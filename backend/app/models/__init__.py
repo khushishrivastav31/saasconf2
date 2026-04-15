@@ -103,6 +103,8 @@ from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.trainer import Trainer, TrainerUnavailability
 from app.models.training import Training, TrainingLanguage, TrainingTheme
+from app.models.training_attendee import TrainingAttendee  # noqa: F401
+from app.models.training_attendee_history import TrainingAttendeeHistory  # noqa: F401
 from app.models.training_invoice import TrainingInvoice  # noqa: F401
 from app.models.training_program import PlacementTrainer, ProgramYearTraining, TrainingProgramYear
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee

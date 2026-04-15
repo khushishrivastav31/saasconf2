@@ -1,5 +1,6 @@
 """Training management endpoints (package)."""
 
+from .attendees import router as attendees_router
 from .certification_bodies import router as certification_bodies_router
 from .core import detail_router, router  # core has root-level routes (GET /, POST /)
 from .customers import router as customers_router
@@ -26,6 +27,7 @@ from .trainers import router as trainers_router
 
 # Include sub-routers BEFORE detail_router so /themes, /languages,
 # /certification-bodies, /syllabi, /trainers, /programs are matched before the /{training_id} catch-all.
+router.include_router(attendees_router)
 router.include_router(themes_router)
 router.include_router(languages_router)
 router.include_router(certification_bodies_router)

@@ -35,6 +35,7 @@ async def list_training_registrations(
         .where(TrainingRegistration.tenant_id == current_user.tenant_id)
         .options(
             joinedload(TrainingRegistration.attendees),
+            joinedload(TrainingRegistration.invoice),
         )
     )
 
@@ -115,6 +116,8 @@ async def list_training_registrations(
                 "contact_email": reg.contact_email,
                 "company_name": reg.company_name,
                 "payment_method": reg.payment_method,
+                "invoice_status": reg.invoice.status if reg.invoice else None,
+                "invoice_number": reg.invoice.invoice_number if reg.invoice else None,
                 "subtotal": str(reg.subtotal) if reg.subtotal else None,
                 "vat_amount": str(reg.vat_amount) if reg.vat_amount else None,
                 "total": str(reg.total) if reg.total else None,

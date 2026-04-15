@@ -106,6 +106,10 @@ class TrainingRegistrationAttendee(Base):
         nullable=False,
     )
 
+    attendee_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("training_attendees.id", ondelete="SET NULL"), nullable=True
+    )
+
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -123,6 +127,7 @@ class TrainingRegistrationAttendee(Base):
     __table_args__ = (
         Index("idx_training_reg_att_tenant", "tenant_id"),
         Index("idx_training_reg_att_reg", "registration_id"),
+        Index("idx_training_reg_att_attendee", "attendee_id"),
     )
 
     def __repr__(self) -> str:

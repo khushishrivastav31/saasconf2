@@ -26,6 +26,10 @@ class OfferAttendee(Base):
         UUID(as_uuid=True), ForeignKey("program_year_trainings.id", ondelete="SET NULL"), nullable=True
     )
 
+    attendee_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("training_attendees.id", ondelete="SET NULL"), nullable=True
+    )
+
     first_name: Mapped[str] = mapped_column(String(200), nullable=False)
     last_name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
@@ -44,6 +48,7 @@ class OfferAttendee(Base):
         Index("idx_offer_attendees_tenant", "tenant_id"),
         Index("idx_offer_attendees_offer", "offer_id"),
         Index("idx_offer_attendees_placement", "placement_id"),
+        Index("idx_offer_att_attendee", "attendee_id"),
     )
 
     def __repr__(self) -> str:

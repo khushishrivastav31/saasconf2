@@ -13,6 +13,8 @@ const FinalProgramTab = lazy(() => import('./tabs/program/FinalProgramTab'));
 const CustomersTab = lazy(() => import('./tabs/CustomersTab'));
 const OfferManagementTab = lazy(() => import('./tabs/OfferManagementTab'));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
+const AttendeesTab = lazy(() => import('./tabs/AttendeesTab'));
+const ParkingLotTab = lazy(() => import('./tabs/ParkingLotTab'));
 const RegistrationsTab = lazy(() => import('./tabs/RegistrationsTab'));
 const InvoicesTab = lazy(() => import('./tabs/InvoicesTab'));
 const PendingInvoicingTab = lazy(() => import('./tabs/PendingInvoicingTab'));
@@ -364,14 +366,8 @@ export default function Trainings() {
               {programInfo?.tab === 'final' && <FinalProgramTab year={programInfo.year} />}
               {activeSection === 'offer-management' && <OfferManagementTab />}
               {activeSection === 'customers' && <CustomersTab />}
-              {activeSection === 'attendees' && (
-                <div className="text-center py-12">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Attendees
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
-                </div>
-              )}
+              {activeSection === 'attendees' && <AttendeesTab />}
+              {activeSection === 'parking-lot' && <ParkingLotTab />}
               {activeSection === 'registrations' && <RegistrationsTab />}
               {activeSection === 'invoices' && <InvoicesTab />}
               {activeSection === 'pending-invoicing' && <PendingInvoicingTab />}

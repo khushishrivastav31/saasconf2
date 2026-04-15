@@ -2,7 +2,7 @@
  * Training Invoices Tab
  *
  * List view with click-to-detail, credit note sub-rows, and operations matching
- * conference invoice behaviour: Cancel → credit note, Mark as Paid, Reopen.
+ * conference invoice behaviour: Cancel → credit note, Mark as Paid.
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -589,7 +589,7 @@ function CreateForm({ onBack, onCreate }: { onBack: () => void; onCreate: (id: s
   );
 }
 
-// ── Replace form ──────────────────────────────────────────────────────────────
+// ── Replace invoice dialog (billing correction — 1:1 with conference) ─────────
 function ReplaceForm({
   invoice: orig,
   onBack,
@@ -602,6 +602,7 @@ function ReplaceForm({
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
+  const [reason, setReason] = useState('');
   const [recipientName, setRecipientName] = useState(orig.recipient_name ?? '');
   const [recipientEmail, setRecipientEmail] = useState(orig.recipient_email ?? '');
   const [recipientAddress, setRecipientAddress] = useState(orig.recipient_address_line1 ?? '');
@@ -609,67 +610,30 @@ function ReplaceForm({
   const [recipientPostalCode, setRecipientPostalCode] = useState(orig.recipient_postal_code ?? '');
   const [recipientCountry, setRecipientCountry] = useState(orig.recipient_country ?? '');
   const [recipientVat, setRecipientVat] = useState(orig.recipient_vat_number ?? '');
-  const currency = orig.currency ?? 'EUR';
-  const [taxRate, setTaxRate] = useState(
-    orig.tax_rate ? String(parseFloat(String(orig.tax_rate)) || 0) : '0'
-  );
-  const [notes, setNotes] = useState('');
-  const [reason, setReason] = useState('');
-  const [lineItems, setLineItems] = useState<LineItemInput[]>(() => {
-    const existing = (orig.line_items as LineItem[] | null) ?? [];
-    if (existing.length > 0) {
-      return existing.map((it) => ({
-        description: it.description,
-        quantity: String(it.quantity),
-        unit_price: String(it.unit_price),
-      }));
-    }
-    return [{ description: '', quantity: '1', unit_price: '' }];
-  });
-
-  const subtotal = useMemo(
-    () =>
-      lineItems.reduce(
-        (s, it) => s + (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0),
-        0
-      ),
-    [lineItems]
-  );
-  const taxAmount = useMemo(
-    () => (subtotal * (parseFloat(taxRate) || 0)) / 100,
-    [subtotal, taxRate]
-  );
-  const total = subtotal + taxAmount;
-  const sym = currency === 'EUR' ? '€' : currency || '';
 
   const replaceMutation = useMutation({
-    mutationFn: () =>
-      api.post(`/trainings/invoices/${orig.id}/replace`, {
-        recipient_name: recipientName || null,
-        recipient_email: recipientEmail || null,
-        recipient_address_line1: recipientAddress || null,
-        recipient_city: recipientCity || null,
-        recipient_postal_code: recipientPostalCode || null,
-        recipient_country: recipientCountry || null,
-        recipient_vat_number: recipientVat || null,
-        line_items: lineItems
-          .filter((it) => it.description.trim())
-          .map((it) => ({
-            description: it.description,
-            quantity: parseFloat(it.quantity) || 1,
-            unit_price: parseFloat(it.unit_price) || 0,
-            total: (parseFloat(it.quantity) || 1) * (parseFloat(it.unit_price) || 0),
-          })),
-        subtotal: subtotal.toFixed(2),
-        tax_rate: (parseFloat(taxRate) || 0).toFixed(2),
-        tax_amount: taxAmount.toFixed(2),
-        total: total.toFixed(2),
-        notes: notes || null,
-        reason: reason || null,
-      }),
+    mutationFn: () => {
+      // Only send fields that changed
+      const payload: Record<string, string | null> = { reason };
+      if (recipientName !== (orig.recipient_name ?? ''))
+        payload.recipient_name = recipientName || null;
+      if (recipientEmail !== (orig.recipient_email ?? ''))
+        payload.recipient_email = recipientEmail || null;
+      if (recipientAddress !== (orig.recipient_address_line1 ?? ''))
+        payload.recipient_address_line1 = recipientAddress || null;
+      if (recipientCity !== (orig.recipient_city ?? ''))
+        payload.recipient_city = recipientCity || null;
+      if (recipientPostalCode !== (orig.recipient_postal_code ?? ''))
+        payload.recipient_postal_code = recipientPostalCode || null;
+      if (recipientCountry !== (orig.recipient_country ?? ''))
+        payload.recipient_country = recipientCountry || null;
+      if (recipientVat !== (orig.recipient_vat_number ?? ''))
+        payload.recipient_vat_number = recipientVat || null;
+      return api.post(`/trainings/invoices/${orig.id}/replace`, payload);
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['training-invoices'] });
-      showToast('Invoice replaced', 'success');
+      showToast('Invoice replaced successfully', 'success');
       onReplace(res.data.new_invoice.id);
     },
     onError: () => showToast('Failed to replace invoice', 'error'),
@@ -677,59 +641,80 @@ function ReplaceForm({
 
   const inputCls =
     'w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100';
+  const isPaid = orig.status === 'paid';
+  const isCreditCard = orig.template_type === 'credit_card';
 
   return (
-    <div>
-      <div className="flex items-center mb-6">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Back to invoice
-        </button>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Replace Invoice
-          </h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <svg
+                className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Replace Invoice with Corrected Billing Information
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                This will cancel invoice &quot;{orig.invoice_number}&quot; and create a new invoice
+                with corrected billing details.
+              </p>
+            </div>
+          </div>
+          {isPaid && (
+            <p className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+              The new invoice will inherit the &quot;paid&quot; status.
+            </p>
+          )}
+          {!isPaid && isCreditCard && (
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              A new payment link will be created for the replacement invoice.
+            </p>
+          )}
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Invoice {orig.invoice_number} will be cancelled and a credit note issued. A corrected
-            invoice will be created.
+            Both a credit note and the new invoice will be sent to the recipient.
           </p>
         </div>
 
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-6 py-4 space-y-4">
+          {/* Reason */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-              Reason (optional)
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Reason for replacement <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Corrected VAT number"
+              rows={2}
+              placeholder="e.g. Wrong company name and VAT number provided"
               className={inputCls}
             />
           </div>
 
+          <hr className="border-gray-200 dark:border-gray-700" />
+
+          {/* Corrected billing */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              Recipient
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Corrected Billing Information
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                  Name
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Company / Recipient Name
                 </label>
                 <input
                   type="text"
@@ -739,9 +724,7 @@ function ReplaceForm({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                  Email
-                </label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
                 <input
                   type="email"
                   value={recipientEmail}
@@ -750,8 +733,8 @@ function ReplaceForm({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                  Address Line 1
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Street Address
                 </label>
                 <input
                   type="text"
@@ -760,30 +743,32 @@ function ReplaceForm({
                   className={inputCls}
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                  City
-                </label>
-                <input
-                  type="text"
-                  value={recipientCity}
-                  onChange={(e) => setRecipientCity(e.target.value)}
-                  className={inputCls}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={recipientCity}
+                    onChange={(e) => setRecipientCity(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Postal Code
+                  </label>
+                  <input
+                    type="text"
+                    value={recipientPostalCode}
+                    onChange={(e) => setRecipientPostalCode(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                  Postal Code
-                </label>
-                <input
-                  type="text"
-                  value={recipientPostalCode}
-                  onChange={(e) => setRecipientPostalCode(e.target.value)}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
                   Country
                 </label>
                 <input
@@ -794,7 +779,7 @@ function ReplaceForm({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
                   VAT Number
                 </label>
                 <input
@@ -806,48 +791,21 @@ function ReplaceForm({
               </div>
             </div>
           </div>
-
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              Line Items
-            </h4>
-            <LineItemsEditor items={lineItems} currency={currency} onChange={setLineItems} />
-            <InvoiceTotalsEditor
-              sym={sym}
-              subtotal={subtotal}
-              taxRate={taxRate}
-              taxAmount={taxAmount}
-              total={total}
-              onTaxRateChange={setTaxRate}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-              Notes (for new invoice)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className={inputCls}
-            />
-          </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-between items-center">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-2">
           <button
             onClick={onBack}
             className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            Back
+            Cancel
           </button>
           <button
             onClick={() => replaceMutation.mutate()}
-            disabled={replaceMutation.isPending}
+            disabled={!reason.trim() || replaceMutation.isPending}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-40"
           >
-            Replace Invoice
+            {replaceMutation.isPending ? 'Replacing...' : 'Replace Invoice'}
           </button>
         </div>
       </div>
@@ -1033,7 +991,6 @@ function DetailPanel({
   onResend,
   onCancel,
   onMarkPaid,
-  onReopen,
   onReplace,
   onSave,
   onSend,
@@ -1050,7 +1007,6 @@ function DetailPanel({
   onResend: () => void;
   onCancel: () => void;
   onMarkPaid: () => void;
-  onReopen: () => void;
   onReplace: () => void;
   onSave: (data: Record<string, unknown>) => void;
   onSend: (data: Record<string, unknown>) => void;
@@ -1146,7 +1102,6 @@ function DetailPanel({
   const canReplace = canCancel;
   const canMarkPaid =
     inv.template_type === 'bank_transfer' && ['sent', 'overdue'].includes(inv.status);
-  const canReopen = ['paid', 'cancelled', 'overdue'].includes(inv.status);
   const canResend = ['sent', 'overdue'].includes(inv.status) && !!inv.recipient_email;
 
   const lineItems: LineItem[] = (inv.line_items as LineItem[]) ?? [];
@@ -1571,15 +1526,6 @@ function DetailPanel({
                 Mark as Paid
               </button>
             )}
-            {canReopen && (
-              <button
-                onClick={onReopen}
-                disabled={isMutating}
-                className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40"
-              >
-                Reopen
-              </button>
-            )}
           </div>
           <div className="flex items-center gap-2">
             {isDraft && (
@@ -1756,15 +1702,6 @@ export default function InvoicesTab() {
     onError: () => showToast('Failed to mark as paid', 'error'),
   });
 
-  const reopenMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/trainings/invoices/${id}/reopen`),
-    onSuccess: () => {
-      invalidate();
-      showToast('Invoice reopened', 'success');
-    },
-    onError: () => showToast('Failed to reopen invoice', 'error'),
-  });
-
   const syncStripeMutation = useMutation({
     mutationFn: () => api.post('/trainings/invoices/sync-stripe'),
     onSuccess: (res) => {
@@ -1831,8 +1768,7 @@ export default function InvoicesTab() {
       : (selectedListItem ?? null)
     : null;
 
-  const isMutating =
-    cancelMutation.isPending || markPaidMutation.isPending || reopenMutation.isPending;
+  const isMutating = cancelMutation.isPending || markPaidMutation.isPending;
 
   // ── Create view ────────────────────────────────────────────────────────────
   if (view === 'create') {
@@ -1847,41 +1783,40 @@ export default function InvoicesTab() {
     );
   }
 
-  // ── Replace view ───────────────────────────────────────────────────────────
-  if (view === 'replace' && selectedInvoice) {
-    return (
-      <ReplaceForm
-        invoice={selectedInvoice}
-        onBack={() => setView('list')}
-        onReplace={(id) => {
-          setView('list');
-          setSelectedId(id);
-        }}
-      />
-    );
-  }
-
-  // ── Detail view ────────────────────────────────────────────────────────────
+  // ── Detail view + replace dialog overlay ─────────────────────────────────
   if (selectedInvoice) {
     return (
-      <DetailPanel
-        inv={selectedInvoice}
-        allInvoices={items}
-        onBack={() => setSelectedId(null)}
-        onNavigate={(id) => setSelectedId(id)}
-        onDownloadPdf={() => handleDownloadPdf(selectedInvoice.id, selectedInvoice.invoice_number)}
-        onResend={() => resendMutation.mutate(selectedInvoice.id)}
-        onCancel={() => cancelMutation.mutate(selectedInvoice.id)}
-        onMarkPaid={() => markPaidMutation.mutate(selectedInvoice.id)}
-        onReopen={() => reopenMutation.mutate(selectedInvoice.id)}
-        onReplace={() => setView('replace')}
-        onSave={(data) => saveDraftMutation.mutate(data)}
-        onSend={(data) => sendDraftMutation.mutate(data)}
-        isResending={resendMutation.isPending}
-        isMutating={isMutating}
-        isSaving={saveDraftMutation.isPending}
-        isSending={sendDraftMutation.isPending}
-      />
+      <>
+        <DetailPanel
+          inv={selectedInvoice}
+          allInvoices={items}
+          onBack={() => setSelectedId(null)}
+          onNavigate={(id) => setSelectedId(id)}
+          onDownloadPdf={() =>
+            handleDownloadPdf(selectedInvoice.id, selectedInvoice.invoice_number)
+          }
+          onResend={() => resendMutation.mutate(selectedInvoice.id)}
+          onCancel={() => cancelMutation.mutate(selectedInvoice.id)}
+          onMarkPaid={() => markPaidMutation.mutate(selectedInvoice.id)}
+          onReplace={() => setView('replace')}
+          onSave={(data) => saveDraftMutation.mutate(data)}
+          onSend={(data) => sendDraftMutation.mutate(data)}
+          isResending={resendMutation.isPending}
+          isMutating={isMutating}
+          isSaving={saveDraftMutation.isPending}
+          isSending={sendDraftMutation.isPending}
+        />
+        {view === 'replace' && (
+          <ReplaceForm
+            invoice={selectedInvoice}
+            onBack={() => setView('list')}
+            onReplace={(id) => {
+              setView('list');
+              setSelectedId(id);
+            }}
+          />
+        )}
+      </>
     );
   }
 

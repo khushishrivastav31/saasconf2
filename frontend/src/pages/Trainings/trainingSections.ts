@@ -52,6 +52,7 @@ export type StaticSectionId =
   | 'offer-management'
   | 'customers'
   | 'attendees'
+  | 'parking-lot'
   | 'settings'
   | 'registrations'
   | 'invoices'
@@ -131,6 +132,7 @@ export const sectionGroups: TrainingSectionGroup[] = [
       { id: 'offer-management', name: 'Offer Management', icon: OfferTemplatesIcon },
       { id: 'customers', name: 'Customers', icon: CustomersIcon },
       { id: 'attendees', name: 'Attendees', icon: AttendeesIcon },
+      { id: 'parking-lot', name: 'Parking Lot', icon: AttendeesIcon },
       { id: 'settings-trainers', name: 'Trainers', icon: TrainersIcon },
       {
         id: 'settings',
