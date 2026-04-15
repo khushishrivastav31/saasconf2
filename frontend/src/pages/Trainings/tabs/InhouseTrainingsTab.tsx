@@ -96,7 +96,7 @@ export default function InhouseTrainingsTab() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Fetch inhouse trainings
-  const { data, isLoading } = useQuery<{ items: InhouseTraining[] }>({
+  const { data, isLoading, isError } = useQuery<{ items: InhouseTraining[] }>({
     queryKey: [...QK, search, statusFilter],
     queryFn: async () => {
       const params: Record<string, string> = { page_size: '500' };
@@ -259,6 +259,10 @@ export default function InhouseTrainingsTab() {
       {isLoading ? (
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        </div>
+      ) : isError ? (
+        <div className="text-center py-8 text-red-500 dark:text-red-400">
+          Failed to load data. Please try again.
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 text-gray-400 dark:text-gray-500 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">

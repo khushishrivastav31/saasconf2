@@ -10,6 +10,9 @@ from app.core.exceptions import NotFoundError, ValidationError
 from app.core.search import unaccent_ilike
 from app.models.audit import AuditLog
 from app.models.customer import Customer
+from app.models.customer_offer import CustomerOffer
+from app.models.inhouse_training import InhouseTraining
+from app.models.training_program import ProgramYearTraining
 from app.schemas.customer import CustomerCreate, CustomerResponse, CustomerUpdate
 
 router = APIRouter(prefix="/customers", tags=["customers"])
@@ -50,7 +53,6 @@ async def list_customers(
     customers = result.scalars().all()
 
     # Check which customers have inhouse trainings
-    from app.models.inhouse_training import InhouseTraining
 
     customer_ids = [c.id for c in customers]
     if customer_ids:
@@ -159,8 +161,6 @@ async def delete_customer(
 
         raise AuthorizationError("Only tenant super users can delete customers")
 
-    from app.models.inhouse_training import InhouseTraining
-
     result = await db.execute(select(Customer).where(Customer.id == customer_id, _tenant_filter(current_user)))
     customer = result.scalar_one_or_none()
     if not customer:
@@ -170,6 +170,16 @@ async def delete_customer(
     count_result = await db.execute(select(func.count()).where(InhouseTraining.customer_id == customer_id))
     if (count_result.scalar() or 0) > 0:
         raise ValidationError("Cannot delete customer with linked inhouse trainings")
+
+    # Check for linked offers (which may have invoices, attendees, documents)
+    offer_count = await db.execute(select(func.count()).where(CustomerOffer.customer_id == customer_id))
+    if (offer_count.scalar() or 0) > 0:
+        raise ValidationError("Cannot delete customer with linked offers. Delete the offers first.")
+
+    # Check for linked placements (inhouse/hybrid trainings assigned to this customer)
+    pyt_count = await db.execute(select(func.count()).where(ProgramYearTraining.customer_id == customer_id))
+    if (pyt_count.scalar() or 0) > 0:
+        raise ValidationError("Cannot delete customer with linked training placements.")
 
     await db.delete(customer)
 

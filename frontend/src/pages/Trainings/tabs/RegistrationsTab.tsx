@@ -109,7 +109,7 @@ export default function RegistrationsTab() {
   });
   const examLanguages = useMemo(() => langData ?? [], [langData]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['training-registrations', params],
     queryFn: async () => {
       const res = await api.get('/trainings/registrations', { params });
@@ -219,6 +219,10 @@ export default function RegistrationsTab() {
 
       {isLoading ? (
         <div className="text-center py-8 text-gray-400">Loading...</div>
+      ) : isError ? (
+        <div className="text-center py-8 text-red-500 dark:text-red-400">
+          Failed to load data. Please try again.
+        </div>
       ) : groups.length === 0 ? (
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">
           No registrations found.
@@ -243,6 +247,7 @@ export default function RegistrationsTab() {
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
                       <path
                         strokeLinecap="round"

@@ -5,14 +5,18 @@ after a training registration is submitted.
 """
 
 import base64
+import html as html_mod
 import logging
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.email import send_email
 from app.core.training_invoice_pdf import generate_training_invoice_pdf
 from app.models.tenant import Tenant
+from app.models.training import Training
 from app.models.training_invoice import TrainingInvoice
+from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistration
 
 logger = logging.getLogger(__name__)
@@ -53,6 +57,11 @@ def _apply_placeholders(text: str, context: dict[str, str]) -> str:
     return result
 
 
+def _esc(value: str) -> str:
+    """HTML-escape a placeholder value and strip newlines from subject safety."""
+    return html_mod.escape(value).replace("\n", " ").replace("\r", "")
+
+
 def _get_company_name(tenant: Tenant) -> str:
     finance = (tenant.settings or {}).get("training_finance", {})
     company = finance.get("company_info", {})
@@ -63,6 +72,52 @@ def _get_support_email(tenant: Tenant) -> str:
     finance = (tenant.settings or {}).get("training_finance", {})
     company = finance.get("company_info", {})
     return company.get("email", "") or ""
+
+
+async def _resolve_training_name(db: AsyncSession, invoice: TrainingInvoice) -> str:
+    """Resolve actual training name from invoice → registration → placement → training."""
+    # Try via registration → placement
+    if invoice.training_registration_id:
+        result = await db.execute(
+            select(Training.name)
+            .join(ProgramYearTraining, ProgramYearTraining.training_id == Training.id)
+            .join(TrainingRegistration, TrainingRegistration.placement_id == ProgramYearTraining.id)
+            .where(TrainingRegistration.id == invoice.training_registration_id)
+        )
+        name = result.scalar_one_or_none()
+        if name:
+            return name
+
+    # Try via offer → placements (first placement's training)
+    if invoice.offer_id:
+        from app.models.offer_placement import OfferPlacement
+
+        result = await db.execute(
+            select(Training.name)
+            .join(ProgramYearTraining, ProgramYearTraining.training_id == Training.id)
+            .join(OfferPlacement, OfferPlacement.placement_id == ProgramYearTraining.id)
+            .where(OfferPlacement.offer_id == invoice.offer_id)
+            .limit(1)
+        )
+        name = result.scalar_one_or_none()
+        if name:
+            return name
+
+    return "Training"
+
+
+async def _resolve_training_name_for_registration(db: AsyncSession, registration: TrainingRegistration) -> str:
+    """Resolve training name from registration → placement → training."""
+    if registration.placement_id:
+        result = await db.execute(
+            select(Training.name)
+            .join(ProgramYearTraining, ProgramYearTraining.training_id == Training.id)
+            .where(ProgramYearTraining.id == registration.placement_id)
+        )
+        name = result.scalar_one_or_none()
+        if name:
+            return name
+    return "Training"
 
 
 async def send_training_invoice_email(
@@ -101,8 +156,11 @@ async def send_training_invoice_email(
         first_name = parts[0]
         last_name = parts[1] if len(parts) > 1 else ""
 
+    # Resolve actual training name (not hardcoded)
+    training_name = await _resolve_training_name(db, invoice)
+
     payment_link_block = (
-        f'<p><a href="{payment_link_url}" style="display: inline-block; padding: 12px 24px; '
+        f'<p><a href="{html_mod.escape(payment_link_url)}" style="display: inline-block; padding: 12px 24px; '
         "background-color: #16a34a; color: white; text-decoration: none; border-radius: 6px; "
         'font-weight: bold;">Pay Online</a></p>'
         if payment_link_url
@@ -110,15 +168,15 @@ async def send_training_invoice_email(
     )
 
     context = {
-        "First Name": first_name,
-        "Last Name": last_name,
-        "Invoice Number": invoice.invoice_number or "DRAFT",
-        "Training Name": "Training Registration",
-        "Amount Due": f"{invoice.currency or 'EUR'} {invoice.total or 0:.2f}",
-        "Due Date": invoice.due_date.strftime("%d.%m.%Y") if invoice.due_date else "N/A",
-        "Company Name": company_name,
-        "Support Email": support_email,
-        "Payment Link": payment_link_block,
+        "First Name": _esc(first_name),
+        "Last Name": _esc(last_name),
+        "Invoice Number": _esc(invoice.invoice_number or "DRAFT"),
+        "Training Name": _esc(training_name),
+        "Amount Due": _esc(f"{invoice.currency or 'EUR'} {invoice.total or 0:.2f}"),
+        "Due Date": _esc(invoice.due_date.strftime("%d.%m.%Y") if invoice.due_date else "N/A"),
+        "Company Name": _esc(company_name),
+        "Support Email": _esc(support_email),
+        "Payment Link": payment_link_block,  # Already HTML (intentional)
     }
 
     # Get template
@@ -169,12 +227,15 @@ async def send_training_confirmation_email(
     company_name = _get_company_name(tenant)
     support_email = _get_support_email(tenant)
 
+    # Resolve actual training name
+    training_name = await _resolve_training_name_for_registration(db, registration)
+
     context = {
-        "First Name": registration.contact_first_name or "",
-        "Last Name": registration.contact_last_name or "",
-        "Training Name": "Training",
-        "Company Name": company_name,
-        "Support Email": support_email,
+        "First Name": _esc(registration.contact_first_name or ""),
+        "Last Name": _esc(registration.contact_last_name or ""),
+        "Training Name": _esc(training_name),
+        "Company Name": _esc(company_name),
+        "Support Email": _esc(support_email),
     }
 
     subject, body_html, body_text = _get_template(tenant, "training_registration_confirmation")

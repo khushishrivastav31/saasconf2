@@ -11,6 +11,7 @@ import type {
 } from '../../../../types/training';
 import type { PronounOption } from '../../../../types/conference';
 import { parseApiError } from '../../../../utils/apiError';
+import { validateEmail, validatePhone } from '../../../../utils/validators';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
@@ -226,6 +227,7 @@ export default function TrainersSettingsTab() {
     }
   };
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const [trainingSearch, setTrainingSearch] = useState('');
   const [detailTab, setDetailTab] = useState<'profile' | 'catalog' | 'unavailability' | 'schedule'>(
     'profile'
@@ -284,19 +286,37 @@ export default function TrainersSettingsTab() {
           <label className={labelCls}>Email</label>
           <input
             type="email"
-            className={inputCls}
+            className={`${inputCls} ${fieldErrors.email ? 'border-red-500 dark:border-red-500' : ''}`}
             value={form.email || ''}
-            onChange={(e) => setForm({ ...form, email: e.target.value || null })}
+            onChange={(e) => {
+              setFieldErrors((prev) => ({ ...prev, email: null }));
+              setForm({ ...form, email: e.target.value || null });
+            }}
+            onBlur={() =>
+              setFieldErrors((prev) => ({ ...prev, email: validateEmail(form.email ?? '') }))
+            }
           />
+          {fieldErrors.email && (
+            <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+          )}
         </div>
         <div>
           <label className={labelCls}>Phone</label>
           <input
             type="text"
-            className={inputCls}
+            className={`${inputCls} ${fieldErrors.phone ? 'border-red-500 dark:border-red-500' : ''}`}
             value={form.phone || ''}
-            onChange={(e) => setForm({ ...form, phone: e.target.value || null })}
+            onChange={(e) => {
+              setFieldErrors((prev) => ({ ...prev, phone: null }));
+              setForm({ ...form, phone: e.target.value || null });
+            }}
+            onBlur={() =>
+              setFieldErrors((prev) => ({ ...prev, phone: validatePhone(form.phone ?? '') }))
+            }
           />
+          {fieldErrors.phone && (
+            <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{fieldErrors.phone}</p>
+          )}
         </div>
       </div>
 

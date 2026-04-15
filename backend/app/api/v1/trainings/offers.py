@@ -546,6 +546,13 @@ async def delete_offer(
     if not offer:
         raise NotFoundError("Offer not found")
 
+    # Block deletion if invoices exist (financial records must not be orphaned)
+    from app.models.training_invoice import TrainingInvoice
+
+    inv_count = await db.execute(select(func.count()).where(TrainingInvoice.offer_id == offer_id))
+    if (inv_count.scalar() or 0) > 0:
+        raise ValidationError("Cannot delete offer with linked invoices. Cancel or delete the invoices first.")
+
     # Unlink inhouse/hybrid placements (clear direct FK); join table entries cascade-delete
     placements_result = await db.execute(
         select(ProgramYearTraining).where(

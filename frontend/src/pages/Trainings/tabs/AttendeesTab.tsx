@@ -73,7 +73,7 @@ export default function AttendeesTab() {
     return p;
   }, [search, statusFilter, page]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['training-attendees', params],
     queryFn: async () => {
       const res = await api.get('/trainings/attendees', { params });
@@ -146,6 +146,10 @@ export default function AttendeesTab() {
 
       {isLoading ? (
         <div className="text-center py-8 text-gray-400">Loading...</div>
+      ) : isError ? (
+        <div className="text-center py-8 text-red-500 dark:text-red-400">
+          Failed to load data. Please try again.
+        </div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">
           No attendees found.
@@ -214,8 +218,20 @@ export default function AttendeesTab() {
 
       {/* Park dialog */}
       {parkDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setParkDialog(null);
+              setParkReason('');
+            }
+          }}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6"
+            role="dialog"
+            aria-modal="true"
+          >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Park Attendee
             </h3>
@@ -273,13 +289,25 @@ function AttendeeRow({
 }) {
   return (
     <>
-      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={onToggle}>
+      <tr
+        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+        onClick={onToggle}
+        tabIndex={0}
+        role="button"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+      >
         <td className="px-3 py-2 text-gray-400">
           <svg
             className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>

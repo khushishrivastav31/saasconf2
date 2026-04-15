@@ -408,7 +408,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
               <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {t('section_attendees')} ({attendees.length})
               </h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setBulkMode(!bulkMode)}
@@ -455,13 +455,14 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                   key={idx}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2"
                 >
-                  <div className="flex gap-2 items-start">
+                  <div className="flex flex-col sm:flex-row gap-2 items-start">
                     <input
                       type="text"
                       value={att.first_name}
                       onChange={(e) => updateAttendee(idx, 'first_name', e.target.value)}
                       placeholder={`${t('label_first_name')} *`}
                       required
+                      aria-required="true"
                       className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
                     />
                     <input
@@ -470,6 +471,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                       onChange={(e) => updateAttendee(idx, 'last_name', e.target.value)}
                       placeholder={`${t('label_last_name')} *`}
                       required
+                      aria-required="true"
                       className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
                     />
                     <input
@@ -486,12 +488,14 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                         onClick={() => removeAttendee(idx)}
                         className="p-2 text-gray-400 hover:text-red-500"
                         title="Remove"
+                        aria-label="Remove attendee"
                       >
                         <svg
                           className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          aria-hidden="true"
                         >
                           <path
                             strokeLinecap="round"
@@ -504,7 +508,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                     )}
                   </div>
                   {hasExam && (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 items-start">
                       <select
                         value={att.exam_mode}
                         onChange={(e) => updateAttendee(idx, 'exam_mode', e.target.value)}
@@ -653,6 +657,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                 onChange={(e) => setBilling((p) => ({ ...p, contact_first_name: e.target.value }))}
                 placeholder="First name *"
                 required
+                aria-required="true"
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
               />
               <input
@@ -661,6 +666,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                 onChange={(e) => setBilling((p) => ({ ...p, contact_last_name: e.target.value }))}
                 placeholder="Last name *"
                 required
+                aria-required="true"
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
               />
               <input
@@ -669,6 +675,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                 onChange={(e) => setBilling((p) => ({ ...p, contact_email: e.target.value }))}
                 placeholder="Email *"
                 required
+                aria-required="true"
                 className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
               />
               <input
@@ -685,7 +692,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('section_payment')}
               </h3>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-4">
                 {bankTransferAvailable && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -742,12 +749,12 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
               {t('section_summary')}
             </h2>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                <span>
+              <div className="flex justify-between gap-2 text-gray-700 dark:text-gray-300">
+                <span className="min-w-0 wrap-break-word">
                   {training.training_name} x {attendees.length}{' '}
                   {attendees.length === 1 ? t('attendee') : t('attendees_plural')}
                 </span>
-                <span>
+                <span className="shrink-0">
                   {currencySymbol}{' '}
                   {(pricePerPerson * attendees.length).toLocaleString('de-DE', {
                     minimumFractionDigits: 2,
@@ -755,11 +762,11 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                 </span>
               </div>
               {examAttendeeCount > 0 && (
-                <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                  <span>
+                <div className="flex justify-between gap-2 text-gray-700 dark:text-gray-300">
+                  <span className="min-w-0 wrap-break-word">
                     {t('label_certification_exam')} x {examAttendeeCount}
                   </span>
-                  <span>
+                  <span className="shrink-0">
                     {currencySymbol}{' '}
                     {examSubtotal.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
                   </span>
@@ -767,25 +774,25 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
               )}
               {vatRate > 0 && (
                 <>
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between text-gray-700 dark:text-gray-300">
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between gap-2 text-gray-700 dark:text-gray-300">
                     <span>{t('label_subtotal')}</span>
-                    <span>
+                    <span className="shrink-0">
                       {currencySymbol}{' '}
                       {subtotal.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="flex justify-between text-gray-700 dark:text-gray-300">
+                  <div className="flex justify-between gap-2 text-gray-700 dark:text-gray-300">
                     <span>{t('label_vat_amount', { rate: vatRate })}</span>
-                    <span>
+                    <span className="shrink-0">
                       {currencySymbol}{' '}
                       {vatAmount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </>
               )}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-semibold text-gray-900 dark:text-gray-100">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between gap-2 font-semibold text-gray-900 dark:text-gray-100">
                 <span>{t('label_total')}</span>
-                <span>
+                <span className="shrink-0">
                   {currencySymbol}{' '}
                   {totalPrice.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
                 </span>
@@ -809,7 +816,10 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
 
           {/* Error */}
           {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div
+              role="alert"
+              className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+            >
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
@@ -818,7 +828,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           <button
             type="submit"
             disabled={registerMutation.isPending || attemptingPayment || !termsAccepted}
-            className="w-full py-3 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50 transition-colors"
+            className="w-full py-3 min-h-11 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50 transition-colors"
           >
             {registerMutation.isPending || attemptingPayment
               ? t('processing')

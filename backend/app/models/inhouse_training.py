@@ -36,8 +36,9 @@ class InhouseTraining(Base):
     trainer_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("trainers.id", ondelete="SET NULL"), nullable=True
     )
-    # Future: FK to offers table. For now, store as nullable UUID without constraint.
-    offer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    offer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customer_offers.id", ondelete="SET NULL"), nullable=True
+    )
 
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)

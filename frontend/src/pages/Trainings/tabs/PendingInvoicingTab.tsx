@@ -104,7 +104,7 @@ function buildRegGroups(items: PendingRegistration[]): RegGroup[] {
 
 // ── Main component ───────────────────────────────────────────────────────────
 export default function PendingInvoicingTab() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['training-pending-invoicing'],
     queryFn: async () => {
       const res = await api.get('/trainings/invoices/pending');
@@ -119,6 +119,14 @@ export default function PendingInvoicingTab() {
 
   if (isLoading) {
     return <div className="text-center py-8 text-gray-400">Loading...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-8 text-red-500 dark:text-red-400">
+        Failed to load data. Please try again.
+      </div>
+    );
   }
 
   const isEmpty = regs.length === 0 && offers.length === 0;

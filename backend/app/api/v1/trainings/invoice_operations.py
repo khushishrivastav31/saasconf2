@@ -162,10 +162,8 @@ async def send_draft_invoice(
     if not inv.due_date:
         inv.due_date = inv.issue_date + timedelta(days=30)
 
-    await db.commit()
-    await db.refresh(inv)
-
-    # Send email + Stripe payment link
+    # Create Stripe payment link BEFORE committing — if it fails for CC invoices,
+    # the invoice stays draft so the user isn't left with an unpayable sent invoice.
     tenant = await db.get(Tenant, current_user.tenant_id)
     payment_link_url: str | None = None
     if inv.template_type == "credit_card" and tenant:
@@ -173,10 +171,17 @@ async def send_draft_invoice(
             link_id, payment_link_url = await create_training_payment_link(db, tenant, inv)
             inv.stripe_payment_link_id = link_id
             inv.stripe_payment_link_url = payment_link_url
-            await db.commit()
-            await db.refresh(inv)
         except Exception as exc:
             logger.warning("Failed to create Stripe payment link for invoice %s: %s", inv.id, exc)
+            raise HTTPException(
+                status_code=502,
+                detail="Failed to create Stripe payment link. Invoice was not sent. Please check Stripe configuration and try again.",
+            ) from exc
+
+    await db.commit()
+    await db.refresh(inv)
+
+    # Send email (best-effort — invoice is already sent, email failure is non-fatal)
     if inv.recipient_email and tenant:
         try:
             await send_training_invoice_email(db, inv, None, tenant, payment_link_url=payment_link_url)
@@ -208,9 +213,25 @@ async def resend_training_invoice_email_endpoint(
     if not tenant:
         raise NotFoundError("Tenant not found")
 
-    success = await send_training_invoice_email(
-        db, inv, inv.registration, tenant, payment_link_url=inv.stripe_payment_link_url
-    )
+    # For credit card invoices, create a fresh payment link (old one may have expired)
+    payment_link_url = inv.stripe_payment_link_url
+    if inv.template_type == "credit_card" and inv.status in ("sent", "overdue"):
+        try:
+            # Deactivate old link if it exists
+            if inv.stripe_payment_link_id:
+                await deactivate_training_payment_link(inv, tenant)
+            # Create new link
+            link_id, payment_link_url = await create_training_payment_link(db, tenant, inv)
+            inv.stripe_payment_link_id = link_id
+            inv.stripe_payment_link_url = payment_link_url
+            await db.commit()
+            await db.refresh(inv)
+        except Exception as exc:
+            logger.warning("Failed to refresh Stripe payment link for invoice %s: %s", inv.id, exc)
+            # Fall back to existing link URL (may still work)
+            payment_link_url = inv.stripe_payment_link_url
+
+    success = await send_training_invoice_email(db, inv, inv.registration, tenant, payment_link_url=payment_link_url)
     return {"success": success}
 
 

@@ -168,6 +168,12 @@ const TrainingSearch = React.memo(function TrainingSearch({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <a
+        href="#training-list"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:rounded focus:shadow"
+      >
+        Skip to trainings
+      </a>
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6 flex items-start justify-between">
@@ -195,6 +201,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -208,13 +215,14 @@ const TrainingSearch = React.memo(function TrainingSearch({
                 placeholder={t('search_placeholder')}
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
+                aria-label={t('search_placeholder')}
                 className="w-full pl-10 pr-4 py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             {/* Mobile filter toggle */}
             <button
               onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-              className="lg:hidden px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium"
+              className="lg:hidden min-h-[44px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium"
             >
               {t('filters')}
               {hasActiveFilters && (
@@ -244,7 +252,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
           {/* Training list */}
           <div className="flex-1 min-w-0">
             {isLoading ? (
-              <div className="flex justify-center py-16">
+              <div className="flex justify-center py-16" role="status" aria-label="Loading">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
               </div>
             ) : !trainingsData || trainingsData.items.length === 0 ? (
@@ -254,6 +262,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -285,7 +294,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
                     total: trainingsData.total,
                   })}
                 </p>
-                <div className="space-y-4">
+                <div id="training-list" className="space-y-4">
                   {trainingsData.items.map((item) => (
                     <TrainingCard
                       key={item.placement_id}
@@ -298,11 +307,11 @@ const TrainingSearch = React.memo(function TrainingSearch({
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-8">
+                  <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page <= 1}
-                      className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="min-h-[44px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       Previous
                     </button>
@@ -312,7 +321,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
                     <button
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page >= totalPages}
-                      className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="min-h-[44px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       Next
                     </button>

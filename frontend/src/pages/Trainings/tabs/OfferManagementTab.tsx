@@ -102,7 +102,11 @@ export default function OfferManagementTab() {
     [setSearchParams]
   );
 
-  const { data: offersRaw, isLoading } = useQuery<CustomerOffer[]>({
+  const {
+    data: offersRaw,
+    isLoading,
+    isError,
+  } = useQuery<CustomerOffer[]>({
     queryKey: ['all-offers', search, statusFilter],
     queryFn: async () => {
       const params: Record<string, string> = { limit: '500' };
@@ -312,6 +316,10 @@ export default function OfferManagementTab() {
       {/* Table */}
       {isLoading ? (
         <div className="text-center py-8 text-gray-400 text-sm">Loading offers...</div>
+      ) : isError ? (
+        <div className="text-center py-8 text-red-500 dark:text-red-400">
+          Failed to load data. Please try again.
+        </div>
       ) : offers.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
           {(offersRaw ?? []).length === 0

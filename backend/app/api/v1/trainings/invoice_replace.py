@@ -120,8 +120,8 @@ async def replace_training_invoice(
     )
     db.add(new_inv)
 
-    # 4. Deactivate old Stripe payment link
-    if not old_was_paid and inv.template_type == "credit_card" and inv.stripe_payment_link_id:
+    # 4. Deactivate old Stripe payment link (always, even if paid — prevents double charges)
+    if inv.template_type == "credit_card" and inv.stripe_payment_link_id:
         try:
             tenant = await db.get(Tenant, current_user.tenant_id)
             if tenant:

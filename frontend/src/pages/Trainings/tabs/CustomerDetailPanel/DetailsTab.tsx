@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { COUNTRIES_BY_CONTINENT } from '../../../../config/countries';
 import VatNumberInput from '../../../../components/common/VatNumberInput';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
+import { validateEmail, validatePhone, normalizeUrl } from '../../../../utils/validators';
 
 function DetailsTab({
   form,
@@ -12,6 +14,9 @@ function DetailsTab({
   updateField: (key: string, value: unknown) => void;
   inputClass: string;
 }) {
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
@@ -32,10 +37,17 @@ function DetailsTab({
           </label>
           <input
             type="email"
-            className={inputClass}
+            className={`${inputClass} ${emailError ? 'border-red-500 dark:border-red-500' : ''}`}
             value={form.email ?? ''}
-            onChange={(e) => updateField('email', e.target.value || null)}
+            onChange={(e) => {
+              setEmailError(null);
+              updateField('email', e.target.value || null);
+            }}
+            onBlur={() => setEmailError(validateEmail(form.email ?? ''))}
           />
+          {emailError && (
+            <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{emailError}</p>
+          )}
         </div>
       </div>
 
@@ -47,10 +59,17 @@ function DetailsTab({
           <input
             type="text"
             placeholder="+491234545 or 00491234566"
-            className={inputClass}
+            className={`${inputClass} ${phoneError ? 'border-red-500 dark:border-red-500' : ''}`}
             value={form.phone ?? ''}
-            onChange={(e) => updateField('phone', e.target.value || null)}
+            onChange={(e) => {
+              setPhoneError(null);
+              updateField('phone', e.target.value || null);
+            }}
+            onBlur={() => setPhoneError(validatePhone(form.phone ?? ''))}
           />
+          {phoneError && (
+            <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{phoneError}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -62,6 +81,10 @@ function DetailsTab({
             className={inputClass}
             value={form.website ?? ''}
             onChange={(e) => updateField('website', e.target.value || null)}
+            onBlur={() => {
+              const normalized = normalizeUrl(form.website ?? '');
+              updateField('website', normalized || null);
+            }}
           />
         </div>
       </div>

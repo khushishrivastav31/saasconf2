@@ -4,13 +4,13 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
-from app.models.program import ProgramDay
+from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
 from app.models.settings import BookingOption
 from app.schemas.program import (
     ProgramDayCreate,
@@ -350,6 +350,22 @@ async def delete_day(
     day = result.scalar_one_or_none()
     if not day:
         raise NotFoundError(f"Program day with ID '{day_id}' not found")
+
+    # Check for sessions linked to this day's time slots (FK is RESTRICT)
+    session_count_result = await db.execute(
+        select(func.count())
+        .select_from(ProgramSession)
+        .join(ProgramTimeSlot, ProgramSession.start_slot_id == ProgramTimeSlot.id)
+        .where(ProgramTimeSlot.program_day_id == day_id)
+    )
+    session_count = session_count_result.scalar() or 0
+    if session_count > 0:
+        from app.core.exceptions import ValidationError
+
+        raise ValidationError(
+            f"Cannot delete this day — it has {session_count} program session{'s' if session_count != 1 else ''} "
+            f"assigned to its time slots. Remove or reassign the sessions first."
+        )
 
     db.add(
         AuditLog(

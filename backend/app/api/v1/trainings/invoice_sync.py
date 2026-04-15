@@ -48,6 +48,16 @@ async def sync_training_stripe_payments(
         try:
             pi = await find_payment_intent_for_training_invoice(inv, client, log_prefix="[SYNC] ")
             if pi and pi.status == "succeeded":
+                # Idempotency: skip if already marked paid (race condition with concurrent sync/mark-paid)
+                if inv.status == "paid":
+                    continue
+                # Skip if this PI was already assigned to another invoice (double-payment guard)
+                if inv.stripe_payment_intent_id and inv.stripe_payment_intent_id != pi.id:
+                    logger.warning(
+                        "Sync: invoice %s already has PI %s, skipping new PI %s",
+                        inv.invoice_number, inv.stripe_payment_intent_id, pi.id,
+                    )
+                    continue
                 inv.status = "paid"
                 inv.stripe_payment_intent_id = pi.id
                 updated_to_paid += 1

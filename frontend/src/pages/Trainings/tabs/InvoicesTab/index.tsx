@@ -86,7 +86,7 @@ export default function InvoicesTab() {
     return p;
   }, [search, statusFilter, typeFilter, dateFrom, dateTo, page]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['training-invoices', params],
     queryFn: async () => {
       const res = await api.get('/trainings/invoices', { params });
@@ -280,7 +280,13 @@ export default function InvoicesTab() {
             onClick={() => setView('create')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -356,6 +362,10 @@ export default function InvoicesTab() {
 
       {isLoading ? (
         <div className="text-center py-8 text-gray-400">Loading...</div>
+      ) : isError ? (
+        <div className="text-center py-8 text-red-500 dark:text-red-400">
+          Failed to load data. Please try again.
+        </div>
       ) : rows.length === 0 ? (
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">No invoices found.</div>
       ) : (
@@ -400,6 +410,14 @@ export default function InvoicesTab() {
                     <tr
                       key={inv.id}
                       onClick={() => setSelectedId(inv.id)}
+                      tabIndex={0}
+                      role="button"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedId(inv.id);
+                        }
+                      }}
                       className={`cursor-pointer transition-colors ${isSubRow ? 'bg-orange-50/40 dark:bg-orange-900/5 hover:bg-orange-50 dark:hover:bg-orange-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
                     >
                       <td className="px-3 py-2.5 font-mono text-xs text-gray-900 dark:text-gray-100">
@@ -440,6 +458,7 @@ export default function InvoicesTab() {
                             }}
                             className="p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors rounded"
                             title="Download PDF"
+                            aria-label="Download PDF"
                           >
                             <svg
                               className="w-4 h-4"
@@ -464,6 +483,7 @@ export default function InvoicesTab() {
                               disabled={resendMutation.isPending}
                               className="p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors rounded disabled:opacity-40"
                               title="Resend email"
+                              aria-label="Resend email"
                             >
                               <svg
                                 className="w-4 h-4"

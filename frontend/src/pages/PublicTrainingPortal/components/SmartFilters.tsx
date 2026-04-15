@@ -48,6 +48,7 @@ const SmartFilters = React.memo(function SmartFilters({
             value={filters.date_from}
             onChange={(e) => onUpdateFilter('date_from', e.target.value)}
             min={new Date().toISOString().slice(0, 10)}
+            aria-label="Start date"
             className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
           <input
@@ -55,6 +56,7 @@ const SmartFilters = React.memo(function SmartFilters({
             value={filters.date_to}
             onChange={(e) => onUpdateFilter('date_to', e.target.value)}
             min={filters.date_from || new Date().toISOString().slice(0, 10)}
+            aria-label="End date"
             className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
         </div>
@@ -149,7 +151,7 @@ function CheckboxItem({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer group">
+    <label className="flex items-center gap-2 cursor-pointer group min-h-[44px]">
       <input
         type="checkbox"
         checked={checked}

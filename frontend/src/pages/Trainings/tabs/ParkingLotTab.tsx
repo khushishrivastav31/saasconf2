@@ -50,7 +50,7 @@ export default function ParkingLotTab() {
   const [filterGuaranteed, setFilterGuaranteed] = useState(false);
   const [filterType, setFilterType] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['training-attendees', { status: 'parked', per_page: '200' }],
     queryFn: async () => {
       const res = await api.get('/trainings/attendees', {
@@ -92,6 +92,12 @@ export default function ParkingLotTab() {
   const items = data?.items ?? [];
 
   if (isLoading) return <div className="text-center py-8 text-gray-400">Loading...</div>;
+  if (isError)
+    return (
+      <div className="text-center py-8 text-red-500 dark:text-red-400">
+        Failed to load data. Please try again.
+      </div>
+    );
 
   return (
     <div>
@@ -179,8 +185,17 @@ export default function ParkingLotTab() {
 
       {/* Reassign modal with placement picker */}
       {reassignTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setReassignTarget(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
+            role="dialog"
+            aria-modal="true"
+          >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
               Reassign Attendee
             </h3>

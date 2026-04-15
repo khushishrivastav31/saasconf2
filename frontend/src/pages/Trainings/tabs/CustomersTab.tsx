@@ -108,7 +108,7 @@ export default function CustomersTab() {
     comment: '',
   });
 
-  const { data, isLoading } = useQuery<{
+  const { data, isLoading, isError } = useQuery<{
     items: Customer[];
     total: number;
     page: number;
@@ -506,6 +506,10 @@ export default function CustomersTab() {
       {/* Customers table */}
       {isLoading ? (
         <div className="text-center py-8 text-gray-400 text-sm">Loading...</div>
+      ) : isError ? (
+        <div className="text-center py-8 text-red-500 dark:text-red-400">
+          Failed to load data. Please try again.
+        </div>
       ) : customers.length > 0 ? (
         <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

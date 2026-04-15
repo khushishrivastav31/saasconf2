@@ -59,7 +59,13 @@ const TrainingCard = React.memo(function TrainingCard({
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
               {startDate && (
                 <span className="flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -67,7 +73,7 @@ const TrainingCard = React.memo(function TrainingCard({
                       d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
                     />
                   </svg>
-                  {startDate}
+                  <span className="truncate">{startDate}</span>
                   {tr.duration && tr.duration > 1 && (
                     <span className="text-gray-400 dark:text-gray-500">({tr.duration} days)</span>
                   )}
@@ -75,8 +81,14 @@ const TrainingCard = React.memo(function TrainingCard({
               )}
 
               {tr.location_city && (
-                <span className="flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="flex items-center gap-1 min-w-0">
+                  <svg
+                    className="w-4 h-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -90,7 +102,7 @@ const TrainingCard = React.memo(function TrainingCard({
                       d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
                     />
                   </svg>
-                  {tr.location_city}
+                  <span className="truncate">{tr.location_city}</span>
                 </span>
               )}
             </div>
@@ -112,14 +124,14 @@ const TrainingCard = React.memo(function TrainingCard({
 
             {/* Trainers */}
             {tr.trainers.length > 0 && (
-              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 truncate">
                 Trainer{tr.trainers.length > 1 ? 's' : ''}: {tr.trainers.join(', ')}
               </p>
             )}
 
             {/* Description / Content toggle tabs */}
             {(hasDescription || hasContent) && (
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {hasDescription && (
                   <button
                     type="button"
@@ -175,7 +187,7 @@ const TrainingCard = React.memo(function TrainingCard({
             )}
             <button
               onClick={() => navigate(`/${tenantSlug}/trainings/register/${tr.placement_id}/form`)}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors whitespace-nowrap"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors whitespace-nowrap"
             >
               {t('btn_register')}
             </button>

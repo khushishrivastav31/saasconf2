@@ -1,4 +1,8 @@
+import { useState } from 'react';
 import { TypeBadge } from './formatters';
+import { COUNTRIES_BY_CONTINENT } from '../../../../config/countries';
+import VatNumberInput from '../../../../components/common/VatNumberInput';
+import { validateEmail } from '../../../../utils/validators';
 
 export default function DraftDetailsEditor(props: {
   editRecipientName: string;
@@ -24,6 +28,8 @@ export default function DraftDetailsEditor(props: {
   templateType: string;
   currency: string | null;
 }) {
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   const inputCls =
     'w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100';
   return (
@@ -81,9 +87,19 @@ export default function DraftDetailsEditor(props: {
             <input
               type="email"
               value={props.editRecipientEmail}
-              onChange={(e) => props.setEditRecipientEmail(e.target.value)}
-              className={inputCls}
+              onChange={(e) => {
+                props.setEditRecipientEmail(e.target.value);
+                if (emailError) setEmailError(null);
+              }}
+              onBlur={() => {
+                const err = validateEmail(props.editRecipientEmail);
+                setEmailError(err);
+              }}
+              className={`${inputCls} ${emailError ? 'border-red-500 dark:border-red-500' : ''}`}
             />
+            {emailError && (
+              <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{emailError}</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
@@ -122,22 +138,32 @@ export default function DraftDetailsEditor(props: {
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
               Country
             </label>
-            <input
-              type="text"
+            <select
               value={props.editCountry}
               onChange={(e) => props.setEditCountry(e.target.value)}
               className={inputCls}
-            />
+            >
+              <option value="">Select a country</option>
+              {COUNTRIES_BY_CONTINENT.map((group) => (
+                <optgroup key={group.continent} label={group.continent}>
+                  {group.countries.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
               VAT Number
             </label>
-            <input
-              type="text"
+            <VatNumberInput
               value={props.editVat}
-              onChange={(e) => props.setEditVat(e.target.value)}
-              className={inputCls}
+              onChange={props.setEditVat}
+              country={props.editCountry}
+              placeholder="e.g., DE123456789"
             />
           </div>
           <div>

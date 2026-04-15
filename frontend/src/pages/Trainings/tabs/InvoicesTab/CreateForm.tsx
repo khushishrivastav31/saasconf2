@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { useToast } from '../../../../components/Toast';
+import { COUNTRIES_BY_CONTINENT } from '../../../../config/countries';
+import VatNumberInput from '../../../../components/common/VatNumberInput';
+import { validateEmail } from '../../../../utils/validators';
 import type { LineItemInput } from './types';
 import LineItemsEditor, { InvoiceTotalsEditor } from './LineItemsEditor';
 
@@ -26,6 +29,7 @@ export default function CreateForm({
   const [recipientPostalCode, setRecipientPostalCode] = useState('');
   const [recipientCountry, setRecipientCountry] = useState('');
   const [recipientVat, setRecipientVat] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState('0');
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState<LineItemInput[]>([
@@ -191,9 +195,19 @@ export default function CreateForm({
                 <input
                   type="email"
                   value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  className={inputCls}
+                  onChange={(e) => {
+                    setRecipientEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                  }}
+                  onBlur={() => {
+                    const err = validateEmail(recipientEmail);
+                    setEmailError(err);
+                  }}
+                  className={`${inputCls} ${emailError ? 'border-red-500 dark:border-red-500' : ''}`}
                 />
+                {emailError && (
+                  <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{emailError}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
@@ -232,22 +246,32 @@ export default function CreateForm({
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                   Country
                 </label>
-                <input
-                  type="text"
+                <select
                   value={recipientCountry}
                   onChange={(e) => setRecipientCountry(e.target.value)}
                   className={inputCls}
-                />
+                >
+                  <option value="">Select a country</option>
+                  {COUNTRIES_BY_CONTINENT.map((group) => (
+                    <optgroup key={group.continent} label={group.continent}>
+                      {group.countries.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                   VAT Number
                 </label>
-                <input
-                  type="text"
+                <VatNumberInput
                   value={recipientVat}
-                  onChange={(e) => setRecipientVat(e.target.value)}
-                  className={inputCls}
+                  onChange={(val) => setRecipientVat(val)}
+                  country={recipientCountry || undefined}
+                  placeholder="e.g., DE123456789"
                 />
               </div>
             </div>

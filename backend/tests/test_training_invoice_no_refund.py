@@ -214,8 +214,8 @@ async def test_replace_paid_cc_invoice_no_stripe_refund(
         # CRITICAL: Stripe refund must NOT have been called
         mock_refund.assert_not_called()
 
-        # Stripe payment link deactivation should NOT happen for paid invoices
-        mock_deactivate.assert_not_called()
+        # Stripe payment link deactivation DOES happen (prevents double charges)
+        mock_deactivate.assert_called_once()
 
         # No new payment link needed (already paid)
         mock_create_link.assert_not_called()
