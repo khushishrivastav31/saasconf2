@@ -9,19 +9,28 @@ export const PORTAL_STORAGE_STATE = path.join(__dirname, '../../playwright/.auth
 /**
  * Perform admin login via the UI and save storage state.
  */
-export async function adminLogin(page: Page) {
+export async function adminLogin(page: Page, retries = 3) {
   const email = process.env.E2E_ADMIN_EMAIL;
   const password = process.env.E2E_ADMIN_PASSWORD;
   if (!email || !password) throw new Error('E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD required');
 
-  await page.goto('/login');
-  await page.getByPlaceholder(/email/i).fill(email);
-  await page.getByPlaceholder(/password/i).fill(password);
-  await page.getByRole('button', { name: /sign in/i }).click();
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
+      await page.getByPlaceholder(/email/i).fill(email);
+      await page.getByPlaceholder(/password/i).fill(password);
+      await page.getByRole('button', { name: /sign in/i }).click();
 
-  await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
-  await page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 10000 });
-  await page.context().storageState({ path: ADMIN_STORAGE_STATE });
+      await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 30000 });
+      await page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 15000 });
+      await page.context().storageState({ path: ADMIN_STORAGE_STATE });
+      return; // success
+    } catch (err) {
+      if (attempt === retries) throw err;
+      // Wait before retry — backend may still be starting after deploy
+      await page.waitForTimeout(5000);
+    }
+  }
 }
 
 /**

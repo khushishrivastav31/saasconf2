@@ -6,8 +6,7 @@ import { test, expect } from '@playwright/test';
  * saved during admin-setup may expire before later tests execute.
  */
 async function ensureAuthenticated(page: import('@playwright/test').Page) {
-  await page.goto('/dashboard');
-  await page.waitForLoadState('networkidle');
+  await page.goto('/dashboard', { waitUntil: 'networkidle', timeout: 30000 });
 
   // If we got redirected to login, the JWT token expired — re-authenticate
   if (page.url().includes('/login')) {
@@ -18,7 +17,8 @@ async function ensureAuthenticated(page: import('@playwright/test').Page) {
     await page.getByPlaceholder(/email/i).fill(email);
     await page.getByPlaceholder(/password/i).fill(password);
     await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
+    await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 30000 });
+    await page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 15000 });
   }
 }
 

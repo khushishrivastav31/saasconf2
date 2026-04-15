@@ -28,15 +28,24 @@ export class ConferenceDetailPage {
   private async reAuthenticate() {
     const email = process.env.E2E_ADMIN_EMAIL!;
     const password = process.env.E2E_ADMIN_PASSWORD!;
-    await this.page.getByPlaceholder(/email/i).fill(email);
-    await this.page.getByPlaceholder(/password/i).fill(password);
-    await this.page.getByRole('button', { name: /sign in/i }).click();
-    await expect(this.page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
-    await this.page.waitForFunction(
-      () => !!localStorage.getItem('access_token'),
-      { timeout: 10000 },
-    );
-    await this.page.context().storageState({ path: ADMIN_STORAGE_STATE });
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await this.page.getByPlaceholder(/email/i).fill(email);
+        await this.page.getByPlaceholder(/password/i).fill(password);
+        await this.page.getByRole('button', { name: /sign in/i }).click();
+        await expect(this.page).toHaveURL(/dashboard|conferences/i, { timeout: 30000 });
+        await this.page.waitForFunction(
+          () => !!localStorage.getItem('access_token'),
+          { timeout: 15000 },
+        );
+        await this.page.context().storageState({ path: ADMIN_STORAGE_STATE });
+        return;
+      } catch (err) {
+        if (attempt === 3) throw err;
+        await this.page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
+      }
+    }
   }
 
   get conferenceName() { return this.page.locator('h1.text-2xl'); }
