@@ -100,6 +100,10 @@ const FALLBACK_EN: Record<string, string> = {
   label_total: 'Total',
   attendee: 'attendee',
   attendees_plural: 'attendees',
+  label_description: 'Description',
+  label_content: 'Content',
+  label_hide_description: 'Hide Description',
+  label_hide_content: 'Hide Content',
 };
 
 export function usePortalTexts(tenantSlug: string, lang: string) {

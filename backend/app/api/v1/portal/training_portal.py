@@ -244,6 +244,7 @@ def _placement_to_dict(p: ProgramYearTraining, tenant_country: str = "", tenant_
         "training_name": t.name if t else "Unknown",
         "training_slug": t.slug if t else None,
         "training_description": t.description if t else None,
+        "training_content": t.content if t else None,
         "start_date": p.start_date.isoformat() if p.start_date else None,
         "duration": t.duration if t else 1,
         "placement_type": p.placement_type or "open",

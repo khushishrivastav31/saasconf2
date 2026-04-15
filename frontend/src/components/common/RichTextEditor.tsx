@@ -75,6 +75,8 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   rows?: number;
+  /** Maximum visible rows before the editor scrolls (default: 15) */
+  maxRows?: number;
   className?: string;
   disabled?: boolean;
   minLength?: number;
@@ -90,6 +92,7 @@ export default function RichTextEditor({
   onChange,
   placeholder = '',
   rows = 3,
+  maxRows = 15,
   className = '',
   disabled = false,
   minLength,
@@ -351,7 +354,7 @@ export default function RichTextEditor({
       />
 
       {/* Editor area */}
-      <div className="px-3 py-2">
+      <div className="px-3 py-2 overflow-y-auto" style={{ maxHeight: `${maxRows * 1.5}rem` }}>
         <EditorContent editor={editor} />
       </div>
 

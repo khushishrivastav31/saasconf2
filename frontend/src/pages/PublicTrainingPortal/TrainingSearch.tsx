@@ -24,6 +24,7 @@ export interface PublicTraining {
   training_name: string;
   training_slug: string | null;
   training_description: string | null;
+  training_content: string | null;
   start_date: string | null;
   duration: number;
   placement_type: string;

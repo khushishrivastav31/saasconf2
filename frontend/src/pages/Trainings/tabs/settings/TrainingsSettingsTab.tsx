@@ -349,8 +349,7 @@ export default function TrainingsSettingsTab() {
           <label className={labelCls}>Regular Price</label>
           <input
             type="number"
-            step="0.01"
-            min="0"
+            step="any"
             className={inputCls}
             value={form.regular_price ?? ''}
             onChange={(e) =>
@@ -365,8 +364,7 @@ export default function TrainingsSettingsTab() {
           <label className={labelCls}>Early Bird Price</label>
           <input
             type="number"
-            step="0.01"
-            min="0"
+            step="any"
             className={inputCls}
             value={form.early_bird_price ?? ''}
             onChange={(e) =>
