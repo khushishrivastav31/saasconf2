@@ -4,7 +4,10 @@ import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
+import { validatePhone } from '../../../../utils/validators';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import { COUNTRIES_BY_CONTINENT } from '../../../../config/countries';
+import VatNumberInput from '../../../../components/common/VatNumberInput';
 import type { Conference } from '../../../../types';
 import { DirtyContext } from '../../DirtyContext';
 
@@ -38,11 +41,16 @@ export default function InvoiceCompanyDataTab({
   const [footerText, setFooterText] = useState('');
   const [secondCurrency, setSecondCurrency] = useState('');
   const [exchangeRate, setExchangeRate] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch invoice settings
-  const { data: settings, isLoading: settingsLoading } = useQuery({
+  const {
+    data: settings,
+    isLoading: settingsLoading,
+    isError: settingsError,
+  } = useQuery({
     queryKey: queryKeys.invoiceSettings(conference.id),
     queryFn: async () => {
       const res = await api.get(`/conferences/${conference.id}/settings/invoice-settings`);
@@ -169,6 +177,14 @@ export default function InvoiceCompanyDataTab({
     return <div className="text-gray-500 dark:text-gray-400">Loading...</div>;
   }
 
+  if (settingsError) {
+    return (
+      <div className="text-center py-8 text-red-500 dark:text-red-400">
+        Failed to load data. Please try again.
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-6">
@@ -251,26 +267,32 @@ export default function InvoiceCompanyDataTab({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Country
           </label>
-          <input
-            type="text"
+          <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
             disabled={!isAdmin}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
-          />
+          >
+            <option value="">Select a country</option>
+            {COUNTRIES_BY_CONTINENT.map((group) => (
+              <optgroup key={group.continent} label={group.continent}>
+                {group.countries.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
         </div>
 
         {/* Tax ID / VAT Number */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Tax ID / VAT Number
-          </label>
-          <input
-            type="text"
+          <VatNumberInput
             value={taxId}
-            onChange={(e) => setTaxId(e.target.value)}
+            onChange={(val) => setTaxId(val)}
+            country={country}
             disabled={!isAdmin}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -282,11 +304,21 @@ export default function InvoiceCompanyDataTab({
           <input
             type="text"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              if (phoneError) setPhoneError(null);
+            }}
+            onBlur={() => {
+              const err = validatePhone(phone);
+              setPhoneError(err);
+            }}
             disabled={!isAdmin}
             placeholder="e.g., +49 30 1234567"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+            className={`w-full px-3 py-2 border ${phoneError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed`}
           />
+          {phoneError && (
+            <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{phoneError}</p>
+          )}
         </div>
 
         {/* Dual Currency Section */}

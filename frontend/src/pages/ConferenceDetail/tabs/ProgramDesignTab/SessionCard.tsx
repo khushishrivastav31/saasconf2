@@ -200,8 +200,15 @@ function SessionCard({
             }}
             className="absolute top-1 left-1 p-1 rounded bg-black/20 opacity-0 group-hover:opacity-100 hover:bg-amber-500 transition-all"
             title="Unmerge cells"
+            aria-label="Unmerge cells"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -221,8 +228,15 @@ function SessionCard({
             }}
             className="absolute top-1 right-1 p-1 rounded bg-black/20 opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all"
             title="Delete session"
+            aria-label="Delete session"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -242,8 +256,15 @@ function SessionCard({
             }}
             className="absolute bottom-1 right-1 p-1 rounded bg-black/20 opacity-0 group-hover:opacity-100 hover:bg-amber-500 transition-all"
             title="Unassign paper"
+            aria-label="Unassign paper"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

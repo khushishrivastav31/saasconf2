@@ -49,7 +49,11 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
   const basePath = `/conferences/${conferenceId}/messaging`;
 
   // Thread list
-  const { data: threadList, isLoading: loadingThreads } = useQuery({
+  const {
+    data: threadList,
+    isLoading: loadingThreads,
+    isError: threadsError,
+  } = useQuery({
     queryKey: queryKeys.messaging.threads(
       conferenceId,
       page,
@@ -318,7 +322,13 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
               }}
               className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -364,6 +374,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
                 fill={filterFlagged ? 'currentColor' : 'none'}
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -386,7 +397,13 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
               }`}
               title="Show threads with attachments"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -413,6 +430,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
                 fill={filterUnread ? 'currentColor' : 'none'}
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <circle cx="12" cy="12" r="4" />
               </svg>
@@ -426,6 +444,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -470,6 +489,10 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
           {loadingThreads ? (
             <div className="p-8 text-center text-gray-400 dark:text-gray-500 text-sm">
               Loading...
+            </div>
+          ) : threadsError ? (
+            <div className="text-center py-8 text-red-500 dark:text-red-400">
+              Failed to load data. Please try again.
             </div>
           ) : (
             <ThreadList
@@ -568,9 +591,16 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
 
       {/* Thread pop-up modal (double-click from sidebar) */}
       {popupThreadId && popupThreadDetail && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setPopupThreadId(null);
+          }}
+        >
           <div className="absolute inset-0 bg-black/50" onClick={() => setPopupThreadId(null)} />
           <div
+            role="dialog"
+            aria-modal="true"
             className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col resize overflow-hidden"
             style={{
               width: '672px',

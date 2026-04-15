@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
-import { validateEmail } from '../../../../utils/validators';
+import { validateEmail, validatePhone } from '../../../../utils/validators';
 import type { AttendeeData, PronounOption } from '../../../../types';
 
 interface AttendeeFieldsProps {
@@ -20,6 +20,7 @@ export default function AttendeeFields({
 }: AttendeeFieldsProps) {
   const p = prefix ? `${prefix}-` : '';
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const { data: pronounOptions } = useQuery({
     queryKey: queryKeys.pronounOptions,
@@ -114,10 +115,15 @@ export default function AttendeeFields({
         <input
           id={`${p}phone`}
           type="text"
-          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className={`mt-1 block w-full rounded-md border ${phoneError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm`}
           value={data.phone || ''}
-          onChange={(e) => onChange({ ...data, phone: e.target.value || null })}
+          onChange={(e) => {
+            onChange({ ...data, phone: e.target.value || null });
+            if (phoneError) setPhoneError(null);
+          }}
+          onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
         />
+        {phoneError && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{phoneError}</p>}
       </div>
       <div>
         <label

@@ -82,9 +82,11 @@ export default function DayTabs({
                 }}
                 className="p-1 bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700"
                 title="Edit day"
+                aria-label="Edit day"
               >
                 <svg
                   className="w-3 h-3 text-gray-600 dark:text-gray-300"
+                  aria-hidden="true"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -104,9 +106,11 @@ export default function DayTabs({
                 }}
                 className="p-1 bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-red-100 dark:hover:bg-red-900/50"
                 title="Delete day"
+                aria-label="Delete day"
               >
                 <svg
                   className="w-3 h-3 text-red-600"
+                  aria-hidden="true"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

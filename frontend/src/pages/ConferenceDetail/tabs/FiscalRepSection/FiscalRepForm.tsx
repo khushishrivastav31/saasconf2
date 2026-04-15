@@ -56,6 +56,9 @@ function FiscalRepForm({
   const [formData, setFormData] = useState<FiscalRepresentativeUpsert | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [contactErrors, setContactErrors] = useState<
+    Record<number, { email?: string | null; phone?: string | null }>
+  >({});
 
   const hasFiscalRep = !!fiscalRep;
 
@@ -474,50 +477,94 @@ function FiscalRepForm({
               </button>
             </div>
             {(formData.contact_persons || []).map((cp, index) => (
-              <div key={index} className="flex gap-2 mb-2 items-start">
-                <input
-                  type="text"
-                  placeholder="First name"
-                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={cp.first_name}
-                  onChange={(e) => updateContactPerson(index, 'first_name', e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Last name"
-                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={cp.last_name || ''}
-                  onChange={(e) => updateContactPerson(index, 'last_name', e.target.value)}
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={cp.email || ''}
-                  onChange={(e) => updateContactPerson(index, 'email', e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Phone"
-                  className="w-32 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={cp.phone || ''}
-                  onChange={(e) => updateContactPerson(index, 'phone', e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeContactPerson(index)}
-                  className="text-red-500 hover:text-red-700 p-1.5"
-                  title="Remove"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
+              <div key={index} className="mb-2">
+                <div className="flex gap-2 items-start">
+                  <input
+                    type="text"
+                    placeholder="First name"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    value={cp.first_name}
+                    onChange={(e) => updateContactPerson(index, 'first_name', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last name"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    value={cp.last_name || ''}
+                    onChange={(e) => updateContactPerson(index, 'last_name', e.target.value)}
+                  />
+                  <div className="flex-1">
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      className={`w-full border ${contactErrors[index]?.email ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500`}
+                      value={cp.email || ''}
+                      onChange={(e) => {
+                        updateContactPerson(index, 'email', e.target.value);
+                        if (contactErrors[index]?.email)
+                          setContactErrors((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], email: null },
+                          }));
+                      }}
+                      onBlur={(e) => {
+                        const err = validateEmail(e.target.value);
+                        setContactErrors((prev) => ({
+                          ...prev,
+                          [index]: { ...prev[index], email: err },
+                        }));
+                      }}
                     />
-                  </svg>
-                </button>
+                    {contactErrors[index]?.email && (
+                      <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                        {contactErrors[index].email}
+                      </p>
+                    )}
+                  </div>
+                  <div className="w-32">
+                    <input
+                      type="text"
+                      placeholder="Phone"
+                      className={`w-full border ${contactErrors[index]?.phone ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500`}
+                      value={cp.phone || ''}
+                      onChange={(e) => {
+                        updateContactPerson(index, 'phone', e.target.value);
+                        if (contactErrors[index]?.phone)
+                          setContactErrors((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], phone: null },
+                          }));
+                      }}
+                      onBlur={(e) => {
+                        const err = validatePhone(e.target.value);
+                        setContactErrors((prev) => ({
+                          ...prev,
+                          [index]: { ...prev[index], phone: err },
+                        }));
+                      }}
+                    />
+                    {contactErrors[index]?.phone && (
+                      <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                        {contactErrors[index].phone}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeContactPerson(index)}
+                    className="text-red-500 hover:text-red-700 p-1.5"
+                    title="Remove"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>

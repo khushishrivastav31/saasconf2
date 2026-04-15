@@ -142,6 +142,14 @@ export default function RegistrationListView({
                       ref={rowVirtualizer.measureElement}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={() => onSelectRegistration(reg.id)}
+                      tabIndex={0}
+                      role="button"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectRegistration(reg.id);
+                        }
+                      }}
                     >
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {reg.first_name} {reg.last_name}

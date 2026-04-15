@@ -48,7 +48,11 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
   );
 
   // Fetch program days
-  const { data: daysData, isLoading: daysLoading } = useProgramDays({
+  const {
+    data: daysData,
+    isLoading: daysLoading,
+    isError: daysError,
+  } = useProgramDays({
     conferenceId: conference.id,
   });
 
@@ -380,6 +384,14 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
     return (
       <div className="flex justify-center py-12">
         <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (daysError) {
+    return (
+      <div className="text-center py-8 text-red-500 dark:text-red-400">
+        Failed to load data. Please try again.
       </div>
     );
   }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AxiosInstance } from 'axios';
 import { COUNTRIES_BY_CONTINENT, EU_COUNTRY_CODES } from '../../../../config/countries';
-import { validateEmail } from '../../../../utils/validators';
+import { validateEmail, validatePhone } from '../../../../utils/validators';
 import VatNumberInput from '../../../../components/common/VatNumberInput';
 import type { BillingProfileCreate } from '../../../../types';
 
@@ -70,6 +70,7 @@ export default function BillingFields({
   vatEndpoint,
 }: BillingFieldsProps) {
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // On mount, merge initialValues with data (one-time pre-fill)
   useEffect(() => {
@@ -254,10 +255,17 @@ export default function BillingFields({
             type="text"
             required
             disabled={isReadOnly('contact_phone')}
-            className={`mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${isReadOnly('contact_phone') ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
+            className={`mt-1 block w-full rounded-md border ${phoneError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${isReadOnly('contact_phone') ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
             value={data.contact_phone}
-            onChange={(e) => onChange({ ...data, contact_phone: e.target.value })}
+            onChange={(e) => {
+              onChange({ ...data, contact_phone: e.target.value });
+              if (phoneError) setPhoneError(null);
+            }}
+            onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
           />
+          {phoneError && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{phoneError}</p>
+          )}
         </div>
         <div>
           <label

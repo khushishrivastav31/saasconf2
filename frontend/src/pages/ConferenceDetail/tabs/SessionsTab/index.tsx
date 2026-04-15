@@ -21,7 +21,7 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
   const [exporting, setExporting] = useState(false);
   const { showToast } = useToast();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: queryKeys.sessions.enriched(conference.id),
     queryFn: async () => {
       const response = await api.get<EnrichedSessionsResponse>(
@@ -107,6 +107,14 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="text-center py-8 text-red-500 dark:text-red-400">
+        Failed to load data. Please try again.
+      </div>
+    );
+  }
+
   const totalSessions = sessions.length;
   const paperSessions = sessions.filter((s) => s.paper_id).length;
 
@@ -134,7 +142,13 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
             {exporting ? (
               <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
             ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

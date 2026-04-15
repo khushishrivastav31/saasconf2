@@ -340,7 +340,11 @@ function VatRulesTable({
   const [rules, setRules] = useState<VatRule[]>([]);
   const [isDirty, setIsDirty] = useState(false);
 
-  const { data: invoiceSettings, isLoading } = useQuery({
+  const {
+    data: invoiceSettings,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.invoiceSettings(conferenceId),
     queryFn: async () => {
       const res = await api.get(`/conferences/${conferenceId}/settings/invoice-settings`);
@@ -394,6 +398,14 @@ function VatRulesTable({
 
   if (isLoading) {
     return <div className="text-gray-500 dark:text-gray-400 text-sm">Loading VAT rules...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-8 text-red-500 dark:text-red-400">
+        Failed to load data. Please try again.
+      </div>
+    );
   }
 
   // Group rules by attendance type for visual sections

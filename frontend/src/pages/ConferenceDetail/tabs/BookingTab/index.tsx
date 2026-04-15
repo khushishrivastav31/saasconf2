@@ -71,7 +71,11 @@ function ConferenceBookingTab({
   const [apiError, setApiError] = useState('');
 
   // Fetch booking matrix
-  const { data: matrix, isLoading } = useQuery({
+  const {
+    data: matrix,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.booking.matrix(conferenceId),
     queryFn: async () => {
       const response = await api.get<BookingMatrix>(
@@ -353,6 +357,14 @@ function ConferenceBookingTab({
 
   if (isLoading) {
     return <LoadingSpinner />;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-8 text-red-500 dark:text-red-400">
+        Failed to load data. Please try again.
+      </div>
+    );
   }
 
   const periods = matrix?.periods || [];

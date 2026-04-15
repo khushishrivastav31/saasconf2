@@ -32,7 +32,7 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
   const [formOverlayId, setFormOverlayId] = useState<string | null>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
 
-  const { data, isLoading } = useQuery<MessageTemplateListResponse>({
+  const { data, isLoading, isError } = useQuery<MessageTemplateListResponse>({
     queryKey: queryKeys.messaging.templates(conference.id),
     queryFn: () => api.get(`/conferences/${conference.id}/messaging/templates`).then((r) => r.data),
   });
@@ -149,6 +149,10 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
 
       {isLoading ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+      ) : isError ? (
+        <div className="text-center py-8 text-red-500 dark:text-red-400">
+          Failed to load data. Please try again.
+        </div>
       ) : templates.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">No templates yet.</p>
       ) : (
