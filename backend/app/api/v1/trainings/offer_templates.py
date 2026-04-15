@@ -8,7 +8,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, literal, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, ValidationError
+from app.core.file_validation import validate_upload
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.offer_template import OfferTemplate
@@ -195,15 +196,14 @@ async def upload_offer_template_file(
     file_data = await file.read()
 
     if not file_data:
-        from app.core.exceptions import ValidationError
-
         raise ValidationError("Empty file upload is not allowed")
 
     # Max 10MB
     if len(file_data) > 10 * 1024 * 1024:
-        from app.core.exceptions import ValidationError
-
         raise ValidationError("File size exceeds 10MB limit")
+
+    # Validate file content (magic bytes, MIME whitelist, filename sanitization)
+    validate_upload(file_data, file.content_type or "", "offer_template")
 
     # Replace existing attachment if any
     existing = await _get_file(template_id, db)

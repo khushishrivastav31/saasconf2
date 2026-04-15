@@ -19,7 +19,7 @@ export const trainingIntroCategory: HandbookCategory = {
 <ol class="list-decimal list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300"><strong>Setup</strong> — Training Program (per year: Design, Assign Trainers, Final), Offer Management, Customers, Trainers</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Settings</strong> — Training Setup (Catalog, Languages, Locations, Holidays, etc.), Communication (Email, Templates, Messaging), Finance (Currency, Numbering, Invoice Templates, Stripe, etc.), Offer Templates</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Operations</strong> — Registrations, Invoices, Payment Reminders</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Operations</strong> — Registrations, Attendees, Parking Lot, Invoices, Pending Invoicing, Payment Reminders, Inhouse Trainings</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Communications</strong> — Messages, News</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Insights</strong> — Revenue, Training Statistics</li>
 </ol>

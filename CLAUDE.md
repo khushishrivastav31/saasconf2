@@ -2,7 +2,7 @@
 
 ## What This Is
 
-SaaSConf is a **multi-tenant SaaS platform** for conference management. Each tenant manages conferences, CFPs, registrations, sponsors, and programs — isolated via PostgreSQL Row-Level Security (RLS). **Performance is essential**.
+SaaSConf is a **multi-tenant SaaS platform** for conference and training management. Each tenant manages conferences (CFPs, registrations, sponsors, programs) and trainings (program years, placements, offers, invoices, attendees, parking lot, registration portal) — isolated via PostgreSQL Row-Level Security (RLS). **Performance is essential**.
 
 ## Development Workflow
 
@@ -75,12 +75,13 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - **`devops.md`** — CI/CD, Docker, Nginx, testing config, email, rate limiting, CSV exports
 - **`auth-flows.md`** — User invite flow, admin password reset
 - **`refactoring.md`** — Refactoring guidelines, improvement progress, hook extraction patterns
+- **`trainings.md`** — Training module architecture, file structure, invoice/offer/attendee flows
 
 ## Session Continuity
 
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Training invoice feature parity with conference invoices — migration 186 (related_invoice_id), cancel→credit note, mark-paid, reopen, delete endpoints; InvoicesTab rewritten with click-to-detail panel (Details + Line Items tabs, footer actions), credit note sub-rows with ↳ grouping, Type/Status badges, linked navigation between invoice and credit note.
-- **In progress**: Nothing — awaiting user approval to commit.
-- **Status**: All checks pass — mypy, ruff, tsc, eslint.
+- **Last completed**: Full training module refactoring — split all oversized files (invoices.py, programs.py, InvoicesTab, CustomerDetailPanel, OffersTab, TrainersSettingsTab, CurrencyTaxTab, RegistrationsTab, OfferDocumentsSection). Security audit fix (pypdf, python-multipart).
+- **In progress**: Nothing.
+- **Status**: All checks pass — mypy, ruff, tsc, eslint. CI/CD retriggered.

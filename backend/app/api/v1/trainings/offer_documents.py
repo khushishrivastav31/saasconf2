@@ -7,6 +7,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import Response
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
@@ -29,6 +31,7 @@ from app.schemas.offer_document import (
 )
 
 router = APIRouter(prefix="/offers/{offer_id}/documents", tags=["offer-documents"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ---------------------------------------------------------------------------
@@ -382,6 +385,7 @@ async def download_document_pdf(
 
 
 @router.post("/{doc_id}/send", response_model=OfferDocumentSendResponse)
+@limiter.limit("5/minute")
 async def send_document(
     offer_id: UUID,
     doc_id: UUID,

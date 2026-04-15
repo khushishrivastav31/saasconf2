@@ -27,7 +27,9 @@ export const trainingCustomersCategory: HandbookCategory = {
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300"><strong>Details</strong> — Edit customer info, address, VAT, pricing, comments</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Contacts</strong> — Manage contact persons for the customer</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Offers</strong> — View and create offers for this customer</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Offers</strong> — View and create offers, manage attendees, create offer invoices</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Documents</strong> — View all offer documents across this customer's offers</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Invoices</strong> — View all training invoices linked to this customer's offers</li>
 </ul>`,
           }}
         />
@@ -142,6 +144,28 @@ export const trainingCustomersCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Click to navigate</strong> — Clicking an offer navigates to the customer detail panel with that offer selected</li>
 </ul>
 <p class="text-gray-700 dark:text-gray-300 my-2">This is a read-only overview. To edit offers, navigate to the specific customer's Offers tab.</p>`,
+          }}
+        />
+      ),
+    },
+    {
+      id: 't-offer-invoicing',
+      title: 'Offer Invoicing',
+      categoryId: 'category-t-customers',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Generate training invoices directly from accepted offers. Open a customer's offer detail and click <strong>Create Invoice</strong>.</p>
+<strong>How it works:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">The invoice preview auto-populates from offer data: placements, attendees, pricing, and customer billing info</li>
+<li class="text-gray-700 dark:text-gray-300">Choose <strong>Bank Transfer</strong> or <strong>Credit Card</strong> (Stripe) as payment method</li>
+<li class="text-gray-700 dark:text-gray-300">Adjust line items, VAT rate, notes, issue/due dates if needed</li>
+<li class="text-gray-700 dark:text-gray-300">Save as <strong>Draft</strong> (editable, no invoice number) or <strong>Send</strong> (assigns number, emails recipient)</li>
+<li class="text-gray-700 dark:text-gray-300">For credit card invoices, a Stripe payment link is created and included in the email</li>
+<li class="text-gray-700 dark:text-gray-300">Already-invoiced amounts are tracked — the form shows how much of the offer total has been invoiced</li>
+</ul>
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Prerequisite:</strong> The offer must be in <strong>Accepted</strong> status. Finance settings (Currency & Tax, Numbering, Company Data) must be configured.</p>`,
           }}
         />
       ),

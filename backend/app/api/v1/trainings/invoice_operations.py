@@ -5,8 +5,10 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -27,6 +29,7 @@ from ._invoice_helpers import CANCELLABLE_STATUSES, build_credit_note, invoice_t
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/invoices", tags=["training-invoices"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -184,7 +187,9 @@ async def send_draft_invoice(
 
 
 @router.post("/{invoice_id}/resend")
+@limiter.limit("5/minute")
 async def resend_training_invoice_email_endpoint(
+    request: Request,
     invoice_id: UUID,
     current_user: TenantAdminDep,
     db: DbSessionDep,

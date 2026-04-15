@@ -115,18 +115,22 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     gets its own independent session — can see it.  All tables are truncated
     after each test for isolation.
     """
+    # Truncate every table BEFORE the test for full isolation.
+    # Running cleanup at the start (not end) avoids fixture teardown ordering
+    # issues where a new test's fixtures are created before the previous
+    # test's db_session cleanup runs (causing FK violations).
+    async with test_engine.begin() as conn:
+        await conn.execute(RLS_BYPASS)
+        table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+        if table_names:
+            await conn.execute(text(f"TRUNCATE TABLE {table_names} CASCADE"))
+
     session = TestSessionLocal()
     await session.execute(RLS_BYPASS)
     try:
         yield session
     finally:
         await session.close()
-        # Truncate every table after the test for full isolation
-        async with test_engine.begin() as conn:
-            await conn.execute(RLS_BYPASS)
-            table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
-            if table_names:
-                await conn.execute(text(f"TRUNCATE TABLE {table_names} CASCADE"))
 
 
 # ── FastAPI client fixture ───────────────────────────────────────────────

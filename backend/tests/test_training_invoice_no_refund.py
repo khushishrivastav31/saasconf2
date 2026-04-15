@@ -13,6 +13,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,21 +34,30 @@ BASE = "/api/v1/trainings"
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 
-async def _enable_trainings(db: AsyncSession, tenant: Tenant) -> None:
+@pytest_asyncio.fixture()
+async def training_data(
+    db_session: AsyncSession, tenant: Tenant, tenant_admin_user: User
+) -> dict:
+    """Create training module + training + placement + registration + paid CC invoice.
+
+    This fixture ensures all seed data is created atomically in the correct order,
+    avoiding FK violations from interleaved fixture teardown/setup.
+    """
+    db = db_session
+
+    # Enable trainings module
     m = Module(id=uuid.uuid4(), name="Trainings", code="trainings", description="", is_active=True)
     db.add(m)
     await db.flush()
     db.add(TenantModule(id=uuid.uuid4(), tenant_id=tenant.id, module_id=m.id, is_enabled=True))
-    await db.commit()
+    await db.flush()
 
-
-async def _create_training_data(db: AsyncSession, tenant: Tenant) -> dict:
-    """Create a training + placement + registration + paid credit card invoice."""
+    # Training
     training = Training(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         name="Test Training",
-        slug="test-training",
+        slug=f"test-training-{uuid.uuid4().hex[:6]}",
         regular_price=Decimal("1000.00"),
     )
     db.add(training)
@@ -126,7 +136,7 @@ async def _create_training_data(db: AsyncSession, tenant: Tenant) -> dict:
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         training_registration_id=registration.id,
-        invoice_number="TR-TEST-001",
+        invoice_number=f"TR-TEST-{uuid.uuid4().hex[:4]}",
         template_type="credit_card",
         status="paid",
         issue_date=date(2026, 4, 1),
@@ -148,6 +158,8 @@ async def _create_training_data(db: AsyncSession, tenant: Tenant) -> dict:
     db.add(invoice)
     await db.commit()
 
+    token = _make_token(tenant_admin_user, modules=["trainings"])
+
     return {
         "training": training,
         "placement": placement,
@@ -155,6 +167,8 @@ async def _create_training_data(db: AsyncSession, tenant: Tenant) -> dict:
         "registration": registration,
         "reg_att": reg_att,
         "invoice": invoice,
+        "tenant": tenant,
+        "token": token,
     }
 
 
@@ -164,15 +178,10 @@ async def _create_training_data(db: AsyncSession, tenant: Tenant) -> dict:
 @pytest.mark.asyncio
 async def test_replace_paid_cc_invoice_no_stripe_refund(
     client: AsyncClient,
-    db_session: AsyncSession,
-    tenant: Tenant,
-    tenant_admin_user: User,
+    training_data: dict,
 ):
     """Replacing a paid credit card invoice must NOT trigger a Stripe refund."""
-    await _enable_trainings(db_session, tenant)
-    data = await _create_training_data(db_session, tenant)
-
-    token = _make_token(tenant_admin_user, modules=["trainings"])
+    data = training_data
 
     with (
         patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock) as mock_refund,
@@ -189,7 +198,7 @@ async def test_replace_paid_cc_invoice_no_stripe_refund(
                 "reason": "Wrong company name",
                 "recipient_name": "Corrected Name GmbH",
             },
-            headers=auth_headers(token),
+            headers=auth_headers(data["token"]),
         )
 
         assert response.status_code == 200, response.text
@@ -206,7 +215,6 @@ async def test_replace_paid_cc_invoice_no_stripe_refund(
         mock_refund.assert_not_called()
 
         # Stripe payment link deactivation should NOT happen for paid invoices
-        # (deactivate is only for sent/overdue)
         mock_deactivate.assert_not_called()
 
         # No new payment link needed (already paid)
@@ -216,19 +224,15 @@ async def test_replace_paid_cc_invoice_no_stripe_refund(
 @pytest.mark.asyncio
 async def test_replace_sent_cc_invoice_no_stripe_refund(
     client: AsyncClient,
+    training_data: dict,
     db_session: AsyncSession,
-    tenant: Tenant,
-    tenant_admin_user: User,
 ):
     """Replacing a sent credit card invoice must NOT trigger a Stripe refund."""
-    await _enable_trainings(db_session, tenant)
-    data = await _create_training_data(db_session, tenant)
+    data = training_data
 
     # Change invoice to "sent" (not paid)
     data["invoice"].status = "sent"
     await db_session.commit()
-
-    token = _make_token(tenant_admin_user, modules=["trainings"])
 
     with (
         patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock) as mock_refund,
@@ -247,7 +251,7 @@ async def test_replace_sent_cc_invoice_no_stripe_refund(
                 "reason": "Wrong VAT number",
                 "recipient_vat_number": "DE123456789",
             },
-            headers=auth_headers(token),
+            headers=auth_headers(data["token"]),
         )
 
         assert response.status_code == 200, response.text
@@ -272,47 +276,48 @@ async def test_replace_sent_cc_invoice_no_stripe_refund(
 @pytest.mark.asyncio
 async def test_reassign_from_parking_lot_no_stripe_refund(
     client: AsyncClient,
+    training_data: dict,
     db_session: AsyncSession,
-    tenant: Tenant,
-    tenant_admin_user: User,
 ):
     """Reassigning a parked attendee must NOT trigger a Stripe refund on the old paid invoice."""
-    await _enable_trainings(db_session, tenant)
-    data = await _create_training_data(db_session, tenant)
+    data = training_data
+    db = db_session
 
     # Create central attendee + park them
     central_att = TrainingAttendee(
         id=uuid.uuid4(),
-        tenant_id=tenant.id,
+        tenant_id=data["tenant"].id,
         first_name="John",
         last_name="Doe",
         email="john@test.com",
         status="parked",
     )
-    db_session.add(central_att)
-    await db_session.flush()
+    db.add(central_att)
+    await db.flush()
 
     # Link reg attendee to central
     data["reg_att"].attendee_id = central_att.id
-    await db_session.flush()
+    await db.flush()
 
     # Create park history event (stores registration_id as source_id)
     park_event = TrainingAttendeeHistory(
         id=uuid.uuid4(),
-        tenant_id=tenant.id,
+        tenant_id=data["tenant"].id,
         attendee_id=central_att.id,
         event_type="parked",
         placement_id=data["placement"].id,
         source_type="registration",
         source_id=data["registration"].id,
     )
-    db_session.add(park_event)
+    db.add(park_event)
 
     # Delete the reg attendee (simulating the park action)
-    await db_session.delete(data["reg_att"])
-    await db_session.commit()
+    await db.delete(data["reg_att"])
+    await db.commit()
 
-    token = _make_token(tenant_admin_user, modules=["trainings"])
+    # Close the session's implicit transaction so the ASGI client can freely
+    # read/modify the same rows without deadlocking.
+    await db.close()
 
     with (
         patch("app.api.v1.trainings.invoice_operations.refund_training_payment", new_callable=AsyncMock) as mock_refund,
@@ -324,7 +329,7 @@ async def test_reassign_from_parking_lot_no_stripe_refund(
         response = await client.post(
             f"{BASE}/attendees/{central_att.id}/reassign",
             json={"placement_id": str(data["placement2"].id)},
-            headers=auth_headers(token),
+            headers=auth_headers(data["token"]),
         )
 
         assert response.status_code == 200, response.text
@@ -346,15 +351,10 @@ async def test_reassign_from_parking_lot_no_stripe_refund(
 @pytest.mark.asyncio
 async def test_direct_cancel_paid_cc_invoice_does_refund(
     client: AsyncClient,
-    db_session: AsyncSession,
-    tenant: Tenant,
-    tenant_admin_user: User,
+    training_data: dict,
 ):
     """Directly cancelling a paid credit card invoice DOES trigger a Stripe refund."""
-    await _enable_trainings(db_session, tenant)
-    data = await _create_training_data(db_session, tenant)
-
-    token = _make_token(tenant_admin_user, modules=["trainings"])
+    data = training_data
 
     with (
         patch("app.api.v1.trainings.invoice_operations.refund_training_payment", new_callable=AsyncMock) as mock_refund,
@@ -364,7 +364,7 @@ async def test_direct_cancel_paid_cc_invoice_does_refund(
     ):
         response = await client.post(
             f"{BASE}/invoices/{data['invoice'].id}/cancel",
-            headers=auth_headers(token),
+            headers=auth_headers(data["token"]),
         )
 
         assert response.status_code == 200, response.text
@@ -389,15 +389,11 @@ async def test_direct_cancel_paid_cc_invoice_does_refund(
 @pytest.mark.asyncio
 async def test_replace_paid_invoice_transfers_payment_intent(
     client: AsyncClient,
+    training_data: dict,
     db_session: AsyncSession,
-    tenant: Tenant,
-    tenant_admin_user: User,
 ):
     """When replacing a paid CC invoice, the Stripe payment_intent_id is copied to the new invoice."""
-    await _enable_trainings(db_session, tenant)
-    data = await _create_training_data(db_session, tenant)
-
-    token = _make_token(tenant_admin_user, modules=["trainings"])
+    data = training_data
 
     with (
         patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock),
@@ -407,7 +403,7 @@ async def test_replace_paid_invoice_transfers_payment_intent(
         response = await client.post(
             f"{BASE}/invoices/{data['invoice'].id}/replace",
             json={"reason": "Billing correction", "recipient_name": "New Name"},
-            headers=auth_headers(token),
+            headers=auth_headers(data["token"]),
         )
 
         assert response.status_code == 200

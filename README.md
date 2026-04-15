@@ -1,6 +1,6 @@
 # SaaSConf
 
-**Multi-tenant SaaS platform for conference management.**
+**Multi-tenant SaaS platform for conference and training management.**
 
 ![CI](https://github.com/yourusername/SaaSConf/actions/workflows/staging.yml/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-check%20CI-blue)
@@ -10,11 +10,16 @@
 
 ## Overview
 
-SaaSConf is a full-stack, multi-tenant platform that streamlines the entire conference lifecycle -- from call for papers through program scheduling, sponsor management, and attendee communications. Each tenant operates in complete data isolation with its own conferences, users, and settings.
+SaaSConf is a full-stack, multi-tenant platform that streamlines the entire conference and training lifecycle. On the conference side: call for papers, program scheduling, sponsor management, and attendee communications. On the training side: annual program planning, trainer assignments, customer offers, invoicing with Stripe, a public registration portal, and a parking lot for attendee reassignments. Each tenant operates in complete data isolation with its own conferences, trainings, users, and settings.
 
 ## Features
 
+### Platform
+
 - **Multi-tenancy** -- Tenant isolation with role-based access control (super admin, tenant admin, conference admin, committee member)
+
+### Conference Management
+
 - **Conference lifecycle** -- Create, configure, publish, and archive conferences
 - **Call for Papers (CFP)** -- Public submission portal, configurable form builder, multi-round review workflow with scoring scales
 - **Program design** -- Day/track/session grid builder with time slot management
@@ -26,6 +31,18 @@ SaaSConf is a full-stack, multi-tenant platform that streamlines the entire conf
 - **News and newsletters** -- Article publishing for conference communications
 - **Admin dashboard** -- Centralized management with audit logging
 - **Public portal** -- Applicant-facing portal for paper submissions and status tracking
+
+### Training Management
+
+- **Program years** -- Annual training calendar with placements, publish/update workflow with versioned snapshots
+- **Trainer management** -- Profiles, availability, conflict detection, schedule PDFs with automatic email dispatch
+- **Customers and offers** -- B2B customer management, offer creation with placements and attendees, document generation (PDF/DOCX), status lifecycle (Draft, Sent, Accepted, Rejected)
+- **Training invoices** -- Create, send, cancel with credit notes, replace (billing correction), mark paid, Stripe payment links, offer invoicing
+- **Registration portal** -- Public-facing registration with exam options, VAT calculation, bank transfer or Stripe payment
+- **Attendee management** -- Central attendee identity (email-based dedup), event timeline, parking lot with reassignment and automatic invoice transfer
+- **Pending invoicing** -- Track uninvoiced registrations and accepted offers
+- **Payment reminders** -- Manual and automated reminders for overdue invoices
+- **Analytics** -- Revenue tracking, training statistics, placement utilization
 
 ## Tech Stack
 
@@ -156,8 +173,8 @@ npx playwright test
 SaaSConf/
 ├── backend/                # FastAPI application
 │   ├── app/
-│   │   ├── api/v1/         # REST API endpoints
-│   │   ├── core/           # Auth, email, pagination, validators
+│   │   ├── api/v1/         # REST API endpoints (conferences, trainings, settings)
+│   │   ├── core/           # Auth, email, invoicing, Stripe, PDF generation
 │   │   ├── db/             # Database engine, sessions, migrations
 │   │   ├── models/         # SQLAlchemy ORM models
 │   │   └── schemas/        # Pydantic request/response schemas

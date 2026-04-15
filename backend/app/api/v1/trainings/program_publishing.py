@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import datetime
+import html as html_mod
 import logging
 from uuid import UUID
 
@@ -188,11 +189,11 @@ async def _send_trainer_emails(
             if tc:
                 items = []
                 for t in tc.added_trainings:
-                    items.append(f'<li style="color:#059669;">New: {t}</li>')
+                    items.append(f'<li style="color:#059669;">New: {html_mod.escape(t)}</li>')
                 for t in tc.removed_trainings:
-                    items.append(f'<li style="color:#dc2626;">Removed: {t}</li>')
+                    items.append(f'<li style="color:#dc2626;">Removed: {html_mod.escape(t)}</li>')
                 for t in tc.modified_trainings:
-                    items.append(f'<li style="color:#d97706;">Changed: {t}</li>')
+                    items.append(f'<li style="color:#d97706;">Changed: {html_mod.escape(t)}</li>')
                 if items:
                     changes_html = f"<h3>Changes</h3><ul>{''.join(items)}</ul>"
 
@@ -203,12 +204,12 @@ async def _send_trainer_emails(
 
         # Replace placeholders
         replacements = {
-            "[First Name]": trainer.first_name or "",
-            "[Last Name]": trainer.last_name or "",
+            "[First Name]": html_mod.escape(trainer.first_name or ""),
+            "[Last Name]": html_mod.escape(trainer.last_name or ""),
             "[Year]": str(year),
             "[Training Count]": str(len(trainer_placements)),
-            "[Changes]": changes_html,
-            "[Company Name]": company_name,
+            "[Changes]": changes_html,  # already escaped above
+            "[Company Name]": html_mod.escape(company_name),
         }
         for placeholder, value in replacements.items():
             subject = subject.replace(placeholder, value)
