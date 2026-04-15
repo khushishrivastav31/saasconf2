@@ -110,6 +110,7 @@ export default function OfferManagementTab() {
       const res = await api.get('/trainings/offers', { params });
       return res.data.items ?? res.data;
     },
+    staleTime: 30_000,
   });
 
   const offers = useMemo(() => {

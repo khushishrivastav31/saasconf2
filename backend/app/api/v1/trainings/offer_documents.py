@@ -250,12 +250,22 @@ async def list_documents(
         .where(OfferDocument.offer_id == offer_id, OfferDocument.tenant_id == current_user.tenant_id)
         .order_by(OfferDocument.created_at.desc())
     )
-    docs = result.scalars().all()
+    docs = list(result.scalars().all())
+
+    # Batch-load version counts to avoid N+1 queries
+    version_counts: dict[UUID, int] = {}
+    if docs:
+        doc_ids = [d.id for d in docs]
+        vc_result = await db.execute(
+            select(OfferDocumentVersion.document_id, func.count())
+            .where(OfferDocumentVersion.document_id.in_(doc_ids))
+            .group_by(OfferDocumentVersion.document_id)
+        )
+        version_counts = {did: cnt for did, cnt in vc_result.all()}
 
     responses: list[OfferDocumentResponse] = []
     for doc in docs:
-        vc = await _count_versions(db, doc.id)
-        resp = _build_document_response(doc, vc)
+        resp = _build_document_response(doc, version_counts.get(doc.id, 0))
         resp.html_content = None  # Omit for list performance
         responses.append(resp)
 

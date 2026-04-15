@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -44,7 +45,12 @@ async def list_themes(
     db: DbSessionDep,
 ) -> TrainingThemeListResponse:
     """List all training themes for the current tenant."""
-    query = select(TrainingTheme).where(TrainingTheme.tenant_id == current_user.tenant_id).order_by(TrainingTheme.name)
+    query = (
+        select(TrainingTheme)
+        .options(joinedload(TrainingTheme.language))
+        .where(TrainingTheme.tenant_id == current_user.tenant_id)
+        .order_by(TrainingTheme.name)
+    )
     result = await db.execute(query)
     themes = list(result.unique().scalars().all())
 

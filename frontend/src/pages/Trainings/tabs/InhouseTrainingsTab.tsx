@@ -105,20 +105,24 @@ export default function InhouseTrainingsTab() {
       const res = await api.get('/trainings/inhouse', { params });
       return res.data;
     },
+    staleTime: 30_000,
   });
 
   // Fetch dropdowns
   const { data: trainingsData } = useQuery<{ items: DropdownItem[] }>({
     queryKey: ['trainings-for-select'],
     queryFn: async () => (await api.get('/trainings?page_size=500')).data,
+    staleTime: 60_000,
   });
   const { data: customersData } = useQuery<{ items: DropdownItem[] }>({
     queryKey: ['training-customers'],
     queryFn: async () => (await api.get('/trainings/customers?page_size=500')).data,
+    staleTime: 60_000,
   });
   const { data: trainersData } = useQuery<{ items: TrainerItem[] }>({
     queryKey: ['trainers-for-select'],
     queryFn: async () => (await api.get('/trainings/trainers?page_size=500')).data,
+    staleTime: 60_000,
   });
 
   const items = data?.items ?? [];

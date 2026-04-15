@@ -58,6 +58,7 @@ export default function ParkingLotTab() {
       });
       return res.data as { items: ParkedAttendee[]; total: number };
     },
+    staleTime: 30_000,
   });
 
   const { data: placements } = useQuery({
@@ -67,6 +68,7 @@ export default function ParkingLotTab() {
       return res.data as AvailablePlacement[];
     },
     enabled: !!reassignTarget,
+    staleTime: 60_000,
   });
 
   const reassignMutation = useMutation({

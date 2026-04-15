@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -53,7 +54,12 @@ async def list_syllabi(
     db: DbSessionDep,
 ) -> SyllabusListResponse:
     """List all syllabi for the current tenant."""
-    query = select(Syllabus).where(Syllabus.tenant_id == current_user.tenant_id).order_by(Syllabus.name)
+    query = (
+        select(Syllabus)
+        .options(joinedload(Syllabus.certification_body), joinedload(Syllabus.language))
+        .where(Syllabus.tenant_id == current_user.tenant_id)
+        .order_by(Syllabus.name)
+    )
     result = await db.execute(query)
     items = list(result.scalars().unique().all())
 

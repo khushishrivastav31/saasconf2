@@ -110,6 +110,7 @@ export default function PendingInvoicingTab() {
       const res = await api.get('/trainings/invoices/pending');
       return res.data as PendingData;
     },
+    staleTime: 30_000,
   });
 
   const regs = useMemo(() => data?.uninvoiced_registrations ?? [], [data]);

@@ -97,6 +97,7 @@ export default function InvoicesTab() {
         per_page: number;
       };
     },
+    staleTime: 30_000,
   });
 
   const { data: detailData } = useQuery({

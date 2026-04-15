@@ -225,11 +225,40 @@ async def list_offers(
     result = await db.execute(items_q)
     offers = list(result.scalars().unique().all())
 
-    items = []
-    for offer in offers:
-        placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
-        ac = await _count_offer_attendees(db, offer.id)
-        items.append(_offer_to_response(offer, placements, ac))
+    # Batch-load placements and attendee counts to avoid N+1 queries
+    offer_ids = [o.id for o in offers]
+    placements_by_offer: dict[UUID, list[ProgramYearTraining]] = {oid: [] for oid in offer_ids}
+    attendee_counts: dict[UUID, int] = {oid: 0 for oid in offer_ids}
+
+    if offer_ids:
+        # Batch placements
+        pl_result = await db.execute(
+            select(OfferPlacement.offer_id, ProgramYearTraining)
+            .join(ProgramYearTraining, OfferPlacement.placement_id == ProgramYearTraining.id)
+            .options(
+                joinedload(ProgramYearTraining.training),
+                joinedload(ProgramYearTraining.location),
+                joinedload(ProgramYearTraining.program_year),
+            )
+            .where(OfferPlacement.offer_id.in_(offer_ids))
+            .order_by(ProgramYearTraining.start_date)
+        )
+        for oid, p in pl_result.unique().all():
+            placements_by_offer[oid].append(p)
+
+        # Batch attendee counts
+        ac_result = await db.execute(
+            select(OfferAttendee.offer_id, func.count())
+            .where(OfferAttendee.offer_id.in_(offer_ids))
+            .group_by(OfferAttendee.offer_id)
+        )
+        for oid, cnt in ac_result.all():
+            attendee_counts[oid] = cnt
+
+    items = [
+        _offer_to_response(offer, placements_by_offer.get(offer.id, []), attendee_counts.get(offer.id, 0))
+        for offer in offers
+    ]
 
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 

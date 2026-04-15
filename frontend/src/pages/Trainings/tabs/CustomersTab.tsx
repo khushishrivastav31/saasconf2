@@ -121,6 +121,7 @@ export default function CustomersTab() {
       const res = await api.get('/trainings/customers', { params });
       return res.data;
     },
+    staleTime: 30_000,
   });
 
   const customers = useMemo(() => data?.items ?? [], [data]);

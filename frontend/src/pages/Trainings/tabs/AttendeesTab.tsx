@@ -79,6 +79,7 @@ export default function AttendeesTab() {
       const res = await api.get('/trainings/attendees', { params });
       return res.data as { items: Attendee[]; total: number; page: number; per_page: number };
     },
+    staleTime: 30_000,
   });
 
   const items = data?.items ?? [];

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, literal, select
+from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError
@@ -51,7 +52,16 @@ async def list_inhouse_trainings(
     count_q = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
-    items_q = base.order_by(InhouseTraining.start_date.desc()).offset((page - 1) * page_size).limit(page_size)
+    items_q = (
+        base.options(
+            joinedload(InhouseTraining.customer),
+            joinedload(InhouseTraining.training),
+            joinedload(InhouseTraining.trainer),
+        )
+        .order_by(InhouseTraining.start_date.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
     result = await db.execute(items_q)
     items = [_to_response(it) for it in result.scalars().unique().all()]
 
