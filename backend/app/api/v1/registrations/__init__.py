@@ -10,6 +10,7 @@ from .core import (  # noqa: F401
     create_registration,
     delete_registration,
     get_bookable_sessions,
+    get_booking_history_by_email,
     get_registration,
     list_registrations,
     update_registration,

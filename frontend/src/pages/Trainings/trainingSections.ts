@@ -38,6 +38,7 @@ import {
   HolidaysIcon,
   CustomersIcon,
   AttendeesIcon,
+  UsersIcon,
   OfferTemplatesIcon,
 } from './icons';
 
@@ -53,6 +54,7 @@ export type StaticSectionId =
   | 'customers'
   | 'attendees'
   | 'parking-lot'
+  | 'users'
   | 'settings'
   | 'registrations'
   | 'invoices'
@@ -133,6 +135,7 @@ export const sectionGroups: TrainingSectionGroup[] = [
       { id: 'customers', name: 'Customers', icon: CustomersIcon },
       { id: 'attendees', name: 'Attendees', icon: AttendeesIcon },
       { id: 'parking-lot', name: 'Parking Lot', icon: AttendeesIcon },
+      { id: 'users', name: 'Users', icon: UsersIcon },
       { id: 'settings-trainers', name: 'Trainers', icon: TrainersIcon },
       {
         id: 'settings',

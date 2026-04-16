@@ -55,7 +55,9 @@ async def sync_training_stripe_payments(
                 if inv.stripe_payment_intent_id and inv.stripe_payment_intent_id != pi.id:
                     logger.warning(
                         "Sync: invoice %s already has PI %s, skipping new PI %s",
-                        inv.invoice_number, inv.stripe_payment_intent_id, pi.id,
+                        inv.invoice_number,
+                        inv.stripe_payment_intent_id,
+                        pi.id,
                     )
                     continue
                 inv.status = "paid"

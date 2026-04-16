@@ -706,3 +706,79 @@ async def calculate_vat_admin(
         "total": float(total),
         "notes": notes,
     }
+
+
+# ── Booking history by email ─────────────────────────────────────────────────
+
+
+@router.get("/history/by-email/{email}")
+async def get_booking_history_by_email(
+    conference_id: UUID,
+    email: str,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> dict:
+    """Get all registrations for an email address across ALL conferences for this tenant.
+
+    Used by admin to see a user's full booking history (which conferences,
+    tickets, discounts, dates, amounts).
+    """
+    from app.models.conference import Conference
+
+    tenant_id = current_user.tenant_id
+    await check_conference_admin(conference_id, current_user, db)
+
+    result = await db.execute(
+        select(
+            Registration.id,
+            Registration.conference_id,
+            Registration.first_name,
+            Registration.last_name,
+            Registration.status,
+            Registration.created_at,
+            Conference.name.label("conference_name"),
+            BookingOption.name.label("booking_option_name"),
+            BillingProfile.discount_code,
+            BillingProfile.payment_method,
+            Invoice.total,
+            Invoice.currency,
+            Invoice.status.label("invoice_status"),
+        )
+        .join(Conference, Registration.conference_id == Conference.id)
+        .outerjoin(BillingProfile, Registration.billing_profile_id == BillingProfile.id)
+        .outerjoin(BookingOption, Registration.booking_option_id == BookingOption.id)
+        .outerjoin(
+            Invoice,
+            (Invoice.conference_id == Registration.conference_id)
+            & (Invoice.tenant_id == Registration.tenant_id)
+            & (Invoice.recipient_email == Registration.email)
+            & (Invoice.status != "cancelled"),
+        )
+        .where(
+            Registration.tenant_id == tenant_id,
+            func.lower(Registration.email) == email.lower(),
+        )
+        .order_by(Registration.created_at.desc())
+    )
+
+    items = []
+    for row in result.all():
+        items.append(
+            {
+                "registration_id": str(row.id),
+                "conference_id": str(row.conference_id),
+                "conference_name": row.conference_name,
+                "first_name": row.first_name,
+                "last_name": row.last_name,
+                "booking_option_name": row.booking_option_name,
+                "status": row.status,
+                "discount_code": row.discount_code,
+                "payment_method": row.payment_method,
+                "invoice_total": str(row.total) if row.total else None,
+                "invoice_currency": row.currency,
+                "invoice_status": row.invoice_status,
+                "registered_at": row.created_at.isoformat() if row.created_at else None,
+            }
+        )
+
+    return {"email": email, "items": items}
