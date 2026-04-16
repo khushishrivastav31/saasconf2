@@ -9,16 +9,26 @@ async function ensureAuthenticated(page: import('@playwright/test').Page) {
   await page.goto('/dashboard', { waitUntil: 'networkidle', timeout: 30000 });
 
   // If we got redirected to login, the JWT token expired — re-authenticate
+  // Use retry loop (backend may still be starting after staging deploy)
   if (page.url().includes('/login')) {
     const email = process.env.E2E_ADMIN_EMAIL;
     const password = process.env.E2E_ADMIN_PASSWORD;
     if (!email || !password) throw new Error('E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD required');
 
-    await page.getByPlaceholder(/email/i).fill(email);
-    await page.getByPlaceholder(/password/i).fill(password);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 30000 });
-    await page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 15000 });
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await page.getByPlaceholder(/email/i).fill(email);
+        await page.getByPlaceholder(/password/i).fill(password);
+        await page.getByRole('button', { name: /sign in/i }).click();
+        await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 30000 });
+        await page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 15000 });
+        break;
+      } catch {
+        if (attempt === 3) throw new Error('Failed to re-authenticate after 3 attempts');
+        await page.waitForTimeout(5000);
+        await page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
+      }
+    }
   }
 }
 

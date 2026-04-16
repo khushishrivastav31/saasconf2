@@ -8,18 +8,29 @@ async function gotoDashboard(page: import('@playwright/test').Page) {
   await page.waitForLoadState('networkidle');
 
   // If redirected to login, the stored auth state has expired — re-authenticate
+  // Use retry loop (backend may still be starting after staging deploy)
   if (page.url().includes('/login')) {
     const email = process.env.E2E_ADMIN_EMAIL;
     const password = process.env.E2E_ADMIN_PASSWORD;
     if (!email || !password) throw new Error('E2E_ADMIN_EMAIL / PASSWORD required for re-auth');
-    await page.getByPlaceholder(/email/i).fill(email);
-    await page.getByPlaceholder(/password/i).fill(password);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await page.getByPlaceholder(/email/i).fill(email);
+        await page.getByPlaceholder(/password/i).fill(password);
+        await page.getByRole('button', { name: /sign in/i }).click();
+        await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 30000 });
+        break;
+      } catch {
+        if (attempt === 3) throw new Error('Failed to re-authenticate after 3 attempts');
+        await page.waitForTimeout(5000);
+        await page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
+      }
+    }
     await page.waitForLoadState('networkidle');
   }
 
-  await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible({ timeout: 30000 });
 }
 
 test.describe('Navigation', () => {
