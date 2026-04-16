@@ -19,6 +19,8 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "badge_qr_logo": {"image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"},
     "badge_conditional_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "trainer_photo": {"image/jpeg", "image/png", "image/webp"},
+    "portal_user_picture": {"image/jpeg", "image/png", "image/webp"},
+    "portal_user_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
     "customer_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "offer_template": {
         "application/pdf",

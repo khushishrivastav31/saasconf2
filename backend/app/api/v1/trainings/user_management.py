@@ -4,7 +4,7 @@ import logging
 from datetime import timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
@@ -361,3 +361,265 @@ async def impersonate_portal_user(
         "portal_user_email": user.email,
         "portal_user_name": f"{user.first_name} {user.last_name}",
     }
+
+
+# ── Profile Update ───────────────────────────────────────────────────────────
+
+
+class UpdatePortalUserProfile(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    pronouns: str | None = None
+    title: str | None = None
+    company: str | None = None
+    bio: str | None = None
+    social_links: dict | None = None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
+
+
+@router.put("/{user_id}")
+async def update_portal_user_profile(
+    user_id: UUID,
+    data: UpdatePortalUserProfile,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Update a portal user's profile fields."""
+    user = await _get_portal_user(db, user_id, current_user.tenant_id)
+
+    update_fields = data.model_dump(exclude_unset=True)
+
+    # Sanitize HTML in bio
+    if update_fields.get("bio"):
+        from app.core.html_sanitize import sanitize_html
+
+        update_fields["bio"] = sanitize_html(update_fields["bio"])
+
+    for field, value in update_fields.items():
+        setattr(user, field, value)
+
+    await db.commit()
+    await db.refresh(user)
+
+    logger.info("Updated portal user %s profile by admin %s", user.email, current_user.user_id)
+    return _portal_user_to_dict(user)
+
+
+def _portal_user_to_dict(user: PortalUser) -> dict:
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "phone": user.phone,
+        "pronouns": user.pronouns,
+        "title": user.title,
+        "company": user.company,
+        "bio": user.bio,
+        "social_links": user.social_links or {},
+        "address_line_1": user.address_line_1,
+        "address_line_2": user.address_line_2,
+        "city": user.city,
+        "postal_code": user.postal_code,
+        "country": user.country,
+        "is_active": user.is_active,
+        "has_password": user.password_hash is not None,
+        "email_verified": user.email_verified_at is not None,
+        "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+    }
+
+
+@router.get("/{user_id}")
+async def get_portal_user_detail(
+    user_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Get full portal user profile including picture/video URLs."""
+    from app.models.attachment import Attachment
+
+    user = await _get_portal_user(db, user_id, current_user.tenant_id)
+    result = _portal_user_to_dict(user)
+
+    # Get picture + video attachments
+    att_result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type.in_(["portal_user_picture", "portal_user_video"]),
+            Attachment.entity_id == user.id,
+            Attachment.tenant_id == current_user.tenant_id,
+        )
+    )
+    for att in att_result.scalars().all():
+        if att.entity_type == "portal_user_picture":
+            result["picture_id"] = str(att.id)
+            result["picture_filename"] = att.filename
+        elif att.entity_type == "portal_user_video":
+            result["video_id"] = str(att.id)
+            result["video_filename"] = att.filename
+
+    return result
+
+
+# ── Picture / Video Upload ───────────────────────────────────────────────────
+
+
+@router.post("/{user_id}/picture")
+async def upload_portal_user_picture(
+    user_id: UUID,
+    file: UploadFile = File(...),
+    *,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Upload or replace portal user picture."""
+    from app.core.file_validation import validate_upload
+    from app.models.attachment import Attachment
+
+    user = await _get_portal_user(db, user_id, current_user.tenant_id)
+    file_data = await file.read()
+
+    if not file_data:
+        raise HTTPException(status_code=422, detail="Empty file")
+    if len(file_data) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=422, detail="File too large (max 5MB)")
+
+    content_type = validate_upload(file_data, file.content_type or "", "portal_user_picture")
+
+    # Replace existing
+    existing = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "portal_user_picture",
+            Attachment.entity_id == user.id,
+            Attachment.tenant_id == current_user.tenant_id,
+        )
+    )
+    old = existing.scalar_one_or_none()
+    if old:
+        old.file_data = file_data
+        old.filename = file.filename or "picture"
+        old.content_type = content_type
+        old.file_size = len(file_data)
+    else:
+        db.add(
+            Attachment(
+                tenant_id=current_user.tenant_id,
+                entity_type="portal_user_picture",
+                entity_id=user.id,
+                filename=file.filename or "picture",
+                content_type=content_type,
+                file_size=len(file_data),
+                file_data=file_data,
+                uploaded_by=current_user.user_id,
+            )
+        )
+
+    await db.commit()
+    return {"message": "Picture uploaded"}
+
+
+@router.delete("/{user_id}/picture")
+async def delete_portal_user_picture(
+    user_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Delete portal user picture."""
+    from app.models.attachment import Attachment
+
+    user = await _get_portal_user(db, user_id, current_user.tenant_id)
+    result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "portal_user_picture",
+            Attachment.entity_id == user.id,
+            Attachment.tenant_id == current_user.tenant_id,
+        )
+    )
+    att = result.scalar_one_or_none()
+    if att:
+        await db.delete(att)
+        await db.commit()
+    return {"message": "Picture deleted"}
+
+
+@router.post("/{user_id}/video")
+async def upload_portal_user_video(
+    user_id: UUID,
+    file: UploadFile = File(...),
+    *,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Upload or replace portal user video."""
+    from app.core.file_validation import validate_upload
+    from app.models.attachment import Attachment
+
+    user = await _get_portal_user(db, user_id, current_user.tenant_id)
+    file_data = await file.read()
+
+    if not file_data:
+        raise HTTPException(status_code=422, detail="Empty file")
+    if len(file_data) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=422, detail="File too large (max 50MB)")
+
+    content_type = validate_upload(file_data, file.content_type or "", "portal_user_video")
+
+    existing = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "portal_user_video",
+            Attachment.entity_id == user.id,
+            Attachment.tenant_id == current_user.tenant_id,
+        )
+    )
+    old = existing.scalar_one_or_none()
+    if old:
+        old.file_data = file_data
+        old.filename = file.filename or "video"
+        old.content_type = content_type
+        old.file_size = len(file_data)
+    else:
+        db.add(
+            Attachment(
+                tenant_id=current_user.tenant_id,
+                entity_type="portal_user_video",
+                entity_id=user.id,
+                filename=file.filename or "video",
+                content_type=content_type,
+                file_size=len(file_data),
+                file_data=file_data,
+                uploaded_by=current_user.user_id,
+            )
+        )
+
+    await db.commit()
+    return {"message": "Video uploaded"}
+
+
+@router.delete("/{user_id}/video")
+async def delete_portal_user_video(
+    user_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Delete portal user video."""
+    from app.models.attachment import Attachment
+
+    user = await _get_portal_user(db, user_id, current_user.tenant_id)
+    result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "portal_user_video",
+            Attachment.entity_id == user.id,
+            Attachment.tenant_id == current_user.tenant_id,
+        )
+    )
+    att = result.scalar_one_or_none()
+    if att:
+        await db.delete(att)
+        await db.commit()
+    return {"message": "Video deleted"}
