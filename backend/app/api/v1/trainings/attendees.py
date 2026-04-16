@@ -493,7 +493,7 @@ async def get_attendee_profile(
             .where(TrainingRegistration.id.in_(reg_ids))
             .order_by(TrainingRegistration.created_at.desc())
         )
-        regs = reg_result.scalars().all()
+        regs = reg_result.scalars().unique().all()
 
         # Batch-load placement + training + location info for all registrations
         placement_ids = {r.placement_id for r in regs if r.placement_id}
