@@ -25,6 +25,7 @@ from app.api.v1 import (
     news,
     payment_reminders,
     portal,
+    portal_auth,
     portal_templates,
     program,
     pronoun_options,
@@ -206,6 +207,9 @@ api_router.include_router(attachments.router, prefix="/attachments", tags=["Atta
 # Must be before CFP Portal — cfp_portal has a catch-all /{tenant_slug}/{abbreviation}
 # that would match /portal/{tenant}/trainings otherwise.
 api_router.include_router(portal.router, tags=["Public Portal"])
+
+# Unified Portal Auth (login, refresh, forgot/reset password, profile)
+api_router.include_router(portal_auth.router, tags=["Portal Auth"])
 
 # CFP Applicant Portal (public + applicant-auth endpoints)
 api_router.include_router(cfp_portal.router, tags=["CFP Portal"])
