@@ -73,6 +73,13 @@ const MyExpensesPage = lazy(() => import('./pages/portal/PortalExpensesTab'));
 const PublicRegistrationPage = lazy(() => import('./pages/PublicRegistration'));
 const PublicTrainingPortalPage = lazy(() => import('./pages/PublicTrainingPortal'));
 
+// Training Portal (authenticated)
+const TrainingPortalLayout = lazy(() => import('./pages/TrainingPortal/PortalLayout'));
+const TrainingPortalLogin = lazy(() => import('./pages/TrainingPortal/LoginPage'));
+const TrainingPortalSetPassword = lazy(() => import('./pages/TrainingPortal/SetPasswordPage'));
+const TrainingPortalDashboard = lazy(() => import('./pages/TrainingPortal/DashboardPage'));
+const TrainingPortalDetail = lazy(() => import('./pages/TrainingPortal/TrainingDetailPage'));
+
 function LazyFallback() {
   return (
     <div className="flex justify-center py-12">
@@ -445,6 +452,27 @@ function App() {
               </ErrorBoundary>
             }
           />
+
+          {/* Training Portal — login + set-password (public) */}
+          <Route path=":tenantSlug/trainings/portal/login" element={<TrainingPortalLogin />} />
+          <Route
+            path=":tenantSlug/trainings/portal/set-password"
+            element={<TrainingPortalSetPassword />}
+          />
+
+          {/* Training Portal — authenticated routes */}
+          <Route
+            path=":tenantSlug/trainings/portal"
+            element={
+              <ErrorBoundary>
+                <TrainingPortalLayout />
+              </ErrorBoundary>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<TrainingPortalDashboard />} />
+            <Route path="training/:registrationId" element={<TrainingPortalDetail />} />
+          </Route>
 
           {/* CFP Applicant Portal — authenticated routes */}
           <Route
