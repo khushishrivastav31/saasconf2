@@ -24,6 +24,7 @@ interface Attendee {
   status: string;
   notes: string | null;
   current_training: string;
+  current_training_date: string | null;
   created_at: string | null;
   history: HistoryEvent[];
 }
@@ -65,6 +66,7 @@ export default function AttendeesTab() {
   const [parkDialog, setParkDialog] = useState<Attendee | null>(null);
   const [parkReason, setParkReason] = useState('');
   const [page, setPage] = useState(1);
+  const [showPast, setShowPast] = useState(false);
 
   const params = useMemo(() => {
     const p: Record<string, string> = { page: String(page), per_page: '50' };
@@ -82,7 +84,22 @@ export default function AttendeesTab() {
     staleTime: 30_000,
   });
 
-  const items = data?.items ?? [];
+  const allItems = useMemo(() => data?.items ?? [], [data]);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const items = useMemo(
+    () =>
+      showPast
+        ? allItems
+        : allItems.filter(
+            (att) =>
+              // Always show parked attendees and those with no training date
+              att.status === 'parked' ||
+              !att.current_training_date ||
+              att.current_training_date >= today
+          ),
+    [allItems, showPast, today]
+  );
+  const hiddenCount = allItems.length - items.length;
   const total = data?.total ?? 0;
   const totalPages = data ? Math.ceil(data.total / data.per_page) : 0;
 
@@ -142,6 +159,15 @@ export default function AttendeesTab() {
           <option value="active">Active</option>
           <option value="parked">Parked</option>
         </select>
+        <label className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showPast}
+            onChange={(e) => setShowPast(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+          />
+          Show past{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
+        </label>
       </div>
 
       {isLoading ? (

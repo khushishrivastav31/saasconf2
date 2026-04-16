@@ -1,5 +1,6 @@
 """Training attendees — central identity, parking lot, and history endpoints."""
 
+import json
 import logging
 from uuid import UUID
 
@@ -329,6 +330,7 @@ async def list_attendees(
                 placement_ids.add(h.placement_id)
 
     training_names: dict[UUID, str] = {}
+    training_dates: dict[UUID, str | None] = {}
     if placement_ids:
         tn_result = await db.execute(
             select(ProgramYearTraining.id, Training.name, ProgramYearTraining.start_date)
@@ -338,14 +340,17 @@ async def list_attendees(
         for pid, tname, sdate in tn_result.all():
             date_str = sdate.strftime("%d.%m.%Y") if sdate else ""
             training_names[pid] = f"{tname} ({date_str})" if date_str else tname
+            training_dates[pid] = sdate.isoformat() if sdate else None
 
     items = []
     for att in attendees:
         # Latest history event
         latest = att.history[0] if att.history else None
         current_training = "—"
+        current_training_date: str | None = None
         if latest and latest.event_type in ("registered", "reassigned", "offer_assigned") and latest.placement_id:
             current_training = training_names.get(latest.placement_id, "—")
+            current_training_date = training_dates.get(latest.placement_id)
 
         items.append(
             {
@@ -356,6 +361,7 @@ async def list_attendees(
                 "status": att.status,
                 "notes": att.notes,
                 "current_training": current_training,
+                "current_training_date": current_training_date,
                 "created_at": att.created_at.isoformat() if att.created_at else None,
                 "history": [
                     {
@@ -456,6 +462,7 @@ async def park_attendee(
 
     source_uuid = UUID(data.source_id)
     placement_id: UUID | None = None
+    exam_data: dict | None = None
 
     # Remove from source
     if data.source_type == "registration":
@@ -472,6 +479,12 @@ async def park_attendee(
                 select(TrainingRegistration.placement_id).where(TrainingRegistration.id == reg_att.registration_id)
             )
             placement_id = reg_result.scalar_one_or_none()
+            # Preserve exam data before deleting (restored during reassignment)
+            exam_data = {
+                "exam_mode": reg_att.exam_mode,
+                "exam_language": reg_att.exam_language,
+                "extra_time": reg_att.extra_time,
+            }
             await db.delete(reg_att)
 
     elif data.source_type == "offer":
@@ -484,10 +497,24 @@ async def park_attendee(
         offer_att = offer_att_result.scalar_one_or_none()
         if offer_att:
             placement_id = offer_att.placement_id
+            # Preserve exam data before deleting
+            exam_data = {
+                "exam_mode": offer_att.exam_mode,
+                "exam_language": offer_att.exam_language,
+                "extra_time": offer_att.extra_time,
+            }
             await db.delete(offer_att)
 
     # Update status
     att.status = "parked"
+
+    # Build notes: combine reason + exam data so reassignment can restore it
+    notes_obj: dict = {}
+    if data.reason:
+        notes_obj["reason"] = data.reason
+    if exam_data and any(v for v in exam_data.values()):
+        notes_obj["exam_data"] = exam_data
+    notes_str = json.dumps(notes_obj) if notes_obj else data.reason
 
     # Create history event
     history = TrainingAttendeeHistory(
@@ -497,7 +524,7 @@ async def park_attendee(
         placement_id=placement_id,
         source_type=data.source_type,
         source_id=source_uuid,
-        notes=data.reason,
+        notes=notes_str,
         created_by=current_user.user_id,
     )
     db.add(history)
@@ -562,6 +589,20 @@ async def reassign_attendee(
     db.add(new_registration)
     await db.flush()
 
+    # Restore exam data from park history event (saved during parking)
+    exam_mode = None
+    exam_language = None
+    extra_time = False
+    if park_event and park_event.notes:
+        try:
+            notes_obj = json.loads(park_event.notes)
+            ed = notes_obj.get("exam_data", {})
+            exam_mode = ed.get("exam_mode")
+            exam_language = ed.get("exam_language")
+            extra_time = bool(ed.get("extra_time", False))
+        except (json.JSONDecodeError, AttributeError):
+            pass  # notes is plain text (old format), no exam data
+
     new_reg_att = TrainingRegistrationAttendee(
         tenant_id=tenant_id,
         registration_id=new_registration.id,
@@ -569,6 +610,9 @@ async def reassign_attendee(
         first_name=att.first_name,
         last_name=att.last_name,
         email=att.email,
+        exam_mode=exam_mode,
+        exam_language=exam_language,
+        extra_time=extra_time,
     )
     db.add(new_reg_att)
 
