@@ -490,17 +490,34 @@ async def get_attendee_profile(
     if reg_ids:
         reg_result = await db.execute(
             select(TrainingRegistration)
-            .options(
-                joinedload(TrainingRegistration.placement).joinedload(ProgramYearTraining.training),
-                joinedload(TrainingRegistration.placement).joinedload(ProgramYearTraining.location),
-            )
             .where(TrainingRegistration.id.in_(reg_ids))
             .order_by(TrainingRegistration.created_at.desc())
         )
-        for reg in reg_result.scalars().unique().all():
-            placement = reg.placement
-            training = placement.training if placement else None
-            location = placement.location if placement else None
+        regs = reg_result.scalars().all()
+
+        # Batch-load placement + training + location info for all registrations
+        placement_ids = {r.placement_id for r in regs if r.placement_id}
+        placement_map: dict[UUID, dict] = {}
+        if placement_ids:
+            pl_result = await db.execute(
+                select(ProgramYearTraining)
+                .options(
+                    joinedload(ProgramYearTraining.training),
+                    joinedload(ProgramYearTraining.location),
+                )
+                .where(ProgramYearTraining.id.in_(placement_ids))
+            )
+            for p in pl_result.scalars().unique().all():
+                placement_map[p.id] = {
+                    "training_name": p.training.name if p.training else "Unknown",
+                    "start_date": p.start_date.isoformat() if p.start_date else None,
+                    "location_name": p.location.name if p.location else None,
+                    "location_city": p.location.city if p.location else None,
+                    "location_country": p.location.country if p.location else None,
+                }
+
+        for reg in regs:
+            pi = placement_map.get(reg.placement_id, {}) if reg.placement_id else {}
 
             # Find this attendee's exam data in this registration
             ra = next((r for r in reg_att_links if r.registration_id == reg.id), None)
@@ -509,11 +526,11 @@ async def get_attendee_profile(
                 {
                     "registration_id": str(reg.id),
                     "status": reg.status,
-                    "training_name": training.name if training else "Unknown",
-                    "training_date": placement.start_date.isoformat() if placement and placement.start_date else None,
-                    "location_name": location.name if location else None,
-                    "location_city": location.city if location else None,
-                    "location_country": location.country if location else None,
+                    "training_name": pi.get("training_name", "Unknown"),
+                    "training_date": pi.get("start_date"),
+                    "location_name": pi.get("location_name"),
+                    "location_city": pi.get("location_city"),
+                    "location_country": pi.get("location_country"),
                     "contact_first_name": reg.contact_first_name,
                     "contact_last_name": reg.contact_last_name,
                     "contact_email": reg.contact_email,
