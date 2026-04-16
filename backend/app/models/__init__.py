@@ -58,6 +58,7 @@ from app.models.offer_template import OfferTemplate
 from app.models.paper_form_variant import PaperFormVariant, PaperFormVariantField
 from app.models.payment_reminder import PaymentReminder
 from app.models.platform_currency import PlatformCurrency
+from app.models.portal_user import PortalRefreshToken, PortalUser  # noqa: F401
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.models.registration import (
     BillingProfile,
