@@ -97,6 +97,35 @@ export default function UsersTab() {
     onError: () => showToast('Failed to send reset email', 'error'),
   });
 
+  const [mergeTarget, setMergeTarget] = useState<string | null>(null);
+  const [mergeSourceEmail, setMergeSourceEmail] = useState('');
+
+  const mergeMutation = useMutation({
+    mutationFn: ({ targetId, sourceId }: { targetId: string; sourceId: string }) =>
+      api.post(`/trainings/users/${targetId}/merge`, { source_user_id: sourceId }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['training-users'] });
+      showToast(res.data.message, 'success');
+      setMergeTarget(null);
+      setMergeSourceEmail('');
+      setSelectedUser(null);
+    },
+    onError: () => showToast('Failed to merge users', 'error'),
+  });
+
+  const impersonateMutation = useMutation({
+    mutationFn: (portalUserId: string) => api.post(`/trainings/users/${portalUserId}/impersonate`),
+    onSuccess: (res) => {
+      const { access_token, portal_user_name } = res.data;
+      // Open portal in new tab with the impersonation token
+      localStorage.setItem('portal_access_token', access_token);
+      const tenantSlug = window.location.pathname.split('/')[2] || '';
+      window.open(`/${tenantSlug}/trainings/portal/dashboard`, '_blank');
+      showToast(`Viewing portal as ${portal_user_name}`, 'info');
+    },
+    onError: () => showToast('Failed to impersonate user', 'error'),
+  });
+
   const params = useMemo(() => {
     const p: Record<string, string> = { page: String(page), per_page: '50' };
     if (search) p.search = search;
@@ -229,6 +258,19 @@ export default function UsersTab() {
                 className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
               >
                 {resetPasswordMutation.isPending ? '...' : 'Reset Password'}
+              </button>
+              <button
+                onClick={() => impersonateMutation.mutate(selectedUser.portal_user_id!)}
+                disabled={impersonateMutation.isPending}
+                className="px-3 py-1.5 text-xs font-medium border border-primary-300 dark:border-primary-700 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-700 dark:text-primary-300 disabled:opacity-40"
+              >
+                {impersonateMutation.isPending ? '...' : 'Impersonate'}
+              </button>
+              <button
+                onClick={() => setMergeTarget(selectedUser.portal_user_id)}
+                className="px-3 py-1.5 text-xs font-medium border border-amber-300 dark:border-amber-700 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-700 dark:text-amber-300"
+              >
+                Merge with...
               </button>
             </div>
           )}
@@ -427,6 +469,70 @@ export default function UsersTab() {
             </div>
           )}
         </>
+      )}
+
+      {/* Merge dialog */}
+      {mergeTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setMergeTarget(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Merge Users
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Enter the email of the <strong>source user</strong> to merge into the selected target.
+              All training history, registrations, and offer links will be moved. The source account
+              will be deleted.
+            </p>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Source user email
+            </label>
+            <input
+              type="email"
+              value={mergeSourceEmail}
+              onChange={(e) => setMergeSourceEmail(e.target.value)}
+              placeholder="user@example.com"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setMergeTarget(null);
+                  setMergeSourceEmail('');
+                }}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Find source portal_user_id by email from the loaded items
+                  const source = items.find(
+                    (u) =>
+                      u.email.toLowerCase() === mergeSourceEmail.toLowerCase() && u.portal_user_id
+                  );
+                  if (!source?.portal_user_id) {
+                    showToast('Source user not found or has no portal account', 'error');
+                    return;
+                  }
+                  mergeMutation.mutate({ targetId: mergeTarget, sourceId: source.portal_user_id });
+                }}
+                disabled={!mergeSourceEmail || mergeMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg disabled:opacity-40"
+              >
+                {mergeMutation.isPending ? 'Merging...' : 'Merge'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

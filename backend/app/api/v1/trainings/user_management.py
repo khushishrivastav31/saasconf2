@@ -5,6 +5,7 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
@@ -199,3 +200,164 @@ font-weight: bold;">Reset Password</a></p>
 
     logger.info("Admin password reset for %s by %s", user.email, current_user.user_id)
     return {"message": "Password reset email sent"}
+
+
+# ── Merge Duplicate Users ────────────────────────────────────────────────────
+
+
+class MergeUsersRequest(BaseModel):
+    source_user_id: str
+
+
+@router.post("/{target_user_id}/merge")
+async def merge_portal_users(
+    target_user_id: UUID,
+    data: MergeUsersRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Merge source portal user into target. Moves all linked records, deletes source.
+
+    - Training attendees from source → re-linked to target portal_user
+    - Attendee history preserved
+    - Registration attendee links preserved
+    - Offer attendee links preserved
+    - CFP applicant link moved if source has one
+    - Source portal_user + source training_attendee deleted
+    """
+    from app.models.cfp_applicants import CFPApplicant
+    from app.models.offer_attendee import OfferAttendee
+    from app.models.training_attendee_history import TrainingAttendeeHistory
+    from app.models.training_registration import TrainingRegistrationAttendee
+
+    tenant_id = current_user.tenant_id
+    source_user_id = UUID(data.source_user_id)
+
+    if target_user_id == source_user_id:
+        raise HTTPException(status_code=422, detail="Cannot merge a user with itself")
+
+    target = await _get_portal_user(db, target_user_id, tenant_id)
+    source = await _get_portal_user(db, source_user_id, tenant_id)
+
+    # 1. Find training attendees linked to source
+    source_att_result = await db.execute(
+        select(TrainingAttendee).where(
+            TrainingAttendee.portal_user_id == source.id,
+            TrainingAttendee.tenant_id == tenant_id,
+        )
+    )
+    source_attendees = source_att_result.scalars().all()
+
+    # Find target attendee (if any)
+    target_att_result = await db.execute(
+        select(TrainingAttendee).where(
+            TrainingAttendee.portal_user_id == target.id,
+            TrainingAttendee.tenant_id == tenant_id,
+        )
+    )
+    target_attendee = target_att_result.scalars().first()
+
+    merged_records = 0
+
+    for src_att in source_attendees:
+        if target_attendee:
+            # Move history events from source attendee → target attendee
+            await db.execute(select(TrainingAttendeeHistory).where(TrainingAttendeeHistory.attendee_id == src_att.id))
+            history_result = await db.execute(
+                select(TrainingAttendeeHistory).where(TrainingAttendeeHistory.attendee_id == src_att.id)
+            )
+            for h in history_result.scalars().all():
+                h.attendee_id = target_attendee.id
+                merged_records += 1
+
+            # Move registration attendee links
+            ra_result = await db.execute(
+                select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.attendee_id == src_att.id)
+            )
+            for ra in ra_result.scalars().all():
+                ra.attendee_id = target_attendee.id
+                merged_records += 1
+
+            # Move offer attendee links
+            oa_result = await db.execute(select(OfferAttendee).where(OfferAttendee.attendee_id == src_att.id))
+            for oa in oa_result.scalars().all():
+                oa.attendee_id = target_attendee.id
+                merged_records += 1
+
+            # Delete the source attendee (now empty)
+            await db.delete(src_att)
+        else:
+            # No target attendee — just re-link source attendee to target portal_user
+            src_att.portal_user_id = target.id
+            target_attendee = src_att  # Use this as the target for subsequent iterations
+            merged_records += 1
+
+    # 2. Move CFP applicant link if source has one and target doesn't
+    source_cfp = await db.execute(select(CFPApplicant).where(CFPApplicant.portal_user_id == source.id))
+    source_cfp_applicant = source_cfp.scalar_one_or_none()
+
+    if source_cfp_applicant:
+        target_cfp = await db.execute(select(CFPApplicant).where(CFPApplicant.portal_user_id == target.id))
+        if not target_cfp.scalar_one_or_none():
+            source_cfp_applicant.portal_user_id = target.id
+            merged_records += 1
+
+    # 3. Copy password if target doesn't have one but source does
+    if not target.password_hash and source.password_hash:
+        target.password_hash = source.password_hash
+
+    # 4. Update target last_login if source was more recent
+    if source.last_login_at and (not target.last_login_at or source.last_login_at > target.last_login_at):
+        target.last_login_at = source.last_login_at
+
+    # 5. Delete source portal_user (cascade deletes refresh tokens)
+    await db.delete(source)
+    await db.commit()
+
+    logger.info(
+        "Merged portal user %s into %s (%d records moved) by admin %s",
+        source.email,
+        target.email,
+        merged_records,
+        current_user.user_id,
+    )
+
+    return {
+        "message": f"Merged {source.email} into {target.email}",
+        "merged_records": merged_records,
+        "target_user_id": str(target.id),
+    }
+
+
+# ── Impersonate ──────────────────────────────────────────────────────────────
+
+
+@router.post("/{user_id}/impersonate")
+async def impersonate_portal_user(
+    user_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Generate a portal access token for admin to view portal as this user.
+
+    Returns a short-lived access token (no refresh token) for the portal user.
+    Only tenant admins can impersonate.
+    """
+    from app.core.portal_security import create_portal_access_token
+
+    user = await _get_portal_user(db, user_id, current_user.tenant_id)
+
+    if not user.is_active:
+        raise HTTPException(status_code=422, detail="Cannot impersonate a deactivated user")
+
+    # Create short-lived access token (uses standard expiry)
+    access_token = create_portal_access_token(user.id, user.tenant_id)
+
+    logger.info("Admin %s impersonating portal user %s", current_user.user_id, user.email)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "portal_user_email": user.email,
+        "portal_user_name": f"{user.first_name} {user.last_name}",
+    }
