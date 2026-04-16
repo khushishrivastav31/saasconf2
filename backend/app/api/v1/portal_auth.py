@@ -312,7 +312,7 @@ async def _get_current_portal_user(request: Request, db: DbSessionDep) -> Portal
     return user
 
 
-@router.get("/portal/me")
+@router.get("/portal/unified/me")
 async def get_portal_profile(
     request: Request,
     db: DbSessionDep,
@@ -350,7 +350,7 @@ async def get_portal_profile(
     }
 
 
-@router.get("/portal/my-trainings")
+@router.get("/portal/unified/my-trainings")
 async def get_my_training_registrations(
     request: Request,
     db: DbSessionDep,
@@ -452,7 +452,7 @@ async def get_my_training_registrations(
     return {"items": items}
 
 
-@router.get("/portal/my-trainings/{registration_id}/files")
+@router.get("/portal/unified/my-trainings/{registration_id}/files")
 async def get_training_files_for_portal(
     registration_id: str,
     request: Request,

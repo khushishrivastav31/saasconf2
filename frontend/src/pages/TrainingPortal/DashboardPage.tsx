@@ -36,7 +36,7 @@ const DashboardPage = React.memo(function DashboardPage() {
   } = useQuery<TrainingRegistration[]>({
     queryKey: ['portal-my-trainings'],
     queryFn: async () => {
-      const response = await trainingPortalApi.get('/portal/my-trainings');
+      const response = await trainingPortalApi.get('/portal/unified/my-trainings');
       return response.data;
     },
   });

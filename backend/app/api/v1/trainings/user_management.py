@@ -363,6 +363,61 @@ async def impersonate_portal_user(
     }
 
 
+# ── Create Portal Account for Attendee ────────────────────────────────────────
+
+
+@router.post("/create-for-attendee/{attendee_id}")
+async def create_portal_user_for_attendee(
+    attendee_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Create a portal_user for an attendee that doesn't have one yet."""
+    tenant_id = current_user.tenant_id
+
+    att_result = await db.execute(
+        select(TrainingAttendee).where(
+            TrainingAttendee.id == attendee_id,
+            TrainingAttendee.tenant_id == tenant_id,
+        )
+    )
+    att = att_result.scalar_one_or_none()
+    if not att:
+        raise NotFoundError("Attendee not found")
+
+    if att.portal_user_id:
+        # Already has a portal account — return it
+        user = await db.get(PortalUser, att.portal_user_id)
+        if user:
+            return {"portal_user_id": str(user.id), "created": False}
+
+    # Check if portal_user already exists for this email
+    existing = await db.execute(
+        select(PortalUser).where(
+            PortalUser.tenant_id == tenant_id,
+            func.lower(PortalUser.email) == att.email.lower(),
+        )
+    )
+    portal_user = existing.scalar_one_or_none()
+
+    if not portal_user:
+        portal_user = PortalUser(
+            tenant_id=tenant_id,
+            email=att.email,
+            first_name=att.first_name,
+            last_name=att.last_name,
+            is_active=True,
+        )
+        db.add(portal_user)
+        await db.flush()
+
+    att.portal_user_id = portal_user.id
+    await db.commit()
+
+    logger.info("Created/linked portal user for attendee %s by admin %s", att.email, current_user.user_id)
+    return {"portal_user_id": str(portal_user.id), "created": True}
+
+
 # ── Profile Update ───────────────────────────────────────────────────────────
 
 

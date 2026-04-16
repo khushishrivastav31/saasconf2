@@ -27,7 +27,9 @@ const TrainingDetailPage = React.memo(function TrainingDetailPage() {
   } = useQuery<TrainingDetail>({
     queryKey: ['portal-training-detail', registrationId],
     queryFn: async () => {
-      const response = await trainingPortalApi.get(`/portal/my-trainings/${registrationId}`);
+      const response = await trainingPortalApi.get(
+        `/portal/unified/my-trainings/${registrationId}`
+      );
       return response.data;
     },
     enabled: !!registrationId,
@@ -163,7 +165,9 @@ function TrainingFiles({ registrationId }: { registrationId: string }) {
   const { data, isLoading } = useQuery({
     queryKey: ['portal-training-files', registrationId],
     queryFn: async () => {
-      const res = await trainingPortalApi.get(`/portal/my-trainings/${registrationId}/files`);
+      const res = await trainingPortalApi.get(
+        `/portal/unified/my-trainings/${registrationId}/files`
+      );
       return res.data as {
         items: Array<{
           id: string;
