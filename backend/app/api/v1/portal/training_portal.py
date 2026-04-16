@@ -852,6 +852,11 @@ async def register_for_training(
         tenant=tenant,
     )
 
+    # Auto-create unified portal user account for the contact person
+    from app.core.portal_user_service import ensure_portal_user_for_registration
+
+    await ensure_portal_user_for_registration(db, registration, tenant)
+
     return {
         "registration_id": str(registration.id),
         "status": registration.status,
