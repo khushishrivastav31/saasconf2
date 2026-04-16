@@ -106,7 +106,6 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
       );
       return data as { items: SpeakerExpense[]; total: number };
     },
-    staleTime: 0,
   });
 
   const { data: stats } = useQuery({
@@ -115,7 +114,6 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
       const { data } = await api.get(`/conferences/${conference.id}/speaker-expenses/stats`);
       return data as ExpenseStats;
     },
-    staleTime: 0,
   });
 
   const { data: allowances } = useQuery({

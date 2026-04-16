@@ -12,11 +12,10 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep
+from app.core.rate_limiter import limiter
 from app.core.vat_calculation import (
     classify_customer_location,
     classify_customer_type,
@@ -30,7 +29,6 @@ from .registration import resolve_tenant_and_conference
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/{tenant_slug}/conferences/{conference_slug}/validate-discount/{code}")

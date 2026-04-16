@@ -7,12 +7,12 @@ directly on the TrainingInvoice row rather than looked up via event logs.
 """
 
 import logging
-from datetime import datetime
 
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ValidationError
+from app.core.utils import utcnow
 from app.models.tenant import Tenant
 from app.models.training_invoice import TrainingInvoice
 
@@ -67,7 +67,7 @@ async def create_training_payment_link(
     if not client:
         raise ValidationError("Stripe is not enabled for this tenant's training configuration")
 
-    idempotency_key = f"training-invoice-{invoice.id}-payment-link-{datetime.utcnow().isoformat()}"
+    idempotency_key = f"training-invoice-{invoice.id}-payment-link-{utcnow().isoformat()}"
 
     try:
         payment_link = client.payment_links.create(

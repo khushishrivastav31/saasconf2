@@ -436,7 +436,7 @@ Is billing info wrong (name, address, VAT, PO)?
 - Single billing profile for entire group
 - Multiple attendee records (each with own data)
 - One invoice for all attendees
-- Use bulk endpoint: `POST /registrations/bulk`
+- Use unified endpoint: `POST /registrations` (with multiple attendees)
 
 **Best Practices**:
 - Require one contact person for group (receives all communications)

@@ -135,7 +135,6 @@ export default function DesignProgramTab({ year }: Props) {
       return res.data;
     },
     enabled: !!programYear,
-    staleTime: 0,
   });
 
   // Create placement mutation

@@ -234,25 +234,27 @@ async def _create_registration(
     last_name: str = "User",
     email: str | None = None,
 ) -> dict:
-    """Create a registration via the API and return the response body."""
+    """Create a registration via the unified API and return the registration dict."""
     if email is None:
         email = f"{uuid.uuid4().hex[:8]}@test.com"
     payload = {
-        "attendee": {
-            "first_name": first_name,
-            "last_name": last_name,
-            "email": email,
-        },
         "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(booking_option_id),
+        "attendees": [
+            {
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "booking_option_id": str(booking_option_id),
+            }
+        ],
     }
     resp = await client.post(
-        f"{BASE}/{conference_id}/registrations/individual",
+        f"{BASE}/{conference_id}/registrations",
         json=payload,
         headers=auth_headers(token),
     )
     assert resp.status_code == 201, f"Registration creation failed: {resp.text}"
-    return resp.json()
+    return resp.json()["registrations"][0]
 
 
 # =========================================================================
@@ -1367,16 +1369,18 @@ class TestEmailCaseInsensitivity:
         )
         # Try same email with different case
         payload = {
-            "attendee": {
-                "first_name": "Dup",
-                "last_name": "Case",
-                "email": "UNIQUE@TEST.COM",
-            },
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(main_booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Dup",
+                    "last_name": "Case",
+                    "email": "UNIQUE@TEST.COM",
+                    "booking_option_id": str(main_booking_option.id),
+                }
+            ],
         }
         resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(reg_admin_token),
         )
@@ -1403,16 +1407,18 @@ class TestInactiveBookingOption:
     ) -> None:
         """Registration with an inactive booking option returns 400."""
         payload = {
-            "attendee": {
-                "first_name": "Inactive",
-                "last_name": "Option",
-                "email": "inactive@test.com",
-            },
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(inactive_booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Inactive",
+                    "last_name": "Option",
+                    "email": "inactive@test.com",
+                    "booking_option_id": str(inactive_booking_option.id),
+                }
+            ],
         }
         resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(reg_admin_token),
         )
@@ -1535,25 +1541,27 @@ class TestRegistrationWithExtraFields:
     ) -> None:
         """Create a registration with all optional attendee fields."""
         payload = {
-            "attendee": {
-                "first_name": "Full",
-                "last_name": "Fields",
-                "email": "full@fields.com",
-                "pronouns": "they/them",
-                "job_title": "Software Engineer",
-                "department": "Engineering",
-                "phone": "+491234567890",
-            },
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(main_booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Full",
+                    "last_name": "Fields",
+                    "email": "full@fields.com",
+                    "pronouns": "they/them",
+                    "job_title": "Software Engineer",
+                    "department": "Engineering",
+                    "phone": "+491234567890",
+                    "booking_option_id": str(main_booking_option.id),
+                }
+            ],
         }
         resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(reg_admin_token),
         )
         assert resp.status_code == 201
-        data = resp.json()
+        data = resp.json()["registrations"][0]
         assert data["pronouns"] == "they/them"
         assert data["job_title"] == "Software Engineer"
         assert data["department"] == "Engineering"
@@ -1569,24 +1577,26 @@ class TestRegistrationWithExtraFields:
         conference: Conference,
         main_booking_option: BookingOption,
     ) -> None:
-        """Create a registration with notes via the individual endpoint."""
+        """Create a registration with notes via the unified endpoint."""
         payload = {
-            "attendee": {
-                "first_name": "Notes",
-                "last_name": "Person",
-                "email": "notes-person@test.com",
-            },
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(main_booking_option.id),
-            "notes": "Requires wheelchair access",
+            "attendees": [
+                {
+                    "first_name": "Notes",
+                    "last_name": "Person",
+                    "email": "notes-person@test.com",
+                    "booking_option_id": str(main_booking_option.id),
+                    "notes": "Requires wheelchair access",
+                }
+            ],
         }
         resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(reg_admin_token),
         )
         assert resp.status_code == 201
-        assert resp.json()["notes"] == "Requires wheelchair access"
+        assert resp.json()["registrations"][0]["notes"] == "Requires wheelchair access"
 
     @pytest.mark.asyncio
     async def test_create_with_items_at_registration_time(
@@ -1601,27 +1611,29 @@ class TestRegistrationWithExtraFields:
     ) -> None:
         """Create a registration with add-on items included in the initial request."""
         payload = {
-            "attendee": {
-                "first_name": "WithItems",
-                "last_name": "AtCreate",
-                "email": "items-at-create@test.com",
-            },
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(main_booking_option.id),
-            "items": [
+            "attendees": [
                 {
-                    "item_type": "booking_option",
-                    "booking_option_id": str(addon_booking_option.id),
-                },
+                    "first_name": "WithItems",
+                    "last_name": "AtCreate",
+                    "email": "items-at-create@test.com",
+                    "booking_option_id": str(main_booking_option.id),
+                    "items": [
+                        {
+                            "item_type": "booking_option",
+                            "booking_option_id": str(addon_booking_option.id),
+                        },
+                    ],
+                }
             ],
         }
         resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(reg_admin_token),
         )
         assert resp.status_code == 201
-        data = resp.json()
+        data = resp.json()["registrations"][0]
         assert len(data["items"]) == 1
         assert data["items"][0]["item_name"] == "Tutorial Day"
 

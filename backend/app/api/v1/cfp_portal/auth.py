@@ -4,8 +4,6 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -20,6 +18,7 @@ from app.core.applicant_security import (
 )
 from app.core.email import send_password_reset_email, send_verification_email
 from app.core.exceptions import AuthenticationError, NotFoundError
+from app.core.rate_limiter import limiter
 from app.core.security import hash_password, hash_token, verify_password
 from app.core.utils import utcnow
 from app.db.session import set_rls_context
@@ -63,7 +62,6 @@ from .shared import (
 
 settings = get_settings()
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 async def log_applicant_activity(

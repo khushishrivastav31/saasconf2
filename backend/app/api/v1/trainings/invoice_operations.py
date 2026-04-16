@@ -7,13 +7,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.core.rate_limiter import limiter
 from app.core.training_invoice_number import generate_training_invoice_number
 from app.core.training_registration_emails import send_training_invoice_email
 from app.core.training_stripe_helper import (
@@ -29,7 +28,6 @@ from ._invoice_helpers import CANCELLABLE_STATUSES, build_credit_note, invoice_t
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/invoices", tags=["training-invoices"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────

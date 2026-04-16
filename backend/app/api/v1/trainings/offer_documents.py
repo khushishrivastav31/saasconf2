@@ -7,8 +7,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import Response
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
@@ -18,6 +16,7 @@ from app.core.email import send_email
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.file_validation import safe_content_disposition, validate_upload
 from app.core.html_sanitize import sanitize_html
+from app.core.rate_limiter import limiter
 from app.models.audit import AuditLog
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_document import OfferDocument, OfferDocumentVersion
@@ -31,7 +30,6 @@ from app.schemas.offer_document import (
 )
 
 router = APIRouter(prefix="/offers/{offer_id}/documents", tags=["offer-documents"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 # ---------------------------------------------------------------------------

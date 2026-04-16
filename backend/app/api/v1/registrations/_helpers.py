@@ -2,12 +2,11 @@
 
 from uuid import UUID
 
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import func, inspect, select
 
 from app.core.dependencies import DbSessionDep
 from app.core.exceptions import ValidationError
+from app.core.rate_limiter import limiter
 from app.models.booking import BookingOption
 from app.models.conference import Conference
 from app.models.program import ProgramSession
@@ -26,7 +25,7 @@ from app.schemas.registration import (
 
 MODULE_CODE = "registration"
 
-limiter = Limiter(key_func=get_remote_address)
+__all__ = ["MODULE_CODE", "limiter"]
 
 
 async def _validate_booking_option(db, option_id: UUID, conference_id: UUID, tenant_id: UUID) -> BookingOption:

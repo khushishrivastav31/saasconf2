@@ -11,8 +11,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 
 from app.config import get_settings
@@ -24,6 +22,7 @@ from app.core.portal_security import (
     decode_portal_token,
     generate_password_reset_token,
 )
+from app.core.rate_limiter import limiter
 from app.core.security import hash_password, verify_password
 from app.core.utils import utcnow
 from app.db.session import set_rls_context
@@ -33,7 +32,6 @@ from app.models.tenant import Tenant
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["portal-auth"])
-limiter = Limiter(key_func=get_remote_address)
 
 portal_settings = get_settings()
 

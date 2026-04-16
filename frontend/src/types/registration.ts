@@ -129,22 +129,6 @@ export interface RegistrationListResponse {
 }
 
 // Create payloads
-export interface IndividualRegistrationCreate {
-  attendee: AttendeeData;
-  billing: BillingProfileCreate;
-  booking_option_id: string;
-  items?: RegistrationItemCreate[];
-  notes?: string | null;
-}
-
-export interface CompanySingleRegistrationCreate {
-  attendee: AttendeeData;
-  billing: BillingProfileCreate;
-  booking_option_id: string;
-  items?: RegistrationItemCreate[];
-  notes?: string | null;
-}
-
 export interface BulkAttendeeData extends AttendeeData {
   booking_option_id: string;
   main_session_id?: string;

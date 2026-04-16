@@ -24,7 +24,6 @@ from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.registration import (
-    AttendeeData,
     BillingProfileCreate,
     BulkAttendeeData,
     BulkRegistrationCreate,
@@ -144,31 +143,43 @@ async def addon_booking_option(db_session: AsyncSession, tenant: Tenant, confere
 
 
 class TestAttendeeDataValidation:
-    """Tests for AttendeeData schema validation."""
+    """Tests for BulkAttendeeData schema validation."""
 
     def test_valid_attendee(self):
-        a = AttendeeData(first_name="John", last_name="Doe", email="john@example.com")
+        a = BulkAttendeeData(
+            first_name="John", last_name="Doe", email="john@example.com", booking_option_id=uuid.uuid4()
+        )
         assert a.first_name == "John"
         assert a.email == "john@example.com"
 
     def test_email_lowercased(self):
-        a = AttendeeData(first_name="John", last_name="Doe", email="JOHN@Example.COM")
+        a = BulkAttendeeData(
+            first_name="John", last_name="Doe", email="JOHN@Example.COM", booking_option_id=uuid.uuid4()
+        )
         assert a.email == "john@example.com"
 
     def test_missing_first_name_raises(self):
         with pytest.raises(ValidationError):
-            AttendeeData(first_name="", last_name="Doe", email="john@example.com")
+            BulkAttendeeData(first_name="", last_name="Doe", email="john@example.com", booking_option_id=uuid.uuid4())
 
     def test_invalid_email_raises(self):
         with pytest.raises(ValidationError):
-            AttendeeData(first_name="John", last_name="Doe", email="not-an-email")
+            BulkAttendeeData(first_name="John", last_name="Doe", email="not-an-email", booking_option_id=uuid.uuid4())
 
     def test_pronouns_optional(self):
-        a = AttendeeData(first_name="John", last_name="Doe", email="john@example.com")
+        a = BulkAttendeeData(
+            first_name="John", last_name="Doe", email="john@example.com", booking_option_id=uuid.uuid4()
+        )
         assert a.pronouns is None
 
     def test_pronouns_stored(self):
-        a = AttendeeData(first_name="John", last_name="Doe", email="john@example.com", pronouns="he/him")
+        a = BulkAttendeeData(
+            first_name="John",
+            last_name="Doe",
+            email="john@example.com",
+            booking_option_id=uuid.uuid4(),
+            pronouns="he/him",
+        )
         assert a.pronouns == "he/him"
 
 
@@ -278,41 +289,36 @@ async def test_list_registrations_empty(
     assert data["total"] == 0
 
 
-async def test_create_individual_registration(
+async def _create_one(
     client: AsyncClient,
-    tenant_with_reg_module: Tenant,
-    tenant_admin_user: User,
-    reg_admin_token: str,
     conference: Conference,
-    main_booking_option: BookingOption,
-) -> None:
-    """Create an individual registration successfully."""
-    payload = {
-        "attendee": {
-            "first_name": "Alice",
-            "last_name": "Smith",
-            "email": "alice@example.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
+    token: str,
+    booking_option_id: uuid.UUID,
+    *,
+    first_name: str = "Test",
+    last_name: str = "User",
+    email: str = "test@example.com",
+    pronouns: str | None = None,
+) -> dict:
+    """Helper: create a single registration via the unified endpoint, return the registration dict."""
+    attendee: dict = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "booking_option_id": str(booking_option_id),
     }
+    if pronouns is not None:
+        attendee["pronouns"] = pronouns
     response = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+        f"{BASE}/{conference.id}/registrations",
+        json={"billing": BILLING_PAYLOAD, "attendees": [attendee]},
+        headers=auth_headers(token),
     )
-    assert response.status_code == 201
-    data = response.json()
-    assert data["first_name"] == "Alice"
-    assert data["last_name"] == "Smith"
-    assert data["email"] == "alice@example.com"
-    assert data["status"] == "registered_pending_invoice"
-    assert data["registration_mode"] == "individual"
-    assert data["booking_option_name"] == "Full Conference"
-    assert data["billing_company_name"] == "Test GmbH"
+    assert response.status_code == 201, response.text
+    return response.json()["registrations"][0]
 
 
-async def test_create_individual_registration_with_pronouns(
+async def test_create_registration_with_pronouns(
     client: AsyncClient,
     tenant_with_reg_module: Tenant,
     tenant_admin_user: User,
@@ -321,157 +327,25 @@ async def test_create_individual_registration_with_pronouns(
     main_booking_option: BookingOption,
 ) -> None:
     """Create a registration with pronouns and verify they persist."""
-    payload = {
-        "attendee": {
-            "first_name": "Alex",
-            "last_name": "Pronoun",
-            "email": "alex@pronouns.com",
-            "pronouns": "they/them",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    response = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+    reg = await _create_one(
+        client,
+        conference,
+        reg_admin_token,
+        main_booking_option.id,
+        first_name="Alex",
+        last_name="Pronoun",
+        email="alex@pronouns.com",
+        pronouns="they/them",
     )
-    assert response.status_code == 201
-    data = response.json()
-    assert data["pronouns"] == "they/them"
+    assert reg["pronouns"] == "they/them"
 
     # Verify on fetch
     get_resp = await client.get(
-        f"{BASE}/{conference.id}/registrations/{data['id']}",
+        f"{BASE}/{conference.id}/registrations/{reg['id']}",
         headers=auth_headers(reg_admin_token),
     )
     assert get_resp.status_code == 200
     assert get_resp.json()["pronouns"] == "they/them"
-
-
-async def test_create_company_registration(
-    client: AsyncClient,
-    tenant_with_reg_module: Tenant,
-    tenant_admin_user: User,
-    reg_admin_token: str,
-    conference: Conference,
-    main_booking_option: BookingOption,
-) -> None:
-    """Create a company (single employee) registration."""
-    payload = {
-        "attendee": {
-            "first_name": "Bob",
-            "last_name": "Jones",
-            "email": "bob@company.com",
-            "job_title": "Engineer",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    response = await client.post(
-        f"{BASE}/{conference.id}/registrations/company",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
-    )
-    assert response.status_code == 201
-    data = response.json()
-    assert data["registration_mode"] == "company_single"
-    assert data["job_title"] == "Engineer"
-
-
-async def test_create_bulk_registration(
-    client: AsyncClient,
-    tenant_with_reg_module: Tenant,
-    tenant_admin_user: User,
-    reg_admin_token: str,
-    conference: Conference,
-    main_booking_option: BookingOption,
-) -> None:
-    """Create a bulk registration with 3 attendees."""
-    payload = {
-        "billing": BILLING_PAYLOAD,
-        "attendees": [
-            {
-                "first_name": f"Person{i}",
-                "last_name": "Test",
-                "email": f"person{i}@bulk.com",
-                "booking_option_id": str(main_booking_option.id),
-            }
-            for i in range(3)
-        ],
-    }
-    response = await client.post(
-        f"{BASE}/{conference.id}/registrations/bulk",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
-    )
-    assert response.status_code == 201
-    data = response.json()
-    assert data["total_created"] == 3
-    assert len(data["registrations"]) == 3
-    # All share same billing profile
-    bp_ids = {r["billing_profile_id"] for r in data["registrations"]}
-    assert len(bp_ids) == 1
-
-
-async def test_duplicate_email_rejected(
-    client: AsyncClient,
-    tenant_with_reg_module: Tenant,
-    tenant_admin_user: User,
-    reg_admin_token: str,
-    conference: Conference,
-    main_booking_option: BookingOption,
-) -> None:
-    """Creating a second registration with the same email returns 400."""
-    payload = {
-        "attendee": {
-            "first_name": "Carol",
-            "last_name": "Dup",
-            "email": "carol@dup.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    # First registration succeeds
-    r1 = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
-    )
-    assert r1.status_code == 201
-
-    # Second with same email fails
-    r2 = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
-    )
-    assert r2.status_code == 400
-
-
-async def test_invalid_package_rejected(
-    client: AsyncClient,
-    tenant_with_reg_module: Tenant,
-    tenant_admin_user: User,
-    reg_admin_token: str,
-    conference: Conference,
-) -> None:
-    """Registration with non-existent package returns 400."""
-    payload = {
-        "attendee": {
-            "first_name": "Dave",
-            "last_name": "Fake",
-            "email": "dave@fake.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(uuid.uuid4()),
-    }
-    response = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
-    )
-    assert response.status_code == 400
 
 
 async def test_get_registration_by_id(
@@ -483,24 +357,17 @@ async def test_get_registration_by_id(
     main_booking_option: BookingOption,
 ) -> None:
     """Get a single registration by ID."""
-    # Create first
-    payload = {
-        "attendee": {
-            "first_name": "Eve",
-            "last_name": "Get",
-            "email": "eve@get.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    create_resp = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+    reg = await _create_one(
+        client,
+        conference,
+        reg_admin_token,
+        main_booking_option.id,
+        first_name="Eve",
+        last_name="Get",
+        email="eve@get.com",
     )
-    reg_id = create_resp.json()["id"]
+    reg_id = reg["id"]
 
-    # Fetch
     response = await client.get(
         f"{BASE}/{conference.id}/registrations/{reg_id}",
         headers=auth_headers(reg_admin_token),
@@ -520,24 +387,17 @@ async def test_update_registration_status(
     main_booking_option: BookingOption,
 ) -> None:
     """Update a registration status from pending to paid."""
-    # Create
-    payload = {
-        "attendee": {
-            "first_name": "Frank",
-            "last_name": "Update",
-            "email": "frank@update.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    create_resp = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+    reg = await _create_one(
+        client,
+        conference,
+        reg_admin_token,
+        main_booking_option.id,
+        first_name="Frank",
+        last_name="Update",
+        email="frank@update.com",
     )
-    reg_id = create_resp.json()["id"]
+    reg_id = reg["id"]
 
-    # Update status
     response = await client.put(
         f"{BASE}/{conference.id}/registrations/{reg_id}",
         json={"status": "paid"},
@@ -556,31 +416,23 @@ async def test_delete_registration(
     main_booking_option: BookingOption,
 ) -> None:
     """Delete a registration successfully."""
-    # Create
-    payload = {
-        "attendee": {
-            "first_name": "Grace",
-            "last_name": "Delete",
-            "email": "grace@delete.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    create_resp = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+    reg = await _create_one(
+        client,
+        conference,
+        reg_admin_token,
+        main_booking_option.id,
+        first_name="Grace",
+        last_name="Delete",
+        email="grace@delete.com",
     )
-    reg_id = create_resp.json()["id"]
+    reg_id = reg["id"]
 
-    # Delete
     response = await client.delete(
         f"{BASE}/{conference.id}/registrations/{reg_id}",
         headers=auth_headers(reg_admin_token),
     )
     assert response.status_code == 200
 
-    # Verify gone
     get_resp = await client.get(
         f"{BASE}/{conference.id}/registrations/{reg_id}",
         headers=auth_headers(reg_admin_token),
@@ -598,22 +450,16 @@ async def test_add_and_remove_registration_item(
     addon_booking_option: BookingOption,
 ) -> None:
     """Add a booking option item to a registration, then remove it."""
-    # Create registration
-    payload = {
-        "attendee": {
-            "first_name": "Hank",
-            "last_name": "Items",
-            "email": "hank@items.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    create_resp = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+    reg = await _create_one(
+        client,
+        conference,
+        reg_admin_token,
+        main_booking_option.id,
+        first_name="Hank",
+        last_name="Items",
+        email="hank@items.com",
     )
-    reg_id = create_resp.json()["id"]
+    reg_id = reg["id"]
 
     # Add item
     item_payload = {
@@ -662,22 +508,16 @@ async def test_get_and_update_billing_profile(
     main_booking_option: BookingOption,
 ) -> None:
     """Get and update the billing profile of a registration."""
-    # Create
-    payload = {
-        "attendee": {
-            "first_name": "Ivy",
-            "last_name": "Billing",
-            "email": "ivy@billing.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    create_resp = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+    reg = await _create_one(
+        client,
+        conference,
+        reg_admin_token,
+        main_booking_option.id,
+        first_name="Ivy",
+        last_name="Billing",
+        email="ivy@billing.com",
     )
-    reg_id = create_resp.json()["id"]
+    reg_id = reg["id"]
 
     # Get billing
     get_resp = await client.get(
@@ -706,21 +546,15 @@ async def test_search_registrations(
     main_booking_option: BookingOption,
 ) -> None:
     """Search registrations by name or email."""
-    # Create two registrations
     for name, email in [("SearchAlice", "searchalice@test.com"), ("SearchBob", "searchbob@test.com")]:
-        payload = {
-            "attendee": {
-                "first_name": name,
-                "last_name": "Test",
-                "email": email,
-            },
-            "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(main_booking_option.id),
-        }
-        await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
-            json=payload,
-            headers=auth_headers(reg_admin_token),
+        await _create_one(
+            client,
+            conference,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name=name,
+            last_name="Test",
+            email=email,
         )
 
     # Search for Alice
@@ -753,22 +587,16 @@ async def test_filter_registrations_by_status(
     main_booking_option: BookingOption,
 ) -> None:
     """Filter registrations by status."""
-    # Create a registration
-    payload = {
-        "attendee": {
-            "first_name": "Filter",
-            "last_name": "Test",
-            "email": "filter@test.com",
-        },
-        "billing": BILLING_PAYLOAD,
-        "booking_option_id": str(main_booking_option.id),
-    }
-    create_resp = await client.post(
-        f"{BASE}/{conference.id}/registrations/individual",
-        json=payload,
-        headers=auth_headers(reg_admin_token),
+    reg = await _create_one(
+        client,
+        conference,
+        reg_admin_token,
+        main_booking_option.id,
+        first_name="Filter",
+        last_name="Test",
+        email="filter@test.com",
     )
-    reg_id = create_resp.json()["id"]
+    reg_id = reg["id"]
 
     # Update to "paid"
     await client.put(

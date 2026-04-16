@@ -12,8 +12,8 @@ When registering, if a booking option is linked to a program day that has sessio
 - Data is always fresh (`staleTime: 0`) so program changes are reflected immediately
 
 ### Registration Modes
-- **Single Registration**: One attendee with billing info (uses `/registrations/individual` endpoint)
-- **Group Registration**: Multiple attendees sharing one billing profile (uses `/registrations/bulk` endpoint)
+- **Single Registration**: One attendee with billing info (unified `POST /registrations` with one attendee)
+- **Group Registration**: Multiple attendees sharing one billing profile (unified `POST /registrations` with N attendees)
 
 ### VAT Number Validation
 

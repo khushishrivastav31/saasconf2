@@ -6,8 +6,6 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -23,6 +21,7 @@ from app.core.dependencies import (
 from app.core.email import send_password_reset_email
 from app.core.exceptions import AuthenticationError
 from app.core.mfa import decrypt_secret, verify_recovery_code, verify_totp_code
+from app.core.rate_limiter import limiter
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -57,7 +56,6 @@ from app.schemas.auth import (
 
 settings = get_settings()
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 async def _load_tenant_roles(db: AsyncSession, user_id: UUID) -> list[dict[str, str]]:

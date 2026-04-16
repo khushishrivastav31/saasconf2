@@ -9,9 +9,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1.router import api_router
@@ -25,11 +24,9 @@ from app.core.exceptions import (
     SubmissionValidationError,
 )
 from app.core.logging import setup_logging
+from app.core.rate_limiter import limiter
 
 settings = get_settings()
-
-# Rate limiter
-limiter = Limiter(key_func=get_remote_address)
 
 # Sentry error monitoring
 if settings.SENTRY_DSN:

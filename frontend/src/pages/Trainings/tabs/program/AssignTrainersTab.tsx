@@ -87,7 +87,6 @@ export default function AssignTrainersTab({ year }: Props) {
       return res.data;
     },
     enabled: !!programYear,
-    staleTime: 0,
   });
 
   // Fetch trainers

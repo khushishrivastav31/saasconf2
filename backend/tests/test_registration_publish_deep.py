@@ -579,182 +579,7 @@ class TestUnifiedRegistration:
 
 
 # =========================================================================
-# 2. Company Single Registration (POST /company)
-# =========================================================================
-
-
-class TestCompanyRegistration:
-    """Tests for POST /conferences/{id}/registrations/company."""
-
-    @pytest.mark.asyncio
-    async def test_company_single_registration(
-        self,
-        client: AsyncClient,
-        tenant_with_all: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        booking_option: BookingOption,
-    ) -> None:
-        """Create a company single registration."""
-        payload = {
-            "attendee": {
-                "first_name": "Company",
-                "last_name": "Employee",
-                "email": "company-emp@test.com",
-                "job_title": "Engineer",
-                "department": "R&D",
-            },
-            "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(booking_option.id),
-        }
-        resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/company",
-            json=payload,
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data["registration_mode"] == "company_single"
-        assert data["job_title"] == "Engineer"
-        assert data["department"] == "R&D"
-        assert data["billing_company_name"] == "Deep Test GmbH"
-        assert data["billing_contact_email"] == "billing@deep.de"
-
-    @pytest.mark.asyncio
-    async def test_company_registration_with_items(
-        self,
-        client: AsyncClient,
-        tenant_with_all: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        booking_option: BookingOption,
-        booking_option_b: BookingOption,
-    ) -> None:
-        """Company registration with add-on items."""
-        payload = {
-            "attendee": {
-                "first_name": "CompItem",
-                "last_name": "Employee",
-                "email": "comp-item@test.com",
-            },
-            "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(booking_option.id),
-            "items": [
-                {
-                    "item_type": "booking_option",
-                    "booking_option_id": str(booking_option_b.id),
-                }
-            ],
-            "notes": "Dietary requirement: vegan",
-        }
-        resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/company",
-            json=payload,
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 201
-        data = resp.json()
-        assert len(data["items"]) == 1
-        assert data["notes"] == "Dietary requirement: vegan"
-
-
-# =========================================================================
-# 3. Bulk Registration (POST /bulk)
-# =========================================================================
-
-
-class TestBulkRegistration:
-    """Tests for POST /conferences/{id}/registrations/bulk."""
-
-    @pytest.mark.asyncio
-    async def test_bulk_registration_multiple_attendees(
-        self,
-        client: AsyncClient,
-        tenant_with_all: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        booking_option: BookingOption,
-        booking_option_b: BookingOption,
-    ) -> None:
-        """Create bulk registration with multiple attendees sharing billing."""
-        payload = {
-            "billing": BILLING_PAYLOAD,
-            "attendees": [
-                {
-                    "first_name": "Bulk1",
-                    "last_name": "Employee",
-                    "email": "bulk1@test.com",
-                    "booking_option_id": str(booking_option.id),
-                    "pronouns": "he/him",
-                },
-                {
-                    "first_name": "Bulk2",
-                    "last_name": "Employee",
-                    "email": "bulk2@test.com",
-                    "booking_option_id": str(booking_option_b.id),
-                    "job_title": "Manager",
-                },
-            ],
-        }
-        resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/bulk",
-            json=payload,
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data["total_created"] == 2
-        assert data["billing_profile_id"] is not None
-        # Both share the same billing profile
-        bp_ids = {r["billing_profile_id"] for r in data["registrations"]}
-        assert len(bp_ids) == 1
-
-    @pytest.mark.asyncio
-    async def test_bulk_with_items_per_attendee(
-        self,
-        client: AsyncClient,
-        tenant_with_all: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        booking_option: BookingOption,
-        booking_option_b: BookingOption,
-    ) -> None:
-        """Bulk registration with items on attendees."""
-        payload = {
-            "billing": BILLING_PAYLOAD,
-            "attendees": [
-                {
-                    "first_name": "BulkItem",
-                    "last_name": "One",
-                    "email": "bulkitem1@test.com",
-                    "booking_option_id": str(booking_option.id),
-                    "items": [
-                        {
-                            "item_type": "booking_option",
-                            "booking_option_id": str(booking_option_b.id),
-                            "notes": "Extra workshop",
-                        }
-                    ],
-                },
-            ],
-        }
-        resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/bulk",
-            json=payload,
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 201
-        reg = resp.json()["registrations"][0]
-        assert len(reg["items"]) == 1
-        assert reg["items"][0]["notes"] == "Extra workshop"
-
-
-# =========================================================================
-# 4. Bookable Sessions with Data
+# 2. Bookable Sessions with Data
 # =========================================================================
 
 
@@ -841,18 +666,24 @@ class TestItemRemoval:
         booking_option_b: BookingOption,
     ) -> None:
         """Add and then remove an item from a registration."""
-        # Create registration via individual endpoint
+        # Create registration via unified endpoint
         payload = {
-            "attendee": {"first_name": "Remove", "last_name": "Item", "email": "remove-item@test.com"},
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Remove",
+                    "last_name": "Item",
+                    "email": "remove-item@test.com",
+                    "booking_option_id": str(booking_option.id),
+                }
+            ],
         }
         create_resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(admin_token),
         )
-        reg_id = create_resp.json()["id"]
+        reg_id = create_resp.json()["registrations"][0]["id"]
 
         # Add an item
         add_resp = await client.post(
@@ -900,16 +731,22 @@ class TestBillingProfileDeep:
     ) -> None:
         """Get billing profile for a registration."""
         payload = {
-            "attendee": {"first_name": "Bill", "last_name": "Get", "email": "bill-get@test.com"},
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Bill",
+                    "last_name": "Get",
+                    "email": "bill-get@test.com",
+                    "booking_option_id": str(booking_option.id),
+                }
+            ],
         }
         create_resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(admin_token),
         )
-        reg_id = create_resp.json()["id"]
+        reg_id = create_resp.json()["registrations"][0]["id"]
 
         resp = await client.get(
             f"{BASE}/{conference.id}/registrations/{reg_id}/billing",
@@ -934,16 +771,22 @@ class TestBillingProfileDeep:
     ) -> None:
         """Update billing profile fields."""
         payload = {
-            "attendee": {"first_name": "Bill", "last_name": "Update", "email": "bill-upd@test.com"},
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Bill",
+                    "last_name": "Update",
+                    "email": "bill-upd@test.com",
+                    "booking_option_id": str(booking_option.id),
+                }
+            ],
         }
         create_resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(admin_token),
         )
-        reg_id = create_resp.json()["id"]
+        reg_id = create_resp.json()["registrations"][0]["id"]
 
         resp = await client.put(
             f"{BASE}/{conference.id}/registrations/{reg_id}/billing",
@@ -1427,17 +1270,23 @@ class TestTutorialItemWithSession:
 
         # Create registration
         payload = {
-            "attendee": {"first_name": "Tutorial", "last_name": "Picker", "email": "tut-pick@test.com"},
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Tutorial",
+                    "last_name": "Picker",
+                    "email": "tut-pick@test.com",
+                    "booking_option_id": str(booking_option.id),
+                }
+            ],
         }
         create_resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(admin_token),
         )
         assert create_resp.status_code == 201
-        reg_id = create_resp.json()["id"]
+        reg_id = create_resp.json()["registrations"][0]["id"]
 
         # Add tutorial item with specific session
         add_resp = await client.post(
@@ -1490,16 +1339,22 @@ class TestTutorialItemWithSession:
 
         # Create registration
         payload = {
-            "attendee": {"first_name": "Bad", "last_name": "Tutorial", "email": "bad-tut@test.com"},
             "billing": BILLING_PAYLOAD,
-            "booking_option_id": str(booking_option.id),
+            "attendees": [
+                {
+                    "first_name": "Bad",
+                    "last_name": "Tutorial",
+                    "email": "bad-tut@test.com",
+                    "booking_option_id": str(booking_option.id),
+                }
+            ],
         }
         create_resp = await client.post(
-            f"{BASE}/{conference.id}/registrations/individual",
+            f"{BASE}/{conference.id}/registrations",
             json=payload,
             headers=auth_headers(admin_token),
         )
-        reg_id = create_resp.json()["id"]
+        reg_id = create_resp.json()["registrations"][0]["id"]
 
         # Add tutorial item referencing non-bookable session
         add_resp = await client.post(
@@ -1535,18 +1390,24 @@ class TestListWithStatusFilter:
         # Create two registrations
         for i, email in enumerate(["status-a@test.com", "status-b@test.com"]):
             payload = {
-                "attendee": {"first_name": f"Status{i}", "last_name": "Test", "email": email},
                 "billing": BILLING_PAYLOAD,
-                "booking_option_id": str(booking_option.id),
+                "attendees": [
+                    {
+                        "first_name": f"Status{i}",
+                        "last_name": "Test",
+                        "email": email,
+                        "booking_option_id": str(booking_option.id),
+                    }
+                ],
             }
             resp = await client.post(
-                f"{BASE}/{conference.id}/registrations/individual",
+                f"{BASE}/{conference.id}/registrations",
                 json=payload,
                 headers=auth_headers(admin_token),
             )
             assert resp.status_code == 201
             if i == 0:
-                reg_id = resp.json()["id"]
+                reg_id = resp.json()["registrations"][0]["id"]
 
         # Set first one to paid
         await client.put(

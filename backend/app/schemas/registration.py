@@ -130,50 +130,8 @@ class RegistrationItemResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Attendee (person) schemas — used inside registration requests
-# ---------------------------------------------------------------------------
-
-
-class AttendeeData(BaseModel):
-    """Person data for a single attendee."""
-
-    first_name: str = Field(..., min_length=1, max_length=255)
-    last_name: str = Field(..., min_length=1, max_length=255)
-    email: EmailStr
-    pronouns: str | None = Field(None, max_length=50)
-    job_title: str | None = Field(None, max_length=255)
-    department: str | None = Field(None, max_length=255)
-    phone: str | None = Field(None, max_length=50)
-
-    @field_validator("email")
-    @classmethod
-    def lowercase_email(cls, v: str) -> str:
-        return v.lower()
-
-
-# ---------------------------------------------------------------------------
 # Registration request schemas
 # ---------------------------------------------------------------------------
-
-
-class IndividualRegistrationCreate(BaseModel):
-    """Register one individual attendee."""
-
-    attendee: AttendeeData
-    billing: BillingProfileCreate
-    booking_option_id: UUID
-    items: list[RegistrationItemCreate] = Field(default_factory=list)
-    notes: str | None = None
-
-
-class CompanySingleRegistrationCreate(BaseModel):
-    """Register one employee of a company."""
-
-    attendee: AttendeeData
-    billing: BillingProfileCreate
-    booking_option_id: UUID
-    items: list[RegistrationItemCreate] = Field(default_factory=list)
-    notes: str | None = None
 
 
 class BulkAttendeeData(BaseModel):

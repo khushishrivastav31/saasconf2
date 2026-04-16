@@ -1,7 +1,6 @@
 """Stripe payment and refund helpers with full event logging."""
 
 import logging
-from datetime import datetime
 from decimal import Decimal
 
 import stripe
@@ -11,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import CurrentUser
 from app.core.exceptions import ValidationError
 from app.core.invoice_events import InvoiceEventType, log_invoice_event
+from app.core.utils import utcnow
 from app.models.conference import Conference
 from app.models.invoice import Invoice
 from app.models.user import User
@@ -144,7 +144,7 @@ async def create_payment_intent(
         raise ValidationError("Invoice must have total and currency")
 
     # Generate idempotency key
-    idempotency_key = f"invoice-{invoice.id}-payment-intent-{datetime.utcnow().isoformat()}"
+    idempotency_key = f"invoice-{invoice.id}-payment-intent-{utcnow().isoformat()}"
 
     try:
         # Create PaymentIntent
@@ -224,7 +224,7 @@ async def create_payment_link(
         raise ValidationError("Invoice must have total and currency")
 
     # Generate idempotency key
-    idempotency_key = f"invoice-{invoice.id}-payment-link-{datetime.utcnow().isoformat()}"
+    idempotency_key = f"invoice-{invoice.id}-payment-link-{utcnow().isoformat()}"
 
     try:
         # Create Payment Link
@@ -321,7 +321,7 @@ async def refund_payment(
         raise ValidationError("Invoice does not have a Stripe payment intent ID")
 
     # Generate idempotency key
-    idempotency_key = f"refund-{invoice.id}-{datetime.utcnow().isoformat()}"
+    idempotency_key = f"refund-{invoice.id}-{utcnow().isoformat()}"
 
     try:
         # Log refund initiation
