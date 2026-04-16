@@ -72,7 +72,6 @@ export default function UsersTab() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState<PortalUser | null>(null);
-  const [showPast, setShowPast] = useState(false);
   const [page, setPage] = useState(1);
 
   const toggleAccessMutation = useMutation({
@@ -114,19 +113,7 @@ export default function UsersTab() {
     staleTime: 30_000,
   });
 
-  const allItems = useMemo(() => data?.items ?? [], [data]);
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const items = useMemo(
-    () =>
-      showPast
-        ? allItems
-        : allItems.filter(
-            (u) =>
-              u.status === 'parked' || !u.current_training_date || u.current_training_date >= today
-          ),
-    [allItems, showPast, today]
-  );
-  const hiddenCount = allItems.length - items.length;
+  const items = useMemo(() => data?.items ?? [], [data]);
   const total = data?.total ?? 0;
   const totalPages = data ? Math.ceil(data.total / data.per_page) : 0;
 
@@ -340,15 +327,6 @@ export default function UsersTab() {
           <option value="active">Active</option>
           <option value="parked">Parked</option>
         </select>
-        <label className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showPast}
-            onChange={(e) => setShowPast(e.target.checked)}
-            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-          />
-          Show past{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
-        </label>
       </div>
 
       {isLoading ? (
