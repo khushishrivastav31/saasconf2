@@ -450,3 +450,87 @@ async def get_my_training_registrations(
         )
 
     return {"items": items}
+
+
+@router.get("/portal/my-trainings/{registration_id}/files")
+async def get_training_files_for_portal(
+    registration_id: str,
+    request: Request,
+    db: DbSessionDep,
+) -> dict:
+    """Get downloadable files for a training (portal user must be registered)."""
+    from app.models.attachment import Attachment
+    from app.models.training_program import ProgramYearTraining
+    from app.models.training_registration import TrainingRegistration
+
+    user = await _get_current_portal_user(request, db)
+
+    # Verify user has access to this registration
+    reg_result = await db.execute(
+        select(TrainingRegistration).where(
+            TrainingRegistration.id == registration_id,
+            TrainingRegistration.tenant_id == user.tenant_id,
+        )
+    )
+    reg = reg_result.scalar_one_or_none()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    # Verify this user is linked to an attendee in this registration
+    from app.models.training_attendee import TrainingAttendee
+    from app.models.training_registration import TrainingRegistrationAttendee
+
+    att_result = await db.execute(
+        select(TrainingRegistrationAttendee).where(
+            TrainingRegistrationAttendee.registration_id == reg.id,
+            TrainingRegistrationAttendee.attendee_id.in_(
+                select(TrainingAttendee.id).where(
+                    TrainingAttendee.portal_user_id == user.id,
+                )
+            ),
+        )
+    )
+    if not att_result.scalar_one_or_none():
+        # Fallback: check by email
+        att_email_result = await db.execute(
+            select(TrainingRegistrationAttendee).where(
+                TrainingRegistrationAttendee.registration_id == reg.id,
+                func.lower(TrainingRegistrationAttendee.email) == user.email.lower(),
+            )
+        )
+        if not att_email_result.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="Not authorized to access this training")
+
+    # Get placement → training_id
+    placement_result = await db.execute(
+        select(ProgramYearTraining.training_id).where(ProgramYearTraining.id == reg.placement_id)
+    )
+    training_id = placement_result.scalar_one_or_none()
+    if not training_id:
+        return {"items": []}
+
+    # Get files for this training
+    files_result = await db.execute(
+        select(Attachment)
+        .where(
+            Attachment.entity_type == "training",
+            Attachment.entity_id == training_id,
+            Attachment.tenant_id == user.tenant_id,
+        )
+        .order_by(Attachment.created_at.desc())
+    )
+    files = files_result.scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": str(f.id),
+                "filename": f.filename,
+                "content_type": f.content_type,
+                "file_size": f.file_size,
+                "description": f.description,
+                "created_at": f.created_at.isoformat() if f.created_at else None,
+            }
+            for f in files
+        ]
+    }

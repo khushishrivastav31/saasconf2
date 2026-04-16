@@ -30,6 +30,7 @@ from .registrations import router as registrations_router
 from .syllabi import router as syllabi_router
 from .themes import router as themes_router
 from .trainers import router as trainers_router
+from .user_management import router as user_management_router
 
 # Include sub-routers BEFORE detail_router so /themes, /languages,
 # /certification-bodies, /syllabi, /trainers, /programs are matched before the /{training_id} catch-all.
@@ -62,6 +63,7 @@ router.include_router(invoice_operations_router)
 router.include_router(invoice_replace_router)
 router.include_router(invoice_sync_router)
 router.include_router(location_types_router)
+router.include_router(user_management_router)
 router.include_router(detail_router)
 
 __all__ = ["router"]

@@ -6,8 +6,9 @@
  * Phase 3: Merge duplicates, impersonate.
  */
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { useToast } from '../../../components/Toast';
 
 interface HistoryEvent {
   id: string;
@@ -28,6 +29,7 @@ interface PortalUser {
   notes: string | null;
   current_training: string;
   current_training_date: string | null;
+  portal_user_id: string | null;
   created_at: string | null;
   history: HistoryEvent[];
 }
@@ -65,11 +67,36 @@ const formatDate = (d: string | null) =>
     : '—';
 
 export default function UsersTab() {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState<PortalUser | null>(null);
   const [showPast, setShowPast] = useState(false);
   const [page, setPage] = useState(1);
+
+  const toggleAccessMutation = useMutation({
+    mutationFn: (portalUserId: string) => api.put(`/trainings/users/${portalUserId}/toggle-access`),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['training-users'] });
+      showToast(res.data.message, 'success');
+    },
+    onError: () => showToast('Failed to update access', 'error'),
+  });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: (portalUserId: string) =>
+      api.post(`/trainings/users/${portalUserId}/resend-invite`),
+    onSuccess: () => showToast('Invite email sent', 'success'),
+    onError: () => showToast('Failed to send invite', 'error'),
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: (portalUserId: string) =>
+      api.post(`/trainings/users/${portalUserId}/reset-password`),
+    onSuccess: () => showToast('Password reset email sent', 'success'),
+    onError: () => showToast('Failed to send reset email', 'error'),
+  });
 
   const params = useMemo(() => {
     const p: Record<string, string> = { page: String(page), per_page: '50' };
@@ -179,12 +206,45 @@ export default function UsersTab() {
                 <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Portal Account
                 </dt>
-                <dd className="mt-1 text-sm text-gray-500 dark:text-gray-400 italic">
-                  No portal account yet
+                <dd className="mt-1 text-sm">
+                  {selectedUser.portal_user_id ? (
+                    <span className="text-green-600 dark:text-green-400 font-medium">Linked</span>
+                  ) : (
+                    <span className="text-gray-400 dark:text-gray-500 italic">
+                      No portal account
+                    </span>
+                  )}
                 </dd>
               </div>
             </div>
           </div>
+
+          {/* Management actions */}
+          {selectedUser.portal_user_id && (
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-2">
+              <button
+                onClick={() => toggleAccessMutation.mutate(selectedUser.portal_user_id!)}
+                disabled={toggleAccessMutation.isPending}
+                className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
+              >
+                {toggleAccessMutation.isPending ? '...' : 'Toggle Access'}
+              </button>
+              <button
+                onClick={() => resendInviteMutation.mutate(selectedUser.portal_user_id!)}
+                disabled={resendInviteMutation.isPending}
+                className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
+              >
+                {resendInviteMutation.isPending ? '...' : 'Resend Invite'}
+              </button>
+              <button
+                onClick={() => resetPasswordMutation.mutate(selectedUser.portal_user_id!)}
+                disabled={resetPasswordMutation.isPending}
+                className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
+              >
+                {resetPasswordMutation.isPending ? '...' : 'Reset Password'}
+              </button>
+            </div>
+          )}
 
           {/* History timeline */}
           <div className="px-6 py-5">

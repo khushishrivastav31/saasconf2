@@ -151,17 +151,93 @@ const TrainingDetailPage = React.memo(function TrainingDetailPage() {
             </div>
           )}
 
-          {/* Materials section — Phase 3 */}
-          <div>
-            <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Materials</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-              No materials uploaded yet.
-            </p>
-          </div>
+          {/* Materials / Files */}
+          <TrainingFiles registrationId={registrationId!} />
         </div>
       </div>
     </div>
   );
 });
+
+function TrainingFiles({ registrationId }: { registrationId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['portal-training-files', registrationId],
+    queryFn: async () => {
+      const res = await trainingPortalApi.get(`/portal/my-trainings/${registrationId}/files`);
+      return res.data as {
+        items: Array<{
+          id: string;
+          filename: string;
+          content_type: string;
+          file_size: number;
+          description: string | null;
+        }>;
+      };
+    },
+    staleTime: 60_000,
+  });
+
+  const files = data?.items ?? [];
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleDownload = async (fileId: string, filename: string) => {
+    try {
+      const res = await trainingPortalApi.get(`/attachments/${fileId}/download`, {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent fail — user sees nothing
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Materials</h2>
+      {isLoading ? (
+        <p className="text-sm text-gray-400">Loading...</p>
+      ) : files.length === 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+          No materials uploaded yet.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {files.map((file) => (
+            <li
+              key={file.id}
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {file.filename}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatSize(file.file_size)}
+                  {file.description && ` — ${file.description}`}
+                </p>
+              </div>
+              <button
+                onClick={() => handleDownload(file.id, file.filename)}
+                className="ml-3 shrink-0 px-3 py-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 border border-primary-300 dark:border-primary-700 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20"
+              >
+                Download
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default TrainingDetailPage;

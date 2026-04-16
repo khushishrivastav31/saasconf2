@@ -362,6 +362,7 @@ async def list_attendees(
                 "notes": att.notes,
                 "current_training": current_training,
                 "current_training_date": current_training_date,
+                "portal_user_id": str(att.portal_user_id) if att.portal_user_id else None,
                 "created_at": att.created_at.isoformat() if att.created_at else None,
                 "history": [
                     {
