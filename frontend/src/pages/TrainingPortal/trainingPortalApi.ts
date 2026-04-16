@@ -109,7 +109,7 @@ trainingPortalApi.interceptors.response.use(
       }
 
       try {
-        const response = await axios.post(`${API_URL}/api/v1/portal/${slug}/refresh`, {
+        const response = await axios.post(`${API_URL}/api/v1/portal/${slug}/unified/refresh`, {
           refresh_token: refreshToken,
         });
 

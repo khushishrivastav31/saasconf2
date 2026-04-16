@@ -18,7 +18,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await trainingPortalApi.post(`/portal/${tenantSlug}/login`, {
+      const response = await trainingPortalApi.post(`/portal/${tenantSlug}/unified/login`, {
         email,
         password,
       });

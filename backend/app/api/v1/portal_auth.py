@@ -109,7 +109,7 @@ async def _issue_tokens(db: DbSessionDep, portal_user: PortalUser) -> PortalToke
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 
-@router.post("/portal/{tenant_slug}/login")
+@router.post("/portal/{tenant_slug}/unified/login")
 @limiter.limit("5/minute")
 async def portal_login(
     request: Request,
@@ -147,7 +147,7 @@ async def portal_login(
     return tokens
 
 
-@router.post("/portal/{tenant_slug}/refresh")
+@router.post("/portal/{tenant_slug}/unified/refresh")
 @limiter.limit("10/minute")
 async def portal_refresh(
     request: Request,
@@ -189,7 +189,7 @@ async def portal_refresh(
     return tokens
 
 
-@router.post("/portal/{tenant_slug}/forgot-password")
+@router.post("/portal/{tenant_slug}/unified/forgot-password")
 @limiter.limit("3/minute")
 async def portal_forgot_password(
     request: Request,
@@ -246,7 +246,7 @@ font-weight: bold;">Reset Password</a></p>
     return {"message": "If an account with this email exists, a password reset link has been sent."}
 
 
-@router.post("/portal/{tenant_slug}/reset-password")
+@router.post("/portal/{tenant_slug}/unified/reset-password")
 @limiter.limit("5/minute")
 async def portal_reset_password(
     request: Request,

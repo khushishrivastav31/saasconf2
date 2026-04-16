@@ -31,7 +31,7 @@ export default function SetPasswordPage() {
     setIsLoading(true);
 
     try {
-      await trainingPortalApi.post(`/portal/${tenantSlug}/reset-password`, {
+      await trainingPortalApi.post(`/portal/${tenantSlug}/unified/reset-password`, {
         token,
         password,
       });
