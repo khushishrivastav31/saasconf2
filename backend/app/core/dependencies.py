@@ -90,6 +90,7 @@ async def get_token_from_header(authorization: Annotated[str | None, Header()] =
 
 
 async def get_current_user(
+    request: Request,
     token: Annotated[str, Depends(get_token_from_header)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CurrentUser:
@@ -141,13 +142,18 @@ async def get_current_user(
         if isinstance(r, dict) and "scope" in r and "level" in r
     ]
 
-    return CurrentUser(
+    current_user = CurrentUser(
         user_id=user_id,
         tenant_id=tenant_id,
         role=role,
         modules=modules,
         tenant_roles=tenant_roles,
     )
+    # Expose the authenticated user on request.state so that the
+    # tenant-aware rate limiter's key_func can read it without re-decoding
+    # the JWT. See app.core.rate_limiter._tenant_or_ip_key.
+    request.state.current_user = current_user
+    return current_user
 
 
 async def get_current_active_user(

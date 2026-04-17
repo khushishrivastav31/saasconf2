@@ -82,6 +82,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Full training module refactoring — split all oversized files (invoices.py, programs.py, InvoicesTab, CustomerDetailPanel, OffersTab, TrainersSettingsTab, CurrencyTaxTab, RegistrationsTab, OfferDocumentsSection). Security audit fix (pypdf, python-multipart).
-- **In progress**: Nothing.
-- **Status**: All checks pass — mypy, ruff, tsc, eslint. CI/CD retriggered.
+- **Last completed**: Audit Phase C — per-tenant rate limiter (`tenant_limiter` in `app/core/rate_limiter.py`, applied to 3 analytics export endpoints), enum CHECK constraints migration 194 (7 status/role columns), Sentry alerts runbook (`docs/runbooks/sentry-alerts.md`).
+- **In progress**: Phase D — frontend primitives (Input/Select/DataTable/DetailPanel, zod pilot, InvoicesTab refactor, OpenAPI codegen). Not yet started.
+- **Status**: mypy clean (584 files), ruff clean, rate-limiter + RLS + analytics + auth + csv tests green (61 passed). Phase C ready to commit.

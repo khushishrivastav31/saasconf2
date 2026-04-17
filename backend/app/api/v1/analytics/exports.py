@@ -1,4 +1,10 @@
-"""CSV, XLSX, and PDF export endpoints for analytics."""
+"""CSV, XLSX, and PDF export endpoints for analytics.
+
+These endpoints stream materialised rows or run WeasyPrint/openpyxl in a
+thread pool — the combination can burn significant CPU per call. We apply
+the per-tenant rate limiter so one noisy tenant cannot starve its peers
+when they share the same upstream proxy IP.
+"""
 
 import asyncio
 import io
@@ -6,7 +12,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from app.constants import ModuleCode
@@ -14,6 +20,7 @@ from app.core.conference_helpers import check_conference_admin, get_conference_f
 from app.core.csv_export import csv_response
 from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
 from app.core.file_validation import safe_content_disposition
+from app.core.rate_limiter import tenant_limiter
 from app.schemas.analytics import (
     CostPerAttendee,
     FinancialReportResponse,
@@ -36,7 +43,9 @@ router = APIRouter()
     "/revenue/export/csv",
     dependencies=[Depends(require_module(MODULE_CODE))],
 )
+@tenant_limiter.limit("30/minute")
 async def export_revenue_csv(
+    request: Request,
     conference_id: UUID,
     db: DbSessionDep,
     current_user: CurrentUserDep,
@@ -93,7 +102,9 @@ async def export_revenue_csv(
     "/revenue/export/xlsx",
     dependencies=[Depends(require_module(MODULE_CODE))],
 )
+@tenant_limiter.limit("30/minute")
 async def export_revenue_xlsx(
+    request: Request,
     conference_id: UUID,
     db: DbSessionDep,
     current_user: CurrentUserDep,
@@ -122,7 +133,9 @@ async def export_revenue_xlsx(
     "/financial-report/export/pdf",
     dependencies=[Depends(require_module(MODULE_CODE))],
 )
+@tenant_limiter.limit("10/minute")
 async def export_financial_report_pdf(
+    request: Request,
     conference_id: UUID,
     db: DbSessionDep,
     current_user: CurrentUserDep,
