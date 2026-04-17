@@ -83,6 +83,28 @@ For zero-downtime rotation, implement dual-key support:
 3. Rebuild and restart all services
 4. Revoke old DSN in Sentry
 
+## PII Encryption Key
+
+**Not a simple swap.** `PII_ENCRYPTION_KEY` encrypts column-level PII across
+13 columns (`users.email`, `portal_users.email/phone`, `invoices.recipient_email/vat`,
+`billing_profiles.contact_email/phone/vat_number`, `trainers.email/phone`,
+`customers.email/phone/vat_number`). Rows encrypted with the old key are
+unreadable once the old key is discarded.
+
+**Rotation is phased** — execute per the runbook:
+see [runbooks/pii-encryption-key-management.md](runbooks/pii-encryption-key-management.md#rotation-procedure).
+
+Summary of the phases:
+
+1. Generate new key. Move current key to `PII_ENCRYPTION_KEYS_OLD` (comma-separated list).
+2. Set the new key as `PII_ENCRYPTION_KEY`. Deploy. `MultiFernet` reads fall back
+   through old keys; new writes use the new key.
+3. Run the backfill script to re-encrypt every historical row with the new key.
+4. **After backfill completes cleanly**, remove the old key from `PII_ENCRYPTION_KEYS_OLD`.
+5. Retain the old key in offline storage for ≥90 days (restore safety net).
+
+**Never** drop the old key before backfill is verified complete on every table.
+
 ## Super Admin Password
 
 1. Update `SUPER_ADMIN_PASSWORD` in environment
@@ -98,6 +120,7 @@ For zero-downtime rotation, implement dual-key support:
 |--------|-------------------|-------|
 | JWT_SECRET_KEY | Every 90 days | Causes user re-login |
 | DB_PASSWORD | Every 90 days | Brief downtime during rotation |
+| PII_ENCRYPTION_KEY | Every 365 days or on suspected leak | Phased — see runbook; backfill required |
 | RESEND_API_KEY | Every 180 days | No downtime |
 | SENTRY_DSN | As needed | Rebuild required |
 

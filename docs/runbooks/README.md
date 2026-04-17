@@ -18,6 +18,7 @@ A runbook belongs here if it meets **all** of:
 | [incident-response.md](incident-response.md) | Triage / escalate / postmortem a production incident | During and after an outage |
 | [restore-from-backup.md](restore-from-backup.md) | Restore the production DB from S3 backup | Data corruption / accidental destructive query |
 | [secret-rotation-execution.md](secret-rotation-execution.md) | Execute a secret rotation (companion to `../secret-rotation.md` policy) | Scheduled rotation or suspected secret leak |
+| [pii-encryption-key-management.md](pii-encryption-key-management.md) | Store, rotate, and recover `PII_ENCRYPTION_KEY` | Before enabling PII encryption; any key rotation |
 | [sentry-alerts.md](sentry-alerts.md) | Reference for configured Sentry alert rules + expected responses | Receiving a Sentry page |
 | [rls-policy-verification.md](rls-policy-verification.md) | Verify every tenant-scoped table has RLS enabled + a policy | After a schema change; periodic audit |
 
