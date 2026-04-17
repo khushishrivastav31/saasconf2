@@ -82,7 +82,13 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Phase H **Step 38 — ratchet budget** (not warn→error as plan originally stated). Discovery: 105 files exceed 400 LOC, not 8 — Phase G only addressed the top 8 god-components. Plan's literal verify criterion (`--max-warnings 0` passes) was already false; CI had been red. Adopted option 1 (budget ratchet): ESLint `max-lines` rule stays at `warn` / max 400, `npm run lint` + CI now use `--max-warnings 105` (the current count). Lint exits 0. Adding a new 400+ LOC file or growing an existing one fails CI. Lower the budget as files get split. **lint-staged stays at `--max-warnings 0`** so any *newly staged* file must be under 400 LOC.
+- **Last completed**: Phase H **Step 39 — five foundational ADRs** written in `docs/adr/` (Michael Nygard format, all Accepted, dated 2026-04-17, @josediaz):
+  - `0001-row-level-security-for-multi-tenancy.md` — PostgreSQL RLS with `app.current_tenant_id` session setting + super-admin bypass; alternatives (schema-per-tenant, DB-per-tenant, app-layer filtering) rejected.
+  - `0002-jwt-hs256-over-rs256.md` — HS256 because the backend is the only verifier; smaller tokens, faster HMAC; revisit if federation ever needed.
+  - `0003-redis-backed-rate-limiter.md` — slowapi + Redis with two instances (`limiter` IP-only, `tenant_limiter` `<tenant_id>:<ip>`); Nginx kept as coarse secondary.
+  - `0004-async-sqlalchemy.md` — async SQLAlchemy + asyncpg end-to-end; `asyncio.to_thread` for inherently blocking libs (WeasyPrint etc.); tests use `NullPool`.
+  - `0005-pydantic-v2-strict.md` — v2 with `ConfigDict(from_attributes=True)` everywhere; treat lax coercion as a bug; migrate v1 `class Config:` on sight.
+  - `docs/adr/README.md` catalog: 5 rows flipped `_planned_` → `Accepted`, trailing "will be written in Phase H" sentence removed.
 - **In progress**: Step 37 remaining phases (each its own commit): (c) dual-write — populate `*_encrypted` + `*_hash` on insert/update; (d) backfill script; (e) read cutover — switch login (`auth.py:79`, `portal_auth.py:26`, `trainings/user_management.py:73`) and search queries to hash lookups, decrypt-on-read for display; (f) drop plaintext columns. Also: prod startup check (refuse boot if `PII_ENCRYPTION_KEY` empty in production).
-- **Next up**: Step 39 (5 foundational ADRs: RLS / JWT HS256 / Redis rate limiter / async SQLAlchemy / Pydantic v2) OR Step 37 phase (c) dual-write. Step 38 + Step 40 done. Future: another round of splits to lower the max-lines budget below 105.
-- **Status**: `npm run lint` exits 0 with 105 warnings (budget). Pre-existing IDE diagnostic warnings at `.github/workflows/staging.yml:606-607` (E2E_PORTAL_* secrets) are unrelated — not introduced by this change.
+- **Next up**: Step 37 phase (c) dual-write layer. All other Phase H items except the ongoing 37 rollout are done (38 ratchet, 39 ADRs, 40 runbooks). Future: another round of splits to lower the max-lines budget below 105.
+- **Status**: ADR files ready for commit; no code or test changes since Step 38. `npm run lint` still exits 0 with 105 warnings (budget).

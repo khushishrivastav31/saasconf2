@@ -19,10 +19,8 @@ Use [0000-template.md](0000-template.md). Number ADRs sequentially — once an A
 
 | # | Title | Status |
 |---|-------|--------|
-| [0001](0001-row-level-security-for-multi-tenancy.md) | Row-Level Security for multi-tenancy | _planned_ |
-| [0002](0002-jwt-hs256-over-rs256.md) | JWT HS256 over RS256 | _planned_ |
-| [0003](0003-redis-backed-rate-limiter.md) | Redis-backed slowapi rate limiter | _planned_ |
-| [0004](0004-async-sqlalchemy.md) | Async SQLAlchemy throughout | _planned_ |
-| [0005](0005-pydantic-v2-strict.md) | Pydantic v2 strict mode | _planned_ |
-
-The five _planned_ entries will be written in Phase H of the audit implementation (see `docs/audit-report-2026-04.md`).
+| [0001](0001-row-level-security-for-multi-tenancy.md) | Row-Level Security for multi-tenancy | Accepted |
+| [0002](0002-jwt-hs256-over-rs256.md) | JWT HS256 over RS256 | Accepted |
+| [0003](0003-redis-backed-rate-limiter.md) | Redis-backed slowapi rate limiter | Accepted |
+| [0004](0004-async-sqlalchemy.md) | Async SQLAlchemy throughout | Accepted |
+| [0005](0005-pydantic-v2-strict.md) | Pydantic v2 strict mode | Accepted |
