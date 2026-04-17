@@ -19,6 +19,16 @@ repos:
         files: ^frontend/src/
         pass_filenames: false
 
+  # Backend - enforce max LOC per file (guard against new god-modules)
+  - repo: local
+    hooks:
+      - id: backend-max-loc
+        name: Backend max LOC check (600 per file)
+        entry: python backend/scripts/check_max_loc.py
+        language: system
+        files: ^backend/app/.*\.py$
+        pass_filenames: true
+
   # Backend - Python type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1

@@ -1,0 +1,43 @@
+# Backlog: Python files under backend/app/ that exceed 600 LOC.
+# Snapshotted 2026-04-17. The pre-commit hook (`scripts/check_max_loc.py`)
+# allows these files to stay large but forbids NEW large files and forbids
+# any of these files from growing past their current size unless they're
+# refactored.
+#
+# When you refactor one of these below 600 LOC, delete the corresponding
+# line. The audit at docs/audit-report-2026-04.md tracks the refactor order.
+backend/app/api/v1/auth.py
+backend/app/api/v1/budgets.py
+backend/app/api/v1/cfp/papers.py
+backend/app/api/v1/cfp/shared.py
+backend/app/api/v1/cfp_portal/auth.py
+backend/app/api/v1/cfp_portal/messaging.py
+backend/app/api/v1/cfp_portal/my_registrations.py
+backend/app/api/v1/cfp_portal/papers.py
+backend/app/api/v1/cfp_portal/registration.py
+backend/app/api/v1/conferences/core.py
+backend/app/api/v1/form_schema.py
+backend/app/api/v1/invoices/operations.py
+backend/app/api/v1/locations.py
+backend/app/api/v1/messaging/threads.py
+backend/app/api/v1/portal/registration.py
+backend/app/api/v1/portal/training_portal.py
+backend/app/api/v1/program/publish.py
+backend/app/api/v1/program/sessions.py
+backend/app/api/v1/registrations/core.py
+backend/app/api/v1/settings/email_templates.py
+backend/app/api/v1/settings/user_roles.py
+backend/app/api/v1/speaker_expenses.py
+backend/app/api/v1/sponsor_contracts.py
+backend/app/api/v1/trainings/attendees.py
+backend/app/api/v1/trainings/offer_documents.py
+backend/app/api/v1/trainings/user_management.py
+backend/app/api/v1/users.py
+backend/app/api/v1/volunteer_tasks.py
+backend/app/core/badge_pdf.py
+backend/app/core/conference_duplicate.py
+backend/app/core/default_settings.py
+backend/app/core/email.py
+backend/app/core/invoice_pdf.py
+backend/app/core/zugferd_xml.py
+backend/app/schemas/settings.py

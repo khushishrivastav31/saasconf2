@@ -1,0 +1,137 @@
+name: Backup restore test
+
+# Weekly sanity check: can the most recent off-site backup actually be
+# restored? A backup you haven't test-restored is a backup you can't trust.
+#
+# This workflow pulls the newest object from the backup S3 prefix, restores it
+# into a throwaway Postgres container, and runs a smoke query. It fails loudly
+# if any step breaks — caught early, before you actually need the backup.
+#
+# Prerequisites (configured as repo or org secrets):
+#   - BACKUP_S3_URI                  e.g. s3://saasconf-backups/staging
+#   - AWS_ACCESS_KEY_ID
+#   - AWS_SECRET_ACCESS_KEY
+#   - AWS_DEFAULT_REGION             (optional, defaults to eu-central-1)
+#   - BACKUP_ENCRYPTION_PASSPHRASE   (optional, only needed if backups are encrypted)
+#
+# If BACKUP_S3_URI is not set, the workflow exits successfully with a notice —
+# this prevents CI noise before the backup pipeline is live.
+
+on:
+  schedule:
+    # Sundays 08:00 UTC — after the nightly backup job has run.
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: restore_test
+          POSTGRES_PASSWORD: restore_test_password
+          POSTGRES_DB: restore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U restore_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check backup pipeline is configured
+        id: check-config
+        env:
+          BACKUP_S3_URI: ${{ secrets.BACKUP_S3_URI }}
+        run: |
+          if [ -z "${BACKUP_S3_URI:-}" ]; then
+            echo "::notice::BACKUP_S3_URI secret is not set — skipping restore test until the backup pipeline is live."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials
+        if: steps.check-config.outputs.skip == 'false'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'eu-central-1' }}
+        run: |
+          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> "$GITHUB_ENV"
+          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> "$GITHUB_ENV"
+          echo "AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION" >> "$GITHUB_ENV"
+
+      - name: Fetch most recent DB backup
+        if: steps.check-config.outputs.skip == 'false'
+        env:
+          BACKUP_S3_URI: ${{ secrets.BACKUP_S3_URI }}
+        run: |
+          set -euo pipefail
+          # List backups, pick the most recent db_*.sql.gz (optionally .enc) by lexicographic sort
+          # since filenames are timestamped YYYYMMDD_HHMMSS.
+          LATEST=$(aws s3 ls "${BACKUP_S3_URI}/" | grep -E 'db_[0-9]{8}_[0-9]{6}\.sql\.gz(\.enc)?$' | sort | tail -1 | awk '{print $4}')
+          if [ -z "${LATEST:-}" ]; then
+            echo "::error::No db_*.sql.gz object found in ${BACKUP_S3_URI}"
+            exit 1
+          fi
+          echo "Latest backup: $LATEST"
+          aws s3 cp "${BACKUP_S3_URI}/${LATEST}" "./${LATEST}"
+          echo "BACKUP_FILE=${LATEST}" >> "$GITHUB_ENV"
+
+      - name: Decrypt backup if needed
+        if: steps.check-config.outputs.skip == 'false'
+        env:
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [[ "$BACKUP_FILE" == *.enc ]]; then
+            if [ -z "${BACKUP_ENCRYPTION_PASSPHRASE:-}" ]; then
+              echo "::error::Backup is encrypted but BACKUP_ENCRYPTION_PASSPHRASE secret is not set"
+              exit 1
+            fi
+            DECRYPTED="${BACKUP_FILE%.enc}"
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 \
+              -pass "pass:${BACKUP_ENCRYPTION_PASSPHRASE}" \
+              -in "$BACKUP_FILE" -out "$DECRYPTED"
+            rm "$BACKUP_FILE"
+            echo "BACKUP_FILE=$DECRYPTED" >> "$GITHUB_ENV"
+          fi
+
+      - name: Verify gzip integrity
+        if: steps.check-config.outputs.skip == 'false'
+        run: gzip -t "$BACKUP_FILE"
+
+      - name: Install psql client
+        if: steps.check-config.outputs.skip == 'false'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Restore into throwaway Postgres
+        if: steps.check-config.outputs.skip == 'false'
+        env:
+          PGPASSWORD: restore_test_password
+        run: |
+          set -euo pipefail
+          gunzip -c "$BACKUP_FILE" | psql -h localhost -U restore_test -d restore_test -v ON_ERROR_STOP=1
+
+      - name: Smoke-test restored schema
+        if: steps.check-config.outputs.skip == 'false'
+        env:
+          PGPASSWORD: restore_test_password
+        run: |
+          set -euo pipefail
+          # These queries will fail if the restored DB is missing core tables,
+          # which is exactly what the test is meant to catch.
+          psql -h localhost -U restore_test -d restore_test -c "SELECT count(*) FROM tenants"
+          psql -h localhost -U restore_test -d restore_test -c "SELECT count(*) FROM users"
+          psql -h localhost -U restore_test -d restore_test -c "SELECT count(*) FROM conferences"

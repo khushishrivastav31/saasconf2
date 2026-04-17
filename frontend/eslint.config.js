@@ -35,6 +35,19 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" },
       ],
+      // Keep as warn until the god-components identified in docs/audit-report-2026-04.md
+      // are split (Phase G). Flip to "error" once src/ has no warnings.
+      "max-lines": [
+        "warn",
+        { max: 400, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  {
+    // Tests can be long (fixtures, many scenarios). max-lines targets prod code.
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
+    rules: {
+      "max-lines": "off",
     },
   },
 );

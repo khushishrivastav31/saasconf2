@@ -184,7 +184,10 @@ source = ["app"]
 omit = ["app/tests/*", "app/__pycache__/*"]
 
 [tool.coverage.report]
-fail_under = 50
+# Ratchet: CI was green at 50 on 2026-04-17. Bumping to 55 to block silent
+# regressions while giving Phase G test-writing room to land before we
+# target 70. Do not lower this value; only raise it.
+fail_under = 55
 show_missing = true
 exclude_lines = [
     "pragma: no cover",

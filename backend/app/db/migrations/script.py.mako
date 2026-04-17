@@ -19,6 +19,16 @@ depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
 
 
 def upgrade() -> None:
+    # RLS reminder: if this migration creates a new table with a tenant_id column,
+    # also enable Row-Level Security and create tenant isolation policies, e.g.:
+    #
+    #   op.execute("ALTER TABLE my_new_table ENABLE ROW LEVEL SECURITY")
+    #   op.execute(
+    #       "CREATE POLICY tenant_isolation ON my_new_table "
+    #       "USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)"
+    #   )
+    #
+    # tests/test_rls_coverage.py will fail CI if you forget.
     ${upgrades if upgrades else "pass"}
 
 
