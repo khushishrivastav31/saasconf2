@@ -82,13 +82,15 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Phase H **Step 37 phase (c) — PII dual-write layer**. SQLAlchemy `before_insert` / `before_update` listeners now populate the `*_encrypted` (Fernet) + `*_hash` (deterministic SHA-256) companions alongside every write to the 13 PII columns.
-  - New module: `backend/app/core/security/pii_dual_write.py` — `PII_COLUMN_SPEC` maps 6 model classes (`User`, `PortalUser`, `Invoice`, `BillingProfile`, `Trainer`, `Customer`) to (plaintext_attr, kind) tuples. `register_pii_dual_write_listeners()` is idempotent; called from `app/models/__init__.py` once all models are defined.
-  - Update path skips rows whose plaintext attr has not changed (Fernet is non-deterministic — re-encryption would thrash ciphertext on every unrelated row touch).
-  - Each of the 6 models now declares its `*_encrypted` (`Text, nullable=True`) and `*_hash` (`String(64), nullable=True`) mapped columns. The DB columns were added in migration 197 (`e8b60c4`).
-  - 9 new tests in `backend/tests/test_pii_dual_write.py` cover insert, update, skip-on-unchanged, normalization (email lowercase/strip, VAT alnum-uppercase), null handling, and the multi-PII models.
-  - Backend restarted cleanly; `/health` = 200. mypy + ruff green; full backend suite = 852 passed + 1 pre-existing unrelated failure in `test_dashboard_matviews.py::test_downgrade_drops_matviews`.
-  - **Known gap** documented in the module docstring: bulk `session.execute(update(...))` bypasses ORM events. No current call site does this on plaintext PII, but audit before phase (e) cutover.
-- **In progress**: Step 37 remaining phases: (d) backfill script for historical rows; (e) read cutover — switch login (`auth.py:79`, `portal_auth.py:26`, `trainings/user_management.py:73`) and search queries to hash lookups, decrypt-on-read for display; (f) drop plaintext columns. Also: prod startup check (refuse boot if `PII_ENCRYPTION_KEY` empty in production).
-- **Next up**: Step 37 phase (d) — backfill script to populate `*_encrypted` + `*_hash` for rows that existed before dual-write was turned on.
-- **Status**: Dual-write commit `1ad8e2e` on main (not yet pushed). Backend running with listeners active.
+- **Last completed**: Phase H **Step 37 phase (d) — PII backfill script**. Populates `*_encrypted` + `*_hash` for rows that existed before dual-write (phase c) was installed.
+  - New module: `backend/scripts/backfill_pii_encryption.py` (~180 LOC) — raw SQL, batched (default 500), per-batch commits so SIGINT leaves partial progress. Filter `<col>_encrypted IS NULL AND <col> IS NOT NULL` makes it idempotent and restartable.
+  - `BACKFILL_SPEC` mirrors migration 197's 13 (table, col, kind) tuples. RLS bypass via `set_config('app.is_super_admin', 'true', true)` so all tenants' PII is reachable.
+  - Flags: `--dry-run`, `--batch-size`, `--sleep`, `--tables` (comma list).
+  - Chose raw SQL over ORM because dual-write skip-on-unchanged would no-op for every row and ORM round-trip is ~10× slower on bulk writes.
+  - New `backend/scripts/__init__.py` (empty) makes the module importable by tests.
+  - 6 new tests in `backend/tests/test_pii_backfill.py` — populates missing, idempotent (ORM-written row untouched), dry-run writes nothing, handles email/phone/vat kinds on `customers`, respects `batch_size=1`, skips NULL plaintext. All 6 pass.
+  - Runbook `docs/runbooks/pii-encryption-key-management.md` now has an "Initial backfill (step 37 phase d)" section with command examples, distinguishing it from the key-rotation backfill.
+  - mypy `app/` + ruff green. Backend untouched (script is invoked out-of-band; no model changes in this phase).
+- **In progress**: Step 37 remaining phases: (e) read cutover — switch login (`auth.py:79`, `portal_auth.py:26`, `trainings/user_management.py:73`) + search queries to hash lookups, decrypt-on-read for display; (f) drop plaintext columns. Also: prod startup check (refuse boot if `PII_ENCRYPTION_KEY` empty in production).
+- **Next up**: Step 37 phase (e) — read cutover. Start with login paths: change `get_user_by_email` to hash lookup (`WHERE email_hash = :h`); change display paths to decrypt from `email_encrypted` when present (fall back to `email` during transition).
+- **Status**: Phase (d) not yet committed — changes: `backend/scripts/__init__.py` (new), `backend/scripts/backfill_pii_encryption.py` (new), `backend/tests/test_pii_backfill.py` (new), `docs/runbooks/pii-encryption-key-management.md` (added "Initial backfill" section). Phase (c) commit `1ad8e2e` is on main, not yet pushed.

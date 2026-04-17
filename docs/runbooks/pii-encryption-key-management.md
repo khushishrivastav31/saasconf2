@@ -65,6 +65,34 @@ not a valid Fernet key and will refuse to load.
 3. Confirm the offline copy is retrievable by someone other than you.
 4. Deploy the environment. Startup log must include `PII encryption: enabled`.
 
+## Initial backfill (step 37 phase d — once per environment)
+
+Dual-write (step 37 phase c) keeps the `*_encrypted` + `*_hash` companion
+columns in sync for every row **written after it was installed**. Rows that
+existed before still have `NULL` companions. Before the read cutover (phase e)
+can go live, those legacy rows need their companions filled in.
+
+```bash
+cd backend
+# 1. Dry run first — prints row counts per (table, column), writes nothing.
+venv/bin/python -m scripts.backfill_pii_encryption --dry-run
+
+# 2. Real run. Commits per batch so SIGINT leaves partial progress intact.
+venv/bin/python -m scripts.backfill_pii_encryption
+
+# Knobs:
+venv/bin/python -m scripts.backfill_pii_encryption --batch-size 1000 --sleep 0.05
+venv/bin/python -m scripts.backfill_pii_encryption --tables customers,invoices
+```
+
+The script filters on `<col>_encrypted IS NULL AND <col> IS NOT NULL`, so
+re-running after a crash or after new legacy rows are imported only touches
+rows that still need it. Raw SQL (not ORM) — ORM dual-write would no-op
+because the plaintext attr hasn't changed on these rows.
+
+Distinct from the key-rotation backfill below: this one fills `NULL`
+companions once. Rotation re-encrypts already-encrypted rows with a new key.
+
 ## Rotation procedure
 
 Rotation is **phased** because old rows stay encrypted with the old key
