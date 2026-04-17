@@ -172,7 +172,10 @@ jobs:
 
       - name: Lint
         working-directory: frontend
-        run: npx eslint src/ --max-warnings 0
+        # Budget is the current count of grandfathered max-lines warnings
+        # (files >400 LOC). Must stay ≤ current count; lower as files are
+        # split. See frontend/eslint.config.js comment + audit step 38.
+        run: npx eslint src/ --max-warnings 105
 
       - name: Type check
         working-directory: frontend

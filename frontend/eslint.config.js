@@ -35,8 +35,13 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" },
       ],
-      // Keep as warn until the god-components identified in docs/audit-report-2026-04.md
-      // are split (Phase G). Flip to "error" once src/ has no warnings.
+      // Ratchet strategy: rule stays at "warn", max at 400. CI + `npm run lint`
+      // use `--max-warnings <N>` where N is the current count of files over 400
+      // LOC. Adding a new 400+ LOC file or growing an existing one raises the
+      // count past N and fails CI. When files get split, lower N to lock in
+      // the win. Target is eventually N=0. lint-staged stays at
+      // `--max-warnings 0` so any *newly staged* file must be under 400 LOC.
+      // See audit step 38 in docs/audit-report-2026-04.md.
       "max-lines": [
         "warn",
         { max: 400, skipBlankLines: true, skipComments: true },
