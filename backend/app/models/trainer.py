@@ -64,7 +64,11 @@ class Trainer(Base):
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    phone_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     pronouns: Mapped[str | None] = mapped_column(String(100), nullable=True)
     vita: Mapped[str | None] = mapped_column(Text, nullable=True)
 

@@ -75,10 +75,16 @@ class BillingProfile(Base):
     contact_first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_last_name: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_phone: Mapped[str] = mapped_column(String(50), nullable=False)
+    contact_phone_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     contact_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    contact_email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Tax / procurement
     vat_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    vat_number_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vat_number_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     vat_validated: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     procurement_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
 

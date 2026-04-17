@@ -57,6 +57,8 @@ class Invoice(Base):
     # Recipient information
     recipient_name: Mapped[str] = mapped_column(String(255), nullable=False)
     recipient_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recipient_email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recipient_email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     recipient_address_line1: Mapped[str | None] = mapped_column(String(255), nullable=True)
     recipient_address_line2: Mapped[str | None] = mapped_column(String(255), nullable=True)
     recipient_city: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -64,6 +66,8 @@ class Invoice(Base):
     recipient_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recipient_country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     recipient_vat_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    recipient_vat_number_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recipient_vat_number_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     procurement_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Payment
