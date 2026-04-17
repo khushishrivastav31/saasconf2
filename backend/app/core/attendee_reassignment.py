@@ -138,7 +138,13 @@ def create_new_registration(
     old_registration: TrainingRegistration | None,
     att: TrainingAttendee,
 ) -> TrainingRegistration:
-    """Create a new registration, copying billing from old registration if available."""
+    """Create a new registration, copying billing from old registration if available.
+
+    When there is no old registration (park history missing or
+    unrecoverable), the NOT NULL billing-address columns fall back to
+    empty strings — the admin fills them in from the registration UI
+    after reassignment.
+    """
     return TrainingRegistration(
         tenant_id=tenant_id,
         placement_id=placement_id,
@@ -148,10 +154,10 @@ def create_new_registration(
         contact_email=old_registration.contact_email if old_registration else att.email,
         contact_phone=old_registration.contact_phone if old_registration else None,
         company_name=old_registration.company_name if old_registration else None,
-        street=old_registration.street if old_registration else None,
-        postal_code=old_registration.postal_code if old_registration else None,
-        city=old_registration.city if old_registration else None,
-        country=old_registration.country if old_registration else None,
+        street=old_registration.street if old_registration else "",
+        postal_code=old_registration.postal_code if old_registration else "",
+        city=old_registration.city if old_registration else "",
+        country=old_registration.country if old_registration else "",
         vat_number=old_registration.vat_number if old_registration else None,
         payment_method=old_registration.payment_method if old_registration else "bank_transfer",
         subtotal=old_registration.subtotal if old_registration else None,
