@@ -245,6 +245,12 @@ jobs:
 
       - name: Assert api.generated.ts matches backend schema
         working-directory: frontend
+        env:
+          # Backend imports get_settings() at module load time; supply the
+          # minimum vars needed to validate Settings. Values are throwaway —
+          # the script only invokes app.openapi(), never opens a connection.
+          JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
+          SUPER_ADMIN_PASSWORD: TestPassword123!
         run: npm run gen:api:check
 
       - name: Check bundle size

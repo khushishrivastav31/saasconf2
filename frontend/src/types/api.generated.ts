@@ -8593,6 +8593,26 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/conferences/{conference_id}/analytics/matviews/refresh': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Refresh Matviews
+     * @description Refresh all dashboard matviews (super-admin only). Returns the list refreshed.
+     */
+    post: operations['refresh_matviews_api_v1_conferences__conference_id__analytics_matviews_refresh_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/vat-rates': {
     parameters: {
       query?: never;
@@ -11820,16 +11840,7 @@ export type paths = {
     };
     /**
      * Check Alumni Status
-     * @description Check if current user is alumni and if ALUMNI discount exists.
-     *
-     *     Returns:
-     *         {
-     *             "is_alumni": bool,
-     *             "has_discount": bool,
-     *             "discount_id": UUID | null,
-     *             "alumni_conferences": list[dict],  # Conferences user attended
-     *             "warning_message": str | null  # If alumni but no discount
-     *         }
+     * @description Check alumni status + whether the ALUMNI discount is available.
      */
     get: operations['check_alumni_status_api_v1_portal_conferences__conference_id__alumni_check_get'];
     put?: never;
@@ -11849,10 +11860,7 @@ export type paths = {
     };
     /**
      * Get Authenticated Conference Details
-     * @description Get conference details for authenticated portal registration.
-     *
-     *     Returns conference data including booking options, periods, and pricing.
-     *     Same schema as public endpoint but requires authentication.
+     * @description Conference details for authenticated portal registration.
      */
     get: operations['get_authenticated_conference_details_api_v1_portal_conferences__conference_id__public_details_get'];
     put?: never;
@@ -11874,49 +11882,9 @@ export type paths = {
     put?: never;
     /**
      * Calculate Vat Authenticated
-     * @description Calculate VAT for authenticated portal registration (preview before submission).
+     * @description Preview VAT for authenticated portal registration.
      */
     post: operations['calculate_vat_authenticated_api_v1_portal_conferences__conference_id__calculate_vat_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/portal/conferences/{conference_id}/create-payment-intent': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Create Payment Intent Authenticated
-     * @description Create Stripe PaymentIntent for authenticated portal registration.
-     */
-    post: operations['create_payment_intent_authenticated_api_v1_portal_conferences__conference_id__create_payment_intent_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/portal/conferences/{conference_id}/update-payment-intent/{payment_intent_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Update Payment Intent Authenticated
-     * @description Update Stripe PaymentIntent amount for authenticated portal registration.
-     */
-    post: operations['update_payment_intent_authenticated_api_v1_portal_conferences__conference_id__update_payment_intent__payment_intent_id__post'];
     delete?: never;
     options?: never;
     head?: never;
@@ -11952,13 +11920,51 @@ export type paths = {
     };
     /**
      * Validate Discount Authenticated
-     * @description Validate discount code for authenticated portal registration.
-     *
-     *     For authenticated users, primarily used to validate ALUMNI discount.
+     * @description Validate a discount code for authenticated portal registration.
      */
     get: operations['validate_discount_authenticated_api_v1_portal_conferences__conference_id__validate_discount__code__get'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/portal/conferences/{conference_id}/create-payment-intent': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Create Payment Intent Authenticated
+     * @description Create a Stripe PaymentIntent for authenticated portal registration.
+     */
+    post: operations['create_payment_intent_authenticated_api_v1_portal_conferences__conference_id__create_payment_intent_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/portal/conferences/{conference_id}/update-payment-intent/{payment_intent_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Update Payment Intent Authenticated
+     * @description Update a Stripe PaymentIntent's amount.
+     */
+    post: operations['update_payment_intent_authenticated_api_v1_portal_conferences__conference_id__update_payment_intent__payment_intent_id__post'];
     delete?: never;
     options?: never;
     head?: never;
@@ -11976,14 +11982,7 @@ export type paths = {
     put?: never;
     /**
      * Create Authenticated Registration
-     * @description Create registration for authenticated user with discount code support.
-     *
-     *     Business Rules:
-     *     - User must be logged in (CurrentApplicantDep)
-     *     - If user is alumni, ALUMNI discount auto-applies (if exists and valid)
-     *     - Any valid discount code can be applied via the discount_code field
-     *     - Pre-filled billing from user profile (frontend responsibility)
-     *     - Same payment flow as public registration (Stripe Elements or bank transfer)
+     * @description Create a registration for an authenticated user (with discount-code support).
      */
     post: operations['create_authenticated_registration_api_v1_portal_conferences__conference_id__register_post'];
     delete?: never;
@@ -17673,6 +17672,8 @@ export type components = {
       total?: number | null;
       /** Currency */
       currency?: string | null;
+      /** Exchange Rate Used */
+      exchange_rate_used?: string | null;
       /** Procurement Code */
       procurement_code?: string | null;
       /** Discount Code */
@@ -47931,6 +47932,39 @@ export interface operations {
       };
     };
   };
+  refresh_matviews_api_v1_conferences__conference_id__analytics_matviews_refresh_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: string[];
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   list_vat_rates_api_v1_vat_rates_get: {
     parameters: {
       query?: never;
@@ -54503,6 +54537,80 @@ export interface operations {
       };
     };
   };
+  validate_vat_authenticated_api_v1_portal_conferences__conference_id__validate_vat_post: {
+    parameters: {
+      query: {
+        vat_number: string;
+        country: string;
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        conference_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  validate_discount_authenticated_api_v1_portal_conferences__conference_id__validate_discount__code__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        conference_id: string;
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   create_payment_intent_authenticated_api_v1_portal_conferences__conference_id__create_payment_intent_post: {
     parameters: {
       query?: never;
@@ -54559,80 +54667,6 @@ export interface operations {
         'application/json': components['schemas']['app__api__v1__cfp_portal__registration__UpdatePaymentIntentRequest'];
       };
     };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  validate_vat_authenticated_api_v1_portal_conferences__conference_id__validate_vat_post: {
-    parameters: {
-      query: {
-        vat_number: string;
-        country: string;
-      };
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        conference_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  validate_discount_authenticated_api_v1_portal_conferences__conference_id__validate_discount__code__get: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        conference_id: string;
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {
