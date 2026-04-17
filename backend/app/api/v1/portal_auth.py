@@ -24,6 +24,7 @@ from app.core.portal_security import (
 )
 from app.core.rate_limiter import limiter
 from app.core.security import hash_password, verify_password
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.db.session import set_rls_context
 from app.models.portal_user import PortalRefreshToken, PortalUser
@@ -124,7 +125,7 @@ async def portal_login(
     result = await db.execute(
         select(PortalUser).where(
             PortalUser.tenant_id == tenant.id,
-            func.lower(PortalUser.email) == normalized_email,
+            PortalUser.email_hash == hash_email(data.email),
         )
     )
     user = result.scalar_one_or_none()
@@ -199,12 +200,10 @@ async def portal_forgot_password(
     tenant = await _resolve_tenant(db, tenant_slug)
     await set_rls_context(db, tenant_id=str(tenant.id), is_super_admin=False)
 
-    normalized_email = data.email.strip().lower()
-
     result = await db.execute(
         select(PortalUser).where(
             PortalUser.tenant_id == tenant.id,
-            func.lower(PortalUser.email) == normalized_email,
+            PortalUser.email_hash == hash_email(data.email),
         )
     )
     user = result.scalar_one_or_none()

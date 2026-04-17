@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.portal_security import generate_password_reset_token
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.models.portal_user import PortalRefreshToken, PortalUser
 from app.models.tenant import Tenant
@@ -40,7 +41,7 @@ async def ensure_portal_user_for_registration(
     result = await db.execute(
         select(PortalUser).where(
             PortalUser.tenant_id == tenant.id,
-            func.lower(PortalUser.email) == email,
+            PortalUser.email_hash == hash_email(email),
         )
     )
     portal_user = result.scalar_one_or_none()

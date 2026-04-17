@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security.pii_crypto import hash_email
 from app.models.audit import AuditLog
 from app.models.conference import Conference
 from app.models.invoice import Invoice
@@ -130,7 +131,7 @@ async def cancel_registrations_for_invoice(
             # Find portal users with matching emails
             user_result = await db.execute(
                 select(User.id).where(
-                    User.email.in_([email.lower() for email in registration_emails]),
+                    User.email_hash.in_([hash_email(email) for email in registration_emails]),
                 )
             )
             user_ids_to_remove = [row[0] for row in user_result.all()]

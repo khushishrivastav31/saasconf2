@@ -6,7 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -30,6 +30,7 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
+from app.core.security.pii_crypto import hash_email
 from app.core.token_blacklist import blacklist_token, clear_failed_logins, is_account_locked, record_failed_login
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
@@ -84,8 +85,8 @@ async def login(
     if await is_account_locked(login_data.email):
         raise AuthenticationError("Account temporarily locked due to too many failed login attempts. Try again later.")
 
-    # Find user by email
-    result = await db.execute(select(User).where(func.lower(User.email) == login_data.email.strip().lower()))
+    # Find user by email (hash lookup — plaintext column retained during phase e; dropped in phase f)
+    result = await db.execute(select(User).where(User.email_hash == hash_email(login_data.email)))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(login_data.password, user.password_hash):
@@ -579,7 +580,7 @@ async def forgot_password(
     # Always return the same message regardless of whether user exists
     success_message = "If an account with this email exists, a password reset link has been sent."
 
-    result = await db.execute(select(User).where(func.lower(User.email) == data.email.strip().lower()))
+    result = await db.execute(select(User).where(User.email_hash == hash_email(data.email)))
     user = result.scalar_one_or_none()
 
     if not user or not user.is_active:

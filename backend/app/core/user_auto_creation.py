@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import generate_email_verification_token
 from app.core.security import hash_password
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.models.registration import Registration
 from app.models.user import User, UserRole
@@ -49,10 +50,10 @@ async def create_user_for_registration(
         logger.warning(f"Registration {registration.id} has no email, cannot create user")
         return (None, None)
 
-    # Step 1: Check for existing user (case-insensitive email lookup)
+    # Step 1: Check for existing user (hash lookup — normalized by hash_email)
     existing_user_stmt = select(User).where(
         User.tenant_id == tenant_id,
-        User.email.ilike(registration.email),  # Case-insensitive
+        User.email_hash == hash_email(registration.email),
     )
     existing_user_result = await db.execute(existing_user_stmt)
     existing_user = existing_user_result.scalar_one_or_none()

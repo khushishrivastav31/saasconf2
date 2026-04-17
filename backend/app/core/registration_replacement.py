@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import generate_email_verification_token
@@ -14,6 +14,7 @@ from app.core.email import send_email
 from app.core.email_templates import build_registration_cancellation_context, render_email
 from app.core.invoice_number import generate_invoice_number
 from app.core.security import hash_password
+from app.core.security.pii_crypto import hash_email
 from app.core.vat_calculation import calculate_vat_for_invoice
 from app.models.audit import AuditLog
 from app.models.booking import BookingOption, BookingPeriod
@@ -226,7 +227,7 @@ async def replace_attendee(
 
 async def _remove_conference_access(db: AsyncSession, email: str, conference_id: UUID) -> int:
     """Remove conference access for old attendee."""
-    result = await db.execute(select(User).where(func.lower(User.email) == email.lower()))
+    result = await db.execute(select(User).where(User.email_hash == hash_email(email)))
     old_user = result.scalar_one_or_none()
 
     if not old_user:
@@ -416,7 +417,7 @@ async def _create_user_and_access(
 ) -> tuple[User, str]:
     """Create portal user + conference access for new attendee."""
     # Check if user already exists
-    result = await db.execute(select(User).where(func.lower(User.email) == registration.email.lower()))
+    result = await db.execute(select(User).where(User.email_hash == hash_email(registration.email)))
     existing_user = result.scalar_one_or_none()
 
     if existing_user:

@@ -111,6 +111,15 @@ class Settings(BaseSettings):
             _assert_valid_fernet_key(self.PII_ENCRYPTION_KEY, "PII_ENCRYPTION_KEY")
         for idx, key in enumerate(k.strip() for k in self.PII_ENCRYPTION_KEYS_OLD.split(",") if k.strip()):
             _assert_valid_fernet_key(key, f"PII_ENCRYPTION_KEYS_OLD[{idx}]")
+        # Production (and staging, which mirrors it) refuses to boot without a
+        # key: phase-e read cutover means hash lookups, and new writes need to
+        # encrypt. A missing key silently breaks login + creates unreadable data.
+        if self.SENTRY_ENVIRONMENT.lower() in ("production", "staging") and not self.PII_ENCRYPTION_KEY:
+            raise ValueError(
+                f"PII_ENCRYPTION_KEY must be set in {self.SENTRY_ENVIRONMENT} — "
+                "login (hash lookup) and PII writes depend on it. See "
+                "docs/runbooks/pii-encryption-key-management.md."
+            )
         return self
 
 

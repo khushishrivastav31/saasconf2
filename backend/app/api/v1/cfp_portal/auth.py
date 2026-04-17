@@ -20,6 +20,7 @@ from app.core.email import send_password_reset_email, send_verification_email
 from app.core.exceptions import AuthenticationError, NotFoundError
 from app.core.rate_limiter import limiter
 from app.core.security import hash_password, hash_token, verify_password
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.db.session import set_rls_context
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
@@ -371,7 +372,7 @@ async def login_applicant(
     admin_result = await db.execute(
         select(User).where(
             User.tenant_id == tenant.id,
-            func.lower(User.email) == data.email.strip().lower(),
+            User.email_hash == hash_email(data.email),
             User.role == UserRole.TENANT_ADMIN.value,
             User.is_active == True,
         )

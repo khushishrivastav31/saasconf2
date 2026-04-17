@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
 from app.core.portal_security import generate_password_reset_token
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.models.portal_user import PortalRefreshToken, PortalUser
 from app.models.training_attendee import TrainingAttendee
@@ -395,7 +396,7 @@ async def create_portal_user_for_attendee(
     existing = await db.execute(
         select(PortalUser).where(
             PortalUser.tenant_id == tenant_id,
-            func.lower(PortalUser.email) == att.email.lower(),
+            PortalUser.email_hash == hash_email(att.email),
         )
     )
     portal_user = existing.scalar_one_or_none()

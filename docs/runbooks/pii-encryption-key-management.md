@@ -42,11 +42,27 @@ cancelled or locked out, move it.
 
 - **Every environment uses a different key.** Never share keys across
   dev/staging/prod. Never copy prod keys to a laptop for debugging.
-- **Dev default is empty** (`PII_ENCRYPTION_KEY=""`). Encryption is a no-op
-  in dev so a missing key doesn't block local work. Staging and production
-  **must** set a real key.
-- **Production refuses to boot without a key.** (Startup assertion — see
-  `app/config.py`.) Never weaken the check to "just get staging up".
+- **Dev needs a key once phase (e) is live.** Login uses hash lookup
+  (`User.email_hash`) and dual-write encrypts on every insert — both fail
+  without a key. Generate an ephemeral dev key, add it to `backend/.env`,
+  then run the backfill once to populate companions on seeded rows:
+
+  ```bash
+  cd backend
+  # 1. Generate + add to .env (dev-only, don't commit)
+  venv/bin/python -c "from cryptography.fernet import Fernet; print('PII_ENCRYPTION_KEY=' + Fernet.generate_key().decode())" >> .env
+  # 2. Apply migration 197 if not already
+  venv/bin/alembic upgrade head
+  # 3. Backfill companions for pre-existing rows
+  venv/bin/python -m scripts.backfill_pii_encryption
+  # 4. Restart uvicorn so the new env var is picked up
+  ```
+
+  Rotating the dev key is destructive — rows encrypted with the old key
+  become unreadable. Drop + reseed the dev DB if you need to rotate.
+- **Production + staging refuse to boot without a key.** Startup assertion
+  in `app/config.py` raises if `SENTRY_ENVIRONMENT` is production or
+  staging and `PII_ENCRYPTION_KEY` is empty. Never weaken this check.
 
 ## Generating a new key
 

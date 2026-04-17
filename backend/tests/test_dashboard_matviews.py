@@ -140,7 +140,7 @@ def test_refresh_all_works(migrated_dsn: dict[str, str]) -> None:
 
 
 def test_downgrade_drops_matviews(migrated_dsn: dict[str, str]) -> None:
-    """`alembic downgrade -1` removes the matviews; upgrade restores them."""
+    """Downgrading past migration 196 removes the matviews; re-upgrade restores them."""
     env = os.environ.copy()
     migrated_url = (
         f"postgresql+asyncpg://{migrated_dsn['user']}:{migrated_dsn['password']}"
@@ -148,8 +148,10 @@ def test_downgrade_drops_matviews(migrated_dsn: dict[str, str]) -> None:
     )
     env["DATABASE_URL"] = migrated_url
 
+    # Target 195 (the revision before matviews) rather than -1, so the test
+    # remains correct as later migrations land on top of 196.
     down = subprocess.run(
-        [sys.executable, "-m", "alembic", "downgrade", "-1"],
+        [sys.executable, "-m", "alembic", "downgrade", "195"],
         cwd=BACKEND_DIR,
         env=env,
         capture_output=True,

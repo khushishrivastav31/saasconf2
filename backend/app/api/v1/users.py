@@ -5,7 +5,7 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -17,6 +17,7 @@ from app.core.exceptions import AuthorizationError, NotFoundError, ValidationErr
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.security import hash_password
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.settings import PronounOption
@@ -165,9 +166,7 @@ async def create_tenant_user(
 
     # Check email uniqueness within tenant
     existing = await db.execute(
-        select(User)
-        .where(User.tenant_id == target_tenant_id)
-        .where(func.lower(User.email) == user_data.email.strip().lower())
+        select(User).where(User.tenant_id == target_tenant_id).where(User.email_hash == hash_email(user_data.email))
     )
     if existing.scalar_one_or_none():
         raise ValidationError(f"User with email '{user_data.email}' already exists in this tenant")
@@ -344,7 +343,7 @@ async def update_tenant_user(
         existing = await db.execute(
             select(User)
             .where(User.tenant_id == user.tenant_id)
-            .where(func.lower(User.email) == update_data["email"].strip().lower())
+            .where(User.email_hash == hash_email(update_data["email"]))
             .where(User.id != user_id)
         )
         if existing.scalar_one_or_none():

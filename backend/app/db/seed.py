@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.security import hash_password, verify_password
+from app.core.security.pii_crypto import hash_email
 from app.db.session import async_session_maker
 from app.models.conference import Conference
 from app.models.module import Module
@@ -21,7 +22,7 @@ settings = get_settings()
 
 async def seed_super_admin(session: AsyncSession) -> None:
     """Create the initial super admin user if it doesn't exist."""
-    result = await session.execute(select(User).where(func.lower(User.email) == settings.SUPER_ADMIN_EMAIL.lower()))
+    result = await session.execute(select(User).where(User.email_hash == hash_email(settings.SUPER_ADMIN_EMAIL)))
     existing = result.scalar_one_or_none()
 
     if existing:
