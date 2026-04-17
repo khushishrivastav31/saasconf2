@@ -14,12 +14,15 @@ API endpoints call these functions and handle HTTP concerns (auth, responses, st
 
 import logging
 from datetime import UTC, datetime
+from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ValidationError
+from app.core.exchange_rates import resolve_rate_for_freeze
 from app.core.invoice_events import InvoiceEventType, log_invoice_event
 from app.core.invoice_number import generate_invoice_number
 from app.core.invoice_operations import create_credit_note_for_invoice
@@ -121,6 +124,11 @@ async def assign_invoice_number_and_mark_sent(
     if not invoice.issue_date:
         invoice.issue_date = datetime.now(UTC).date()
 
+    # Freeze the exchange rate in effect right now, so the PDF and reports
+    # reflect the rate at issue time — not whatever the settings say later.
+    if invoice.exchange_rate_used is None:
+        invoice.exchange_rate_used = await _resolve_invoice_freeze_rate(db, invoice, conference)
+
     # Update status
     invoice.status = "sent"
 
@@ -135,6 +143,32 @@ async def assign_invoice_number_and_mark_sent(
     )
 
     return invoice
+
+
+async def _resolve_invoice_freeze_rate(
+    db: AsyncSession,
+    invoice: Invoice,
+    conference: Conference,
+) -> Decimal | None:
+    """Resolve the rate to freeze onto an invoice at issue time.
+
+    Prefers the tenant's current ``ExchangeRate`` row; falls back to the
+    legacy settings rate so tenants that never populated the new table
+    keep their existing behaviour.
+    """
+    settings: dict[str, Any] = getattr(conference, "settings", None) or {}
+    company_info: dict[str, Any] = settings.get("invoice_company_info") or {}
+    primary_ccy = invoice.currency or getattr(conference, "currency", None)
+    secondary_ccy = company_info.get("second_currency") or getattr(conference, "invoice_currency", None)
+    settings_fallback = company_info.get("exchange_rate") or settings.get("invoice_exchange_rate")
+
+    return await resolve_rate_for_freeze(
+        db=db,
+        tenant_id=invoice.tenant_id,
+        from_ccy=primary_ccy,
+        to_ccy=secondary_ccy,
+        settings_fallback=settings_fallback,
+    )
 
 
 async def cancel_invoice_with_credit_note_creation(

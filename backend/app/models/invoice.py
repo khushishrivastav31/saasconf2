@@ -78,6 +78,10 @@ class Invoice(Base):
     tax_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     total: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    # Rate-at-issue snapshot (frozen when the invoice is sent). When set,
+    # PDF renderers use this instead of current settings so the invoice shows
+    # the rate it was issued with, not whatever the settings say today.
+    exchange_rate_used: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
     vat_auto_calculated: Mapped[bool] = mapped_column(Boolean, default=False)
     attendance_type: Mapped[str | None] = mapped_column(
         String(20), nullable=True

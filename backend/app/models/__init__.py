@@ -32,6 +32,7 @@ from app.models.customer import Customer
 from app.models.customer_offer import CustomerOffer
 from app.models.deadline import Deadline
 from app.models.email_log import EmailLog
+from app.models.exchange_rate import ExchangeRate
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
 from app.models.holiday_config import CustomBlockedDay, TenantHolidayConfig
@@ -159,6 +160,7 @@ __all__ = [
     "DynamicRecipientList",
     "EmailLog",
     "EmailTemplate",
+    "ExchangeRate",
     "ExpenseCategory",
     "ExpenseTier",
     "FiscalRepresentative",

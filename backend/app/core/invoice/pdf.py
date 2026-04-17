@@ -215,7 +215,13 @@ async def generate_invoice_pdf(
     phone = company_info.get("phone", "") or conference.phone or ""
     primary_currency = invoice.currency or conference.currency or "EUR"
     second_currency = company_info.get("second_currency", "") or getattr(conference, "invoice_currency", "") or ""
-    raw_rate = company_info.get("exchange_rate") or settings.get("invoice_exchange_rate")
+    # Prefer the rate frozen onto the invoice at issue time; fall back to settings.
+    frozen_rate = getattr(invoice, "exchange_rate_used", None)
+    raw_rate = (
+        frozen_rate
+        if frozen_rate is not None
+        else (company_info.get("exchange_rate") or settings.get("invoice_exchange_rate"))
+    )
     exchange_rate = Decimal(str(raw_rate)) if raw_rate else None
 
     replacements = build_company_replacements(
@@ -406,7 +412,13 @@ async def generate_invoice_pdf_from_data(
     phone = company_info.get("phone", "") or conference.phone or ""
     primary_currency = invoice_data.get("currency") or conference.currency or "EUR"
     second_currency = company_info.get("second_currency", "") or getattr(conference, "invoice_currency", "") or ""
-    raw_rate = company_info.get("exchange_rate") or settings.get("invoice_exchange_rate")
+    # Prefer the rate frozen onto the invoice at issue time; fall back to settings.
+    frozen_rate = invoice_data.get("exchange_rate_used")
+    raw_rate = (
+        frozen_rate
+        if frozen_rate is not None
+        else (company_info.get("exchange_rate") or settings.get("invoice_exchange_rate"))
+    )
     exchange_rate = Decimal(str(raw_rate)) if raw_rate else None
 
     replacements = build_company_replacements(

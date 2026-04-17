@@ -1,6 +1,7 @@
 """Invoice schemas."""
 
 from datetime import date, datetime
+from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
@@ -237,6 +238,7 @@ class InvoiceResponse(BaseModel):
     tax_amount: float | None = None
     total: float | None = None
     currency: str | None = None
+    exchange_rate_used: Decimal | None = None
     procurement_code: str | None = None
     discount_code: str | None = None
     discount_amount: float | None = None

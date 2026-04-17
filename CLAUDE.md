@@ -82,6 +82,7 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Audit Phase C — per-tenant rate limiter (`tenant_limiter` in `app/core/rate_limiter.py`, applied to 3 analytics export endpoints), enum CHECK constraints migration 194 (7 status/role columns), Sentry alerts runbook (`docs/runbooks/sentry-alerts.md`).
-- **In progress**: Phase D — frontend primitives (Input/Select/DataTable/DetailPanel, zod pilot, InvoicesTab refactor, OpenAPI codegen). Not yet started.
-- **Status**: mypy clean (584 files), ruff clean, rate-limiter + RLS + analytics + auth + csv tests green (61 passed). Phase C ready to commit.
+- **Last completed**: Phase E Step 28 — full `app/core/` subpackaging (zugferd/vat/email/pdf/security/invoice subpackages, 15 invoice modules + shims in 28f, commit `a6d88ad`).
+- **In progress**: Phase F Step 29 — `ExchangeRate` model (tenant-scoped, RLS, history-preserving), migration 195 adds table + `invoices.exchange_rate_used` column, `app/core/exchange_rates.py` helpers, `assign_invoice_number_and_mark_sent` freezes rate at issue time, PDF renderer prefers frozen rate. 18 new tests green.
+- **Next up**: Phase D Step 23 (InvoicesTab refactor), Phase F Step 30 (materialized views), Phase G (god-components), Phase H (PII encryption, ADRs, runbooks).
+- **Status**: mypy clean (633 files), ruff clean, 29 spot tests green. Full suite running in background (`/tmp/pytest-29.log`).
