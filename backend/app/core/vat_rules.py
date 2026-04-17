@@ -1,36 +1,11 @@
-"""VAT rule lookup for conference invoicing.
+"""Backwards-compatible shim for :mod:`app.core.vat.rules`.
 
-Pure functions — no DB access, no side effects.
+Moved under ``app.core.vat`` in audit Step 28. This shim preserves the
+historical import path and will be removed once callers are updated.
 """
 
 from __future__ import annotations
 
+from app.core.vat.rules import get_vat_rule
 
-def get_vat_rule(
-    rules: list[dict] | None,
-    attendance_type: str,
-    customer_type: str,
-    customer_location: str,
-) -> dict | None:
-    """Find the matching VAT rule for a given combination.
-
-    Args:
-        rules: List of VAT rule dicts (from conference.settings["vat_rules"]).
-        attendance_type: "in_person", "virtual", "hybrid_onsite", or "hybrid_online".
-        customer_type: "b2b" or "b2c".
-        customer_location: "domestic", "eu", or "non_eu".
-
-    Returns:
-        The matching rule dict, or None if no match found.
-    """
-    if not rules:
-        return None
-
-    for rule in rules:
-        if (
-            rule.get("attendance_type") == attendance_type
-            and rule.get("customer_type") == customer_type
-            and rule.get("customer_location") == customer_location
-        ):
-            return rule
-    return None
+__all__ = ["get_vat_rule"]
