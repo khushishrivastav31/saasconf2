@@ -36,5 +36,5 @@ backend/app/core/conference_duplicate.py
 backend/app/core/default_settings.py
 backend/app/core/email.py
 backend/app/core/invoice_pdf.py
-backend/app/core/zugferd_xml.py
+backend/app/core/zugferd/xml.py
 backend/app/schemas/settings.py
