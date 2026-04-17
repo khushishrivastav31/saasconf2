@@ -14,7 +14,6 @@ backend/app/api/v1/cfp_portal/auth.py
 backend/app/api/v1/cfp_portal/messaging.py
 backend/app/api/v1/cfp_portal/my_registrations.py
 backend/app/api/v1/cfp_portal/papers.py
-backend/app/api/v1/cfp_portal/registration.py
 backend/app/api/v1/conferences/core.py
 backend/app/api/v1/form_schema.py
 backend/app/api/v1/invoices/operations.py
