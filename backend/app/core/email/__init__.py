@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.core.email_templates import (
+from app.core.email.templates import (
     build_conference_team_invitation_context,
     build_cospeaker_context,
     build_deadline_reminder_context,

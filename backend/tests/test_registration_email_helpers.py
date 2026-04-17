@@ -1,4 +1,4 @@
-"""Tests for registration email helper guard clauses in app/core/registration_emails.py."""
+"""Tests for registration email helper guard clauses in app/core/email/registrations.py."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -23,8 +23,8 @@ class TestSendRegistrationInvoiceEmail:
         db = AsyncMock()
 
         with (
-            patch("app.core.registration_emails.generate_invoice_pdf") as mock_pdf,
-            patch("app.core.registration_emails.send_email") as mock_send,
+            patch("app.core.email.registrations.generate_invoice_pdf") as mock_pdf,
+            patch("app.core.email.registrations.send_email") as mock_send,
         ):
             result = await send_registration_invoice_email(db, invoice, conference)
 
@@ -52,8 +52,8 @@ class TestSendAttendeeWelcomeEmail:
         db = AsyncMock()
 
         with (
-            patch("app.core.registration_emails.send_email") as mock_send,
-            patch("app.core.registration_emails.render_email") as mock_render,
+            patch("app.core.email.registrations.send_email") as mock_send,
+            patch("app.core.email.registrations.render_email") as mock_render,
         ):
             result = await send_attendee_welcome_email(
                 db, registration, conference, password_setup_token="tok123"
