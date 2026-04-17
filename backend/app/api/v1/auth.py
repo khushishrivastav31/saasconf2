@@ -65,7 +65,7 @@ async def _load_tenant_roles(db: AsyncSession, user_id: UUID) -> list[dict[str, 
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("5/minute")
+@limiter.limit("30/minute")
 async def login(
     request: Request,
     login_data: LoginRequest,
