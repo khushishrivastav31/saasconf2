@@ -82,7 +82,7 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Phase G Step 34 — split `SpeakerExpensesTab` (1070 LOC) into a `SpeakerExpensesTab/` directory of 15 files, all under 260 LOC. Orchestrator `index.tsx` (258 LOC) wires state + `useSpeakerExpensesData` (6 useQuery: expenses/stats/allowances/tiers/allowanceDefaults/attachments) + `useSpeakerExpensesMutations` (approve/reject/markPaid/create/assignTier/sendMessage). Subcomponents: `ExpensesViewToggle`, `ExpensesStatsBar`, `ExpensesFilters`, `SpeakerGroupCard` (composes `TierBudgetBar` + `ExpenseRowsTable` + `AddExpenseInline`), `ExpenseDetailPanel`, `RejectExpenseModal`. Shared `types.ts` exports `groupBySpeaker`, constants (`VIEWS`, `STATUSES`), and `formatFileSize`. Pre-existing `AllowancesView.tsx` + `DefaultsView.tsx` untouched.
-- **In progress**: Phase G Step 35 — refactor `UserDetailPanel` (1060 LOC).
-- **Next up**: Step 36 (CustomerDetailPanel/OffersTab); Phase H (PII encryption, max-lines warn→error, ADRs, runbooks).
-- **Status**: tsc clean, eslint --max-warnings 0 clean for `SpeakerExpensesTab/`, vitest 1817 tests green.
+- **Last completed**: Phase G Step 35 — split `UserDetailPanel` (1060 LOC) into a `UserDetailPanel/` directory of 13 files, all under 200 LOC. Orchestrator `index.tsx` (194 LOC) keeps existing `useState`+`updateField` form pattern (no RHF adoption — parity-focused refactor) + `useUserDetailData` (profile + editable queries) + `useUserDetailMutations` (10 mutations: toggleAccess/resendInvite/resetPassword/impersonate/saveProfile/upload+deletePicture/upload+deleteVideo/createPortalAccount). Shared `styles.ts` holds class-name constants. Subcomponents: `UserDetailHeader`, `DetailTabs`, `NoPortalAccountNotice`, `ProfileMediaFields`, `ProfileFormFields`, `PortalAccountSection`, `RegistrationsList` (+ internal `RegistrationRow`), `OfferLinksTable`, `ActivityHistory`. Sibling `MergeDialog.tsx` + `types.ts` + `constants.ts` untouched.
+- **In progress**: Phase G Step 36 — refactor `CustomerDetailPanel/OffersTab` (1055 LOC).
+- **Next up**: Phase H (PII encryption, max-lines warn→error, ADRs, runbooks).
+- **Status**: tsc clean, eslint --max-warnings 0 clean for `UserDetailPanel/`, vitest 1817 tests green.
