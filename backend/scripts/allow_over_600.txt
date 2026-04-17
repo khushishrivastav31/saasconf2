@@ -27,7 +27,6 @@ backend/app/api/v1/program/sessions.py
 backend/app/api/v1/registrations/core.py
 backend/app/api/v1/settings/email_templates.py
 backend/app/api/v1/settings/user_roles.py
-backend/app/api/v1/speaker_expenses.py
 backend/app/api/v1/sponsor_contracts.py
 backend/app/api/v1/trainings/attendees.py
 backend/app/api/v1/trainings/offer_documents.py
