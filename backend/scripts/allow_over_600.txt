@@ -33,7 +33,6 @@ backend/app/api/v1/trainings/attendees.py
 backend/app/api/v1/trainings/offer_documents.py
 backend/app/api/v1/trainings/user_management.py
 backend/app/api/v1/users.py
-backend/app/api/v1/volunteer_tasks.py
 backend/app/core/badge_pdf.py
 backend/app/core/conference_duplicate.py
 backend/app/core/default_settings.py
