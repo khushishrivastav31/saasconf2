@@ -7,7 +7,7 @@ import pytest
 import pytest_asyncio
 
 from app.core.security import create_access_token, decode_token
-from app.core.token_blacklist import (
+from app.core.security.token_blacklist import (
     blacklist_token,
     close_redis,
     init_redis,
@@ -18,7 +18,7 @@ from app.core.token_blacklist import (
 @pytest.fixture(autouse=True)
 def _reset_redis():
     """Ensure Redis module state is reset between tests."""
-    import app.core.token_blacklist as mod
+    import app.core.security.token_blacklist as mod
 
     original = mod._redis
     yield
@@ -57,7 +57,7 @@ class TestTokenBlacklistUnit:
     @pytest.mark.asyncio
     async def test_blacklist_noop_when_redis_none(self):
         """blacklist_token should not raise when Redis is None."""
-        import app.core.token_blacklist as mod
+        import app.core.security.token_blacklist as mod
 
         mod._redis = None
         await blacklist_token("some-jti", 60)  # should not raise
@@ -65,7 +65,7 @@ class TestTokenBlacklistUnit:
     @pytest.mark.asyncio
     async def test_is_blacklisted_false_when_redis_none(self):
         """Should return False when Redis is unavailable (fail-open)."""
-        import app.core.token_blacklist as mod
+        import app.core.security.token_blacklist as mod
 
         mod._redis = None
         result = await is_token_blacklisted("some-jti")
@@ -76,7 +76,7 @@ class TestTokenBlacklistUnit:
         """If Redis raises an exception, is_token_blacklisted returns False."""
         mock_redis = AsyncMock()
         mock_redis.get = AsyncMock(side_effect=ConnectionError("Redis down"))
-        import app.core.token_blacklist as mod
+        import app.core.security.token_blacklist as mod
 
         mod._redis = mock_redis
         result = await is_token_blacklisted("some-jti")
@@ -90,7 +90,7 @@ class TestTokenBlacklistIntegration:
     async def _setup_redis(self):
         """Connect to test Redis and clean up after."""
         await init_redis()
-        import app.core.token_blacklist as mod
+        import app.core.security.token_blacklist as mod
 
         if mod._redis is None:
             pytest.skip("Redis not available")

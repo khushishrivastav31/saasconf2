@@ -541,7 +541,7 @@ async def test_blacklisted_token_rejected_after_logout(
     tenant_admin_token: str,
 ) -> None:
     """After logout the access token should be blacklisted and rejected."""
-    from app.core.token_blacklist import _redis
+    from app.core.security.token_blacklist import _redis
 
     if _redis is None:
         pytest.skip("Redis unavailable — token blacklist tests require Redis")

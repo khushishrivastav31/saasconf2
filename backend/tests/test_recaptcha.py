@@ -36,7 +36,7 @@ class TestValidateRecaptcha:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch("app.core.recaptcha.httpx.AsyncClient", return_value=mock_client):
+        with patch("app.core.security.recaptcha.httpx.AsyncClient", return_value=mock_client):
             # Should not raise
             await validate_recaptcha(token="valid-token", secret_key="secret123")
 
@@ -51,7 +51,7 @@ class TestValidateRecaptcha:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch("app.core.recaptcha.httpx.AsyncClient", return_value=mock_client):
+        with patch("app.core.security.recaptcha.httpx.AsyncClient", return_value=mock_client):
             with pytest.raises(HTTPException) as exc_info:
                 await validate_recaptcha(token="low-score", secret_key="secret123")
             assert exc_info.value.status_code == 400
@@ -71,7 +71,7 @@ class TestValidateRecaptcha:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch("app.core.recaptcha.httpx.AsyncClient", return_value=mock_client):
+        with patch("app.core.security.recaptcha.httpx.AsyncClient", return_value=mock_client):
             with pytest.raises(HTTPException) as exc_info:
                 await validate_recaptcha(token="bad-token", secret_key="secret123")
             assert exc_info.value.status_code == 400
@@ -84,7 +84,7 @@ class TestValidateRecaptcha:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.post = AsyncMock(side_effect=httpx.HTTPError("Connection refused"))
 
-        with patch("app.core.recaptcha.httpx.AsyncClient", return_value=mock_client):
+        with patch("app.core.security.recaptcha.httpx.AsyncClient", return_value=mock_client):
             with pytest.raises(HTTPException) as exc_info:
                 await validate_recaptcha(token="token", secret_key="secret123")
             assert exc_info.value.status_code == 503
@@ -101,7 +101,7 @@ class TestValidateRecaptcha:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch("app.core.recaptcha.httpx.AsyncClient", return_value=mock_client):
+        with patch("app.core.security.recaptcha.httpx.AsyncClient", return_value=mock_client):
             # Score 0.6 passes with threshold 0.5 (default)
             await validate_recaptcha(token="ok", secret_key="secret123", threshold=0.5)
 
