@@ -35,6 +35,6 @@ backend/app/core/pdf/badges.py
 backend/app/core/conference_duplicate.py
 backend/app/core/default_settings.py
 backend/app/core/email/__init__.py
-backend/app/core/invoice_pdf.py
+backend/app/core/invoice/pdf.py
 backend/app/core/zugferd/xml.py
 backend/app/schemas/settings.py

@@ -303,7 +303,7 @@ async def readiness_check() -> JSONResponse:
 
     from sqlalchemy import text
 
-    from app.core.token_blacklist import _redis
+    from app.core.security.token_blacklist import _redis
     from app.db.session import engine
 
     logger = logging.getLogger("saasconf.health")

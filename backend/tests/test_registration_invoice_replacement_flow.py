@@ -71,7 +71,7 @@ def mock_stripe_operations():
 
     with (
         patch("app.core.stripe_helper.get_stripe_client") as mock_get_client,
-        patch("app.core.invoice_replacement.create_payment_link", new_callable=AsyncMock) as mock_payment_link,
+        patch("app.core.invoice.replacement.create_payment_link", new_callable=AsyncMock) as mock_payment_link,
     ):
         # Configure mocks
         mock_get_client.return_value = mock_client

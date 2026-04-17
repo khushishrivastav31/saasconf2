@@ -177,8 +177,8 @@ class TestSendInvoiceEmail:
         db = AsyncMock()
 
         with (
-            patch("app.core.invoice_email.generate_invoice_pdf") as mock_pdf,
-            patch("app.core.invoice_email.send_email") as mock_send,
+            patch("app.core.invoice.email.generate_invoice_pdf") as mock_pdf,
+            patch("app.core.invoice.email.send_email") as mock_send,
         ):
             result = await send_invoice_email(db, invoice, conference)
 

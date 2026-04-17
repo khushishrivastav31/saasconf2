@@ -12,21 +12,20 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency_formats import format_amount
-from app.models.tenant import Tenant
-from app.models.training_invoice import TrainingInvoice
-
-from app.core.invoice_pdf import EDITOR_MATCHING_CSS, _render_items_table, _replace_items_placeholder
-from app.core.invoice_pdf_normalize import (
+from app.core.invoice.pdf import EDITOR_MATCHING_CSS, _render_items_table, _replace_items_placeholder
+from app.core.invoice.pdf_normalize import (
     _generate_pdf_with_weasyprint,
     build_full_html,
 )
-from app.core.invoice_pdf_placeholders import (
+from app.core.invoice.pdf_placeholders import (
     _apply_placeholders,
     _format_notes_for_html,
     _format_recipient_address_from_parts,
     build_company_replacements,
     build_dual_currency_replacements,
 )
+from app.models.tenant import Tenant
+from app.models.training_invoice import TrainingInvoice
 
 logger = logging.getLogger(__name__)
 

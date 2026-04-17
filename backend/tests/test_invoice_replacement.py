@@ -88,7 +88,7 @@ def admin_token_invoices(tenant_admin_user: User) -> str:
 @pytest.fixture(autouse=True)
 def mock_stripe_payment_link():
     """Mock create_payment_link to avoid Stripe API calls in tests."""
-    with patch("app.core.invoice_replacement.create_payment_link", new_callable=AsyncMock) as mock:
+    with patch("app.core.invoice.replacement.create_payment_link", new_callable=AsyncMock) as mock:
         # Return dummy payment intent ID and payment link URL
         mock.return_value = (None, "https://buy.stripe.com/test_mock_link")
         yield mock
