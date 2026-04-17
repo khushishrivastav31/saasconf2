@@ -5,9 +5,10 @@ import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -70,6 +71,13 @@ def _check_production_safety() -> None:
         logger.warning("SECURITY: CORS_ORIGINS contains localhost entries — remove for production")
     if is_prod and not settings.RESEND_API_KEY:
         logger.warning("SECURITY: RESEND_API_KEY not set — emails will only be logged, not sent")
+    if is_prod and not settings.DATABASE_SSL_REQUIRED:
+        logger.warning(
+            "SECURITY: DATABASE_SSL_REQUIRED=False in '%s' environment — DB traffic is not encrypted in transit",
+            settings.SENTRY_ENVIRONMENT,
+        )
+    if is_prod and not settings.OPS_API_KEY:
+        logger.warning("SECURITY: OPS_API_KEY is empty — /metrics and /ops/* endpoints are effectively locked closed")
 
 
 @asynccontextmanager
@@ -105,8 +113,9 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
-# Prometheus metrics
-Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+# Prometheus metrics — instrumentation only. The /metrics endpoint is
+# registered below with OPS_API_KEY bearer auth (defense-in-depth).
+Instrumentator().instrument(app)
 
 # ---------------------------------------------------------------------------
 # Middleware classes
@@ -340,6 +349,15 @@ def _verify_ops_auth(request: Request) -> bool:
     auth_header = request.headers.get("Authorization", "")
     expected = f"Bearer {settings.OPS_API_KEY}"
     return secrets.compare_digest(auth_header, expected)
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics(request: Request) -> Response:
+    # Nginx blocks /metrics at the public edge; this bearer check is defense-in-depth
+    # so a compromised sidecar or leaked internal hostname can't trivially scrape metrics.
+    if not _verify_ops_auth(request):
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.post("/ops/data-retention-cleanup")

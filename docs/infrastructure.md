@@ -260,7 +260,7 @@ All settings are loaded via Pydantic `BaseSettings` from environment variables o
 |----------|---------|-------------|
 | `CORS_ORIGINS` | `["http://localhost:3000", ...]` | Allowed CORS origins (JSON array) |
 | `MAX_UPLOAD_SIZE_MB` | `10` | Maximum file upload size |
-| `RATE_LIMIT_LOGIN` | `5/minute` | Login endpoint rate limit |
+| `RATE_LIMIT_LOGIN` | `10/minute` | Login endpoint rate limit (staging overrides to `30/minute` for E2E) |
 | `RATE_LIMIT_API` | `100/minute` | General API rate limit |
 
 ### Monitoring

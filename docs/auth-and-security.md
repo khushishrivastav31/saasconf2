@@ -174,7 +174,8 @@ The TTL-based approach means blacklist entries automatically clean themselves up
 ## Rate Limiting
 
 - Library: SlowAPI
-- Login endpoint: 5 requests/minute per IP (`RATE_LIMIT_LOGIN`)
+- Login endpoint: 10 requests/minute per IP (`RATE_LIMIT_LOGIN`); staging overrides to 30/minute for Playwright E2E
+- Login lockout: 5 failed attempts per email → 15 minute lock (Redis-backed, fail-open); see `app/core/token_blacklist.py`
 - API endpoints: 100 requests/minute per IP (`RATE_LIMIT_API`)
 - Configured in `app/config.py`, applied in `app/main.py`
 

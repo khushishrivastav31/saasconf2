@@ -63,7 +63,10 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 10
 
     # Rate Limiting
-    RATE_LIMIT_LOGIN: str = "5/minute"
+    # Login is defense-in-depth on top of per-email account lockout
+    # (5 failed attempts → 15min lock). Staging overrides to "30/minute"
+    # via env so Playwright E2E runs don't trip the limit.
+    RATE_LIMIT_LOGIN: str = "10/minute"
     RATE_LIMIT_API: str = "100/minute"
 
     # Super Admin (initial setup)

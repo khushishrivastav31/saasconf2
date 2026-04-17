@@ -231,7 +231,7 @@ Uses `pydantic-settings` `BaseSettings` with `.env` file support. Settings are c
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `int` | `7` | |
 | `CORS_ORIGINS` | `list[str]` | `["http://localhost:3000", ...]` | Six localhost origins for dev |
 | `MAX_UPLOAD_SIZE_MB` | `int` | `10` | |
-| `RATE_LIMIT_LOGIN` | `str` | `"5/minute"` | SlowAPI format |
+| `RATE_LIMIT_LOGIN` | `str` | `"10/minute"` | SlowAPI format; paired with 5-attempt per-email lockout |
 | `RATE_LIMIT_API` | `str` | `"100/minute"` | SlowAPI format |
 | `SUPER_ADMIN_EMAIL` | `str` | `"admin@saasconf.com"` | Initial super admin account |
 | `SUPER_ADMIN_PASSWORD` | `str` | **(required)** | Minimum 10 characters |

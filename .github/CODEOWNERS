@@ -1,16 +1,56 @@
-# Default owners for everything
-* @josediaz
+# Code ownership for SaaSConf. GitHub auto-requests review from the
+# matching owner when a PR touches a path listed here. Later entries
+# override earlier ones, so list narrower paths last.
+#
+# Currently a single-owner team — every line points to @josediaz — but
+# the domain structure is written out so future hires slot in with a
+# one-line change (e.g. `/backend/app/core/invoice_*.py @billing-lead`).
 
-# Backend
-/backend/ @josediaz
+# -- Fallback default ---------------------------------------------------
+*                                                     @josediaz
 
-# Frontend
-/frontend/ @josediaz
+# -- Security-sensitive (auth, crypto, rate limiting, sessions) ---------
+/backend/app/api/v1/auth.py                           @josediaz
+/backend/app/api/v1/mfa.py                            @josediaz
+/backend/app/core/security.py                         @josediaz
+/backend/app/core/mfa.py                              @josediaz
+/backend/app/core/token_blacklist.py                  @josediaz
+/backend/app/core/rate_limiter.py                     @josediaz
+/backend/app/core/dependencies.py                     @josediaz
 
-# Infrastructure
-/deploy/ @josediaz
-/.github/ @josediaz
-/docker-compose.yml @josediaz
+# -- Database schema & migrations --------------------------------------
+/backend/app/db/migrations/                           @josediaz
+/backend/app/db/session.py                            @josediaz
+/backend/app/models/                                  @josediaz
 
-# Documentation
-/docs/ @josediaz
+# -- Billing / invoicing domain ----------------------------------------
+/backend/app/core/invoice_*.py                        @josediaz
+/backend/app/core/zugferd*.py                         @josediaz
+/backend/app/api/v1/invoices.py                       @josediaz
+/backend/app/services/invoice_service.py              @josediaz
+/backend/app/schemas/invoice.py                       @josediaz
+/frontend/src/components/InvoiceDetailPanel/          @josediaz
+/frontend/src/components/InvoiceTemplateEditor.tsx    @josediaz
+/frontend/src/pages/ConferenceDetail/tabs/InvoicesTab/ @josediaz
+
+# -- CFP portal & papers domain ----------------------------------------
+/backend/app/api/v1/cfp_portal/                       @josediaz
+/backend/app/api/v1/submissions.py                    @josediaz
+/frontend/src/pages/modules/cfp/                      @josediaz
+/frontend/src/pages/CFPPortal/                        @josediaz
+
+# -- Training module domain --------------------------------------------
+/backend/app/api/v1/trainings/                        @josediaz
+/frontend/src/pages/Trainings/                        @josediaz
+
+# -- Infrastructure & deployment ---------------------------------------
+/deploy/                                              @josediaz
+/.github/                                             @josediaz
+/docker-compose.yml                                   @josediaz
+/Dockerfile*                                          @josediaz
+/backend/Dockerfile*                                  @josediaz
+/frontend/Dockerfile*                                 @josediaz
+
+# -- Docs & handbook ---------------------------------------------------
+/docs/                                                @josediaz
+/frontend/src/pages/Handbook/                         @josediaz

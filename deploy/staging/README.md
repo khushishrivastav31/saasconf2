@@ -108,6 +108,29 @@ docker compose exec backend alembic upgrade head
 
 Certificates are automatically renewed by the certbot container every 12 hours. Nginx reloads every 6 hours to pick up renewed certificates.
 
+## Observability
+
+### Prometheus metrics
+
+The backend exposes Prometheus metrics at `/metrics`, but access is locked down with two layers:
+
+1. **Nginx** returns `404` for `/metrics` on the public API host (`nginx.conf`), so the endpoint is unreachable from the public internet.
+2. **Backend** requires an `Authorization: Bearer $OPS_API_KEY` header, so even inside the Docker network the endpoint is not trivially readable.
+
+An internal Prometheus scraper must be deployed on the same Docker network and configured to target `http://backend:8000/metrics` with the bearer header, e.g.:
+
+```yaml
+scrape_configs:
+  - job_name: saasconf-backend
+    static_configs:
+      - targets: ["backend:8000"]
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/ops_api_key
+```
+
+`OPS_API_KEY` is the same shared secret already used by the cron sidecars in `docker-compose.yml`.
+
 ## Troubleshooting
 
 ### Check container logs

@@ -61,6 +61,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+asyncpg://${DB_USER:-saasconf}:${DB_PASSWORD}@db:5432/${DB_NAME:-saasconf}
+      DATABASE_SSL_REQUIRED: ${DATABASE_SSL_REQUIRED:-false}
       REDIS_URL: redis://redis:6379
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ALGORITHM: HS256
@@ -69,6 +70,8 @@ services:
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
       OPS_API_KEY: ${OPS_API_KEY}
+      # Override for E2E: Playwright tests run from a single GHA IP and would trip the prod-safe default
+      RATE_LIMIT_LOGIN: ${RATE_LIMIT_LOGIN:-30/minute}
       SENTRY_DSN: ${SENTRY_DSN_BACKEND:-}
       SENTRY_ENVIRONMENT: staging
       APP_VERSION: ${APP_VERSION:-0.1.0}
