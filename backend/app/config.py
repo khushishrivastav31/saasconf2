@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # PII column encryption (Fernet key — generate with Fernet.generate_key())
+    # Empty = encryption disabled (dev convenience; staging/prod must set it).
+    # PII_ENCRYPTION_KEYS_OLD: comma-separated previous keys kept for read fallback
+    # during rotation; see docs/secret-rotation.md.
+    PII_ENCRYPTION_KEY: str = ""
+    PII_ENCRYPTION_KEYS_OLD: str = ""
+
     # CORS — set CORS_ORIGINS env var for production (comma-separated or JSON array)
     CORS_ORIGINS: list[str] = _parse_cors_origins()
 
@@ -99,7 +106,21 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters")
         if len(self.SUPER_ADMIN_PASSWORD) < 8:
             raise ValueError("SUPER_ADMIN_PASSWORD must be at least 8 characters")
+        # Validate PII encryption keys if set (Fernet key = 44-char urlsafe base64).
+        if self.PII_ENCRYPTION_KEY:
+            _assert_valid_fernet_key(self.PII_ENCRYPTION_KEY, "PII_ENCRYPTION_KEY")
+        for idx, key in enumerate(k.strip() for k in self.PII_ENCRYPTION_KEYS_OLD.split(",") if k.strip()):
+            _assert_valid_fernet_key(key, f"PII_ENCRYPTION_KEYS_OLD[{idx}]")
         return self
+
+
+def _assert_valid_fernet_key(key: str, label: str) -> None:
+    from cryptography.fernet import Fernet  # local import keeps module import light
+
+    try:
+        Fernet(key.encode())
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"{label} is not a valid Fernet key: {exc}") from exc
 
 
 @lru_cache

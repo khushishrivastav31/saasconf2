@@ -24,10 +24,12 @@ os.environ.setdefault(
 )
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
+os.environ.setdefault("PII_ENCRYPTION_KEY", "d3SqaqrZBel50kd5H4KnoZNvwPcNFP8kozOQeuPh9Jg=")
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ["RATELIMIT_ENABLED"] = "false"  # Disable rate limiting in tests
 os.environ["TESTING"] = "true"  # Disable background email tasks in tests
+
 
 @pytest.fixture(autouse=True)
 def _mock_resend_client(request):
