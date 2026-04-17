@@ -1,135 +1,24 @@
-import { useState, useRef, useCallback, lazy, Suspense } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../config/api';
-import ConfirmDialog from '../components/ConfirmDialog';
-import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
-import RichTextEditor from '../components/common/RichTextEditor';
-import { validatePhone, validateEmail } from '../utils/validators';
-import { COUNTRIES_BY_CONTINENT } from '../config/countries';
-import VatNumberInput from '../components/common/VatNumberInput';
-import { parseApiError } from '../utils/apiError';
-import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
-import { useToast } from '../components/Toast';
-import type { Tenant, TenantUpdate, ContactPerson } from '../types';
+import { useState, useRef, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import api from '../../config/api';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
+import RichTextEditor from '../../components/common/RichTextEditor';
+import { validatePhone, validateEmail } from '../../utils/validators';
+import { COUNTRIES_BY_CONTINENT } from '../../config/countries';
+import VatNumberInput from '../../components/common/VatNumberInput';
+import { parseApiError } from '../../utils/apiError';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { useToast } from '../../components/Toast';
+import type { Tenant, TenantUpdate, ContactPerson } from '../../types';
 
-const SystemEmailTemplates = lazy(() => import('./SystemEmailTemplates'));
-
-interface EmailFailure {
-  id: string;
-  recipient_email: string;
-  subject: string;
-  email_type: string;
-  status: string;
-  error_message: string | null;
-  acknowledged: boolean;
-  created_at: string;
-}
-
-interface EmailFailureList {
-  items: EmailFailure[];
-  total: number;
-  total_unacknowledged: number;
-  page: number;
-  page_size: number;
-}
-
-type MyCompanyTab = 'company' | 'email';
-
-export default function MyCompany() {
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<MyCompanyTab>('company');
-
-  // Fetch company data
-  const {
-    data: tenant,
-    isLoading,
-    error,
-  } = useQuery<Tenant>({
-    queryKey: ['my-company'],
-    queryFn: async () => {
-      const res = await api.get('/my-company');
-      return res.data;
-    },
-  });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (error || !tenant) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-red-600">Failed to load company information</p>
-      </div>
-    );
-  }
-
-  const tabs: { key: MyCompanyTab; label: string }[] = [
-    { key: 'company', label: 'Company' },
-    { key: 'email', label: 'Email Settings' },
-  ];
-
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Company</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Manage your company information, email settings, and templates
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.key
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {activeTab === 'company' && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="p-6">
-            <CompanyForm
-              tenant={tenant}
-              onUpdate={() => queryClient.invalidateQueries({ queryKey: ['my-company'] })}
-            />
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'email' && (
-        <EmailSettingsTab
-          tenant={tenant}
-          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['my-company'] })}
-        />
-      )}
-    </div>
-  );
-}
-
-interface EmailDefaults {
-  resend_from_email: string;
-  resend_from_name: string;
-  resend_api_key_set: boolean;
-  tenant_api_key_set: boolean;
-}
-
-function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => void }) {
+export default function CompanyForm({
+  tenant,
+  onUpdate,
+}: {
+  tenant: Tenant;
+  onUpdate: () => void;
+}) {
   // Logo upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoStatus, setLogoStatus] = useState<'idle' | 'uploading' | 'deleting' | 'error'>('idle');
@@ -238,7 +127,6 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
   };
 
   const handleSave = useCallback(() => {
-    // Validate phone before saving
     if (formData.phone) {
       const phoneError = validatePhone(formData.phone);
       if (phoneError) {
@@ -247,7 +135,6 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
       }
     }
 
-    // Exclude contact_persons from this save — they're saved explicitly via add/remove/update
     const { contact_persons: _, ...payload } = formData;
     updateMutation.mutate(payload as TenantUpdate);
   }, [formData, updateMutation, showToast]);
@@ -322,7 +209,6 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
             Company Logo
           </h5>
           <div className="flex items-start gap-4">
-            {/* Logo preview */}
             <div className="min-w-24 max-w-48 h-24 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-2">
               {tenant.logo_url ? (
                 <img
@@ -347,7 +233,6 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
               )}
             </div>
 
-            {/* Upload/Delete controls */}
             <div className="flex flex-col gap-2">
               <input
                 ref={fileInputRef}
@@ -883,326 +768,6 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
       />
 
       <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
-    </div>
-  );
-}
-
-function EmailSettingsTab({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => void }) {
-  const { showToast } = useToast();
-
-  const { data: emailDefaults } = useQuery<EmailDefaults>({
-    queryKey: ['my-company-email-defaults'],
-    queryFn: async () => {
-      const res = await api.get('/my-company/email-defaults');
-      return res.data;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const [resendApiKey, setResendApiKey] = useState(tenant.resend_api_key || '');
-  const [resendFromEmail, setResendFromEmail] = useState(tenant.resend_from_email || '');
-  const [resendFromName, setResendFromName] = useState(tenant.resend_from_name || '');
-  const [isDirty, setIsDirty] = useState(false);
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      await api.put('/my-company', {
-        resend_api_key: resendApiKey,
-        resend_from_email: resendFromEmail,
-        resend_from_name: resendFromName,
-      });
-    },
-    onSuccess: () => {
-      setIsDirty(false);
-      onUpdate();
-      showToast('Email settings saved', 'success');
-    },
-    onError: (err) => showToast(parseApiError(err), 'error'),
-  });
-
-  return (
-    <div className="space-y-6">
-      {/* Resend Configuration */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Email Delivery (Resend)
-            </h4>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Configure your Resend API credentials for sending emails. Leave fields empty to use
-              platform defaults.
-            </p>
-          </div>
-          <button
-            onClick={() => saveMutation.mutate()}
-            disabled={!isDirty || saveMutation.isPending}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saveMutation.isPending ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-
-        {/* Warning banner when no API key is configured */}
-        {emailDefaults &&
-          !emailDefaults.tenant_api_key_set &&
-          !emailDefaults.resend_api_key_set && (
-            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-md">
-              <div className="flex">
-                <svg
-                  className="h-5 w-5 text-amber-400 shrink-0"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <div className="ml-3">
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    Email sending is not configured. Enter your Resend API key below to enable email
-                    delivery.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Resend API Key
-            </label>
-            <input
-              type="password"
-              placeholder={
-                emailDefaults?.resend_api_key_set
-                  ? 'Platform default key is configured'
-                  : 'No API key configured'
-              }
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-              value={resendApiKey}
-              onChange={(e) => {
-                setResendApiKey(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Your own Resend API key. Leave empty to use the platform default.
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              From Email
-            </label>
-            <input
-              type="email"
-              placeholder={emailDefaults?.resend_from_email || 'noreply@example.com'}
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-              value={resendFromEmail}
-              onChange={(e) => {
-                setResendFromEmail(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Sender address for outgoing emails.
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              From Name
-            </label>
-            <input
-              type="text"
-              placeholder={emailDefaults?.resend_from_name || 'My Company'}
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-              value={resendFromName}
-              onChange={(e) => {
-                setResendFromName(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Display name for outgoing emails.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Email Templates */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <Suspense
-          fallback={
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-            </div>
-          }
-        >
-          <SystemEmailTemplates embedded />
-        </Suspense>
-      </div>
-
-      {/* Email Delivery Failures */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <EmailFailuresSection />
-      </div>
-    </div>
-  );
-}
-
-const EMAIL_TYPE_LABELS: Record<string, string> = {
-  general: 'General',
-  verification: 'Email Verification',
-  submission_confirmation: 'Submission Confirmation',
-  cospeaker_invitation: 'Co-Speaker Invitation',
-  password_reset: 'Password Reset',
-  tenant_welcome: 'Tenant Welcome',
-  team_invitation: 'Team Invitation',
-  deadline_reminder: 'Deadline Reminder',
-  direct_message: 'Direct Message',
-  message_notification: 'Message Notification',
-  registration_invoice: 'Registration Invoice',
-  attendee_welcome: 'Attendee Welcome',
-  invoice: 'Invoice',
-  cancellation: 'Cancellation',
-  payment_reminder: 'Payment Reminder',
-  admin_notification: 'Admin Notification',
-  sponsor_contract: 'Sponsor Contract',
-  registration_replacement: 'Registration Replacement',
-};
-
-function EmailFailuresSection() {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-  const [page, setPage] = useState(1);
-
-  const { data: failures, isLoading } = useQuery<EmailFailureList>({
-    queryKey: ['email-failures', page],
-    queryFn: async () => {
-      const res = await api.get('/my-company/email-failures', {
-        params: { page, page_size: 10, acknowledged: false },
-      });
-      return res.data;
-    },
-    refetchInterval: 60000,
-  });
-
-  const acknowledgeMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.post(`/my-company/email-failures/${id}/acknowledge`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-failures'] });
-    },
-    onError: (err) => showToast(parseApiError(err), 'error'),
-  });
-
-  const acknowledgeAllMutation = useMutation({
-    mutationFn: async () => {
-      await api.post('/my-company/email-failures/acknowledge-all');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-failures'] });
-      showToast('All failures acknowledged', 'success');
-    },
-    onError: (err) => showToast(parseApiError(err), 'error'),
-  });
-
-  if (isLoading) return null;
-  if (!failures || failures.total_unacknowledged === 0) return null;
-
-  const totalPages = Math.ceil(failures.total / failures.page_size);
-
-  return (
-    <div className="border-t dark:border-gray-700 pt-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Email Delivery Failures
-          </h5>
-          <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full">
-            {failures.total_unacknowledged}
-          </span>
-        </div>
-        {failures.total_unacknowledged > 1 && (
-          <button
-            onClick={() => acknowledgeAllMutation.mutate()}
-            disabled={acknowledgeAllMutation.isPending}
-            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
-          >
-            Acknowledge All
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        {failures.items.map((failure) => (
-          <div
-            key={failure.id}
-            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded">
-                    {failure.status === 'not_configured' ? 'Not Configured' : 'Failed'}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {EMAIL_TYPE_LABELS[failure.email_type] || failure.email_type}
-                  </span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
-                    {new Date(failure.created_at).toLocaleString()}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-gray-900 dark:text-gray-100 truncate">
-                  To: {failure.recipient_email}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                  Subject: {failure.subject}
-                </p>
-                {failure.error_message && (
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                    {failure.error_message}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => acknowledgeMutation.mutate(failure.id)}
-                disabled={acknowledgeMutation.isPending}
-                className="shrink-0 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
-                title="Acknowledge"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {totalPages > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            Previous
-          </button>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </div>
   );
 }
