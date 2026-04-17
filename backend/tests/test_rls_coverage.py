@@ -155,12 +155,19 @@ def _query(dsn: dict[str, str], sql: str) -> list[tuple]:
 
 
 def _tenant_scoped_tables(dsn: dict[str, str]) -> set[str]:
+    # Only base tables — matviews can have a `tenant_id` column for
+    # application-level filtering but PostgreSQL doesn't support RLS on
+    # matviews, so they shouldn't be treated as RLS-required here.
     return {
         row[0]
         for row in _query(
             dsn,
-            "SELECT table_name FROM information_schema.columns "
-            "WHERE table_schema = 'public' AND column_name = 'tenant_id'",
+            "SELECT c.table_name FROM information_schema.columns c "
+            "JOIN information_schema.tables t "
+            "  ON c.table_schema = t.table_schema AND c.table_name = t.table_name "
+            "WHERE c.table_schema = 'public' "
+            "  AND c.column_name = 'tenant_id' "
+            "  AND t.table_type = 'BASE TABLE'",
         )
     }
 
