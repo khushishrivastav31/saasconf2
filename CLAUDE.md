@@ -82,13 +82,13 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Phase H **Step 39 — five foundational ADRs** written in `docs/adr/` (Michael Nygard format, all Accepted, dated 2026-04-17, @josediaz):
-  - `0001-row-level-security-for-multi-tenancy.md` — PostgreSQL RLS with `app.current_tenant_id` session setting + super-admin bypass; alternatives (schema-per-tenant, DB-per-tenant, app-layer filtering) rejected.
-  - `0002-jwt-hs256-over-rs256.md` — HS256 because the backend is the only verifier; smaller tokens, faster HMAC; revisit if federation ever needed.
-  - `0003-redis-backed-rate-limiter.md` — slowapi + Redis with two instances (`limiter` IP-only, `tenant_limiter` `<tenant_id>:<ip>`); Nginx kept as coarse secondary.
-  - `0004-async-sqlalchemy.md` — async SQLAlchemy + asyncpg end-to-end; `asyncio.to_thread` for inherently blocking libs (WeasyPrint etc.); tests use `NullPool`.
-  - `0005-pydantic-v2-strict.md` — v2 with `ConfigDict(from_attributes=True)` everywhere; treat lax coercion as a bug; migrate v1 `class Config:` on sight.
-  - `docs/adr/README.md` catalog: 5 rows flipped `_planned_` → `Accepted`, trailing "will be written in Phase H" sentence removed.
-- **In progress**: Step 37 remaining phases (each its own commit): (c) dual-write — populate `*_encrypted` + `*_hash` on insert/update; (d) backfill script; (e) read cutover — switch login (`auth.py:79`, `portal_auth.py:26`, `trainings/user_management.py:73`) and search queries to hash lookups, decrypt-on-read for display; (f) drop plaintext columns. Also: prod startup check (refuse boot if `PII_ENCRYPTION_KEY` empty in production).
-- **Next up**: Step 37 phase (c) dual-write layer. All other Phase H items except the ongoing 37 rollout are done (38 ratchet, 39 ADRs, 40 runbooks). Future: another round of splits to lower the max-lines budget below 105.
-- **Status**: ADR files ready for commit; no code or test changes since Step 38. `npm run lint` still exits 0 with 105 warnings (budget).
+- **Last completed**: Phase H **Step 37 phase (c) — PII dual-write layer**. SQLAlchemy `before_insert` / `before_update` listeners now populate the `*_encrypted` (Fernet) + `*_hash` (deterministic SHA-256) companions alongside every write to the 13 PII columns.
+  - New module: `backend/app/core/security/pii_dual_write.py` — `PII_COLUMN_SPEC` maps 6 model classes (`User`, `PortalUser`, `Invoice`, `BillingProfile`, `Trainer`, `Customer`) to (plaintext_attr, kind) tuples. `register_pii_dual_write_listeners()` is idempotent; called from `app/models/__init__.py` once all models are defined.
+  - Update path skips rows whose plaintext attr has not changed (Fernet is non-deterministic — re-encryption would thrash ciphertext on every unrelated row touch).
+  - Each of the 6 models now declares its `*_encrypted` (`Text, nullable=True`) and `*_hash` (`String(64), nullable=True`) mapped columns. The DB columns were added in migration 197 (`e8b60c4`).
+  - 9 new tests in `backend/tests/test_pii_dual_write.py` cover insert, update, skip-on-unchanged, normalization (email lowercase/strip, VAT alnum-uppercase), null handling, and the multi-PII models.
+  - Backend restarted cleanly; `/health` = 200. mypy + ruff green; full backend suite = 852 passed + 1 pre-existing unrelated failure in `test_dashboard_matviews.py::test_downgrade_drops_matviews`.
+  - **Known gap** documented in the module docstring: bulk `session.execute(update(...))` bypasses ORM events. No current call site does this on plaintext PII, but audit before phase (e) cutover.
+- **In progress**: Step 37 remaining phases: (d) backfill script for historical rows; (e) read cutover — switch login (`auth.py:79`, `portal_auth.py:26`, `trainings/user_management.py:73`) and search queries to hash lookups, decrypt-on-read for display; (f) drop plaintext columns. Also: prod startup check (refuse boot if `PII_ENCRYPTION_KEY` empty in production).
+- **Next up**: Step 37 phase (d) — backfill script to populate `*_encrypted` + `*_hash` for rows that existed before dual-write was turned on.
+- **Status**: Dual-write commit `1ad8e2e` on main (not yet pushed). Backend running with listeners active.
