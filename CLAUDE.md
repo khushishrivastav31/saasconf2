@@ -82,7 +82,7 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Phase E Step 28 — full `app/core/` subpackaging (zugferd/vat/email/pdf/security/invoice subpackages, 15 invoice modules + shims in 28f, commit `a6d88ad`).
-- **In progress**: Phase F Step 29 — `ExchangeRate` model (tenant-scoped, RLS, history-preserving), migration 195 adds table + `invoices.exchange_rate_used` column, `app/core/exchange_rates.py` helpers, `assign_invoice_number_and_mark_sent` freezes rate at issue time, PDF renderer prefers frozen rate. 18 new tests green.
-- **Next up**: Phase D Step 23 (InvoicesTab refactor), Phase F Step 30 (materialized views), Phase G (god-components), Phase H (PII encryption, ADRs, runbooks).
-- **Status**: mypy clean (633 files), ruff clean, 29 spot tests green. Full suite running in background (`/tmp/pytest-29.log`).
+- **Last completed**: Phase G Step 33 — split `CompanyInfoTab` (1078 LOC) into a `CompanyInfoTab/` directory of 14 files, all under 170 LOC. Orchestrator `index.tsx` (131 LOC) wraps `FormProvider`; split: `schema.ts` (zod + `CompanyFormData` + `tenantToFormData`/`formDataToUpdate`/`emptyContact`), `useTenantMutations` (update/toggleActive/delete/uploadLogo/deleteLogo + logoStatus/logoError), `CompanyHeader`, `LogoSection`, `BasicInfoFields` (RHF `register`), `PortalUrlSection` (copy/open), `AddressFields` (RHF `register`), `ContactPersonsSection` + `ContactPersonItem` + `ContactPersonForm` (contact_persons stay outside RHF — immediate per-op saves via mutation), `CommentsField` (Controller for RichTextEditor), `CompanyStatusSection`, `DangerZone` (custom delete-confirm dialog with type-to-confirm).
+- **In progress**: Phase G Step 34 — refactor `SpeakerExpensesTab` (1070 LOC).
+- **Next up**: Steps 35-36 (UserDetailPanel, CustomerDetailPanel/OffersTab); Phase H (PII encryption, max-lines warn→error, ADRs, runbooks).
+- **Status**: tsc clean, eslint --max-warnings 0 clean for `CompanyInfoTab/`, vitest 1817 tests green.
