@@ -2048,26 +2048,6 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/trainings/attendees/backfill': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Backfill Central Attendees
-     * @description Backfill central TrainingAttendee records from existing registration + offer attendees.
-     */
-    post: operations['backfill_central_attendees_api_v1_trainings_attendees_backfill_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/trainings/attendees/park-by-source': {
     parameters: {
       query?: never;
@@ -2084,86 +2064,6 @@ export type paths = {
      *     Automatically creates a central TrainingAttendee if one doesn't exist yet.
      */
     post: operations['park_by_source_api_v1_trainings_attendees_park_by_source_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/trainings/attendees/available-placements': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List Available Placements
-     * @description List future training placements for reassignment picker with training details.
-     */
-    get: operations['list_available_placements_api_v1_trainings_attendees_available_placements_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/trainings/attendees': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List Attendees
-     * @description List all central training attendees with latest history event.
-     */
-    get: operations['list_attendees_api_v1_trainings_attendees_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/trainings/attendees/{attendee_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Attendee
-     * @description Get a single attendee with full history.
-     */
-    get: operations['get_attendee_api_v1_trainings_attendees__attendee_id__get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/trainings/attendees/{attendee_id}/profile': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Attendee Profile
-     * @description Get full attendee profile with all registrations, offers, and portal account info.
-     */
-    get: operations['get_attendee_profile_api_v1_trainings_attendees__attendee_id__profile_get'];
-    put?: never;
-    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -2190,6 +2090,78 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/attendees/{attendee_id}/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Deactivate Attendee
+     * @description Deactivate a parked attendee — flips status to 'inactive' and hides from the parking lot.
+     *
+     *     Only attendees with status ``parked`` can be deactivated. Active attendees must be
+     *     parked first (via ``/park`` or ``/park-by-source``). Writes a ``deactivated`` history
+     *     event. Reactivation happens via the reciprocal endpoint or by toggling the linked
+     *     portal user back on.
+     */
+    post: operations['deactivate_attendee_api_v1_trainings_attendees__attendee_id__deactivate_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/attendees/{attendee_id}/reactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reactivate Attendee
+     * @description Reactivate an inactive attendee — sets ``status='active'`` so the user is operational.
+     *
+     *     Also handles the historical case where ``attendee.status`` is still ``parked`` but
+     *     the portal account has been deactivated (effective-status = inactive). In that case,
+     *     the portal account is reactivated *and* the attendee is moved to ``active``.
+     *
+     *     Reactivation never puts a user back into the parking lot. If the user later
+     *     needs to be parked again, admins can use the usual parking flow.
+     */
+    post: operations['reactivate_attendee_api_v1_trainings_attendees__attendee_id__reactivate_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/attendees/available-placements': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Available Placements
+     * @description List future training placements for reassignment picker with training details.
+     */
+    get: operations['list_available_placements_api_v1_trainings_attendees_available_placements_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/attendees/{attendee_id}/reassign': {
     parameters: {
       query?: never;
@@ -2204,6 +2176,91 @@ export type paths = {
      * @description Reassign a parked attendee to a new training with invoice transfer.
      */
     post: operations['reassign_attendee_api_v1_trainings_attendees__attendee_id__reassign_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/attendees/{attendee_id}/profile': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Attendee Profile
+     * @description Get full attendee profile with all registrations, offers, and portal account info.
+     */
+    get: operations['get_attendee_profile_api_v1_trainings_attendees__attendee_id__profile_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/attendees/backfill': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Backfill Central Attendees
+     * @description Backfill central TrainingAttendee records from existing registration + offer attendees.
+     */
+    post: operations['backfill_central_attendees_api_v1_trainings_attendees_backfill_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/attendees': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Attendees
+     * @description List all central training attendees with latest history event.
+     *
+     *     Effective status treats a parked attendee whose portal account has been
+     *     deactivated (``portal_users.is_active = False``) as ``inactive``. This keeps
+     *     the parking lot and the status filter in sync with the portal-account state
+     *     without requiring a data migration for historical rows.
+     */
+    get: operations['list_attendees_api_v1_trainings_attendees_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/attendees/{attendee_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Attendee
+     * @description Get a single attendee with full history.
+     */
+    get: operations['get_attendee_api_v1_trainings_attendees__attendee_id__get'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -2761,6 +2818,29 @@ export type paths = {
      * @description Toggle the is_guaranteed flag on a placement.
      */
     patch: operations['toggle_placement_guaranteed_api_v1_trainings_programs_years__year_id__trainings__placement_id__guaranteed_patch'];
+    trace?: never;
+  };
+  '/api/v1/trainings/programs/years/{year_id}/trainings/{placement_id}/active': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Toggle Placement Active
+     * @description Toggle the is_active flag on a placement.
+     *
+     *     Deactivating requires zero registrations and zero offer-attendees on the
+     *     placement. Reactivating is always allowed.
+     */
+    patch: operations['toggle_placement_active_api_v1_trainings_programs_years__year_id__trainings__placement_id__active_patch'];
     trace?: never;
   };
   '/api/v1/trainings/programs/years/{year_id}/trainings/{placement_id}/check-trainer': {
@@ -4290,6 +4370,50 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/users/{user_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Portal User Detail
+     * @description Get full portal user profile including picture/video URLs.
+     */
+    get: operations['get_portal_user_detail_api_v1_trainings_users__user_id__get'];
+    /**
+     * Update Portal User Profile
+     * @description Update a portal user's profile fields.
+     */
+    put: operations['update_portal_user_profile_api_v1_trainings_users__user_id__put'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/users/create-for-attendee/{attendee_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Create Portal User For Attendee
+     * @description Create a portal_user for an attendee that doesn't have one yet.
+     */
+    post: operations['create_portal_user_for_attendee_api_v1_trainings_users_create_for_attendee__attendee_id__post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/users/{user_id}/toggle-access': {
     parameters: {
       query?: never;
@@ -4301,6 +4425,20 @@ export type paths = {
     /**
      * Toggle Portal Access
      * @description Enable or disable a portal user's access.
+     *
+     *     Deactivation is blocked if the user is still attached to an active training
+     *     (non-parked attendee + active placement + non-cancelled registration or
+     *     accepted offer). Park the attendee first, or deactivate the placement.
+     *
+     *     This endpoint toggles ``PortalUser.is_active`` only — it does not mutate
+     *     ``TrainingAttendee.status``. Activating a user does not restore them to the
+     *     parking lot; attendee status is controlled by the explicit Deactivate /
+     *     Reactivate actions on the attendee itself. Read endpoints derive an
+     *     *effective* status (``parked`` + dead portal → reported as ``inactive``)
+     *     so the parking lot hides deactivated users without mutating the attendee.
+     *
+     *     Writes a ``portal_activated`` or ``portal_deactivated`` history event on
+     *     every linked attendee for audit purposes.
      */
     put: operations['toggle_portal_access_api_v1_trainings_users__user_id__toggle_access_put'];
     post?: never;
@@ -4350,33 +4488,6 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/trainings/users/{target_user_id}/merge': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Merge Portal Users
-     * @description Merge source portal user into target. Moves all linked records, deletes source.
-     *
-     *     - Training attendees from source → re-linked to target portal_user
-     *     - Attendee history preserved
-     *     - Registration attendee links preserved
-     *     - Offer attendee links preserved
-     *     - CFP applicant link moved if source has one
-     *     - Source portal_user + source training_attendee deleted
-     */
-    post: operations['merge_portal_users_api_v1_trainings_users__target_user_id__merge_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/trainings/users/{user_id}/impersonate': {
     parameters: {
       query?: never;
@@ -4400,7 +4511,7 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/trainings/users/create-for-attendee/{attendee_id}': {
+  '/api/v1/trainings/users/{target_user_id}/merge': {
     parameters: {
       query?: never;
       header?: never;
@@ -4410,34 +4521,17 @@ export type paths = {
     get?: never;
     put?: never;
     /**
-     * Create Portal User For Attendee
-     * @description Create a portal_user for an attendee that doesn't have one yet.
+     * Merge Portal Users
+     * @description Merge source portal user into target. Moves all linked records, deletes source.
+     *
+     *     - Training attendees from source → re-linked to target portal_user
+     *     - Attendee history preserved
+     *     - Registration attendee links preserved
+     *     - Offer attendee links preserved
+     *     - CFP applicant link moved if source has one
+     *     - Source portal_user + source training_attendee deleted
      */
-    post: operations['create_portal_user_for_attendee_api_v1_trainings_users_create_for_attendee__attendee_id__post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/trainings/users/{user_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Portal User Detail
-     * @description Get full portal user profile including picture/video URLs.
-     */
-    get: operations['get_portal_user_detail_api_v1_trainings_users__user_id__get'];
-    /**
-     * Update Portal User Profile
-     * @description Update a portal user's profile fields.
-     */
-    put: operations['update_portal_user_profile_api_v1_trainings_users__user_id__put'];
-    post?: never;
+    post: operations['merge_portal_users_api_v1_trainings_users__target_user_id__merge_post'];
     delete?: never;
     options?: never;
     head?: never;
@@ -16322,6 +16416,11 @@ export type components = {
       /** Count */
       count: number;
     };
+    /** DeactivateAttendeeRequest */
+    DeactivateAttendeeRequest: {
+      /** Notes */
+      notes?: string | null;
+    };
     /** DeadlineCreate */
     DeadlineCreate: {
       /** Title */
@@ -21882,6 +21981,11 @@ export type components = {
        */
       is_guaranteed?: boolean;
       /**
+       * Is Active
+       * @default true
+       */
+      is_active?: boolean;
+      /**
        * Created At
        * Format: date-time
        */
@@ -22152,6 +22256,11 @@ export type components = {
       placement_id: string;
       /** Notes */
       notes?: string | null;
+      /**
+       * Keep Invoice
+       * @default false
+       */
+      keep_invoice?: boolean;
     };
     /**
      * RecipientListCreate
@@ -31864,7 +31973,7 @@ export interface operations {
       };
     };
   };
-  backfill_central_attendees_api_v1_trainings_attendees_backfill_post: {
+  park_by_source_api_v1_trainings_attendees_park_by_source_post: {
     parameters: {
       query?: never;
       header?: {
@@ -31873,7 +31982,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ParkRequest'];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
@@ -31897,13 +32010,15 @@ export interface operations {
       };
     };
   };
-  park_by_source_api_v1_trainings_attendees_park_by_source_post: {
+  park_attendee_api_v1_trainings_attendees__attendee_id__park_post: {
     parameters: {
       query?: never;
       header?: {
         authorization?: string | null;
       };
-      path?: never;
+      path: {
+        attendee_id: string;
+      };
       cookie?: never;
     };
     requestBody: {
@@ -31911,6 +32026,80 @@ export interface operations {
         'application/json': components['schemas']['ParkRequest'];
       };
     };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  deactivate_attendee_api_v1_trainings_attendees__attendee_id__deactivate_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        attendee_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DeactivateAttendeeRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  reactivate_attendee_api_v1_trainings_attendees__attendee_id__reactivate_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        attendee_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {
@@ -31954,6 +32143,113 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           }[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  reassign_attendee_api_v1_trainings_attendees__attendee_id__reassign_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        attendee_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReassignRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_attendee_profile_api_v1_trainings_attendees__attendee_id__profile_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        attendee_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  backfill_central_attendees_api_v1_trainings_attendees_backfill_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
         };
       };
       /** @description Validation Error */
@@ -32017,119 +32313,6 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  get_attendee_profile_api_v1_trainings_attendees__attendee_id__profile_get: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        attendee_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  park_attendee_api_v1_trainings_attendees__attendee_id__park_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        attendee_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ParkRequest'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  reassign_attendee_api_v1_trainings_attendees__attendee_id__reassign_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        attendee_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ReassignRequest'];
-      };
-    };
     responses: {
       /** @description Successful Response */
       200: {
@@ -33549,6 +33732,40 @@ export interface operations {
     };
   };
   toggle_placement_guaranteed_api_v1_trainings_programs_years__year_id__trainings__placement_id__guaranteed_patch: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        year_id: string;
+        placement_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProgramYearTrainingResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  toggle_placement_active_api_v1_trainings_programs_years__year_id__trainings__placement_id__active_patch: {
     parameters: {
       query?: never;
       header?: {
@@ -37473,6 +37690,115 @@ export interface operations {
       };
     };
   };
+  get_portal_user_detail_api_v1_trainings_users__user_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_portal_user_profile_api_v1_trainings_users__user_id__put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdatePortalUserProfile'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_portal_user_for_attendee_api_v1_trainings_users_create_for_attendee__attendee_id__post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        attendee_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   toggle_portal_access_api_v1_trainings_users__user_id__toggle_access_put: {
     parameters: {
       query?: never;
@@ -37578,45 +37904,6 @@ export interface operations {
       };
     };
   };
-  merge_portal_users_api_v1_trainings_users__target_user_id__merge_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        target_user_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['MergeUsersRequest'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
   impersonate_portal_user_api_v1_trainings_users__user_id__impersonate_post: {
     parameters: {
       query?: never;
@@ -37652,90 +37939,20 @@ export interface operations {
       };
     };
   };
-  create_portal_user_for_attendee_api_v1_trainings_users_create_for_attendee__attendee_id__post: {
+  merge_portal_users_api_v1_trainings_users__target_user_id__merge_post: {
     parameters: {
       query?: never;
       header?: {
         authorization?: string | null;
       };
       path: {
-        attendee_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  get_portal_user_detail_api_v1_trainings_users__user_id__get: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        user_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  update_portal_user_profile_api_v1_trainings_users__user_id__put: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        user_id: string;
+        target_user_id: string;
       };
       cookie?: never;
     };
     requestBody: {
       content: {
-        'application/json': components['schemas']['UpdatePortalUserProfile'];
+        'application/json': components['schemas']['MergeUsersRequest'];
       };
     };
     responses: {
