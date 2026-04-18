@@ -65,6 +65,8 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ALGORITHM: HS256
+      PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY}
+      PII_ENCRYPTION_KEYS_OLD: ${PII_ENCRYPTION_KEYS_OLD:-}
       DEBUG: "false"
       CORS_ORIGINS: '["https://${DOMAIN}", "https://www.${DOMAIN}"]'
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}

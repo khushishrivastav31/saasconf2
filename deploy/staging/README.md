@@ -22,6 +22,7 @@ cp .env.example .env
 Required environment variables:
 - `DB_PASSWORD` - PostgreSQL password
 - `JWT_SECRET_KEY` - Secret key for JWT tokens (min 32 chars)
+- `PII_ENCRYPTION_KEY` - Fernet key for PII column encryption (required; see [runbook](../../backend/docs/runbooks/pii-encryption-key-management.md))
 - `SUPER_ADMIN_EMAIL` - Email for the super admin account
 - `SUPER_ADMIN_PASSWORD` - Password for the super admin account
 - `DOMAIN` - Domain name (e.g., `staging.sonrisa.ventures`)
