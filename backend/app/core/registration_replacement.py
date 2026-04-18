@@ -14,7 +14,7 @@ from app.core.email import send_email
 from app.core.email_templates import build_registration_cancellation_context, render_email
 from app.core.invoice_number import generate_invoice_number
 from app.core.security import hash_password
-from app.core.security.pii_crypto import hash_email
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.core.vat_calculation import calculate_vat_for_invoice
 from app.models.audit import AuditLog
 from app.models.booking import BookingOption, BookingPeriod
@@ -370,12 +370,12 @@ async def _create_incremental_invoice(
         recipient_source_type="registration_replacement",  # OPTION D - links via replacement record
         recipient_source_id=billing_profile.id,  # Still links to billing profile for queries
         recipient_name=recipient_name,
-        recipient_email=billing_profile.contact_email,
+        recipient_email=read_pii(billing_profile, "contact_email"),
         recipient_address_line1=billing_profile.street,
         recipient_city=billing_profile.city,
         recipient_postal_code=billing_profile.postal_code,
         recipient_country=billing_profile.country,
-        recipient_vat_number=billing_profile.vat_number,
+        recipient_vat_number=read_pii(billing_profile, "vat_number"),
         procurement_code=billing_profile.procurement_code,
         line_items=[item.model_dump() for item in line_items],
         subtotal=float(subtotal),

@@ -14,6 +14,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.program_snapshot import ProgramDiff, build_snapshot, compute_diff
+from app.core.security.pii_crypto import read_pii
 from app.models.audit import AuditLog
 from app.models.training_program import (
     PlacementTrainer,
@@ -155,7 +156,8 @@ async def _send_trainer_emails(
 
     for tid in trainer_ids:
         trainer = trainers.get(tid)
-        if not trainer or not trainer.email:
+        trainer_email = read_pii(trainer, "email") if trainer else None
+        if not trainer or not trainer_email:
             continue
 
         trainer_name = f"{trainer.first_name} {trainer.last_name}"
@@ -217,7 +219,7 @@ async def _send_trainer_emails(
 
         send_email_background(
             send_email,
-            trainer.email,
+            trainer_email,
             subject,
             html_body,
             attachments=[attachment],

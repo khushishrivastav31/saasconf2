@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import CurrentUser
 from app.core.exceptions import ValidationError
 from app.core.invoice.number import generate_invoice_number
+from app.core.security.pii_crypto import read_pii
 from app.core.stripe_helper import create_payment_link
 from app.models.conference import Conference
 from app.models.invoice import Invoice
@@ -88,7 +89,7 @@ async def create_replacement_invoice(
     # Build corrected recipient fields (apply corrections over old values)
     recipient_data = {
         "recipient_name": corrected_fields.get("recipient_name") or old_invoice.recipient_name,
-        "recipient_email": corrected_fields.get("recipient_email") or old_invoice.recipient_email,
+        "recipient_email": corrected_fields.get("recipient_email") or read_pii(old_invoice, "recipient_email"),
         "recipient_address_line1": corrected_fields.get("recipient_address_line1")
         or old_invoice.recipient_address_line1,
         "recipient_address_line2": corrected_fields.get("recipient_address_line2")
@@ -97,7 +98,8 @@ async def create_replacement_invoice(
         "recipient_state": corrected_fields.get("recipient_state") or old_invoice.recipient_state,
         "recipient_postal_code": corrected_fields.get("recipient_postal_code") or old_invoice.recipient_postal_code,
         "recipient_country": corrected_fields.get("recipient_country") or old_invoice.recipient_country,
-        "recipient_vat_number": corrected_fields.get("recipient_vat_number") or old_invoice.recipient_vat_number,
+        "recipient_vat_number": corrected_fields.get("recipient_vat_number")
+        or read_pii(old_invoice, "recipient_vat_number"),
         "procurement_code": corrected_fields.get("procurement_code") or old_invoice.procurement_code,
     }
 

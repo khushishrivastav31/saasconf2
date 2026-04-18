@@ -15,6 +15,7 @@ from app.core.conference_helpers import check_conference_admin, get_conference_f
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import NotFoundError
 from app.core.invoice_auto_generation import create_invoice_for_registrations
+from app.core.security.pii_crypto import hash_email
 from app.core.user_auto_creation import create_user_for_registration
 from app.core.vat_validation import validate_vat_number
 from app.models.booking import BookingOption, BookingPeriod
@@ -728,6 +729,10 @@ async def get_booking_history_by_email(
     tenant_id = current_user.tenant_id
     await check_conference_admin(conference_id, current_user, db)
 
+    # Join invoice by recipient_email_hash rather than plaintext so the query
+    # survives phase (f.2) dropping Invoice.recipient_email. Registration.email
+    # is not a PII-encrypted column, so we hash its Python-side value once.
+    email_hash = hash_email(email)
     result = await db.execute(
         select(
             Registration.id,
@@ -751,7 +756,7 @@ async def get_booking_history_by_email(
             Invoice,
             (Invoice.conference_id == Registration.conference_id)
             & (Invoice.tenant_id == Registration.tenant_id)
-            & (Invoice.recipient_email == Registration.email)
+            & (Invoice.recipient_email_hash == email_hash)
             & (Invoice.status != "cancelled"),
         )
         .where(

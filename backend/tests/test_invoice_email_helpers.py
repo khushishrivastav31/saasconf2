@@ -22,6 +22,8 @@ def _make_invoice(
     invoice.invoice_number = invoice_number
     invoice.template_type = template_type
     invoice.recipient_email = recipient_email
+    # read_pii() prefers *_encrypted; force the plaintext fallback path for mocks.
+    invoice.recipient_email_encrypted = None
 
     # conference.settings is a plain dict (JSONB column)
     conference = MagicMock()

@@ -25,6 +25,7 @@ from app.core.invoice.line_items import (
     generate_line_items_from_registration,
 )
 from app.core.invoice.number import generate_invoice_number
+from app.core.security.pii_crypto import read_pii
 from app.core.stripe_helper import create_payment_link
 from app.core.vat_calculation import calculate_vat_for_invoice
 from app.models.booking import BookingOption
@@ -258,14 +259,14 @@ async def create_invoice_for_registrations(
         recipient_source_type="registration",
         recipient_source_id=billing_profile.id,  # Link to billing profile, not individual registration
         recipient_name=recipient_name,
-        recipient_email=billing_profile.contact_email,
+        recipient_email=read_pii(billing_profile, "contact_email"),
         recipient_address_line1=billing_profile.street,
         recipient_address_line2=None,
         recipient_city=billing_profile.city,
         recipient_state=None,
         recipient_postal_code=billing_profile.postal_code,
         recipient_country=billing_profile.country,
-        recipient_vat_number=billing_profile.vat_number,
+        recipient_vat_number=read_pii(billing_profile, "vat_number"),
         procurement_code=billing_profile.procurement_code,
         payment_method=payment_method,
         discount_code=billing_profile.discount_code,

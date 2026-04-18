@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.portal_security import generate_password_reset_token
+from app.core.security.pii_crypto import read_pii
 from app.core.utils import utcnow
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
@@ -121,7 +122,7 @@ async def toggle_portal_access(
     await db.commit()
 
     status = "enabled" if user.is_active else "disabled"
-    logger.info("Portal user %s access %s by admin %s", user.email, status, current_user.user_id)
+    logger.info("Portal user %s access %s by admin %s", read_pii(user, "email"), status, current_user.user_id)
     return {"id": str(user.id), "is_active": user.is_active, "message": f"Portal access {status}"}
 
 
@@ -155,9 +156,10 @@ async def resend_portal_invite(
 
     set_password_url = f"{settings.PORTAL_BASE_URL}/{tenant.slug}/trainings/portal/set-password?token={raw_token}"
 
+    user_email = read_pii(user, "email") or ""
     try:
         await send_email(
-            to=user.email,
+            to=user_email,
             subject=f"Set up your training portal account — {tenant.name}",
             html=f"""<p>Hi {user.first_name},</p>
 <p>You've been invited to access the training portal. Click below to set your password:</p>
@@ -169,7 +171,7 @@ font-weight: bold;">Set Your Password</a></p>
             tenant_from_name=tenant.name,
         )
     except Exception as exc:
-        logger.warning("Failed to send portal invite to %s: %s", user.email, exc)
+        logger.warning("Failed to send portal invite to %s: %s", user_email, exc)
         raise HTTPException(status_code=502, detail="Failed to send invite email") from exc
 
     return {"message": "Invite email sent"}
@@ -205,9 +207,10 @@ async def admin_reset_portal_password(
 
     reset_url = f"{settings.PORTAL_BASE_URL}/{tenant.slug}/trainings/portal/set-password?token={raw_token}"
 
+    user_email = read_pii(user, "email") or ""
     try:
         await send_email(
-            to=user.email,
+            to=user_email,
             subject=f"Password reset — {tenant.name}",
             html=f"""<p>Hi {user.first_name},</p>
 <p>An administrator has requested a password reset for your account. Click below to set a new password:</p>
@@ -219,10 +222,10 @@ font-weight: bold;">Reset Password</a></p>
             tenant_from_name=tenant.name,
         )
     except Exception as exc:
-        logger.warning("Failed to send password reset to %s: %s", user.email, exc)
+        logger.warning("Failed to send password reset to %s: %s", user_email, exc)
         raise HTTPException(status_code=502, detail="Failed to send reset email") from exc
 
-    logger.info("Admin password reset for %s by %s", user.email, current_user.user_id)
+    logger.info("Admin password reset for %s by %s", user_email, current_user.user_id)
     return {"message": "Password reset email sent"}
 
 
@@ -246,12 +249,13 @@ async def impersonate_portal_user(
 
     access_token = create_portal_access_token(user.id, user.tenant_id)
 
-    logger.info("Admin %s impersonating portal user %s", current_user.user_id, user.email)
+    user_email = read_pii(user, "email")
+    logger.info("Admin %s impersonating portal user %s", current_user.user_id, user_email)
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "portal_user_email": user.email,
+        "portal_user_email": user_email,
         "portal_user_name": f"{user.first_name} {user.last_name}",
     }
 
@@ -343,19 +347,22 @@ async def merge_portal_users(
     if source.last_login_at and (not target.last_login_at or source.last_login_at > target.last_login_at):
         target.last_login_at = source.last_login_at
 
+    source_email = read_pii(source, "email")
+    target_email = read_pii(target, "email")
+
     await db.delete(source)
     await db.commit()
 
     logger.info(
         "Merged portal user %s into %s (%d records moved) by admin %s",
-        source.email,
-        target.email,
+        source_email,
+        target_email,
         merged_records,
         current_user.user_id,
     )
 
     return {
-        "message": f"Merged {source.email} into {target.email}",
+        "message": f"Merged {source_email} into {target_email}",
         "merged_records": merged_records,
         "target_user_id": str(target.id),
     }

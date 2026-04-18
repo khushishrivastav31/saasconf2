@@ -17,7 +17,7 @@ from app.core.exceptions import AuthorizationError, NotFoundError, ValidationErr
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.security import hash_password
-from app.core.security.pii_crypto import hash_email
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.settings import PronounOption
@@ -91,7 +91,7 @@ async def list_tenant_users(
         UserInDB(
             id=u.id,
             tenant_id=u.tenant_id,
-            email=u.email,
+            email=read_pii(u, "email"),
             first_name=u.first_name,
             last_name=u.last_name,
             pronouns=u.pronouns,
@@ -204,7 +204,7 @@ async def create_tenant_user(
         action=AuditAction.USER_CREATE,
         resource_type="user",
         resource_id=user.id,
-        details={"email": user.email, "role": user.role},
+        details={"email": read_pii(user, "email"), "role": user.role},
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -218,7 +218,7 @@ async def create_tenant_user(
                 action=AuditAction.USER_INVITE_SENT,
                 resource_type="user",
                 resource_id=user.id,
-                details={"email": user.email, "role": user.role},
+                details={"email": read_pii(user, "email"), "role": user.role},
                 ip_address=get_client_ip(request),
                 user_agent=request.headers.get("User-Agent"),
             )
@@ -248,7 +248,7 @@ async def create_tenant_user(
         send_email_background(
             send_tenant_user_welcome_email,
             db,
-            email=user.email,
+            email=read_pii(user, "email"),
             token=raw_token,
             tenant_id=target_tenant_id,
             company_name=tenant_name,
@@ -262,7 +262,7 @@ async def create_tenant_user(
     tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
-        email=user.email,
+        email=read_pii(user, "email"),
         first_name=user.first_name,
         last_name=user.last_name,
         pronouns=user.pronouns,
@@ -296,7 +296,7 @@ async def get_tenant_user(
     tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
-        email=user.email,
+        email=read_pii(user, "email"),
         first_name=user.first_name,
         last_name=user.last_name,
         pronouns=user.pronouns,
@@ -339,7 +339,7 @@ async def update_tenant_user(
 
     # Check email uniqueness if email is being changed
     update_data = user_data.model_dump(exclude_unset=True)
-    if "email" in update_data and update_data["email"] != user.email:
+    if "email" in update_data and update_data["email"] != read_pii(user, "email"):
         existing = await db.execute(
             select(User)
             .where(User.tenant_id == user.tenant_id)
@@ -375,7 +375,7 @@ async def update_tenant_user(
     tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
-        email=user.email,
+        email=read_pii(user, "email"),
         first_name=user.first_name,
         last_name=user.last_name,
         pronouns=user.pronouns,
@@ -418,7 +418,7 @@ async def deactivate_tenant_user(
 
     # Permanent delete
     if permanent:
-        user_email = user.email
+        user_email = read_pii(user, "email")
         await db.delete(user)
 
         # Log action
@@ -454,7 +454,7 @@ async def deactivate_tenant_user(
         action=AuditAction.USER_DELETE,
         resource_type="user",
         resource_id=user.id,
-        details={"email": user.email},
+        details={"email": read_pii(user, "email")},
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -462,7 +462,7 @@ async def deactivate_tenant_user(
 
     await db.commit()
 
-    return {"message": f"User '{user.email}' has been deactivated"}
+    return {"message": f"User '{read_pii(user, 'email')}' has been deactivated"}
 
 
 @router.post("/{user_id}/resend-invite")
@@ -514,7 +514,7 @@ async def resend_invite(
             action=AuditAction.USER_INVITE_SENT,
             resource_type="user",
             resource_id=user.id,
-            details={"email": user.email, "resend": True},
+            details={"email": read_pii(user, "email"), "resend": True},
             ip_address=get_client_ip(request),
             user_agent=request.headers.get("User-Agent"),
         )
@@ -536,9 +536,10 @@ async def resend_invite(
                 tenant_support_email = cp["email"]
                 break
     user_type = "Administrator" if user.role == UserRole.TENANT_ADMIN.value else "Team Member"
+    user_email = read_pii(user, "email") or ""
     await send_tenant_user_welcome_email(
         db,
-        email=user.email,
+        email=user_email,
         token=raw_token,
         tenant_id=user.tenant_id,
         company_name=tenant_name,
@@ -549,7 +550,7 @@ async def resend_invite(
         base_url=frontend_base,
     )
 
-    return {"message": f"Invite email has been resent to {user.email}"}
+    return {"message": f"Invite email has been resent to {user_email}"}
 
 
 @router.get("/{user_id}/tenant-roles", response_model=list[TenantRoleResponse])

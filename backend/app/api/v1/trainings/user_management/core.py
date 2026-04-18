@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
-from app.core.security.pii_crypto import hash_email
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.models.portal_user import PortalUser
 from app.models.training_attendee import TrainingAttendee
 
@@ -75,10 +75,10 @@ async def list_portal_users(
     items = [
         {
             "id": str(u.id),
-            "email": u.email,
+            "email": read_pii(u, "email"),
             "first_name": u.first_name,
             "last_name": u.last_name,
-            "phone": u.phone,
+            "phone": read_pii(u, "phone"),
             "is_active": u.is_active,
             "has_password": u.password_hash is not None,
             "email_verified": u.email_verified_at is not None,
@@ -145,7 +145,7 @@ async def update_portal_user_profile(
     await db.commit()
     await db.refresh(user)
 
-    logger.info("Updated portal user %s profile by admin %s", user.email, current_user.user_id)
+    logger.info("Updated portal user %s profile by admin %s", read_pii(user, "email"), current_user.user_id)
     return portal_user_to_dict(user)
 
 

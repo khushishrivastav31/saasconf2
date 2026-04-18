@@ -21,6 +21,7 @@ from app.core.dependencies import (
 from app.core.exceptions import NotFoundError
 from app.core.html_sanitize import sanitize_html
 from app.core.search import unaccent_ilike
+from app.core.security.pii_crypto import read_pii
 from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
 from app.models.cfp import CFPApplicant, CFPPaper
@@ -501,7 +502,7 @@ async def create_thread(
         # Send actual message content directly via email
         user_result = await db.execute(select(User).where(User.id == current_user.user_id))
         user = user_result.scalar_one()
-        sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+        sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or (read_pii(user, "email") or "")
         await _send_direct_emails(
             db,
             applicants,
@@ -634,7 +635,7 @@ async def reply_to_thread(
             recipients = list(app_result.scalars().all())
             user_result = await db.execute(select(User).where(User.id == current_user.user_id))
             user = user_result.scalar_one()
-            sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+            sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or (read_pii(user, "email") or "")
             await _send_direct_emails(
                 db,
                 recipients,
@@ -674,7 +675,7 @@ async def reply_to_thread(
             type="user",
             first_name=user.first_name or "",
             last_name=user.last_name or "",
-            email=user.email,
+            email=read_pii(user, "email") or "",
         ),
         body_html=message.body_html,
         is_internal_note=message.is_internal_note,
@@ -847,7 +848,7 @@ async def create_internal_note(
             type="user",
             first_name=user.first_name or "",
             last_name=user.last_name or "",
-            email=user.email,
+            email=read_pii(user, "email") or "",
         ),
         body_html=message.body_html,
         is_internal_note=True,

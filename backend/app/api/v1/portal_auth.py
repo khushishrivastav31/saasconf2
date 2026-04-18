@@ -24,7 +24,7 @@ from app.core.portal_security import (
 )
 from app.core.rate_limiter import limiter
 from app.core.security import hash_password, verify_password
-from app.core.security.pii_crypto import hash_email
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.core.utils import utcnow
 from app.db.session import set_rls_context
 from app.models.portal_user import PortalRefreshToken, PortalUser
@@ -225,8 +225,9 @@ async def portal_forgot_password(
             from app.core.email import send_email
 
             reset_url = f"{portal_settings.PORTAL_BASE_URL}/{tenant_slug}/portal/reset-password?token={raw_token}"
+            user_email = read_pii(user, "email") or ""
             await send_email(
-                to=user.email,
+                to=user_email,
                 subject="Reset your password",
                 html=f"""<p>Hi {user.first_name},</p>
 <p>Click the link below to reset your password:</p>
@@ -238,7 +239,7 @@ font-weight: bold;">Reset Password</a></p>
                 tenant_from_name=tenant.name,
             )
         except Exception as exc:
-            logger.warning("Failed to send portal password reset email to %s: %s", user.email, exc)
+            logger.warning("Failed to send portal password reset email to %s: %s", user_email, exc)
 
     return {"message": "If an account with this email exists, a password reset link has been sent."}
 
@@ -282,7 +283,7 @@ async def portal_reset_password(
     await db.delete(stored_token)
     await db.commit()
 
-    logger.info("Portal password reset: %s (tenant %s)", user.email, tenant.slug)
+    logger.info("Portal password reset: %s (tenant %s)", read_pii(user, "email"), tenant.slug)
     return {"message": "Password reset successfully. You can now log in."}
 
 
@@ -331,10 +332,10 @@ async def get_portal_profile(
 
     return {
         "id": str(user.id),
-        "email": user.email,
+        "email": read_pii(user, "email"),
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "phone": user.phone,
+        "phone": read_pii(user, "phone"),
         "is_active": user.is_active,
         "email_verified": user.email_verified_at is not None,
         "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
@@ -368,10 +369,11 @@ async def get_my_training_registrations(
 
     if not attendee_ids:
         # Fallback: find by email match
+        user_email_pt = (read_pii(user, "email") or "").lower()
         att_result2 = await db.execute(
             select(TrainingAttendee).where(
                 TrainingAttendee.tenant_id == user.tenant_id,
-                func.lower(TrainingAttendee.email) == user.email.lower(),
+                func.lower(TrainingAttendee.email) == user_email_pt,
             )
         )
         attendees = att_result2.scalars().all()
@@ -489,10 +491,11 @@ async def get_training_files_for_portal(
     )
     if not att_result.scalar_one_or_none():
         # Fallback: check by email
+        user_email_pt = (read_pii(user, "email") or "").lower()
         att_email_result = await db.execute(
             select(TrainingRegistrationAttendee).where(
                 TrainingRegistrationAttendee.registration_id == reg.id,
-                func.lower(TrainingRegistrationAttendee.email) == user.email.lower(),
+                func.lower(TrainingRegistrationAttendee.email) == user_email_pt,
             )
         )
         if not att_email_result.scalar_one_or_none():

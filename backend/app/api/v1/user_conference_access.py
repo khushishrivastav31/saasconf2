@@ -16,6 +16,7 @@ from app.core.dependencies import (
 )
 from app.core.email import send_conference_team_invitation_email, send_email_background
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.security.pii_crypto import read_pii
 from app.models.audit import AuditLog
 from app.models.conference import Conference
 from app.models.tenant import Tenant
@@ -155,7 +156,7 @@ async def grant_conference_access(
     send_email_background(
         send_conference_team_invitation_email,
         db,
-        email=user.email,
+        email=read_pii(user, "email") or "",
         first_name=user.first_name or "",
         last_name=user.last_name or "",
         conference_name=conference.name,
@@ -204,7 +205,7 @@ async def list_user_conference_access(
             granted_at=a.granted_at,
             conference_name=a.conference.name,
             conference_abbreviation=a.conference.abbreviation,
-            user_email=user.email,
+            user_email=read_pii(user, "email") or "",
             user_name=f"{user.first_name or ''} {user.last_name or ''}".strip() or None,
         )
         for a in access_records
@@ -247,7 +248,7 @@ async def list_conference_user_access(
             granted_at=a.granted_at,
             conference_name=conference.name,
             conference_abbreviation=conference.abbreviation,
-            user_email=a.user.email,
+            user_email=read_pii(a.user, "email") or "",
             user_name=f"{a.user.first_name or ''} {a.user.last_name or ''}".strip() or None,
         )
         for a in access_records

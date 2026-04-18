@@ -21,6 +21,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security.pii_crypto import read_pii
+
 logger = logging.getLogger(__name__)
 
 
@@ -531,8 +533,9 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
     }
 
     # Add buyer VAT ID if available
-    if invoice.recipient_vat_number:
-        buyer_data["vat_id"] = invoice.recipient_vat_number
+    recipient_vat_number = read_pii(invoice, "recipient_vat_number")
+    if recipient_vat_number:
+        buyer_data["vat_id"] = recipient_vat_number
 
     # Add buyer address
     buyer_address: dict[str, Any] = {}
@@ -557,7 +560,7 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
     vat_rules = (conference.settings or {}).get("vat_rules", DEFAULT_VAT_RULES)
 
     # Classify customer for VAT decision table
-    customer_type = classify_customer_type(invoice.recipient_vat_number)
+    customer_type = classify_customer_type(recipient_vat_number)
     customer_location = classify_customer_location(
         invoice.recipient_country or "",
         conference.country or "",

@@ -21,6 +21,7 @@ from app.core.security.pii_crypto import (
     hash_email,
     hash_phone,
     hash_vat,
+    read_pii,
     reset_fernet_cache,
 )
 
@@ -176,6 +177,43 @@ def test_generate_pii_key_returns_valid_fernet_key() -> None:
     key = generate_pii_key()
     # Valid keys are accepted by Fernet without error.
     Fernet(key.encode())
+
+
+# ---------------------------------------------------------------------------
+# read_pii — display-read helper with plaintext fallback
+# ---------------------------------------------------------------------------
+
+
+class _Row:
+    def __init__(self, **kwargs: object) -> None:
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+
+def test_read_pii_prefers_encrypted_companion() -> None:
+    row = _Row(email="stale@old.tld", email_encrypted=encrypt_pii("fresh@new.tld"))
+    assert read_pii(row, "email") == "fresh@new.tld"
+
+
+def test_read_pii_falls_back_to_plaintext_when_encrypted_is_null() -> None:
+    row = _Row(email="legacy@example.com", email_encrypted=None)
+    assert read_pii(row, "email") == "legacy@example.com"
+
+
+def test_read_pii_returns_none_when_both_missing() -> None:
+    row = _Row(email=None, email_encrypted=None)
+    assert read_pii(row, "email") is None
+
+
+def test_read_pii_returns_none_when_plaintext_empty_string() -> None:
+    row = _Row(email="", email_encrypted=None)
+    assert read_pii(row, "email") is None
+
+
+def test_read_pii_works_for_phone_and_vat_attrs() -> None:
+    row = _Row(phone_encrypted=encrypt_pii("+49 170 1234567"), vat_number_encrypted=encrypt_pii("DE123456789"))
+    assert read_pii(row, "phone") == "+49 170 1234567"
+    assert read_pii(row, "vat_number") == "DE123456789"
 
 
 # ---------------------------------------------------------------------------

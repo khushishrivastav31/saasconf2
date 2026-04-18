@@ -19,6 +19,7 @@ from app.core.invoice_operations import create_credit_note_for_invoice
 from app.core.invoice_queries import get_invoice_with_events, refresh_invoice_with_events
 from app.core.invoice_registration_cancellation import cancel_registrations_for_invoice
 from app.core.invoice_replacement import create_replacement_invoice
+from app.core.security.pii_crypto import read_pii
 from app.core.stripe_helper import create_payment_link, deactivate_payment_link_for_invoice, refund_payment
 from app.models.audit import AuditLog
 from app.schemas.invoice import (
@@ -72,7 +73,7 @@ async def send_invoice(
             user_id=current_user.user_id,
             action="invoice.sent" if is_first_send else "invoice.resent",
             invoice=invoice,
-            details={"recipient_email": invoice.recipient_email},
+            details={"recipient_email": read_pii(invoice, "recipient_email")},
             request=request,
         )
     )
@@ -589,7 +590,7 @@ async def convert_to_credit_card(
     invoice = await refresh_invoice_with_events(db, invoice.id)
 
     # Send email with payment link (best-effort)
-    if invoice.recipient_email and payment_link_url:
+    if read_pii(invoice, "recipient_email") and payment_link_url:
         with contextlib.suppress(Exception):
             await send_invoice_email(
                 db=db,

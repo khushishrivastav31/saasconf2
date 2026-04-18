@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.address import _resolve_country_code
 from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
+from app.core.security.pii_crypto import read_pii
 from app.core.vat.rules import get_vat_rule
 from app.models.booking import BookingOption
 from app.models.invoice import Invoice
@@ -118,7 +119,7 @@ async def calculate_vat_for_invoice(
         - notes_text: Optional text to append to invoice notes (reverse charge/OSS)
     """
     # Step 1: Classify customer type (B2B vs B2C)
-    customer_type = classify_customer_type(invoice.recipient_vat_number)
+    customer_type = classify_customer_type(read_pii(invoice, "recipient_vat_number"))
 
     # Step 2: Classify customer location (domestic/EU/non-EU)
     eu_countries = (conference.settings or {}).get("eu_countries", DEFAULT_EU_COUNTRIES)

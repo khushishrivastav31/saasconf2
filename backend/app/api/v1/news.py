@@ -13,6 +13,7 @@ from app.core.dependencies import (
 )
 from app.core.email import send_direct_message_email
 from app.core.exceptions import NotFoundError
+from app.core.security.pii_crypto import read_pii
 from app.models.associations import ConferenceCFP
 from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper
 from app.models.messaging import RecipientListMember
@@ -308,7 +309,7 @@ async def send_article(
 
     user_result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = user_result.scalar_one()
-    sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+    sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or (read_pii(user, "email") or "")
     conference_name = conference.name or ""
     emails_sent = 0
 

@@ -18,6 +18,7 @@ from app.core.email.templates import (
 )
 from app.core.invoice_email import build_pdf_attachment
 from app.core.invoice_pdf import generate_invoice_pdf
+from app.core.security.pii_crypto import read_pii
 from app.models.booking import BookingOption
 from app.schemas.email_template import EmailTemplateType
 
@@ -49,7 +50,8 @@ async def send_registration_invoice_email(
     Returns:
         True if email sent successfully, False otherwise
     """
-    if not invoice.recipient_email:
+    recipient_email = read_pii(invoice, "recipient_email")
+    if not recipient_email:
         logger.warning(f"Cannot send email for invoice {invoice.id}: no recipient email")
         return False
 
@@ -84,7 +86,7 @@ async def send_registration_invoice_email(
 
         # Send email
         success = await send_email(
-            to=invoice.recipient_email,
+            to=recipient_email,
             subject=rendered.subject,
             html=rendered.body_html,
             text=rendered.body_text,
@@ -97,9 +99,9 @@ async def send_registration_invoice_email(
         )
 
         if success:
-            logger.info(f"Invoice email sent to {invoice.recipient_email} for invoice {invoice.invoice_number}")
+            logger.info(f"Invoice email sent to {recipient_email} for invoice {invoice.invoice_number}")
         else:
-            logger.error(f"Failed to send invoice email to {invoice.recipient_email} for invoice {invoice.id}")
+            logger.error(f"Failed to send invoice email to {recipient_email} for invoice {invoice.id}")
 
         return success
 

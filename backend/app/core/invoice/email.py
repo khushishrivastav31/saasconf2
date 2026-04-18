@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.core.email import send_email
 from app.core.email_templates import build_invoice_send_context, render_email
 from app.core.invoice.pdf import generate_invoice_pdf
+from app.core.security.pii_crypto import read_pii
 from app.schemas.email_template import EmailTemplateType
 
 if TYPE_CHECKING:
@@ -105,7 +106,8 @@ async def send_invoice_email(
     Returns:
         True if email sent successfully, False otherwise
     """
-    if not invoice.recipient_email:
+    recipient_email = read_pii(invoice, "recipient_email")
+    if not recipient_email:
         logger.warning(f"Cannot send email for invoice {invoice.id}: no recipient email")
         return False
 
@@ -149,7 +151,7 @@ async def send_invoice_email(
 
         # Send email
         return await send_email(
-            to=invoice.recipient_email,
+            to=recipient_email,
             subject=subject,
             html=rendered.body_html,
             text=rendered.body_text,

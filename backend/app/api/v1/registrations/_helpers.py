@@ -7,6 +7,7 @@ from sqlalchemy import func, inspect, select
 from app.core.dependencies import DbSessionDep
 from app.core.exceptions import ValidationError
 from app.core.rate_limiter import limiter
+from app.core.security.pii_crypto import read_pii
 from app.models.booking import BookingOption
 from app.models.conference import Conference
 from app.models.program import ProgramSession
@@ -287,7 +288,7 @@ def _build_response(
         created_at=reg.created_at,
         updated_at=reg.updated_at,
         billing_company_name=billing.company_name if billing else None,
-        billing_contact_email=billing.contact_email if billing else None,
+        billing_contact_email=read_pii(billing, "contact_email") if billing else None,
     )
 
 

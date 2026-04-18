@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.security.pii_crypto import read_pii
 from app.models.audit import AuditAction, AuditLog
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -47,7 +48,7 @@ async def get_tenant_super_user(
         "tenant_name": tenant.name,
         "super_user": {
             "id": str(super_user.id),
-            "email": super_user.email,
+            "email": read_pii(super_user, "email"),
             "first_name": super_user.first_name,
             "last_name": super_user.last_name,
         }
@@ -110,7 +111,7 @@ async def assign_tenant_super_user(
         details={
             "action": "assign_super_user",
             "new_super_user_id": str(user_id),
-            "new_super_user_email": user.email,
+            "new_super_user_email": read_pii(user, "email"),
             "old_super_user_id": str(old_super_user_id) if old_super_user_id else None,
         },
         ip_address=get_client_ip(request),
@@ -120,11 +121,12 @@ async def assign_tenant_super_user(
 
     await db.commit()
 
+    user_email = read_pii(user, "email") or ""
     return {
-        "message": f"User '{user.email}' assigned as super user for tenant '{tenant.name}'",
+        "message": f"User '{user_email}' assigned as super user for tenant '{tenant.name}'",
         "tenant_id": str(tenant_id),
         "super_user_id": str(user_id),
-        "super_user_email": user.email,
+        "super_user_email": user_email,
     }
 
 

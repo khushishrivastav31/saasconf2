@@ -13,6 +13,7 @@ from sqlalchemy.orm import joinedload
 from app.api.v1.trainings._invoice_helpers import invoice_to_dict
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.core.security.pii_crypto import read_pii
 from app.core.training_invoice_number import generate_training_invoice_number
 from app.core.training_registration_emails import send_training_invoice_email
 from app.core.training_stripe_helper import create_training_payment_link
@@ -155,7 +156,7 @@ async def get_offer_invoice_preview(
     placements = await _load_placement_details(db, offer_id, current_user.tenant_id)
 
     # Get primary contact email from customer.contact_persons or customer.email
-    contact_email = customer.email
+    contact_email = read_pii(customer, "email")
     if customer.contact_persons:
         for cp in customer.contact_persons:
             if isinstance(cp, dict) and cp.get("email"):
@@ -203,7 +204,7 @@ async def get_offer_invoice_preview(
         "recipient_city": customer.city,
         "recipient_postal_code": customer.postal_code,
         "recipient_country": customer.country,
-        "recipient_vat_number": customer.vat_number,
+        "recipient_vat_number": read_pii(customer, "vat_number"),
         "currency": offer.currency,
         "po_number": offer.po_number,
         "suggested_training_price": float(offer.training_price) if offer.training_price else 0,
@@ -318,7 +319,7 @@ async def create_offer_invoice(
     due_date = date.fromisoformat(data.due_date) if data.due_date else None
 
     # Get contact email
-    contact_email = customer.email
+    contact_email = read_pii(customer, "email")
     if customer.contact_persons:
         for cp in customer.contact_persons:
             if isinstance(cp, dict) and cp.get("email"):
@@ -340,7 +341,7 @@ async def create_offer_invoice(
         recipient_city=customer.city,
         recipient_postal_code=customer.postal_code,
         recipient_country=customer.country,
-        recipient_vat_number=customer.vat_number,
+        recipient_vat_number=read_pii(customer, "vat_number"),
         payment_method=data.template_type.replace("_", " "),
         po_number=offer.po_number,
         line_items=line_items,

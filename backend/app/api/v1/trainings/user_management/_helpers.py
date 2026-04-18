@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep
 from app.core.exceptions import NotFoundError
+from app.core.security.pii_crypto import read_pii
 from app.models.portal_user import PortalUser
 
 
@@ -21,10 +22,10 @@ async def get_portal_user(db: DbSessionDep, user_id: UUID, tenant_id: UUID) -> P
 def portal_user_to_dict(user: PortalUser) -> dict:
     return {
         "id": str(user.id),
-        "email": user.email,
+        "email": read_pii(user, "email"),
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "phone": user.phone,
+        "phone": read_pii(user, "phone"),
         "pronouns": user.pronouns,
         "title": user.title,
         "company": user.company,

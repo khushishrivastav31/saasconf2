@@ -18,6 +18,8 @@ class TestSendRegistrationInvoiceEmail:
         invoice = MagicMock()
         invoice.id = "fake-id"
         invoice.recipient_email = None
+        # read_pii() prefers *_encrypted; force plaintext fallback for mocks.
+        invoice.recipient_email_encrypted = None
 
         conference = MagicMock()
         db = AsyncMock()

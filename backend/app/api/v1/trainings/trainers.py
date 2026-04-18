@@ -8,6 +8,7 @@ from sqlalchemy import func, literal, select
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
+from app.core.security.pii_crypto import read_pii
 from app.models.audit import AuditLog
 from app.models.trainer import (
     Trainer,
@@ -40,8 +41,8 @@ def _build_response(trainer: Trainer) -> TrainerResponse:
         tenant_id=trainer.tenant_id,
         first_name=trainer.first_name,
         last_name=trainer.last_name,
-        email=trainer.email,
-        phone=trainer.phone,
+        email=read_pii(trainer, "email"),
+        phone=read_pii(trainer, "phone"),
         pronouns=trainer.pronouns,
         vita=trainer.vita,
         is_active=trainer.is_active,

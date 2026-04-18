@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.portal_security import generate_password_reset_token
-from app.core.security.pii_crypto import hash_email
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.core.utils import utcnow
 from app.models.portal_user import PortalRefreshToken, PortalUser
 from app.models.tenant import Tenant
@@ -108,9 +108,10 @@ async def _send_portal_invite_email(
 
     set_password_url = f"{settings.PORTAL_BASE_URL}/{tenant.slug}/portal/set-password?token={raw_token}"
 
+    portal_user_email = read_pii(portal_user, "email") or ""
     try:
         await send_email(
-            to=portal_user.email,
+            to=portal_user_email,
             subject=f"Set up your training portal account — {tenant.name}",
             html=f"""<p>Hi {portal_user.first_name},</p>
 <p>Your training registration was successful! You can now access your personal
@@ -122,6 +123,6 @@ font-weight: bold;">Set Your Password</a></p>
 <p>Best regards,<br/>{tenant.name}</p>""",
             tenant_from_name=tenant.name,
         )
-        logger.info("Sent portal invite email to %s", portal_user.email)
+        logger.info("Sent portal invite email to %s", portal_user_email)
     except Exception as exc:
-        logger.warning("Failed to send portal invite email to %s: %s", portal_user.email, exc)
+        logger.warning("Failed to send portal invite email to %s: %s", portal_user_email, exc)

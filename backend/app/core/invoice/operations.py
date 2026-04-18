@@ -3,6 +3,7 @@
 from datetime import date as date_type
 from uuid import UUID
 
+from app.core.security.pii_crypto import read_pii
 from app.models.invoice import Invoice
 
 
@@ -46,14 +47,14 @@ def create_credit_note_for_invoice(
         recipient_source_type=invoice.recipient_source_type,
         recipient_source_id=invoice.recipient_source_id,
         recipient_name=invoice.recipient_name,
-        recipient_email=invoice.recipient_email,
+        recipient_email=read_pii(invoice, "recipient_email"),
         recipient_address_line1=invoice.recipient_address_line1,
         recipient_address_line2=invoice.recipient_address_line2,
         recipient_city=invoice.recipient_city,
         recipient_state=invoice.recipient_state,
         recipient_postal_code=invoice.recipient_postal_code,
         recipient_country=invoice.recipient_country,
-        recipient_vat_number=invoice.recipient_vat_number,
+        recipient_vat_number=read_pii(invoice, "recipient_vat_number"),
         line_items=credit_line_items,
         subtotal=-abs(float(invoice.subtotal)) if invoice.subtotal else None,
         tax_rate=invoice.tax_rate,

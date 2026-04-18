@@ -17,6 +17,7 @@ from app.core.exceptions import NotFoundError, ValidationError
 from app.core.file_validation import safe_content_disposition, validate_upload
 from app.core.html_sanitize import sanitize_html
 from app.core.rate_limiter import limiter
+from app.core.security.pii_crypto import read_pii
 from app.models.audit import AuditLog
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_document import OfferDocument, OfferDocumentVersion
@@ -436,7 +437,7 @@ async def send_document(
     sent_count = 0
     failed: list[str] = []
     now = datetime.now(UTC)
-    sender_email = user.email
+    sender_email = read_pii(user, "email") or ""
 
     for recipient in recipients:
         success = await send_email(

@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.core.security.pii_crypto import read_pii
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
 from app.models.portal_user import PortalUser
@@ -43,7 +44,7 @@ async def get_attendee_profile(
         if pu:
             portal_info = {
                 "id": str(pu.id),
-                "email": pu.email,
+                "email": read_pii(pu, "email"),
                 "is_active": pu.is_active,
                 "has_password": pu.password_hash is not None,
                 "email_verified": pu.email_verified_at is not None,

@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 
+from app.core.security.pii_crypto import read_pii
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -109,7 +111,7 @@ async def validate_vat_requirements(
     )
 
     # Step 5: Check if VAT is missing when required/recommended
-    vat_number = invoice.recipient_vat_number
+    vat_number = read_pii(invoice, "recipient_vat_number")
     if not vat_number or not vat_number.strip():
         if requirement.level == VatRequirementLevel.REQUIRED:
             warnings.append(

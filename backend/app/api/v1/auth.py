@@ -30,7 +30,7 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
-from app.core.security.pii_crypto import hash_email
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.core.token_blacklist import blacklist_token, clear_failed_logins, is_account_locked, record_failed_login
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
@@ -467,7 +467,7 @@ async def get_current_user_info(
 
     return UserResponse(
         id=user.id,
-        email=user.email,
+        email=read_pii(user, "email") or "",
         first_name=user.first_name,
         last_name=user.last_name,
         pronouns=user.pronouns,
@@ -620,9 +620,10 @@ async def forgot_password(
             tenant_name = row
 
     # Send email
+    user_email = read_pii(user, "email") or ""
     await send_password_reset_email(
         db,
-        email=user.email,
+        email=user_email,
         token=raw_token,
         company_name=tenant_name,
         first_name=user.first_name or "",
@@ -638,7 +639,7 @@ async def forgot_password(
             action=AuditAction.USER_PASSWORD_RESET_REQUESTED,
             resource_type="user",
             resource_id=user.id,
-            details={"email": user.email},
+            details={"email": user_email},
             ip_address=get_client_ip(request),
             user_agent=request.headers.get("User-Agent"),
         )

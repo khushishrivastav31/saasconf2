@@ -14,6 +14,7 @@ from app.core.csv_export import stream_csv_export
 from app.core.dependencies import DbSessionDep, SuperAdminDep
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
+from app.core.security.pii_crypto import read_pii
 from app.core.utils import utcnow
 from app.models.audit import AuditLog
 from app.models.user import User
@@ -139,7 +140,7 @@ def _log_to_response(log: AuditLog) -> AuditLogResponse:
         created_at=log.created_at,
         user=AuditLogUserResponse(
             id=log.user.id,
-            email=log.user.email,
+            email=read_pii(log.user, "email") or "",
             first_name=log.user.first_name,
             last_name=log.user.last_name,
         )
@@ -255,7 +256,7 @@ async def export_audit_logs(
     filename = f"audit_logs_{utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
 
     def _map_audit_row(log: AuditLog) -> list[str]:
-        user_email = log.user.email if log.user else ""
+        user_email = (read_pii(log.user, "email") or "") if log.user else ""
         user_name = ""
         if log.user:
             names = [log.user.first_name, log.user.last_name]

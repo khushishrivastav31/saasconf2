@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency_formats import format_amount
+from app.core.security.pii_crypto import read_pii
 from app.models.conference import Conference
 from app.models.invoice import Invoice
 
@@ -251,7 +252,7 @@ async def generate_invoice_pdf(
                 invoice.recipient_city,
                 invoice.recipient_country,
             ),
-            "[RECIPIENT_VAT]": invoice.recipient_vat_number or "",
+            "[RECIPIENT_VAT]": read_pii(invoice, "recipient_vat_number") or "",
             "[PROCUREMENT_CODE]": invoice.procurement_code or "",
             "[PO_NUMBER]": invoice.procurement_code or "",
             # Financial (formatted using conference number format settings)

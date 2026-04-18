@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
+from app.core.security.pii_crypto import read_pii
 from app.models.invoice_event import InvoiceEvent, InvoiceEventType  # noqa: F401
 from app.models.user import User
 
@@ -56,7 +57,7 @@ async def log_invoice_event(
             user_email = result.scalar_one_or_none()
         else:  # User object
             user_id = user.id
-            user_email = user.email
+            user_email = read_pii(user, "email")
     else:
         user_id = None
         user_email = None

@@ -15,6 +15,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.security.pii_crypto import read_pii
 from app.models.associations import ConferenceCFP
 from app.models.booking import BookingOption
 from app.models.cfp import CFPPaper
@@ -91,14 +92,14 @@ async def export_conference_invoices(
             inv.issue_date.isoformat() if inv.issue_date else "",
             inv.due_date.isoformat() if inv.due_date else "",
             inv.recipient_name,
-            inv.recipient_email or "",
+            read_pii(inv, "recipient_email") or "",
             inv.recipient_address_line1 or "",
             inv.recipient_address_line2 or "",
             inv.recipient_city or "",
             inv.recipient_state or "",
             inv.recipient_postal_code or "",
             inv.recipient_country or "",
-            inv.recipient_vat_number or "",
+            read_pii(inv, "recipient_vat_number") or "",
             str(inv.subtotal) if inv.subtotal else "",
             str(inv.tax_rate) if inv.tax_rate else "",
             str(inv.tax_amount) if inv.tax_amount else "",
@@ -316,7 +317,7 @@ async def export_conference_attendees(
             reg.created_at.isoformat(),
             reg.updated_at.isoformat(),
             reg.notes or "",
-            reg.billing_profile.contact_email if reg.billing_profile else "",
+            (read_pii(reg.billing_profile, "contact_email") or "") if reg.billing_profile else "",
         ]
 
     # Return CSV response

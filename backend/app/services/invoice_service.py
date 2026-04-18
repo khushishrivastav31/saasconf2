@@ -29,6 +29,7 @@ from app.core.invoice_operations import create_credit_note_for_invoice
 from app.core.invoice_registration_cancellation import cancel_registrations_for_invoice
 from app.core.invoice_replacement import create_replacement_invoice
 from app.core.invoice_validation import validate_recipient_fields
+from app.core.security.pii_crypto import read_pii
 from app.core.stripe_helper import create_payment_link
 from app.models.conference import Conference
 from app.models.invoice import Invoice
@@ -326,14 +327,14 @@ def validate_invoice_sendable(invoice: Invoice) -> None:
         status=invoice.status,
         recipient_source_type=invoice.recipient_source_type,
         recipient_name=invoice.recipient_name or "",
-        recipient_email=invoice.recipient_email or "",
+        recipient_email=read_pii(invoice, "recipient_email") or "",
         recipient_address_line1=invoice.recipient_address_line1 or "",
         recipient_address_line2=invoice.recipient_address_line2,
         recipient_city=invoice.recipient_city or "",
         recipient_state=invoice.recipient_state,
         recipient_postal_code=invoice.recipient_postal_code or "",
         recipient_country=invoice.recipient_country or "",
-        recipient_vat_number=invoice.recipient_vat_number,
+        recipient_vat_number=read_pii(invoice, "recipient_vat_number"),
         line_items=[],
         subtotal=float(invoice.subtotal) if invoice.subtotal is not None else 0.0,
         tax_rate=float(invoice.tax_rate) if invoice.tax_rate is not None else None,
@@ -375,7 +376,7 @@ async def prepare_invoice_for_sending(
     if invoice.status not in ("draft", "sent", "overdue"):
         raise ValidationError(f"Cannot send an invoice with status '{invoice.status}'")
 
-    if not invoice.recipient_email:
+    if not read_pii(invoice, "recipient_email"):
         raise ValidationError("Invoice has no recipient email address")
 
     # Check if first send (draft) or resend

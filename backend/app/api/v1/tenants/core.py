@@ -15,6 +15,7 @@ from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.security import hash_password
+from app.core.security.pii_crypto import read_pii
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import Module, TenantModule
@@ -169,7 +170,7 @@ async def create_tenant(
                 action=AuditAction.USER_INVITE_SENT,
                 resource_type="user",
                 resource_id=admin_user.id,
-                details={"email": admin_user.email, "role": admin_user.role},
+                details={"email": read_pii(admin_user, "email"), "role": admin_user.role},
                 ip_address=get_client_ip(request),
                 user_agent=request.headers.get("User-Agent"),
             )
@@ -193,7 +194,7 @@ async def create_tenant(
         send_email_background(
             send_tenant_user_welcome_email,
             db,
-            email=admin_user.email,
+            email=read_pii(admin_user, "email") or "",
             token=raw_token,
             company_name=tenant.name,
             user_type="Administrator",

@@ -67,6 +67,25 @@ def generate_pii_key() -> str:
     return Fernet.generate_key().decode()
 
 
+def read_pii(obj: Any, plaintext_attr: str) -> str | None:
+    """Return the decrypted PII value for an ORM row, falling back to plaintext.
+
+    Prefers the encrypted companion (``<attr>_encrypted``) when present, so a
+    future drop of the plaintext column is transparent. Falls back to the
+    plaintext attribute for rows that pre-date the dual-write listener and
+    were never backfilled. Returns ``None`` when both are empty.
+
+    Used across display-read sites during Step 37 phase (f.1). After migration
+    199 drops the plaintext columns, the fallback branch becomes dead and this
+    helper collapses to a pure ``decrypt_pii`` wrapper.
+    """
+    encrypted = getattr(obj, f"{plaintext_attr}_encrypted", None)
+    if encrypted:
+        return decrypt_pii(encrypted)
+    value = getattr(obj, plaintext_attr, None)
+    return value if value else None
+
+
 # ---------------------------------------------------------------------------
 # Deterministic hashes for searchable columns
 # ---------------------------------------------------------------------------

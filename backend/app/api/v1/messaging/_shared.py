@@ -11,6 +11,7 @@ from app.core.dependencies import (
     check_conference_admin_access,
 )
 from app.core.exceptions import AuthorizationError
+from app.core.security.pii_crypto import read_pii
 from app.models.attachment import Attachment
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
@@ -83,7 +84,7 @@ async def _notify_participants(
             send_email_background(
                 send_new_message_notification,
                 db,
-                email=user.email,
+                email=read_pii(user, "email") or "",
                 first_name=user.first_name or "",
                 conference_id=conference_id,
                 conference_name=conference_name,
@@ -117,7 +118,7 @@ async def _resolve_senders(db, sender_pairs: set[tuple[str, UUID]]) -> dict[tupl
                 type="user",
                 first_name=user.first_name or "",
                 last_name=user.last_name or "",
-                email=user.email,
+                email=read_pii(user, "email") or "",
             )
 
     if applicant_ids:

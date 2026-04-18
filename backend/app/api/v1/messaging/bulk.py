@@ -16,6 +16,7 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError
 from app.core.html_sanitize import sanitize_html
+from app.core.security.pii_crypto import read_pii
 from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
 from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper
@@ -274,7 +275,7 @@ async def bulk_send(
             # Get sender info
             user_result = await db.execute(select(User).where(User.id == current_user.user_id))
             user = user_result.scalar_one()
-            sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+            sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or (read_pii(user, "email") or "")
 
             sanitized_body = sanitize_html(data.body_html)
 

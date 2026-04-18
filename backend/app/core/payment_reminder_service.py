@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.default_settings import DEFAULT_PAYMENT_REMINDER_SETTINGS
 from app.core.email import send_email
 from app.core.email_templates import build_payment_overdue_admin_context, build_payment_reminder_context, render_email
+from app.core.security.pii_crypto import read_pii
 from app.models.conference import Conference
 from app.models.invoice import Invoice
 from app.models.invoice_event import InvoiceEvent, InvoiceEventType
@@ -172,7 +173,8 @@ async def _create_and_send_reminder(
 
     Returns "sent", "error", or "skipped".
     """
-    if not invoice.recipient_email:
+    recipient_email = read_pii(invoice, "recipient_email")
+    if not recipient_email:
         logger.warning("Skipping reminder for invoice %s: no recipient email", invoice.id)
         return "skipped"
 
@@ -188,7 +190,7 @@ async def _create_and_send_reminder(
         status="pending",
         scheduled_date=scheduled_date,
         recipient_name=invoice.recipient_name,
-        recipient_email=invoice.recipient_email,
+        recipient_email=recipient_email,
         invoice_number=invoice.invoice_number,
         invoice_amount=_format_amount(invoice),
         currency=invoice.currency,
@@ -219,7 +221,7 @@ async def _create_and_send_reminder(
 
         # Send email
         email_sent = await send_email(
-            to=invoice.recipient_email,
+            to=recipient_email,
             subject=rendered.subject,
             html=rendered.body_html,
             text=rendered.body_text,
@@ -337,7 +339,10 @@ async def resend_reminder(
     """
     invoice_result = await db.execute(select(Invoice).where(Invoice.id == reminder.invoice_id))
     invoice = invoice_result.scalar_one_or_none()
-    if not invoice or not invoice.recipient_email:
+    if invoice is None:
+        return False
+    recipient_email = read_pii(invoice, "recipient_email")
+    if not recipient_email:
         return False
 
     # Skip if invoice is no longer overdue/sent
@@ -374,7 +379,7 @@ async def resend_reminder(
     )
 
     email_sent = await send_email(
-        to=invoice.recipient_email,
+        to=recipient_email,
         subject=rendered.subject,
         html=rendered.body_html,
         text=rendered.body_text,
