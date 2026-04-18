@@ -18,6 +18,7 @@ from app.core.invoice_auto_generation import create_invoice_for_registrations
 from app.core.security.pii_crypto import hash_email
 from app.core.user_auto_creation import create_user_for_registration
 from app.core.vat_validation import validate_vat_number
+from app.models.audit import AuditAction
 from app.models.booking import BookingOption, BookingPeriod
 from app.models.invoice import Invoice
 from app.models.registration import (
@@ -35,6 +36,7 @@ from app.schemas.registration import (
     UnifiedRegistrationCreate,
     UnifiedRegistrationResponse,
 )
+from app.services.base import BaseService
 
 from ._helpers import (
     _auto_add_alumni,
@@ -174,6 +176,18 @@ async def get_registration(
     reg = result.scalar_one_or_none()
     if not reg:
         raise NotFoundError(f"Registration '{registration_id}' not found")
+
+    db.add(
+        BaseService.create_audit_log(
+            tenant_id=tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.REGISTRATION_VIEW,
+            resource_type="registration",
+            resource_id=reg.id,
+            subject_email_hash=hash_email(reg.email),
+        )
+    )
+    await db.commit()
 
     opt_map = await _get_option_name_map(db, conference_id, tenant_id)
     return _build_response(reg, option_name=opt_map.get(reg.booking_option_id))

@@ -8,6 +8,7 @@ import { partnershipsCategory } from './sections/partnerships';
 import { registrationFinanceCategory } from './sections/registrationFinance';
 import { communicationsCategory } from './sections/communications';
 import { insightsCategory } from './sections/insights';
+import { dsgvoComplianceCategory } from './sections/dsgvoCompliance';
 import { appendixCategory } from './sections/appendix';
 import { trainingCategories } from './sections/trainings';
 
@@ -36,6 +37,7 @@ export const conferenceHandbookCategories: HandbookCategory[] = [
   registrationFinanceCategory,
   communicationsCategory,
   insightsCategory,
+  dsgvoComplianceCategory,
   appendixCategory,
 ];
 
@@ -50,5 +52,5 @@ export const handbookCategories: HandbookCategory[] = [
 
 // Flatten for backward compatibility
 export const handbookSections: HandbookSection[] = handbookCategories.flatMap(
-  (cat) => cat.sections,
+  (cat) => cat.sections
 );

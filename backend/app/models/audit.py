@@ -36,6 +36,7 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     resource_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     resource_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    subject_email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     details: Mapped[dict] = mapped_column(JSONB, default=dict)
     ip_address: Mapped[str | None] = mapped_column(INET, nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -50,6 +51,7 @@ class AuditLog(Base):
         Index("idx_audit_tenant", "tenant_id"),
         Index("idx_audit_created", "created_at"),
         Index("idx_audit_action", "action"),
+        Index("idx_audit_subject_email_hash", "subject_email_hash"),
     )
 
     def __repr__(self) -> str:
@@ -118,6 +120,19 @@ class AuditAction:
 
     # Settings
     SETTINGS_UPDATE = "settings.update"
+
+    # PII subject-detail reads (GDPR Art. 15 audit trail)
+    APPLICANT_VIEW = "applicant.view"
+    REGISTRATION_VIEW = "registration.view"
+    INVOICE_VIEW = "invoice.view"
+    TRAINING_ATTENDEE_VIEW = "training_attendee.view"
+
+    # Privacy requests (GDPR Art. 15 / Art. 17)
+    PRIVACY_REQUEST_CREATE = "privacy_request.create"
+    PRIVACY_REQUEST_APPROVE = "privacy_request.approve"
+    PRIVACY_REQUEST_REJECT = "privacy_request.reject"
+    PRIVACY_REQUEST_EXECUTE = "privacy_request.execute"
+    PRIVACY_REQUEST_EXPORT_DOWNLOAD = "privacy_request.export_download"
 
     # Platform currency management
     PLATFORM_CURRENCY_CREATE = "platform_currency.create"

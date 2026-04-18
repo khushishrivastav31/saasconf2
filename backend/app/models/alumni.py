@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.security.pii_crypto import hash_email
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -43,6 +44,7 @@ class Alumni(Base):
     )
 
     email: Mapped[str] = mapped_column(String(320), nullable=False)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
     company: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -61,7 +63,13 @@ class Alumni(Base):
     __table_args__ = (
         Index("idx_alumni_tenant", "tenant_id"),
         Index("idx_alumni_conference", "tenant_id", "conference_id"),
+        Index("idx_alumni_email_hash", "email_hash"),
     )
+
+    @validates("email")
+    def _sync_email_hash(self, _key: str, value: str) -> str:
+        self.email_hash = hash_email(value) if value else None
+        return value
 
     def __repr__(self) -> str:
         return f"<Alumni {self.email} @ conference={self.conference_id}>"

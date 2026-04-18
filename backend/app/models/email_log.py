@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.security.pii_crypto import hash_email
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ class EmailLog(Base):
 
     # What failed
     recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    recipient_email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     email_type: Mapped[str] = mapped_column(String(50), nullable=False)
 
@@ -65,4 +67,10 @@ class EmailLog(Base):
         Index("idx_email_logs_tenant", "tenant_id"),
         Index("idx_email_logs_tenant_ack", "tenant_id", "acknowledged"),
         Index("idx_email_logs_created", "created_at"),
+        Index("idx_email_logs_recipient_email_hash", "recipient_email_hash"),
     )
+
+    @validates("recipient_email")
+    def _sync_recipient_email_hash(self, _key: str, value: str) -> str:
+        self.recipient_email_hash = hash_email(value) if value else None
+        return value

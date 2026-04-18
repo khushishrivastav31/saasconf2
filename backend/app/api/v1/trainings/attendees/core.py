@@ -8,6 +8,8 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.core.security.pii_crypto import hash_email
+from app.models.audit import AuditAction
 from app.models.offer_attendee import OfferAttendee
 from app.models.portal_user import PortalUser
 from app.models.training import Training
@@ -15,6 +17,7 @@ from app.models.training_attendee import TrainingAttendee
 from app.models.training_attendee_history import TrainingAttendeeHistory
 from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
+from app.services.base import BaseService
 
 from ._helpers import get_or_create_central_attendee
 
@@ -231,6 +234,18 @@ async def get_attendee(
     att = result.scalars().unique().first()
     if not att:
         raise NotFoundError("Attendee not found")
+
+    db.add(
+        BaseService.create_audit_log(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.TRAINING_ATTENDEE_VIEW,
+            resource_type="training_attendee",
+            resource_id=att.id,
+            subject_email_hash=hash_email(att.email),
+        )
+    )
+    await db.commit()
 
     placement_ids = {h.placement_id for h in att.history if h.placement_id}
     training_names: dict[UUID, str] = {}

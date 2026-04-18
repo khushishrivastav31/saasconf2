@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone, hash_vat, read_pii
 from app.db.base import Base
@@ -181,6 +181,7 @@ class Registration(Base):
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     pronouns: Mapped[str | None] = mapped_column(String(50), nullable=True)
     job_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     department: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -242,7 +243,13 @@ class Registration(Base):
             "email",
             unique=True,
         ),
+        Index("idx_registrations_email_hash", "email_hash"),
     )
+
+    @validates("email")
+    def _sync_email_hash(self, _key: str, value: str) -> str:
+        self.email_hash = hash_email(value) if value else None
+        return value
 
     def __repr__(self) -> str:
         return f"<Registration {self.first_name} {self.last_name} ({self.email})>"

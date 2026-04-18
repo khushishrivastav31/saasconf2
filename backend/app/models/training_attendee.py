@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.security.pii_crypto import hash_email
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ class TrainingAttendee(Base):
     first_name: Mapped[str] = mapped_column(String(200), nullable=False)
     last_name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str] = mapped_column(String(320), nullable=False)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", server_default="active")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -56,7 +58,13 @@ class TrainingAttendee(Base):
         UniqueConstraint("tenant_id", "email", name="uq_training_attendees_tenant_email"),
         Index("idx_training_attendees_tenant", "tenant_id"),
         Index("idx_training_attendees_status", "status"),
+        Index("idx_training_attendees_email_hash", "email_hash"),
     )
+
+    @validates("email")
+    def _sync_email_hash(self, _key: str, value: str) -> str:
+        self.email_hash = hash_email(value) if value else None
+        return value
 
     def __repr__(self) -> str:
         return f"<TrainingAttendee {self.first_name} {self.last_name} ({self.email}) status={self.status}>"

@@ -20,7 +20,9 @@ from app.core.invoice_queries import get_invoice_with_events, refresh_invoice_wi
 from app.core.invoice_validation import validate_recipient_fields
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
+from app.core.security.pii_crypto import hash_email
 from app.core.vat_calculation import calculate_vat_for_invoice
+from app.models.audit import AuditAction
 from app.models.cfp_applicants import CFPApplicant
 from app.models.invoice import Invoice
 from app.models.settings import UserRole, UserRoleAssignment
@@ -33,6 +35,7 @@ from app.schemas.invoice import (
     RecipientSearchResponse,
 )
 from app.schemas.vat_rate import VatPreviewRequest, VatPreviewResponse
+from app.services.base import BaseService
 from app.services.invoice_service import auto_populate_attendance_type_from_registration
 
 from ._helpers import build_invoice_response
@@ -362,6 +365,19 @@ async def get_invoice(
     if invoice.related_invoice_id:
         rel_result = await db.execute(select(Invoice.invoice_number).where(Invoice.id == invoice.related_invoice_id))
         related_number = rel_result.scalar_one_or_none()
+
+    recipient_email = invoice.recipient_email
+    db.add(
+        BaseService.create_audit_log(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.INVOICE_VIEW,
+            resource_type="invoice",
+            resource_id=invoice.id,
+            subject_email_hash=hash_email(recipient_email) if recipient_email else None,
+        )
+    )
+    await db.commit()
 
     return build_invoice_response(invoice, related_invoice_number=related_number)
 

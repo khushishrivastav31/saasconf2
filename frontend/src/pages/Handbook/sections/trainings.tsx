@@ -6,6 +6,7 @@ import { trainingOperationsCategory } from './trainingOperations';
 import { trainingCommunicationsCategory } from './trainingCommunications';
 import { trainingAnalyticsCategory } from './trainingAnalytics';
 import { trainingSettingsCategory } from './trainingSettings';
+import { trainingDsgvoComplianceCategory } from './trainingDsgvoCompliance';
 import { trainingAppendixCategory } from './trainingAppendix';
 
 /** All training handbook categories in display order */
@@ -17,5 +18,6 @@ export const trainingCategories: HandbookCategory[] = [
   trainingCommunicationsCategory,
   trainingAnalyticsCategory,
   trainingSettingsCategory,
+  trainingDsgvoComplianceCategory,
   trainingAppendixCategory,
 ];

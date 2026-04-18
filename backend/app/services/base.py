@@ -177,8 +177,14 @@ class BaseService:
         details: dict | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
+        subject_email_hash: str | None = None,
     ) -> Any:
-        """Build (but do **not** add/commit) an ``AuditLog`` instance."""
+        """Build (but do **not** add/commit) an ``AuditLog`` instance.
+
+        ``subject_email_hash`` is populated for subject-scoped events
+        (``*.view``, ``privacy_request.*``) so Art. 15 export can fetch
+        every audit row concerning a given subject via indexed hash match.
+        """
         from app.models.audit import AuditLog
 
         return AuditLog(
@@ -190,4 +196,5 @@ class BaseService:
             details=details or {},
             ip_address=ip_address,
             user_agent=user_agent,
+            subject_email_hash=subject_email_hash,
         )

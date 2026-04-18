@@ -60,6 +60,11 @@ from app.models.paper_form_variant import PaperFormVariant, PaperFormVariantFiel
 from app.models.payment_reminder import PaymentReminder
 from app.models.platform_currency import PlatformCurrency
 from app.models.portal_user import PortalRefreshToken, PortalUser  # noqa: F401
+from app.models.privacy_request import (
+    PrivacyRequest,
+    PrivacyRequestStatus,
+    PrivacyRequestType,
+)
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.models.registration import (
     BillingProfile,
@@ -188,6 +193,9 @@ __all__ = [
     "PaymentReminder",
     "PlacementTrainer",
     "PlatformCurrency",
+    "PrivacyRequest",
+    "PrivacyRequestStatus",
+    "PrivacyRequestType",
     "ProgramDay",
     "ProgramSession",
     "ProgramTimeSlot",

@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.security.pii_crypto import hash_email
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -49,6 +50,7 @@ class TrainingRegistration(Base):
     contact_first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     contact_last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     contact_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    contact_email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     contact_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Payment
@@ -85,7 +87,13 @@ class TrainingRegistration(Base):
         Index("idx_training_reg_placement", "placement_id"),
         Index("idx_training_reg_status", "status"),
         Index("idx_training_reg_contact_email", "contact_email"),
+        Index("idx_training_registrations_contact_email_hash", "contact_email_hash"),
     )
+
+    @validates("contact_email")
+    def _sync_contact_email_hash(self, _key: str, value: str) -> str:
+        self.contact_email_hash = hash_email(value) if value else None
+        return value
 
     def __repr__(self) -> str:
         return f"<TrainingRegistration {self.id} status={self.status}>"
@@ -113,6 +121,7 @@ class TrainingRegistrationAttendee(Base):
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     language: Mapped[str] = mapped_column(String(5), nullable=False, default="en")
     include_exam: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     exam_language: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -128,7 +137,13 @@ class TrainingRegistrationAttendee(Base):
         Index("idx_training_reg_att_tenant", "tenant_id"),
         Index("idx_training_reg_att_reg", "registration_id"),
         Index("idx_training_reg_att_attendee", "attendee_id"),
+        Index("idx_training_registration_attendees_email_hash", "email_hash"),
     )
+
+    @validates("email")
+    def _sync_email_hash(self, _key: str, value: str) -> str:
+        self.email_hash = hash_email(value) if value else None
+        return value
 
     def __repr__(self) -> str:
         return f"<TrainingRegistrationAttendee {self.first_name} {self.last_name}>"

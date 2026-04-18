@@ -5,8 +5,9 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
+from app.core.security.pii_crypto import hash_email
 from app.db.base import Base
 
 
@@ -33,6 +34,7 @@ class OfferAttendee(Base):
     first_name: Mapped[str] = mapped_column(String(200), nullable=False)
     last_name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     certification: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     exam_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
     extra_time: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
@@ -49,7 +51,13 @@ class OfferAttendee(Base):
         Index("idx_offer_attendees_offer", "offer_id"),
         Index("idx_offer_attendees_placement", "placement_id"),
         Index("idx_offer_att_attendee", "attendee_id"),
+        Index("idx_offer_attendees_email_hash", "email_hash"),
     )
+
+    @validates("email")
+    def _sync_email_hash(self, _key: str, value: str | None) -> str | None:
+        self.email_hash = hash_email(value) if value else None
+        return value
 
     def __repr__(self) -> str:
         return f"<OfferAttendee {self.first_name} {self.last_name} (offer={self.offer_id})>"

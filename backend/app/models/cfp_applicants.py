@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.security.pii_crypto import hash_email
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -27,6 +28,7 @@ class CFPApplicant(Base):
     last_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     pronouns: Mapped[str | None] = mapped_column(String(100), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     company: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -62,7 +64,15 @@ class CFPApplicant(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant")
 
     # Indexes
-    __table_args__ = (Index("idx_cfp_applicants_tenant", "tenant_id"),)
+    __table_args__ = (
+        Index("idx_cfp_applicants_tenant", "tenant_id"),
+        Index("idx_cfp_applicants_email_hash", "email_hash"),
+    )
+
+    @validates("email")
+    def _sync_email_hash(self, _key: str, value: str) -> str:
+        self.email_hash = hash_email(value) if value else None
+        return value
 
     def __repr__(self) -> str:
         return f"<CFPApplicant {self.first_name} {self.last_name}>"
