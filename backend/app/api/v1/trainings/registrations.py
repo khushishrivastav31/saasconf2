@@ -13,8 +13,9 @@ from app.core.exceptions import NotFoundError
 from app.models.customer import Customer
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
+from app.models.trainer import Trainer
 from app.models.training import Training
-from app.models.training_program import ProgramYearTraining
+from app.models.training_program import PlacementTrainer, ProgramYearTraining
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 
 router = APIRouter(prefix="/registrations", tags=["training-registrations"])
@@ -92,15 +93,19 @@ async def list_training_registrations(
                 Training.name,
                 ProgramYearTraining.start_date,
                 ProgramYearTraining.is_guaranteed,
+                ProgramYearTraining.is_active,
+                ProgramYearTraining.program_year_id,
             )
             .join(Training, ProgramYearTraining.training_id == Training.id)
             .where(ProgramYearTraining.id.in_(placement_ids))
         )
-        for pid, tname, sdate, guaranteed in p_result.all():
+        for pid, tname, sdate, guaranteed, active, year_id in p_result.all():
             training_info[pid] = {
                 "name": tname,
                 "start_date": sdate.isoformat() if sdate else None,
                 "is_guaranteed": guaranteed or False,
+                "is_active": bool(active),
+                "program_year_id": str(year_id),
             }
 
     items = []
@@ -113,6 +118,8 @@ async def list_training_registrations(
                 "training_name": placement_data.get("name", "Unknown"),
                 "training_date": placement_data.get("start_date"),
                 "is_guaranteed": placement_data.get("is_guaranteed", False),
+                "is_active": placement_data.get("is_active", True),
+                "program_year_id": placement_data.get("program_year_id"),
                 "status": reg.status,
                 "contact_first_name": reg.contact_first_name,
                 "contact_last_name": reg.contact_last_name,
@@ -166,16 +173,23 @@ async def list_training_registrations(
     if oa_placement_ids:
         oa_t = await db.execute(
             select(
-                ProgramYearTraining.id, Training.name, ProgramYearTraining.start_date, ProgramYearTraining.is_guaranteed
+                ProgramYearTraining.id,
+                Training.name,
+                ProgramYearTraining.start_date,
+                ProgramYearTraining.is_guaranteed,
+                ProgramYearTraining.is_active,
+                ProgramYearTraining.program_year_id,
             )
             .join(Training, ProgramYearTraining.training_id == Training.id)
             .where(ProgramYearTraining.id.in_(oa_placement_ids))
         )
-        for pid, tname, sdate, guaranteed in oa_t.all():
+        for pid, tname, sdate, guaranteed, active, year_id in oa_t.all():
             training_info[pid] = {
                 "name": tname,
                 "start_date": sdate.isoformat() if sdate else None,
                 "is_guaranteed": guaranteed or False,
+                "is_active": bool(active),
+                "program_year_id": str(year_id),
             }
 
     # Get customer names
@@ -197,6 +211,8 @@ async def list_training_registrations(
                 "training_name": pinfo.get("name", "Unknown"),
                 "training_date": pinfo.get("start_date"),
                 "is_guaranteed": pinfo.get("is_guaranteed", False),
+                "is_active": pinfo.get("is_active", True),
+                "program_year_id": pinfo.get("program_year_id"),
                 "first_name": att.first_name,
                 "last_name": att.last_name,
                 "email": att.email,
@@ -211,7 +227,79 @@ async def list_training_registrations(
             }
         )
 
-    return {"items": items, "offer_attendees": offer_attendees, "total": total, "page": page, "per_page": per_page}
+    # ── All placements (incl. zero-registration ones) ───────────────────────────
+    # Honors date_from/date_to. If `search` is set, only matches placements whose
+    # training name contains the term — contact-name searches hide empty groups.
+    placements_q = (
+        select(
+            ProgramYearTraining.id,
+            Training.name,
+            ProgramYearTraining.start_date,
+            ProgramYearTraining.is_guaranteed,
+            ProgramYearTraining.is_active,
+            ProgramYearTraining.program_year_id,
+        )
+        .join(Training, ProgramYearTraining.training_id == Training.id)
+        .where(ProgramYearTraining.tenant_id == current_user.tenant_id)
+    )
+    if date_from:
+        placements_q = placements_q.where(ProgramYearTraining.start_date >= date.fromisoformat(date_from))
+    if date_to:
+        placements_q = placements_q.where(ProgramYearTraining.start_date <= date.fromisoformat(date_to))
+    if search:
+        placements_q = placements_q.where(func.lower(Training.name).contains(search.lower()))
+    if placement_id:
+        placements_q = placements_q.where(ProgramYearTraining.id == placement_id)
+
+    placements_q = placements_q.order_by(ProgramYearTraining.start_date.asc().nullslast()).limit(500)
+    p_all_result = await db.execute(placements_q)
+    placements = [
+        {
+            "placement_id": str(pid),
+            "training_name": tname,
+            "training_date": sdate.isoformat() if sdate else None,
+            "is_guaranteed": guaranteed or False,
+            "is_active": bool(active),
+            "program_year_id": str(year_id),
+        }
+        for pid, tname, sdate, guaranteed, active, year_id in p_all_result.all()
+    ]
+
+    # ── Trainer names per placement ─────────────────────────────────────────────
+    all_placement_ids: set[UUID] = set()
+    all_placement_ids.update(r.placement_id for r in registrations if r.placement_id)
+    all_placement_ids.update(row[0].placement_id for row in offer_attendee_rows if row[0].placement_id)
+    all_placement_ids.update(UUID(p["placement_id"]) for p in placements)
+
+    trainer_names_by_placement: dict[UUID, list[str]] = {}
+    if all_placement_ids:
+        pt_result = await db.execute(
+            select(PlacementTrainer.placement_id, Trainer.first_name, Trainer.last_name)
+            .join(Trainer, PlacementTrainer.trainer_id == Trainer.id)
+            .where(
+                PlacementTrainer.tenant_id == current_user.tenant_id,
+                PlacementTrainer.placement_id.in_(all_placement_ids),
+            )
+            .order_by(Trainer.last_name, Trainer.first_name)
+        )
+        for pid, first, last in pt_result.all():
+            trainer_names_by_placement.setdefault(pid, []).append(f"{first} {last}")
+
+    for item in items:
+        item["trainer_names"] = trainer_names_by_placement.get(UUID(item["placement_id"]), [])
+    for oa in offer_attendees:
+        oa["trainer_names"] = trainer_names_by_placement.get(UUID(oa["placement_id"]), [])
+    for p in placements:
+        p["trainer_names"] = trainer_names_by_placement.get(UUID(p["placement_id"]), [])
+
+    return {
+        "items": items,
+        "offer_attendees": offer_attendees,
+        "placements": placements,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+    }
 
 
 @router.get("/{registration_id}")

@@ -188,6 +188,7 @@ def _build_placement_query(tenant_id: UUID):
             ProgramYearTraining.tenant_id == tenant_id,
             ProgramYearTraining.placement_type.in_(["open", "hybrid"]),
             ProgramYearTraining.start_date >= date.today(),
+            ProgramYearTraining.is_active.is_(True),
             TrainingProgramYear.status == "published",
             Training.is_active.is_(True),
         )
@@ -548,6 +549,7 @@ async def get_public_training_detail(
             ProgramYearTraining.tenant_id == tenant.id,
             ProgramYearTraining.placement_type.in_(["open", "hybrid"]),
             ProgramYearTraining.start_date >= date.today(),
+            ProgramYearTraining.is_active.is_(True),
             TrainingProgramYear.status == "published",
             Training.is_active.is_(True),
         )

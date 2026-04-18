@@ -164,7 +164,10 @@ async def list_available_placements(
             joinedload(ProgramYearTraining.location),
             joinedload(ProgramYearTraining.program_year),
         )
-        .where(ProgramYearTraining.tenant_id == current_user.tenant_id)
+        .where(
+            ProgramYearTraining.tenant_id == current_user.tenant_id,
+            ProgramYearTraining.is_active.is_(True),
+        )
     )
 
     if type == "inhouse":

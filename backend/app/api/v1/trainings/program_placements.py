@@ -4,17 +4,20 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.models.audit import AuditLog
+from app.models.customer_offer import CustomerOffer
+from app.models.offer_attendee import OfferAttendee
 from app.models.training_program import (
     PlacementTrainer,
     ProgramYearTraining,
     TrainingProgramYear,
 )
+from app.models.training_registration import TrainingRegistration
 from app.schemas.training_program import (
     PlacementTrainerResponse,
     ProgramYearTrainingCreate,
@@ -59,6 +62,7 @@ def _placement_to_response(p: ProgramYearTraining) -> ProgramYearTrainingRespons
         customer_name=p.customer.name if p.customer else None,
         offer_id=p.offer_id,
         is_guaranteed=p.is_guaranteed or False,
+        is_active=bool(p.is_active),
         created_at=p.created_at,
         updated_at=p.updated_at,
         trainer_assignments=trainer_assignments,
@@ -254,6 +258,70 @@ async def toggle_placement_guaranteed(
         raise NotFoundError("Placement not found")
 
     placement.is_guaranteed = not placement.is_guaranteed
+    await db.commit()
+    db.expire(placement)
+
+    result = await db.execute(
+        select(ProgramYearTraining)
+        .options(
+            joinedload(ProgramYearTraining.training),
+            joinedload(ProgramYearTraining.location),
+            selectinload(ProgramYearTraining.trainer_assignments).joinedload(PlacementTrainer.trainer),
+        )
+        .where(ProgramYearTraining.id == placement_id)
+    )
+    placement = result.scalar_one()
+    return _placement_to_response(placement)
+
+
+@router.patch("/{year_id}/trainings/{placement_id}/active", response_model=ProgramYearTrainingResponse)
+async def toggle_placement_active(
+    year_id: UUID,
+    placement_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> ProgramYearTrainingResponse:
+    """Toggle the is_active flag on a placement.
+
+    Deactivating requires zero registrations and zero offer-attendees on the
+    placement. Reactivating is always allowed.
+    """
+    result = await db.execute(
+        select(ProgramYearTraining).where(
+            ProgramYearTraining.id == placement_id,
+            ProgramYearTraining.program_year_id == year_id,
+            ProgramYearTraining.tenant_id == current_user.tenant_id,
+        )
+    )
+    placement = result.scalar_one_or_none()
+    if not placement:
+        raise NotFoundError("Placement not found")
+
+    if placement.is_active:
+        reg_count = (
+            await db.execute(
+                select(func.count(TrainingRegistration.id)).where(
+                    TrainingRegistration.placement_id == placement_id,
+                    TrainingRegistration.tenant_id == current_user.tenant_id,
+                    TrainingRegistration.status != "cancelled",
+                )
+            )
+        ).scalar() or 0
+        oa_count = (
+            await db.execute(
+                select(func.count(OfferAttendee.id))
+                .join(CustomerOffer, OfferAttendee.offer_id == CustomerOffer.id)
+                .where(
+                    OfferAttendee.placement_id == placement_id,
+                    OfferAttendee.tenant_id == current_user.tenant_id,
+                    CustomerOffer.status == "accepted",
+                )
+            )
+        ).scalar() or 0
+        if reg_count + oa_count > 0:
+            raise ConflictError("Cannot deactivate a placement with attendees")
+
+    placement.is_active = not placement.is_active
     await db.commit()
     db.expire(placement)
 

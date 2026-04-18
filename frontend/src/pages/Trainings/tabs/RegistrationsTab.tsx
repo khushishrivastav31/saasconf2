@@ -7,97 +7,37 @@
  */
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
-import RegistrationRow from './RegistrationRow';
-import OfferAttendeeRow, { groupOfferAttendeesByOffer } from './OfferAttendeeRow';
+import { useToast } from '../../../components/Toast';
 import type { OfferAttendeeItem } from './OfferAttendeeRow';
 import type { Registration, ExamLanguage } from './RegistrationRow';
+import { buildGroups, type Placement } from './registrationGroups';
+import TrainingGroupRow from './TrainingGroupRow';
 
-interface TrainingGroup {
-  placementId: string;
-  trainingName: string;
-  trainingDate: string | null;
-  isGuaranteed: boolean;
-  registrations: Registration[];
-  offerAttendees: OfferAttendeeItem[];
-  totalAttendees: number;
-}
-
-const formatDate = (d: string | null) =>
-  d ? new Date(d + 'T00:00:00').toLocaleDateString('de-DE') : '—';
-
-function buildGroups(items: Registration[], offerAtts: OfferAttendeeItem[]): TrainingGroup[] {
-  const map = new Map<string, TrainingGroup>();
-  for (const reg of items) {
-    const existing = map.get(reg.placement_id);
-    if (existing) {
-      existing.registrations.push(reg);
-      existing.totalAttendees += reg.attendee_count;
-    } else {
-      map.set(reg.placement_id, {
-        placementId: reg.placement_id,
-        trainingName: reg.training_name,
-        trainingDate: reg.training_date,
-        isGuaranteed: reg.is_guaranteed,
-        registrations: [reg],
-        offerAttendees: [],
-        totalAttendees: reg.attendee_count,
-      });
-    }
-  }
-  // Merge offer attendees into groups (or create new groups)
-  for (const oa of offerAtts) {
-    const existing = map.get(oa.placement_id);
-    if (existing) {
-      existing.offerAttendees.push(oa);
-      existing.totalAttendees += 1;
-    } else {
-      map.set(oa.placement_id, {
-        placementId: oa.placement_id,
-        trainingName: oa.training_name,
-        trainingDate: oa.training_date,
-        isGuaranteed: oa.is_guaranteed,
-        registrations: [],
-        offerAttendees: [oa],
-        totalAttendees: 1,
-      });
-    }
-  }
-  // Sort by training date ascending (nearest future first, nulls last)
-  const groups = Array.from(map.values());
-  groups.sort((a, b) => {
-    if (!a.trainingDate && !b.trainingDate) return 0;
-    if (!a.trainingDate) return 1;
-    if (!b.trainingDate) return -1;
-    return a.trainingDate.localeCompare(b.trainingDate);
-  });
-  return groups;
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
 export default function RegistrationsTab() {
   const [, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [maxRegistrations, setMaxRegistrations] = useState('');
+  const [trainerFilter, setTrainerFilter] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const [showPast, setShowPast] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Track collapsed groups (all groups expanded by default)
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  // Track expanded registration rows (for attendee details)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedRegId, setExpandedRegId] = useState<string | null>(null);
 
   const params = useMemo(() => {
     const p: Record<string, string> = { page: String(page), per_page: '100' };
     if (search) p.search = search;
-    if (statusFilter) p.status = statusFilter;
     if (dateFrom) p.date_from = dateFrom;
     if (dateTo) p.date_to = dateTo;
     return p;
-  }, [search, statusFilter, dateFrom, dateTo, page]);
+  }, [search, dateFrom, dateTo, page]);
 
   const { data: langData } = useQuery({
     queryKey: ['training-exam-languages'],
@@ -116,6 +56,7 @@ export default function RegistrationsTab() {
       return res.data as {
         items: Registration[];
         offer_attendees: OfferAttendeeItem[];
+        placements: Placement[];
         total: number;
         page: number;
         per_page: number;
@@ -125,19 +66,73 @@ export default function RegistrationsTab() {
 
   const items = useMemo(() => data?.items ?? [], [data]);
   const offerAttendees = useMemo(() => data?.offer_attendees ?? [], [data]);
+  const placements = useMemo(() => data?.placements ?? [], [data]);
   const total = data?.total ?? 0;
   const totalPages = data ? Math.ceil(data.total / data.per_page) : 0;
-  const allGroups = useMemo(() => buildGroups(items, offerAttendees), [items, offerAttendees]);
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const groups = useMemo(
-    () =>
-      showPast ? allGroups : allGroups.filter((g) => !g.trainingDate || g.trainingDate >= today),
-    [allGroups, showPast, today]
+  const allGroups = useMemo(
+    () => buildGroups(items, offerAttendees, placements),
+    [items, offerAttendees, placements]
   );
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const maxRegParsed = useMemo(() => {
+    const n = parseInt(maxRegistrations, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }, [maxRegistrations]);
+  const trainerOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const gr of allGroups) {
+      for (const name of gr.trainerNames) set.add(name);
+    }
+    return Array.from(set).sort();
+  }, [allGroups]);
+  const groups = useMemo(() => {
+    let g = showPast
+      ? allGroups
+      : allGroups.filter((gr) => !gr.trainingDate || gr.trainingDate >= today);
+    if (maxRegParsed !== null) {
+      g = g.filter((gr) => gr.registrations.length + gr.offerAttendees.length <= maxRegParsed);
+    }
+    if (trainerFilter) {
+      g = g.filter((gr) => gr.trainerNames.includes(trainerFilter));
+    }
+    if (activeFilter === 'active') {
+      g = g.filter((gr) => gr.isActive);
+    } else if (activeFilter === 'inactive') {
+      g = g.filter((gr) => !gr.isActive);
+    }
+    return g;
+  }, [allGroups, showPast, today, maxRegParsed, trainerFilter, activeFilter]);
   const hiddenCount = allGroups.length - groups.length;
 
+  const activeMutation = useMutation({
+    mutationFn: async ({ yearId, placementId }: { yearId: string; placementId: string }) =>
+      api.patch(`/trainings/programs/years/${yearId}/trainings/${placementId}/active`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+      showToast('Training status updated', 'success');
+    },
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr?.response?.status === 409) {
+        showToast('Cannot deactivate: training has attendees', 'error');
+      } else {
+        showToast('Failed to update training status', 'error');
+      }
+    },
+  });
+
+  const guaranteedMutation = useMutation({
+    mutationFn: async ({ yearId, placementId }: { yearId: string; placementId: string }) =>
+      api.patch(`/trainings/programs/years/${yearId}/trainings/${placementId}/guaranteed`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+      showToast('Guaranteed status updated', 'success');
+    },
+    onError: () => showToast('Failed to update guaranteed status', 'error'),
+  });
+
   const toggleGroup = (placementId: string) => {
-    setCollapsedGroups((prev) => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(placementId)) next.delete(placementId);
       else next.add(placementId);
@@ -145,8 +140,26 @@ export default function RegistrationsTab() {
     });
   };
 
+  const handleToggleActive = (yearId: string, placementId: string, hasAttendees: boolean) => {
+    const group = allGroups.find((g) => g.placementId === placementId);
+    if (group?.isActive && hasAttendees) {
+      showToast('Cannot deactivate: training has attendees', 'error');
+      return;
+    }
+    activeMutation.mutate({ yearId, placementId });
+  };
+
+  const handleNavigateOffer = (customerId: string, offerId: string) => {
+    setSearchParams({
+      section: 'customers',
+      customerId,
+      offerId,
+      tab: 'offers',
+    });
+  };
+
   const inputCls =
-    'px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100';
+    'px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100';
 
   return (
     <div>
@@ -161,31 +174,17 @@ export default function RegistrationsTab() {
         </h2>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="flex flex-nowrap items-center gap-2 mb-4">
         <input
           type="text"
-          placeholder="Search by name, email, company, training..."
+          placeholder="Search name, email, training..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className={`flex-1 min-w-50 ${inputCls}`}
+          className={`flex-1 min-w-0 ${inputCls}`}
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className={inputCls}
-        >
-          <option value="">All statuses</option>
-          <option value="registered">Registered</option>
-          <option value="paid">Paid</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
         <input
           type="date"
           value={dateFrom}
@@ -194,7 +193,7 @@ export default function RegistrationsTab() {
             setPage(1);
           }}
           title="Training date from"
-          className={inputCls}
+          className={`w-32 shrink-0 ${inputCls}`}
         />
         <input
           type="date"
@@ -204,16 +203,48 @@ export default function RegistrationsTab() {
             setPage(1);
           }}
           title="Training date to"
-          className={inputCls}
+          className={`w-32 shrink-0 ${inputCls}`}
         />
-        <label className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+        <input
+          type="number"
+          min={0}
+          placeholder="Max"
+          value={maxRegistrations}
+          onChange={(e) => setMaxRegistrations(e.target.value)}
+          title="Show only trainings with at most this many registrations (incl. offer attendees)"
+          className={`w-16 shrink-0 ${inputCls}`}
+        />
+        <select
+          value={trainerFilter}
+          onChange={(e) => setTrainerFilter(e.target.value)}
+          title="Filter by assigned trainer"
+          className={`w-32 shrink-0 ${inputCls}`}
+        >
+          <option value="">All trainers</option>
+          {trainerOptions.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={activeFilter}
+          onChange={(e) => setActiveFilter(e.target.value as 'active' | 'inactive' | 'all')}
+          title="Filter by active status"
+          className={`w-24 shrink-0 ${inputCls}`}
+        >
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="all">All</option>
+        </select>
+        <label className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none shrink-0">
           <input
             type="checkbox"
             checked={showPast}
             onChange={(e) => setShowPast(e.target.checked)}
             className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
           />
-          Show past{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
+          Past{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
         </label>
       </div>
 
@@ -229,145 +260,37 @@ export default function RegistrationsTab() {
         </div>
       ) : (
         <>
-          <div className="space-y-4">
-            {groups.map((group) => {
-              const isCollapsed = collapsedGroups.has(group.placementId);
-              return (
-                <div
-                  key={group.placementId}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-                >
-                  {/* Group header */}
-                  <button
-                    onClick={() => toggleGroup(group.placementId)}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors text-left"
-                  >
-                    <svg
-                      className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? '' : 'rotate-90'}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                      {group.trainingName}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(group.trainingDate)}
-                    </span>
-                    {group.isGuaranteed && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        Guaranteed
-                      </span>
-                    )}
-                    <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                      {group.registrations.length > 0 && (
-                        <>
-                          {group.registrations.length} registration
-                          {group.registrations.length !== 1 ? 's' : ''}
-                        </>
-                      )}
-                      {group.registrations.length > 0 &&
-                        group.offerAttendees.length > 0 &&
-                        ' \u00B7 '}
-                      {group.offerAttendees.length > 0 && (
-                        <>
-                          {group.offerAttendees.length} offer attendee
-                          {group.offerAttendees.length !== 1 ? 's' : ''}
-                        </>
-                      )}
-                      {(group.registrations.length > 0 || group.offerAttendees.length > 0) &&
-                        ' \u00B7 '}
-                      {group.totalAttendees} total
-                    </span>
-                  </button>
-
-                  {/* Registration rows */}
-                  {!isCollapsed && (
-                    <table className="min-w-full text-sm table-fixed">
-                      <colgroup>
-                        <col className="w-8" />
-                        <col style={{ width: '28%' }} />
-                        <col style={{ width: '20%' }} />
-                        <col style={{ width: '10%' }} />
-                        <col style={{ width: '12%' }} />
-                        <col style={{ width: '15%' }} />
-                        <col style={{ width: '15%' }} />
-                      </colgroup>
-                      <thead>
-                        <tr className="border-t border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50">
-                          <th className="px-3 py-2" />
-                          <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
-                            Contact
-                          </th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
-                            Email
-                          </th>
-                          <th className="px-3 py-2 text-center font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
-                            Attendees
-                          </th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
-                            Status
-                          </th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
-                            Payment
-                          </th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
-                            Total
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {group.registrations.map((reg) => {
-                          const isExpanded = expandedRegId === reg.id;
-                          return (
-                            <RegistrationRow
-                              key={reg.id}
-                              reg={reg}
-                              examLanguages={examLanguages}
-                              expanded={isExpanded}
-                              onToggle={() => setExpandedRegId(isExpanded ? null : reg.id)}
-                            />
-                          );
-                        })}
-                        {groupOfferAttendeesByOffer(group.offerAttendees).map((oag) => {
-                          const oaExpanded = expandedRegId === `oa-${oag.offerId}`;
-                          return (
-                            <OfferAttendeeRow
-                              key={`oag-${oag.offerId}`}
-                              group={oag}
-                              examLanguages={examLanguages}
-                              expanded={oaExpanded}
-                              onToggle={() =>
-                                setExpandedRegId(oaExpanded ? null : `oa-${oag.offerId}`)
-                              }
-                              onNavigate={() =>
-                                setSearchParams({
-                                  section: 'customers',
-                                  customerId: oag.customerId,
-                                  offerId: oag.offerId,
-                                  tab: 'offers',
-                                })
-                              }
-                            />
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-[20px_minmax(0,1fr)_100px_120px_90px_minmax(0,200px)_32px] items-center gap-x-4 px-4 pb-2 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            <span />
+            <span>Training</span>
+            <span>Date</span>
+            <span className="text-center">Guaranteed</span>
+            <span className="text-center">Status</span>
+            <span>Trainers</span>
+            <span className="text-right">#</span>
           </div>
 
-          {/* Pagination */}
+          <div className="space-y-2">
+            {groups.map((group) => (
+              <TrainingGroupRow
+                key={group.placementId}
+                group={group}
+                isCollapsed={!expandedGroups.has(group.placementId)}
+                onToggle={() => toggleGroup(group.placementId)}
+                examLanguages={examLanguages}
+                expandedRegId={expandedRegId}
+                setExpandedRegId={setExpandedRegId}
+                guaranteedPending={guaranteedMutation.isPending}
+                activePending={activeMutation.isPending}
+                onToggleGuaranteed={(yearId, placementId) =>
+                  guaranteedMutation.mutate({ yearId, placementId })
+                }
+                onToggleActive={handleToggleActive}
+                onNavigateOffer={handleNavigateOffer}
+              />
+            ))}
+          </div>
+
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">
               <button

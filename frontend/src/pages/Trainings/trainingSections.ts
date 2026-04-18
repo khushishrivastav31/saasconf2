@@ -131,11 +131,6 @@ export const sectionGroups: TrainingSectionGroup[] = [
     name: 'Setup',
     sections: [
       { id: 'program', name: 'Training Program', icon: TrainingsIcon, children: [] },
-      { id: 'offer-management', name: 'Offer Management', icon: OfferTemplatesIcon },
-      { id: 'customers', name: 'Customers', icon: CustomersIcon },
-      { id: 'attendees', name: 'Attendees', icon: AttendeesIcon },
-      { id: 'parking-lot', name: 'Parking Lot', icon: AttendeesIcon },
-      { id: 'users', name: 'Users', icon: UsersIcon },
       { id: 'settings-trainers', name: 'Trainers', icon: TrainersIcon },
       {
         id: 'settings',
@@ -310,6 +305,11 @@ export const sectionGroups: TrainingSectionGroup[] = [
     name: 'Operations',
     sections: [
       { id: 'registrations', name: 'Training Registrations', icon: RegistrationIcon },
+      { id: 'offer-management', name: 'Offer Management', icon: OfferTemplatesIcon },
+      { id: 'customers', name: 'Customers', icon: CustomersIcon },
+      { id: 'attendees', name: 'Attendees', icon: AttendeesIcon },
+      { id: 'parking-lot', name: 'Parking Lot', icon: AttendeesIcon },
+      { id: 'users', name: 'Users', icon: UsersIcon },
       { id: 'invoices', name: 'Invoices', icon: InvoicesIcon },
       { id: 'pending-invoicing', name: 'Pending Invoicing', icon: InvoicesIcon },
       { id: 'payment-reminders', name: 'Payment Reminders', icon: PaymentRemindersIcon },

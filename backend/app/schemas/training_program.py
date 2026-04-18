@@ -89,6 +89,7 @@ class ProgramYearTrainingResponse(BaseModel):
     customer_name: str | None = None
     offer_id: UUID | None = None
     is_guaranteed: bool = False
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
     trainer_assignments: list["PlacementTrainerResponse"] = Field(default_factory=list)

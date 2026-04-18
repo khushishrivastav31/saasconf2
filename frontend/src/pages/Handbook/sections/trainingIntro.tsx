@@ -17,9 +17,9 @@ export const trainingIntroCategory: HandbookCategory = {
 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Training Sidebar</h3>
 <p class="text-gray-700 dark:text-gray-300 my-2">The left sidebar organizes all training features into groups:</p>
 <ol class="list-decimal list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300"><strong>Setup</strong> — Training Program (per year: Design, Assign Trainers, Final), Offer Management, Customers, Trainers</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Setup</strong> — Training Program (per year: Design, Assign Trainers, Final), Trainers, Settings</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Settings</strong> — Training Setup (Catalog, Languages, Locations, Holidays, etc.), Communication (Email, Templates, Messaging), Finance (Currency, Numbering, Invoice Templates, Stripe, etc.), Offer Templates</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Operations</strong> — Registrations, Attendees, Parking Lot, Invoices, Pending Invoicing, Payment Reminders, Inhouse Trainings</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Operations</strong> — Training Registrations, Offer Management, Customers, Attendees, Parking Lot, Users, Invoices, Pending Invoicing, Payment Reminders</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Communications</strong> — Messages, News</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Insights</strong> — Revenue, Training Statistics</li>
 </ol>

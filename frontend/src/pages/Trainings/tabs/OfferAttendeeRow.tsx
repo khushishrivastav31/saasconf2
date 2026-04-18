@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
@@ -9,6 +9,9 @@ interface OfferAttendeeItem {
   training_name: string;
   training_date: string | null;
   is_guaranteed: boolean;
+  is_active?: boolean;
+  program_year_id?: string | null;
+  trainer_names?: string[];
   first_name: string;
   last_name: string;
   email: string | null;
@@ -70,6 +73,24 @@ function OfferAttendeeRow({
 }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  const [parkConfirm, setParkConfirm] = useState<{ attId: string; name: string } | null>(null);
+
+  const parkMutation = useMutation({
+    mutationFn: (sourceId: string) =>
+      api.post('/trainings/attendees/park-by-source', {
+        source_type: 'offer',
+        source_id: sourceId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['training-attendees'] });
+      queryClient.invalidateQueries({ queryKey: ['offer-attendees'] });
+      showToast('Attendee moved to parking lot', 'success');
+      setParkConfirm(null);
+    },
+    onError: () => showToast('Failed to park attendee', 'error'),
+  });
 
   const updateMutation = useMutation({
     mutationFn: ({
@@ -156,7 +177,8 @@ function OfferAttendeeRow({
                     <th className="text-left py-1 pr-4">Email</th>
                     <th className="text-left py-1 pr-4">Exam</th>
                     <th className="text-left py-1 pr-4">Language</th>
-                    <th className="text-left py-1">Extra Time</th>
+                    <th className="text-left py-1 pr-4">Extra Time</th>
+                    <th className="text-right py-1" />
                   </tr>
                 </thead>
                 <tbody>
@@ -191,7 +213,7 @@ function OfferAttendeeRow({
                           ))}
                         </select>
                       </td>
-                      <td className="py-1" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-1 pr-4" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={att.extra_time}
@@ -199,10 +221,59 @@ function OfferAttendeeRow({
                           className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                         />
                       </td>
+                      <td className="py-1 text-right" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setParkConfirm({
+                              attId: att.id,
+                              name: `${att.first_name} ${att.last_name}`,
+                            })
+                          }
+                          className="px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                          title="Move to Parking Lot"
+                        >
+                          Park Attendee
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {/* Park confirmation dialog */}
+      {parkConfirm && (
+        <tr>
+          <td colSpan={7}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-xl p-6 max-w-sm w-full">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  Park Attendee?
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  <strong>{parkConfirm.name}</strong> will be removed from this offer and placed in
+                  the Parking Lot.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setParkConfirm(null)}
+                    className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => parkMutation.mutate(parkConfirm.attId)}
+                    disabled={parkMutation.isPending}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg disabled:opacity-40"
+                  >
+                    {parkMutation.isPending ? 'Parking...' : 'Park'}
+                  </button>
+                </div>
+              </div>
             </div>
           </td>
         </tr>

@@ -20,6 +20,9 @@ interface Registration {
   training_name: string;
   training_date: string | null;
   is_guaranteed: boolean;
+  is_active?: boolean;
+  program_year_id?: string | null;
+  trainer_names?: string[];
   status: string;
   contact_first_name: string;
   contact_last_name: string;
