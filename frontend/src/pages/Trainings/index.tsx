@@ -14,7 +14,7 @@ const CustomersTab = lazy(() => import('./tabs/CustomersTab'));
 const OfferManagementTab = lazy(() => import('./tabs/OfferManagementTab'));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
 const AttendeesTab = lazy(() => import('./tabs/AttendeesTab'));
-const ParkingLotTab = lazy(() => import('./tabs/ParkingLotTab'));
+const ParkingLotTab = lazy(() => import('./tabs/ParkingLot'));
 const UsersTab = lazy(() => import('./tabs/UsersTab'));
 const RegistrationsTab = lazy(() => import('./tabs/RegistrationsTab'));
 const InvoicesTab = lazy(() => import('./tabs/InvoicesTab'));

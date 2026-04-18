@@ -201,9 +201,9 @@ export const trainingOperationsCategory: HandbookCategory = {
 <strong>Features:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300"><strong>Deduplication:</strong> Attendees are identified by email — registering for multiple trainings creates one central record</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Timeline:</strong> Each attendee has a history showing all events: registered, parked, reassigned, offer assigned</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Timeline:</strong> Each attendee has a history showing all events: registered, parked, reassigned, offer assigned, deactivated, reactivated</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Current placement:</strong> Shows which training(s) the attendee is currently assigned to</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Status:</strong> Active or Parked</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Status:</strong> Active, Parked, or Inactive. An attendee is shown as Inactive when their status is explicitly "inactive" (via the Deactivate button on the parking lot or user profile) or when they are parked but their portal account is deactivated. The parking lot hides inactive users. Use the Deactivate / Reactivate actions on the attendee to change status; toggling portal access does not change the attendee status directly.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Search &amp; filter:</strong> Find attendees by name, email, or training</li>
 </ul>`,
           }}

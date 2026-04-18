@@ -83,6 +83,7 @@ export default function UsersTab() {
           <option value="">All statuses</option>
           <option value="active">Active</option>
           <option value="parked">Parked</option>
+          <option value="inactive">Inactive</option>
         </select>
       </div>
 
@@ -143,7 +144,11 @@ export default function UsersTab() {
                       <span
                         className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold ${STATUS_COLORS[user.status] ?? ''}`}
                       >
-                        {user.status === 'parked' ? 'Parked' : 'Active'}
+                        {user.status === 'parked'
+                          ? 'Parked'
+                          : user.status === 'inactive'
+                            ? 'Inactive'
+                            : 'Active'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 text-sm truncate max-w-48">

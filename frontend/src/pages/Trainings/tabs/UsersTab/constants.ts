@@ -1,6 +1,7 @@
 export const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   parked: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  inactive: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
 };
 
 export const EVENT_LABELS: Record<string, string> = {
@@ -10,6 +11,10 @@ export const EVENT_LABELS: Record<string, string> = {
   reassigned: 'Reassigned',
   cancelled: 'Cancelled',
   offer_removed: 'Removed (Offer)',
+  deactivated: 'Deactivated',
+  reactivated: 'Reactivated',
+  portal_activated: 'Portal Activated',
+  portal_deactivated: 'Portal Deactivated',
 };
 
 export const EVENT_COLORS: Record<string, string> = {
@@ -19,6 +24,10 @@ export const EVENT_COLORS: Record<string, string> = {
   reassigned: 'text-primary-600 dark:text-primary-400',
   cancelled: 'text-red-600 dark:text-red-400',
   offer_removed: 'text-gray-500 dark:text-gray-400',
+  deactivated: 'text-gray-500 dark:text-gray-400',
+  reactivated: 'text-green-600 dark:text-green-400',
+  portal_activated: 'text-green-600 dark:text-green-400',
+  portal_deactivated: 'text-gray-500 dark:text-gray-400',
 };
 
 export const REG_STATUS_COLORS: Record<string, string> = {

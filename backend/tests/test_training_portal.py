@@ -24,18 +24,25 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.security import create_access_token, hash_password
+from app.models.customer import Customer
+from app.models.customer_offer import CustomerOffer
 from app.models.location import Location
+from app.models.offer_attendee import OfferAttendee
+from app.models.portal_user import PortalUser
 from app.models.syllabus import Syllabus
 from app.models.tenant import Tenant
 from app.models.training import Training, TrainingLanguage
+from app.models.training_attendee import TrainingAttendee
+from app.models.training_attendee_history import TrainingAttendeeHistory
 from app.models.training_program import ProgramYearTraining, TrainingProgramYear
+from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -146,9 +153,7 @@ async def admin_portal(db_session: AsyncSession, tenant_portal: Tenant) -> User:
 
 @pytest_asyncio.fixture
 async def lang_de(db_session: AsyncSession, tenant_portal: Tenant) -> TrainingLanguage:
-    lang = TrainingLanguage(
-        id=uuid.uuid4(), tenant_id=tenant_portal.id, name="Deutsch"
-    )
+    lang = TrainingLanguage(id=uuid.uuid4(), tenant_id=tenant_portal.id, name="Deutsch")
     db_session.add(lang)
     await db_session.commit()
     return lang
@@ -156,18 +161,14 @@ async def lang_de(db_session: AsyncSession, tenant_portal: Tenant) -> TrainingLa
 
 @pytest_asyncio.fixture
 async def lang_en(db_session: AsyncSession, tenant_portal: Tenant) -> TrainingLanguage:
-    lang = TrainingLanguage(
-        id=uuid.uuid4(), tenant_id=tenant_portal.id, name="English"
-    )
+    lang = TrainingLanguage(id=uuid.uuid4(), tenant_id=tenant_portal.id, name="English")
     db_session.add(lang)
     await db_session.commit()
     return lang
 
 
 @pytest_asyncio.fixture
-async def syllabus_fl(
-    db_session: AsyncSession, tenant_portal: Tenant
-) -> Syllabus:
+async def syllabus_fl(db_session: AsyncSession, tenant_portal: Tenant) -> Syllabus:
     s = Syllabus(
         id=uuid.uuid4(),
         tenant_id=tenant_portal.id,
@@ -250,9 +251,7 @@ async def training_fl(
 
 
 @pytest_asyncio.fixture
-async def program_year(
-    db_session: AsyncSession, tenant_portal: Tenant
-) -> TrainingProgramYear:
+async def program_year(db_session: AsyncSession, tenant_portal: Tenant) -> TrainingProgramYear:
     py = TrainingProgramYear(
         id=uuid.uuid4(),
         tenant_id=tenant_portal.id,
@@ -342,9 +341,7 @@ class TestPortalConfig:
         lang_de: TrainingLanguage,
         lang_en: TrainingLanguage,
     ):
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/portal-config"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/portal-config")
         assert res.status_code == 200
         data = res.json()
 
@@ -362,12 +359,8 @@ class TestPortalConfig:
         assert "English" in lang_names
 
     @pytest.mark.asyncio
-    async def test_portal_config_includes_default_texts(
-        self, client: AsyncClient, tenant_portal: Tenant
-    ):
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/portal-config"
-        )
+    async def test_portal_config_includes_default_texts(self, client: AsyncClient, tenant_portal: Tenant):
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/portal-config")
         data = res.json()
         assert "guaranteed" in data["portal_texts"]["en"]
         assert data["portal_texts"]["de"]["guaranteed"] == "Garantiert"
@@ -381,9 +374,7 @@ class TestPortalConfig:
         flag_modified(tenant_portal, "settings")
         await db_session.commit()
 
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/portal-config"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/portal-config")
         assert res.status_code == 403
 
 
@@ -398,15 +389,11 @@ class TestTrainingListing:
         tenant_portal: Tenant,
         placement_berlin: ProgramYearTraining,
     ):
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings")
         assert res.status_code == 200
         data = res.json()
         assert data["total"] >= 1
-        item = next(
-            i for i in data["items"] if i["placement_id"] == str(placement_berlin.id)
-        )
+        item = next(i for i in data["items"] if i["placement_id"] == str(placement_berlin.id))
         assert item["training_name"] == "ISTQB FL Deutsch"
         assert item["exam_price"] == "200.00"
         assert item["location_country"] == "DE"
@@ -420,13 +407,9 @@ class TestTrainingListing:
         placement_no_city: ProgramYearTraining,
     ):
         """Location without city should inherit tenant's city (Berlin)."""
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings")
         data = res.json()
-        item = next(
-            i for i in data["items"] if i["placement_id"] == str(placement_no_city.id)
-        )
+        item = next(i for i in data["items"] if i["placement_id"] == str(placement_no_city.id))
         assert item["location_city"] == "Berlin"
         assert item["location_country"] == "DE"
 
@@ -437,13 +420,9 @@ class TestTrainingListing:
         tenant_portal: Tenant,
         placement_online: ProgramYearTraining,
     ):
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings")
         data = res.json()
-        item = next(
-            i for i in data["items"] if i["placement_id"] == str(placement_online.id)
-        )
+        item = next(i for i in data["items"] if i["placement_id"] == str(placement_online.id))
         assert item["location_city"] == "Online"
 
     @pytest.mark.asyncio
@@ -482,9 +461,7 @@ class TestFilterCounts:
         placement_online: ProgramYearTraining,
         placement_no_city: ProgramYearTraining,
     ):
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/filters"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/filters")
         assert res.status_code == 200
         data = res.json()
 
@@ -506,9 +483,7 @@ class TestFilterCounts:
         placement_berlin.is_guaranteed = True
         await db_session.commit()
 
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/filters"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/filters")
         data = res.json()
         assert data["guaranteed_count"] == 1
 
@@ -524,9 +499,7 @@ class TestTrainingDetail:
         tenant_portal: Tenant,
         placement_berlin: ProgramYearTraining,
     ):
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/{placement_berlin.id}"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/{placement_berlin.id}")
         assert res.status_code == 200
         data = res.json()
         assert data["exam_price"] == "200.00"
@@ -544,9 +517,7 @@ class TestTrainingDetail:
         placement_berlin.start_date = date.today() - timedelta(days=1)
         await db_session.commit()
 
-        res = await client.get(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/{placement_berlin.id}"
-        )
+        res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/{placement_berlin.id}")
         assert res.status_code == 404
 
 
@@ -794,3 +765,537 @@ class TestGuaranteedToggle:
         url = f"/api/v1/trainings/programs/years/{program_year.id}/trainings/{uuid.uuid4()}/guaranteed"
         res = await client.patch(url, headers=auth_headers(token))
         assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_guaranteed_reflected_in_registration_form(
+        self,
+        client: AsyncClient,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        program_year: TrainingProgramYear,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Admin marks a training guaranteed → portal listing + detail show it."""
+        # Baseline: listing and detail report is_guaranteed=False
+        list_res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings")
+        item = next(i for i in list_res.json()["items"] if i["placement_id"] == str(placement_berlin.id))
+        assert item["is_guaranteed"] is False
+
+        detail_res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/{placement_berlin.id}")
+        assert detail_res.json()["is_guaranteed"] is False
+
+        # Admin toggles guaranteed on
+        token = _make_token(admin_portal, modules=["trainings"])
+        toggle_url = f"/api/v1/trainings/programs/years/{program_year.id}/trainings/{placement_berlin.id}/guaranteed"
+        toggle_res = await client.patch(toggle_url, headers=auth_headers(token))
+        assert toggle_res.status_code == 200
+        assert toggle_res.json()["is_guaranteed"] is True
+
+        # Portal listing + detail now report the training as guaranteed
+        list_res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings")
+        item = next(i for i in list_res.json()["items"] if i["placement_id"] == str(placement_berlin.id))
+        assert item["is_guaranteed"] is True
+
+        detail_res = await client.get(f"/api/v1/portal/{tenant_portal.slug}/trainings/{placement_berlin.id}")
+        assert detail_res.json()["is_guaranteed"] is True
+
+
+# ── Active Toggle Tests ───────────────────────────────────────────────
+
+
+class TestActiveToggle:
+    @pytest.mark.asyncio
+    async def test_active_toggle_hides_and_shows_in_registration_form(
+        self,
+        client: AsyncClient,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        program_year: TrainingProgramYear,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Deactivated placements disappear from the public portal; reactivating restores them."""
+        list_url = f"/api/v1/portal/{tenant_portal.slug}/trainings"
+        detail_url = f"/api/v1/portal/{tenant_portal.slug}/trainings/{placement_berlin.id}"
+
+        # Baseline: placement is active and visible
+        list_res = await client.get(list_url)
+        ids = {i["placement_id"] for i in list_res.json()["items"]}
+        assert str(placement_berlin.id) in ids
+
+        detail_res = await client.get(detail_url)
+        assert detail_res.status_code == 200
+
+        # Admin deactivates the placement (no attendees → allowed)
+        token = _make_token(admin_portal, modules=["trainings"])
+        toggle_url = f"/api/v1/trainings/programs/years/{program_year.id}/trainings/{placement_berlin.id}/active"
+        toggle_res = await client.patch(toggle_url, headers=auth_headers(token))
+        assert toggle_res.status_code == 200
+        assert toggle_res.json()["is_active"] is False
+
+        # Portal listing no longer includes it; detail returns 404
+        list_res = await client.get(list_url)
+        ids = {i["placement_id"] for i in list_res.json()["items"]}
+        assert str(placement_berlin.id) not in ids
+
+        detail_res = await client.get(detail_url)
+        assert detail_res.status_code == 404
+
+        # Admin reactivates the placement
+        toggle_res = await client.patch(toggle_url, headers=auth_headers(token))
+        assert toggle_res.status_code == 200
+        assert toggle_res.json()["is_active"] is True
+
+        # Portal listing + detail are visible again
+        list_res = await client.get(list_url)
+        ids = {i["placement_id"] for i in list_res.json()["items"]}
+        assert str(placement_berlin.id) in ids
+
+        detail_res = await client.get(detail_url)
+        assert detail_res.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_cannot_deactivate_with_registrations(
+        self,
+        client: AsyncClient,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        program_year: TrainingProgramYear,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Deactivation is blocked (409) when the placement has non-cancelled registrations."""
+        # Register one attendee via the public portal
+        payload = {
+            "placement_id": str(placement_berlin.id),
+            "billing": {
+                "street": "Teststr. 1",
+                "postal_code": "10115",
+                "city": "Berlin",
+                "country": "DE",
+                "contact_first_name": "Max",
+                "contact_last_name": "Muster",
+                "contact_email": "max@test.de",
+                "payment_method": "bank_transfer",
+            },
+            "attendees": [
+                {
+                    "first_name": "Max",
+                    "last_name": "Muster",
+                    "email": "max@test.de",
+                    "exam_mode": "none",
+                }
+            ],
+            "language": "de",
+        }
+        reg_res = await client.post(
+            f"/api/v1/portal/{tenant_portal.slug}/trainings/register",
+            json=payload,
+        )
+        assert reg_res.status_code == 200
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        toggle_url = f"/api/v1/trainings/programs/years/{program_year.id}/trainings/{placement_berlin.id}/active"
+        res = await client.patch(toggle_url, headers=auth_headers(token))
+        assert res.status_code == 409
+
+
+# ── Portal User Deactivation Tests ────────────────────────────────────
+
+
+class TestPortalUserDeactivation:
+    """A portal user can only be deactivated if not assigned to any active training."""
+
+    async def _make_portal_user(self, db_session: AsyncSession, tenant: Tenant, email_suffix: str = "") -> PortalUser:
+        pu = PortalUser(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            email=f"portal-{email_suffix}-{uuid.uuid4().hex[:6]}@test.de",
+            first_name="Port",
+            last_name="User",
+            is_active=True,
+        )
+        db_session.add(pu)
+        await db_session.commit()
+        return pu
+
+    async def _make_attendee(
+        self,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        portal_user: PortalUser,
+        status: str = "active",
+    ) -> TrainingAttendee:
+        att = TrainingAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            first_name=portal_user.first_name,
+            last_name=portal_user.last_name,
+            email=portal_user.email,
+            status=status,
+            portal_user_id=portal_user.id,
+        )
+        db_session.add(att)
+        await db_session.commit()
+        return att
+
+    async def _link_via_registration(
+        self,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        placement: ProgramYearTraining,
+        attendee: TrainingAttendee,
+        reg_status: str = "registered",
+    ) -> None:
+        reg = TrainingRegistration(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            placement_id=placement.id,
+            status=reg_status,
+            street="Teststr. 1",
+            postal_code="10115",
+            city="Berlin",
+            country="DE",
+            contact_first_name=attendee.first_name,
+            contact_last_name=attendee.last_name,
+            contact_email=attendee.email,
+        )
+        db_session.add(reg)
+        await db_session.flush()
+        ra = TrainingRegistrationAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            registration_id=reg.id,
+            attendee_id=attendee.id,
+            first_name=attendee.first_name,
+            last_name=attendee.last_name,
+            email=attendee.email,
+        )
+        db_session.add(ra)
+        await db_session.commit()
+
+    async def _link_via_offer(
+        self,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        placement: ProgramYearTraining,
+        attendee: TrainingAttendee,
+        offer_status: str = "accepted",
+    ) -> None:
+        customer = Customer(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            name=f"Cust {uuid.uuid4().hex[:6]}",
+        )
+        db_session.add(customer)
+        await db_session.flush()
+        offer = CustomerOffer(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            customer_id=customer.id,
+            offer_number=f"O-{uuid.uuid4().hex[:6]}",
+            status=offer_status,
+        )
+        db_session.add(offer)
+        await db_session.flush()
+        oa = OfferAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            offer_id=offer.id,
+            placement_id=placement.id,
+            attendee_id=attendee.id,
+            first_name=attendee.first_name,
+            last_name=attendee.last_name,
+            email=attendee.email,
+        )
+        db_session.add(oa)
+        await db_session.commit()
+
+    @pytest.mark.asyncio
+    async def test_deactivate_succeeds_when_no_assignments(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        """Portal user with no attendee record can be deactivated."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "noass")
+        token = _make_token(admin_portal, modules=["trainings"])
+
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert res.json()["is_active"] is False
+
+    @pytest.mark.asyncio
+    async def test_deactivate_blocked_by_active_registration(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Portal user linked to non-cancelled registration on an active placement → 409."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "reg")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="active")
+        await self._link_via_registration(db_session, tenant_portal, placement_berlin, att)
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 409
+        assert "active training" in res.json()["detail"].lower()
+
+        await db_session.refresh(pu)
+        assert pu.is_active is True
+
+    @pytest.mark.asyncio
+    async def test_deactivate_blocked_by_accepted_offer(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Portal user linked to an accepted offer on an active placement → 409."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "offer")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="active")
+        await self._link_via_offer(db_session, tenant_portal, placement_berlin, att, offer_status="accepted")
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 409
+
+        await db_session.refresh(pu)
+        assert pu.is_active is True
+
+    @pytest.mark.asyncio
+    async def test_deactivate_allowed_when_attendee_parked(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Parked attendees do not block deactivation."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "parked")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="parked")
+        await self._link_via_registration(db_session, tenant_portal, placement_berlin, att)
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert res.json()["is_active"] is False
+
+    @pytest.mark.asyncio
+    async def test_deactivate_allowed_when_placement_inactive(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Registrations on an inactive placement do not block deactivation."""
+        placement_berlin.is_active = False
+        await db_session.commit()
+
+        pu = await self._make_portal_user(db_session, tenant_portal, "inactive")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="active")
+        await self._link_via_registration(db_session, tenant_portal, placement_berlin, att)
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert res.json()["is_active"] is False
+
+    @pytest.mark.asyncio
+    async def test_deactivate_allowed_when_registration_cancelled(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Cancelled registrations do not block deactivation."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "cancelled")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="active")
+        await self._link_via_registration(db_session, tenant_portal, placement_berlin, att, reg_status="cancelled")
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert res.json()["is_active"] is False
+
+    @pytest.mark.asyncio
+    async def test_deactivate_allowed_when_offer_not_accepted(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Draft offers do not block deactivation — only accepted offers do."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "draftoffer")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="active")
+        await self._link_via_offer(db_session, tenant_portal, placement_berlin, att, offer_status="draft")
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert res.json()["is_active"] is False
+
+    @pytest.mark.asyncio
+    async def test_reactivation_always_allowed(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Reactivating an already-deactivated user is always allowed, even with active assignments."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "reactiv")
+        pu.is_active = False
+        await db_session.commit()
+
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="active")
+        await self._link_via_registration(db_session, tenant_portal, placement_berlin, att)
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert res.json()["is_active"] is True
+
+    # ── Toggle-access does NOT mutate attendee.status (effective-status derivation does) ──
+
+    @pytest.mark.asyncio
+    async def test_deactivating_user_logs_history_and_keeps_attendee_status(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        """Toggle Access toggles PortalUser.is_active only — attendee.status stays untouched. A 'portal_deactivated' history event is written."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "park2inact")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="parked")
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+
+        await db_session.refresh(att)
+        assert att.status == "parked"
+
+        events = (
+            (
+                await db_session.execute(
+                    select(TrainingAttendeeHistory).where(TrainingAttendeeHistory.attendee_id == att.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        # attendee.status is NOT mutated, so no "deactivated"/"reactivated" events
+        assert not any(e.event_type in {"deactivated", "reactivated"} for e in events)
+        # but a portal_deactivated audit trail IS written
+        assert any(e.event_type == "portal_deactivated" for e in events)
+
+    @pytest.mark.asyncio
+    async def test_inactive_attendee_excluded_from_parking_lot_list(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        """GET /trainings/attendees?status=parked must not return attendees whose portal user has been deactivated."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "parklot")
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="parked")
+
+        token = _make_token(admin_portal, modules=["trainings"])
+
+        before = await client.get("/api/v1/trainings/attendees?status=parked", headers=auth_headers(token))
+        assert before.status_code == 200
+        assert any(item["id"] == str(att.id) for item in before.json()["items"])
+
+        toggle = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert toggle.status_code == 200
+
+        after = await client.get("/api/v1/trainings/attendees?status=parked", headers=auth_headers(token))
+        assert after.status_code == 200
+        assert all(item["id"] != str(att.id) for item in after.json()["items"])
+
+    @pytest.mark.asyncio
+    async def test_activating_user_logs_history_and_keeps_inactive_attendee(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        """Activating a portal user whose attendee is explicitly 'inactive' → attendee stays 'inactive'. A 'portal_activated' history event is written."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "reparked")
+        pu.is_active = False
+        await db_session.commit()
+
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="inactive")
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert res.json()["is_active"] is True
+
+        await db_session.refresh(att)
+        assert att.status == "inactive"
+
+        events = (
+            (
+                await db_session.execute(
+                    select(TrainingAttendeeHistory).where(TrainingAttendeeHistory.attendee_id == att.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        # reactivating the portal does NOT restore the attendee to parked
+        assert not any(e.event_type == "reactivated" for e in events)
+        # but a portal_activated audit trail IS written
+        assert any(e.event_type == "portal_activated" for e in events)
+
+    @pytest.mark.asyncio
+    async def test_deactivating_user_leaves_active_attendee_untouched(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        """An active attendee without active assignments: toggle access leaves status intact; writes a portal_deactivated audit event only."""
+        pu = await self._make_portal_user(db_session, tenant_portal, "stayact")
+        # Active attendee with no registration/offer — not blocked by guard, but not parked either.
+        att = await self._make_attendee(db_session, tenant_portal, pu, status="active")
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.put(f"/api/v1/trainings/users/{pu.id}/toggle-access", headers=auth_headers(token))
+        assert res.status_code == 200
+
+        await db_session.refresh(att)
+        assert att.status == "active"
+
+        events = (
+            (
+                await db_session.execute(
+                    select(TrainingAttendeeHistory).where(TrainingAttendeeHistory.attendee_id == att.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        # attendee.status is NOT mutated
+        assert not any(e.event_type == "deactivated" for e in events)
+        # audit trail is written
+        assert any(e.event_type == "portal_deactivated" for e in events)

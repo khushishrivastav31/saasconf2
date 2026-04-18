@@ -89,7 +89,11 @@ export default function UserDetailPanel({ selectedUser, items, onBack }: Props) 
         </div>
       ) : (
         <div className="space-y-4">
-          <UserDetailHeader profile={profile} />
+          <UserDetailHeader
+            profile={profile}
+            onReactivate={() => mutations.reactivateAttendee.mutate()}
+            isReactivating={mutations.reactivateAttendee.isPending}
+          />
 
           <DetailTabs
             active={detailTab}
@@ -164,6 +168,8 @@ export default function UserDetailPanel({ selectedUser, items, onBack }: Props) 
                   />
                 </>
               )}
+
+              <ActivityHistory history={profile.history} />
             </div>
           )}
 
@@ -171,7 +177,6 @@ export default function UserDetailPanel({ selectedUser, items, onBack }: Props) 
             <div className="space-y-4">
               <RegistrationsList registrations={profile.registrations} />
               <OfferLinksTable offerLinks={profile.offer_links} />
-              <ActivityHistory history={profile.history} />
             </div>
           )}
         </div>

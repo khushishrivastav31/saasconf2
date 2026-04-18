@@ -36,7 +36,18 @@ export function useUserDetailMutations({
       invalidateUsers();
       showToast(res.data.message, 'success');
     },
-    onError: () => showToast('Failed to update access', 'error'),
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      if (axiosErr?.response?.status === 409) {
+        showToast(
+          axiosErr.response.data?.detail ||
+            'Cannot deactivate: user has active training assignments',
+          'error'
+        );
+      } else {
+        showToast('Failed to update access', 'error');
+      }
+    },
   });
 
   const resendInvite = useMutation({
@@ -141,6 +152,20 @@ export function useUserDetailMutations({
     onError: () => showToast('Failed to create portal account', 'error'),
   });
 
+  const reactivateAttendee = useMutation({
+    mutationFn: () => api.post(`/trainings/attendees/${attendeeId}/reactivate`),
+    onSuccess: () => {
+      invalidateUsers();
+      showToast('Attendee reactivated', 'success');
+    },
+    onError: (err: unknown) => {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
+        'Failed to reactivate attendee';
+      showToast(detail, 'error');
+    },
+  });
+
   return {
     toggleAccess,
     resendInvite,
@@ -152,5 +177,6 @@ export function useUserDetailMutations({
     uploadVideo,
     deleteVideo,
     createPortalAccount,
+    reactivateAttendee,
   };
 }
