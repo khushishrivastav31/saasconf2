@@ -54,6 +54,9 @@ def build_invoice_response(
         **invoice.__dict__,
         "events": [event.__dict__ for event in invoice.events] if invoice.events else [],
         "vat_auto_calculated": invoice.vat_auto_calculated,
+        # @property accessors must be spelled out — __dict__ only has Mapped columns
+        "recipient_email": invoice.recipient_email,
+        "recipient_vat_number": invoice.recipient_vat_number,
         # Ensure list fields are not None (Pydantic v2 requirement)
         "line_items": invoice.line_items or [],
         "contact_persons": invoice.contact_persons or [],

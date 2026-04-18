@@ -50,11 +50,12 @@ async def log_invoice_event(
     if user:
         if isinstance(user, CurrentUser):
             user_id = user.user_id
-            # CurrentUser doesn't have email, fetch from DB
+            # CurrentUser doesn't have email; fetch the row and read the
+            # property (email is an encrypted column accessor, not a Mapped).
             from sqlalchemy import select
 
-            result = await db.execute(select(User.email).where(User.id == user.user_id))
-            user_email = result.scalar_one_or_none()
+            db_user = (await db.execute(select(User).where(User.id == user.user_id))).scalar_one_or_none()
+            user_email = read_pii(db_user, "email") if db_user is not None else None
         else:  # User object
             user_id = user.id
             user_email = read_pii(user, "email")

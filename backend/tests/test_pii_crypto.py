@@ -180,7 +180,7 @@ def test_generate_pii_key_returns_valid_fernet_key() -> None:
 
 
 # ---------------------------------------------------------------------------
-# read_pii — display-read helper with plaintext fallback
+# read_pii — display-read helper (post-phase-f.2: encrypted-only)
 # ---------------------------------------------------------------------------
 
 
@@ -190,23 +190,18 @@ class _Row:
             setattr(self, k, v)
 
 
-def test_read_pii_prefers_encrypted_companion() -> None:
-    row = _Row(email="stale@old.tld", email_encrypted=encrypt_pii("fresh@new.tld"))
+def test_read_pii_decrypts_encrypted_companion() -> None:
+    row = _Row(email_encrypted=encrypt_pii("fresh@new.tld"))
     assert read_pii(row, "email") == "fresh@new.tld"
 
 
-def test_read_pii_falls_back_to_plaintext_when_encrypted_is_null() -> None:
-    row = _Row(email="legacy@example.com", email_encrypted=None)
-    assert read_pii(row, "email") == "legacy@example.com"
-
-
-def test_read_pii_returns_none_when_both_missing() -> None:
-    row = _Row(email=None, email_encrypted=None)
+def test_read_pii_returns_none_when_encrypted_is_null() -> None:
+    row = _Row(email_encrypted=None)
     assert read_pii(row, "email") is None
 
 
-def test_read_pii_returns_none_when_plaintext_empty_string() -> None:
-    row = _Row(email="", email_encrypted=None)
+def test_read_pii_returns_none_when_attribute_missing() -> None:
+    row = _Row()  # no email_encrypted at all
     assert read_pii(row, "email") is None
 
 

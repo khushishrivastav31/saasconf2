@@ -1,6 +1,5 @@
 """SQLAlchemy models."""
 
-from app.core.security.pii_dual_write import register_pii_dual_write_listeners
 from app.models.alumni import Alumni, AlumniSource
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.applicant_token import ApplicantEmailVerification, ApplicantRefreshToken
@@ -118,11 +117,6 @@ from app.models.user_tenant_role import TenantRoleLevel, TenantRoleScope, UserTe
 from app.models.user_totp import UserTOTP
 from app.models.volunteer_profile import VolunteerProfile
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
-
-# Wire up PII dual-write listeners now that every model class is defined
-# (pii_dual_write imports each PII-owning model by submodule, not via this
-# package, so importing it at the top of this file is safe).
-register_pii_dual_write_listeners()
 
 __all__ = [
     "Alumni",

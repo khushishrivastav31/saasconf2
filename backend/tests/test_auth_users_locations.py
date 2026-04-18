@@ -542,20 +542,23 @@ class TestUsers:
         tenant_admin_user: User,
         tenant_admin_token: str,
     ) -> None:
-        """Search filter narrows results by email/name."""
+        """Search filter narrows results by name (partial) and email (exact — encrypted column)."""
         unique = uuid.uuid4().hex[:8]
+        email = f"searchable-{unique}@test.com"
+        last_name = f"SearchablePerson{unique}"
         await client.post(
             USERS_URL,
             json={
-                "email": f"searchable-{unique}@test.com",
+                "email": email,
                 "password": DEFAULT_PASSWORD,
                 "first_name": "Searchable",
-                "last_name": "Person",
+                "last_name": last_name,
                 "role": "user",
             },
             headers=auth_headers(tenant_admin_token),
         )
 
+        # Partial last-name search (plaintext column — still ilike-searchable)
         resp = await client.get(
             USERS_URL,
             params={"search": unique},
@@ -564,7 +567,17 @@ class TestUsers:
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 1
-        assert any(unique in u["email"] for u in data["items"])
+        assert any(u["last_name"] == last_name for u in data["items"])
+
+        # Exact email lookup (encrypted column — only exact hash match works)
+        resp = await client.get(
+            USERS_URL,
+            params={"search": email},
+            headers=auth_headers(tenant_admin_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert any(u["email"] == email for u in data["items"])
 
     @pytest.mark.asyncio
     async def test_list_users_is_active_filter(

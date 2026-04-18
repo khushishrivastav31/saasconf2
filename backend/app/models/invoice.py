@@ -9,6 +9,7 @@ from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Numeric, Stri
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_vat, read_pii
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -56,7 +57,6 @@ class Invoice(Base):
 
     # Recipient information
     recipient_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    recipient_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     recipient_email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     recipient_email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     recipient_address_line1: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -65,7 +65,6 @@ class Invoice(Base):
     recipient_state: Mapped[str | None] = mapped_column(String(100), nullable=True)
     recipient_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recipient_country: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    recipient_vat_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recipient_vat_number_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     recipient_vat_number_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     procurement_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -161,6 +160,32 @@ class Invoice(Base):
             postgresql_where=text("invoice_number IS NOT NULL"),
         ),
     )
+
+    @property
+    def recipient_email(self) -> str | None:
+        return read_pii(self, "recipient_email")
+
+    @recipient_email.setter
+    def recipient_email(self, value: str | None) -> None:
+        if value is None:
+            self.recipient_email_encrypted = None
+            self.recipient_email_hash = None
+        else:
+            self.recipient_email_encrypted = encrypt_pii(value)
+            self.recipient_email_hash = hash_email(value)
+
+    @property
+    def recipient_vat_number(self) -> str | None:
+        return read_pii(self, "recipient_vat_number")
+
+    @recipient_vat_number.setter
+    def recipient_vat_number(self, value: str | None) -> None:
+        if value is None:
+            self.recipient_vat_number_encrypted = None
+            self.recipient_vat_number_hash = None
+        else:
+            self.recipient_vat_number_encrypted = encrypt_pii(value)
+            self.recipient_vat_number_hash = hash_vat(value)
 
     def __repr__(self) -> str:
         return f"<Invoice {self.invoice_number or 'DRAFT'}>"

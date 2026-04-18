@@ -52,7 +52,12 @@ async def list_portal_users(
 
     if search:
         q = f"%{search}%"
-        base = base.where(PortalUser.first_name.ilike(q) | PortalUser.last_name.ilike(q) | PortalUser.email.ilike(q))
+        name_clause = PortalUser.first_name.ilike(q) | PortalUser.last_name.ilike(q)
+        # Email is encrypted — only exact hash lookup is possible.
+        if "@" in search:
+            base = base.where(name_clause | (PortalUser.email_hash == hash_email(search)))
+        else:
+            base = base.where(name_clause)
 
     count_q = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_q)).scalar() or 0

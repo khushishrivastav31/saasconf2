@@ -44,6 +44,7 @@ export const trainingSettingsCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">Mark trainers as internal or external</li>
 <li class="text-gray-700 dark:text-gray-300">Assign which trainings and languages a trainer can deliver</li>
 <li class="text-gray-700 dark:text-gray-300">Delete trainers (tenant super users only)</li>
+<li class="text-gray-700 dark:text-gray-300">Search by first or last name (partial match); to find a trainer by email, enter the full address — email is encrypted at rest and only exact matches resolve</li>
 </ul>
 <strong>Unavailability:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">

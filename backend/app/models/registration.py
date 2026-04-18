@@ -9,6 +9,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone, hash_vat, read_pii
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -74,15 +75,12 @@ class BillingProfile(Base):
     # Contact person
     contact_first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_last_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    contact_phone: Mapped[str] = mapped_column(String(50), nullable=False)
     contact_phone_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     contact_phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    contact_email: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     contact_email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Tax / procurement
-    vat_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     vat_number_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     vat_number_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     vat_validated: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
@@ -107,6 +105,45 @@ class BillingProfile(Base):
         Index("idx_billing_profiles_conference", "conference_id"),
         Index("idx_billing_profiles_tenant_conference", "tenant_id", "conference_id"),
     )
+
+    @property
+    def contact_email(self) -> str | None:
+        return read_pii(self, "contact_email")
+
+    @contact_email.setter
+    def contact_email(self, value: str | None) -> None:
+        if value is None:
+            self.contact_email_encrypted = None
+            self.contact_email_hash = None
+        else:
+            self.contact_email_encrypted = encrypt_pii(value)
+            self.contact_email_hash = hash_email(value)
+
+    @property
+    def contact_phone(self) -> str | None:
+        return read_pii(self, "contact_phone")
+
+    @contact_phone.setter
+    def contact_phone(self, value: str | None) -> None:
+        if value is None:
+            self.contact_phone_encrypted = None
+            self.contact_phone_hash = None
+        else:
+            self.contact_phone_encrypted = encrypt_pii(value)
+            self.contact_phone_hash = hash_phone(value)
+
+    @property
+    def vat_number(self) -> str | None:
+        return read_pii(self, "vat_number")
+
+    @vat_number.setter
+    def vat_number(self, value: str | None) -> None:
+        if value is None:
+            self.vat_number_encrypted = None
+            self.vat_number_hash = None
+        else:
+            self.vat_number_encrypted = encrypt_pii(value)
+            self.vat_number_hash = hash_vat(value)
 
     def __repr__(self) -> str:
         return f"<BillingProfile {self.company_name or f'{self.contact_first_name} {self.contact_last_name}'}>"

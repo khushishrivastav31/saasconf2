@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
+from app.core.security.pii_crypto import hash_email
 from app.models.booking import BookingOption
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
@@ -166,9 +167,7 @@ async def test_simple_replacement_no_additional_items(
     assert data["old_registration"]["email"] == "old@example.com"
 
     # Verify old registration is hard-deleted from DB
-    result = await db_session.execute(
-        select(Registration).where(Registration.id == old_reg_id)
-    )
+    result = await db_session.execute(select(Registration).where(Registration.id == old_reg_id))
     assert result.scalar_one_or_none() is None, "Old registration should be deleted"
 
     # Verify new registration created
@@ -182,9 +181,7 @@ async def test_simple_replacement_no_additional_items(
     # Verify replacement record created with denormalized audit data
     assert "replacement_id" in data
     replacement_result = await db_session.execute(
-        select(RegistrationReplacement).where(
-            RegistrationReplacement.id == data["replacement_id"]
-        )
+        select(RegistrationReplacement).where(RegistrationReplacement.id == data["replacement_id"])
     )
     replacement = replacement_result.scalar_one()
     assert replacement.old_registration_id is None, "FK should be NULL after deletion"
@@ -192,9 +189,7 @@ async def test_simple_replacement_no_additional_items(
     assert replacement.old_attendee_name == "Old Attendee"
 
     # Verify old user lost conference access but account preserved
-    result = await db_session.execute(
-        select(User).where(User.email == "old@example.com")
-    )
+    result = await db_session.execute(select(User).where(User.email_hash == hash_email("old@example.com")))
     old_user = result.scalar_one_or_none()
     if old_user:
         access_result = await db_session.execute(
@@ -291,9 +286,7 @@ async def test_cannot_replace_cancelled_registration(
     reg_id = create_response.json()["registrations"][0]["id"]
 
     # Cancel it
-    result = await db_session.execute(
-        select(Registration).where(Registration.id == reg_id)
-    )
+    result = await db_session.execute(select(Registration).where(Registration.id == reg_id))
     reg = result.scalar_one()
     reg.status = RegistrationStatus.CANCELLED
     await db_session.commit()
@@ -465,9 +458,7 @@ async def test_replacement_creates_audit_trail(
     assert replacement.old_registration_id is None
 
     # Verify old registration no longer exists in DB
-    old_reg_result = await db_session.execute(
-        select(Registration).where(Registration.id == reg_id)
-    )
+    old_reg_result = await db_session.execute(select(Registration).where(Registration.id == reg_id))
     assert old_reg_result.scalar_one_or_none() is None
 
 
@@ -526,9 +517,7 @@ async def test_conference_access_management(
     assert response.status_code == 200
 
     # Verify new user has access
-    result = await db_session.execute(
-        select(User).where(User.email == "newaccess@example.com")
-    )
+    result = await db_session.execute(select(User).where(User.email_hash == hash_email("newaccess@example.com")))
     new_user = result.scalar_one_or_none()
     assert new_user is not None
 
@@ -542,7 +531,7 @@ async def test_conference_access_management(
 
     # Verify old user account still exists but no conference access
     old_user_result = await db_session.execute(
-        select(User).where(User.email == "oldaccess@example.com")
+        select(User).where(User.email_hash == hash_email("oldaccess@example.com"))
     )
     old_user = old_user_result.scalar_one_or_none()
     if old_user:  # May or may not exist depending on how fixtures work

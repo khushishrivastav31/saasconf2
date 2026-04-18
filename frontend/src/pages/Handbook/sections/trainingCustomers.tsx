@@ -17,7 +17,7 @@ export const trainingCustomersCategory: HandbookCategory = {
 <strong>What you can do:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300">Create new customers with company name, address, VAT number, and contact details</li>
-<li class="text-gray-700 dark:text-gray-300">Search and filter the customer list</li>
+<li class="text-gray-700 dark:text-gray-300">Search and filter the customer list (name and contact-person are partial match; email requires the full address because it is encrypted at rest)</li>
 <li class="text-gray-700 dark:text-gray-300">Click a customer to open the detail panel with tabs: Details, Contacts, Offers</li>
 <li class="text-gray-700 dark:text-gray-300">Set customer-specific default pricing and currency</li>
 <li class="text-gray-700 dark:text-gray-300">Add rich-text comments/notes per customer</li>

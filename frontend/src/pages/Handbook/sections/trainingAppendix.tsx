@@ -22,6 +22,7 @@ export const trainingAppendixCategory: HandbookCategory = {
 <tr class="border-b border-gray-100 dark:border-gray-700"><td class="px-3 py-2 text-gray-700 dark:text-gray-300"><strong>Slug</strong></td><td class="px-3 py-2 text-gray-700 dark:text-gray-300">A short code shown on calendar bars (e.g. "AWS-SA", "IREB-FL")</td></tr>
 <tr class="border-b border-gray-100 dark:border-gray-700"><td class="px-3 py-2 text-gray-700 dark:text-gray-300"><strong>Blocked Day</strong></td><td class="px-3 py-2 text-gray-700 dark:text-gray-300">A company-specific non-working day (distinct from public holidays)</td></tr>
 <tr class="border-b border-gray-100 dark:border-gray-700"><td class="px-3 py-2 text-gray-700 dark:text-gray-300"><strong>Snapshot</strong></td><td class="px-3 py-2 text-gray-700 dark:text-gray-300">A frozen copy of the program at the time of publishing, used for version comparison</td></tr>
+<tr class="border-b border-gray-100 dark:border-gray-700"><td class="px-3 py-2 text-gray-700 dark:text-gray-300"><strong>Encrypted PII</strong></td><td class="px-3 py-2 text-gray-700 dark:text-gray-300">Email, phone, and VAT numbers on customers, trainers, portal users, and invoices are encrypted in the database. Admin list searches match names with partial text, but email/phone/VAT only match the full value (because the database cannot scan inside encrypted text)</td></tr>
 </tbody></table></div>`,
           }}
         />

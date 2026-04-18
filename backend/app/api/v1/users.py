@@ -74,11 +74,13 @@ async def list_tenant_users(
     query = select(User).where(User.tenant_id == query_tenant_id).options(selectinload(User.tenant_roles))
 
     if search:
-        query = query.where(
-            unaccent_ilike(User.email, search)
-            | unaccent_ilike(User.first_name, search)
-            | unaccent_ilike(User.last_name, search)
-        )
+        name_clause = unaccent_ilike(User.first_name, search) | unaccent_ilike(User.last_name, search)
+        # Email is encrypted at rest — partial match is impossible; only exact
+        # (case/whitespace-normalized) matches resolve via email_hash.
+        if "@" in search:
+            query = query.where(name_clause | (User.email_hash == hash_email(search)))
+        else:
+            query = query.where(name_clause)
 
     if is_active is not None:
         query = query.where(User.is_active == is_active)

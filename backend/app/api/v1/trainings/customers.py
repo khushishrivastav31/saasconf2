@@ -8,6 +8,7 @@ from sqlalchemy import func, literal, select
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.search import unaccent_ilike
+from app.core.security.pii_crypto import hash_email
 from app.models.audit import AuditLog
 from app.models.customer import Customer
 from app.models.customer_offer import CustomerOffer
@@ -37,11 +38,12 @@ async def list_customers(
     base = select(Customer).where(_tenant_filter(current_user))
 
     if search:
-        base = base.where(
-            unaccent_ilike(Customer.name, search)
-            | unaccent_ilike(Customer.contact_person, search)
-            | unaccent_ilike(Customer.email, search)
-        )
+        name_clause = unaccent_ilike(Customer.name, search) | unaccent_ilike(Customer.contact_person, search)
+        # Email is encrypted — only exact hash lookup is possible.
+        if "@" in search:
+            base = base.where(name_clause | (Customer.email_hash == hash_email(search)))
+        else:
+            base = base.where(name_clause)
     if is_active is not None:
         base = base.where(Customer.is_active == is_active)
 

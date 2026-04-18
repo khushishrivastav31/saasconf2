@@ -9,6 +9,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.security.pii_crypto import encrypt_pii, hash_email, read_pii
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -39,7 +40,6 @@ class User(Base):
     tenant_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True
     )
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
     email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -76,13 +76,22 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
-    # Indexes
-    __table_args__ = (
-        Index("idx_users_tenant", "tenant_id"),
-        Index("idx_users_email", "email"),
-        # Unique constraint: email is unique within a tenant (or globally for super admins)
-        Index("idx_users_tenant_email", "tenant_id", "email", unique=True),
-    )
+    # Indexes — plaintext-email indexes retired in migration 199; uniqueness
+    # is enforced via the (tenant_id, email_hash) index created in migration 197.
+    __table_args__ = (Index("idx_users_tenant", "tenant_id"),)
+
+    @property
+    def email(self) -> str | None:
+        return read_pii(self, "email")
+
+    @email.setter
+    def email(self, value: str | None) -> None:
+        if value is None:
+            self.email_encrypted = None
+            self.email_hash = None
+        else:
+            self.email_encrypted = encrypt_pii(value)
+            self.email_hash = hash_email(value)
 
     @property
     def is_super_admin(self) -> bool:

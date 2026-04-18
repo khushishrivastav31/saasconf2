@@ -68,22 +68,18 @@ def generate_pii_key() -> str:
 
 
 def read_pii(obj: Any, plaintext_attr: str) -> str | None:
-    """Return the decrypted PII value for an ORM row, falling back to plaintext.
+    """Return the decrypted PII value for an ORM row.
 
-    Prefers the encrypted companion (``<attr>_encrypted``) when present, so a
-    future drop of the plaintext column is transparent. Falls back to the
-    plaintext attribute for rows that pre-date the dual-write listener and
-    were never backfilled. Returns ``None`` when both are empty.
-
-    Used across display-read sites during Step 37 phase (f.1). After migration
-    199 drops the plaintext columns, the fallback branch becomes dead and this
-    helper collapses to a pure ``decrypt_pii`` wrapper.
+    Reads the encrypted companion column (``<attr>_encrypted``) and decrypts
+    it via MultiFernet. Returns ``None`` when the column is NULL. The
+    ``plaintext_attr`` argument is the conventional field name (``email``,
+    ``phone``, ``vat_number``) — kept so existing call sites stay stable
+    after plaintext columns were dropped in migration 199.
     """
     encrypted = getattr(obj, f"{plaintext_attr}_encrypted", None)
     if encrypted:
         return decrypt_pii(encrypted)
-    value = getattr(obj, plaintext_attr, None)
-    return value if value else None
+    return None
 
 
 # ---------------------------------------------------------------------------

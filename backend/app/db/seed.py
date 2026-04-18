@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -23,37 +23,19 @@ settings = get_settings()
 async def seed_super_admin(session: AsyncSession) -> None:
     """Create the initial super admin user if it doesn't exist.
 
-    Resilient to pre-phase-(e) rows with NULL email_hash: falls back to
-    plaintext email match and self-heals the hash. Uses .first() so a DB
-    that already contains duplicates (e.g. from a prior buggy seed run)
-    still deploys cleanly — we update the oldest matching row rather than
-    crashing with MultipleResultsFound.
+    Uses .first() with created_at ordering so a DB that already contains
+    duplicates (e.g. from a prior buggy seed run) still deploys cleanly —
+    we update the oldest matching row rather than crashing.
     """
     email = settings.SUPER_ADMIN_EMAIL
-    stmt = (
-        select(User)
-        .where(
-            or_(
-                User.email_hash == hash_email(email),
-                and_(User.email_hash.is_(None), func.lower(User.email) == email.lower()),
-            )
-        )
-        .order_by(User.created_at.asc())
-    )
+    stmt = select(User).where(User.email_hash == hash_email(email)).order_by(User.created_at.asc())
     existing = (await session.execute(stmt)).scalars().first()
 
     if existing:
-        changed = False
-        if existing.email_hash is None:
-            existing.email_hash = hash_email(email)
-            changed = True
-            logger.info(f"Super admin email_hash backfilled in place: {email}")
         if not verify_password(settings.SUPER_ADMIN_PASSWORD, existing.password_hash):
             existing.password_hash = hash_password(settings.SUPER_ADMIN_PASSWORD)
-            changed = True
-            logger.info(f"Super admin password updated: {email}")
-        if changed:
             await session.commit()
+            logger.info(f"Super admin password updated: {email}")
         else:
             logger.info(f"Super admin already exists: {email}")
         return

@@ -8,7 +8,7 @@ from sqlalchemy import func, literal, select
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
-from app.core.security.pii_crypto import read_pii
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.models.audit import AuditLog
 from app.models.trainer import (
     Trainer,
@@ -86,8 +86,9 @@ async def list_trainers(
 
     if search:
         search_filter = unaccent_ilike(Trainer.first_name, search) | unaccent_ilike(Trainer.last_name, search)
+        # Email is encrypted — only exact hash lookup is possible.
         if "@" in search:
-            search_filter = search_filter | unaccent_ilike(Trainer.email, search)
+            search_filter = search_filter | (Trainer.email_hash == hash_email(search))
         query = query.where(search_filter)
 
     query = query.order_by(Trainer.last_name, Trainer.first_name)

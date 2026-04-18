@@ -14,7 +14,7 @@ from app.core.csv_export import stream_csv_export
 from app.core.dependencies import DbSessionDep, SuperAdminDep
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
-from app.core.security.pii_crypto import read_pii
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.core.utils import utcnow
 from app.models.audit import AuditLog
 from app.models.user import User
@@ -110,17 +110,18 @@ def _build_audit_query(
     # Text search - search in action, resource_type, ip_address, and details
     if search:
         search_term = search
-        query = query.outerjoin(AuditLog.user).where(
-            or_(
-                unaccent_ilike(AuditLog.action, search_term),
-                unaccent_ilike(AuditLog.resource_type, search_term),
-                unaccent_ilike(func.cast(AuditLog.ip_address, String), search_term),
-                unaccent_ilike(func.cast(AuditLog.details, String), search_term),
-                unaccent_ilike(User.email, search_term),
-                unaccent_ilike(User.first_name, search_term),
-                unaccent_ilike(User.last_name, search_term),
-            )
-        )
+        clauses = [
+            unaccent_ilike(AuditLog.action, search_term),
+            unaccent_ilike(AuditLog.resource_type, search_term),
+            unaccent_ilike(func.cast(AuditLog.ip_address, String), search_term),
+            unaccent_ilike(func.cast(AuditLog.details, String), search_term),
+            unaccent_ilike(User.first_name, search_term),
+            unaccent_ilike(User.last_name, search_term),
+        ]
+        # Email is encrypted — only exact hash lookup is possible.
+        if "@" in search_term:
+            clauses.append(User.email_hash == hash_email(search_term))
+        query = query.outerjoin(AuditLog.user).where(or_(*clauses))
 
     return query
 

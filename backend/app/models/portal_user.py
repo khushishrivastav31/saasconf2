@@ -12,6 +12,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone, read_pii
 from app.db.base import Base
 
 
@@ -25,13 +26,11 @@ class PortalUser(Base):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
 
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
     email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
-    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     phone_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     pronouns: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -54,10 +53,35 @@ class PortalUser(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (
-        Index("uq_portal_users_tenant_email", "tenant_id", "email", unique=True),
-        Index("idx_portal_users_tenant", "tenant_id"),
-    )
+    # Legacy (tenant_id, email) unique index retired in migration 199; uniqueness
+    # is enforced via (tenant_id, email_hash) created in migration 197.
+    __table_args__ = (Index("idx_portal_users_tenant", "tenant_id"),)
+
+    @property
+    def email(self) -> str | None:
+        return read_pii(self, "email")
+
+    @email.setter
+    def email(self, value: str | None) -> None:
+        if value is None:
+            self.email_encrypted = None
+            self.email_hash = None
+        else:
+            self.email_encrypted = encrypt_pii(value)
+            self.email_hash = hash_email(value)
+
+    @property
+    def phone(self) -> str | None:
+        return read_pii(self, "phone")
+
+    @phone.setter
+    def phone(self, value: str | None) -> None:
+        if value is None:
+            self.phone_encrypted = None
+            self.phone_hash = None
+        else:
+            self.phone_encrypted = encrypt_pii(value)
+            self.phone_hash = hash_phone(value)
 
 
 class PortalRefreshToken(Base):
