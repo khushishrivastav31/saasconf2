@@ -1346,6 +1346,174 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/privacy-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Privacy Requests
+     * @description Paginated list of privacy requests for the current tenant.
+     */
+    get: operations['list_privacy_requests_api_v1_privacy_requests_get'];
+    put?: never;
+    /**
+     * Create Privacy Request
+     * @description Log a new privacy request. Defaults status to ``pending_review``.
+     */
+    post: operations['create_privacy_request_api_v1_privacy_requests_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/privacy-requests/{request_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Privacy Request
+     * @description Fetch a single privacy request. Emits a ``PRIVACY_REQUEST_VIEW`` audit row.
+     */
+    get: operations['get_privacy_request_api_v1_privacy_requests__request_id__get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/privacy-requests/{request_id}/approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Approve Privacy Request
+     * @description Approve an erasure request. Export requests use ``/generate-export`` instead.
+     */
+    post: operations['approve_privacy_request_api_v1_privacy_requests__request_id__approve_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/privacy-requests/{request_id}/reject': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reject Privacy Request
+     * @description Reject a privacy request with a mandatory reason.
+     */
+    post: operations['reject_privacy_request_api_v1_privacy_requests__request_id__reject_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/privacy-requests/{request_id}/generate-export': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Generate Privacy Export
+     * @description Build the Art. 15 export ZIP and mark the request ``completed``.
+     *
+     *     The ZIP bytes are not persisted — ``/download`` re-runs
+     *     :func:`build_export` when the admin clicks through. We only store the
+     *     manifest + the relative download path.
+     */
+    post: operations['generate_privacy_export_api_v1_privacy_requests__request_id__generate_export_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/privacy-requests/{request_id}/preview-erasure': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Preview Privacy Erasure
+     * @description Enumerate rows that would be touched by an erasure. Read-only.
+     */
+    post: operations['preview_privacy_erasure_api_v1_privacy_requests__request_id__preview_erasure_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/privacy-requests/{request_id}/execute-erasure': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Execute Privacy Erasure
+     * @description Commit the chosen erasure actions. Irreversible.
+     */
+    post: operations['execute_privacy_erasure_api_v1_privacy_requests__request_id__execute_erasure_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/privacy-requests/{request_id}/download': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download Privacy Export
+     * @description Stream the Art. 15 export ZIP. Returns 410 after the 7-day window.
+     */
+    get: operations['download_privacy_export_api_v1_privacy_requests__request_id__download_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/system-email-templates': {
     parameters: {
       query?: never;
@@ -16989,6 +17157,77 @@ export type components = {
       /** Custom Fields */
       custom_fields: components['schemas']['CustomFieldMeta'][];
     };
+    /**
+     * ErasureExecuteRequest
+     * @description Body for ``POST /privacy-requests/{id}/execute-erasure``.
+     *
+     *     ``table_actions`` is ``{table_name: "delete" | "anonymize" | "skip"}``.
+     *     Tables omitted from the payload fall back to the preview's default.
+     */
+    ErasureExecuteRequest: {
+      /** Table Actions */
+      table_actions?: {
+        [key: string]: 'delete' | 'anonymize' | 'skip';
+      };
+    };
+    /**
+     * ErasureExecuteResponse
+     * @description Result of a successful ``/execute-erasure`` call.
+     */
+    ErasureExecuteResponse: {
+      /**
+       * Executed At
+       * Format: date-time
+       */
+      executed_at: string;
+      /** Manifest */
+      manifest: {
+        [key: string]: components['schemas']['ErasureManifestEntrySchema'];
+      };
+    };
+    /** ErasureManifestEntrySchema */
+    ErasureManifestEntrySchema: {
+      /**
+       * Action
+       * @enum {string}
+       */
+      action: 'delete' | 'anonymize' | 'skip';
+      /** Affected */
+      affected: number;
+    };
+    /**
+     * ErasurePreviewResponse
+     * @description Preview payload returned before the admin commits an erasure.
+     */
+    ErasurePreviewResponse: {
+      /** Entries */
+      entries: components['schemas']['ErasureTableEntrySchema'][];
+      /** Summary */
+      summary: {
+        [key: string]: number;
+      };
+    };
+    /**
+     * ErasureTableEntrySchema
+     * @description One row in the erasure preview — per PII-owning table.
+     */
+    ErasureTableEntrySchema: {
+      /** Table */
+      table: string;
+      /** Count */
+      count: number;
+      /** Row Ids */
+      row_ids: string[];
+      /**
+       * Default Action
+       * @enum {string}
+       */
+      default_action: 'delete' | 'anonymize' | 'skip';
+      /** Allowed Actions */
+      allowed_actions: ('delete' | 'anonymize' | 'skip')[];
+      /** Locked Reason */
+      locked_reason?: string | null;
+    };
     /** ExpenseCategoryCreate */
     ExpenseCategoryCreate: {
       /** Name */
@@ -17259,6 +17498,23 @@ export type components = {
        * @default true
        */
       is_active?: boolean;
+    };
+    /**
+     * GenerateExportResponse
+     * @description Result of a successful ``/generate-export`` call.
+     */
+    GenerateExportResponse: {
+      /** Download Url */
+      download_url: string;
+      /** Record Counts */
+      record_counts: {
+        [key: string]: number;
+      };
+      /**
+       * Executed At
+       * Format: date-time
+       */
+      executed_at: string;
     };
     /**
      * GlobalUnreadCountResponse
@@ -21254,6 +21510,92 @@ export type components = {
       /** Description */
       description?: string | null;
     };
+    /**
+     * PrivacyRequestCreate
+     * @description Input payload for creating a new privacy request.
+     */
+    PrivacyRequestCreate: {
+      request_type: components['schemas']['PrivacyRequestType'];
+      /** Subject Emails */
+      subject_emails: string[];
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * PrivacyRequestReject
+     * @description Dedicated reject payload — ``rejection_reason`` is required.
+     */
+    PrivacyRequestReject: {
+      /** Rejection Reason */
+      rejection_reason: string;
+    };
+    /**
+     * PrivacyRequestResponse
+     * @description Response payload for a privacy request.
+     *
+     *     ``subject_emails`` is surfaced only to users already allowed to see the
+     *     request (scope check happens in the API layer); the column storage is
+     *     encrypted so this is safe to include in the serialization.
+     */
+    PrivacyRequestResponse: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Tenant Id
+       * Format: uuid
+       */
+      tenant_id: string;
+      request_type: components['schemas']['PrivacyRequestType'];
+      /** Subject Emails */
+      subject_emails: string[];
+      status: components['schemas']['PrivacyRequestStatus'];
+      /** Created By */
+      created_by: string | null;
+      /** Portal User Id */
+      portal_user_id: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Reviewed By */
+      reviewed_by: string | null;
+      /** Reviewed At */
+      reviewed_at: string | null;
+      /** Executed At */
+      executed_at: string | null;
+      /** Completion Artifact Url */
+      completion_artifact_url: string | null;
+      /** Execution Manifest */
+      execution_manifest: {
+        [key: string]: unknown;
+      } | null;
+      /** Rejection Reason */
+      rejection_reason: string | null;
+      /** Notes */
+      notes: string | null;
+    };
+    /**
+     * PrivacyRequestStatus
+     * @description Request lifecycle.
+     * @enum {string}
+     */
+    PrivacyRequestStatus:
+      | 'pending_review'
+      | 'approved'
+      | 'rejected'
+      | 'executing'
+      | 'completed'
+      | 'failed';
+    /**
+     * PrivacyRequestType
+     * @description Kind of privacy request.
+     * @enum {string}
+     */
+    PrivacyRequestType: 'export' | 'erasure';
     /**
      * ProgramDayCreate
      * @description Schema for creating a program day.
@@ -30377,6 +30719,320 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_privacy_requests_api_v1_privacy_requests_get: {
+    parameters: {
+      query?: {
+        status?: components['schemas']['PrivacyRequestStatus'] | null;
+        request_type?: components['schemas']['PrivacyRequestType'] | null;
+        /** @description Plaintext email to match against subject_email_hashes. */
+        q?: string | null;
+        page?: number;
+        page_size?: number;
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_privacy_request_api_v1_privacy_requests_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PrivacyRequestCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PrivacyRequestResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_privacy_request_api_v1_privacy_requests__request_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PrivacyRequestResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  approve_privacy_request_api_v1_privacy_requests__request_id__approve_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PrivacyRequestResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  reject_privacy_request_api_v1_privacy_requests__request_id__reject_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PrivacyRequestReject'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PrivacyRequestResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  generate_privacy_export_api_v1_privacy_requests__request_id__generate_export_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GenerateExportResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  preview_privacy_erasure_api_v1_privacy_requests__request_id__preview_erasure_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErasurePreviewResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  execute_privacy_erasure_api_v1_privacy_requests__request_id__execute_erasure_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ErasureExecuteRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErasureExecuteResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  download_privacy_export_api_v1_privacy_requests__request_id__download_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
         };
       };
       /** @description Validation Error */
