@@ -1,56 +1,91 @@
-import { describe, it, expect, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
-import { useApplicantAuth } from "../useApplicantAuth";
-import { ApplicantAuthContext } from "../../contexts/ApplicantAuthContext";
-import type { ApplicantProfile } from "../../types/portal";
+import { describe, it, expect, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { useApplicantAuth } from '../useApplicantAuth';
+import { ApplicantAuthContext } from '../../contexts/ApplicantAuthContext';
+import type { ApplicantProfile, PortalMe } from '../../types/portal';
 
-describe("useApplicantAuth", () => {
-  describe("when used outside ApplicantAuthProvider", () => {
-    it("throws an error", () => {
+describe('useApplicantAuth', () => {
+  describe('when used outside ApplicantAuthProvider', () => {
+    it('throws an error', () => {
       // Suppress console.error for this test since we expect an error
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(() => {
         renderHook(() => useApplicantAuth());
-      }).toThrow("useApplicantAuth must be used within an ApplicantAuthProvider");
+      }).toThrow('useApplicantAuth must be used within an ApplicantAuthProvider');
 
       consoleSpy.mockRestore();
     });
   });
 
-  describe("when used inside ApplicantAuthProvider", () => {
+  describe('when used inside ApplicantAuthProvider', () => {
     const mockApplicant: ApplicantProfile = {
-      id: "applicant-123",
-      email: "applicant@example.com",
-      first_name: "Test",
-      last_name: "Applicant",
-      pronouns: "they/them",
-      phone: "+1234567890",
-      title: "Speaker",
-      company: "Tech Corp",
-      bio: "A test bio",
-      social_links: { linkedin: "https://linkedin.com/in/test" },
+      id: 'applicant-123',
+      email: 'applicant@example.com',
+      first_name: 'Test',
+      last_name: 'Applicant',
+      pronouns: 'they/them',
+      phone: '+1234567890',
+      title: 'Speaker',
+      company: 'Tech Corp',
+      address_line_1: null,
+      address_line_2: null,
+      city: null,
+      postal_code: null,
+      country: null,
+      bio: 'A test bio',
+      social_links: { linkedin: 'https://linkedin.com/in/test' },
       needs_accessibility: false,
       accessibility_details: null,
       agrees_to_recording: true,
+      allow_out_of_timeframe: false,
+      message_notifications_enabled: true,
+      theme_preference: null,
       picture_url: null,
       video_url: null,
-      created_at: "2024-01-01T00:00:00Z",
+      created_at: '2024-01-01T00:00:00Z',
+    };
+
+    const mockPortalMe: PortalMe = {
+      id: 'portal-user-123',
+      email: 'applicant@example.com',
+      first_name: 'Test',
+      last_name: 'Applicant',
+      phone: '+1234567890',
+      pronouns: 'they/them',
+      title: 'Speaker',
+      company: 'Tech Corp',
+      bio: 'A test bio',
+      social_links: { linkedin: 'https://linkedin.com/in/test' },
+      address_line_1: null,
+      address_line_2: null,
+      city: null,
+      postal_code: null,
+      country: null,
+      theme_preference: null,
+      is_active: true,
+      email_verified: true,
+      last_login_at: null,
+      created_at: '2024-01-01T00:00:00Z',
+      has_conference_account: true,
+      has_training_account: false,
+      cfp_applicant_id: 'applicant-123',
+      training_attendee_id: null,
+      training_attendee_status: null,
     };
 
     const mockContextValue = {
       applicant: mockApplicant,
+      portalMe: mockPortalMe,
       isLoading: false,
-      tenantSlug: "test-tenant",
+      tenantSlug: 'test-tenant',
       login: vi.fn(),
       register: vi.fn(),
       logout: vi.fn(),
       refreshApplicant: vi.fn(),
     };
 
-    it("returns the context value", () => {
+    it('returns the context value', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <ApplicantAuthContext.Provider value={mockContextValue}>
           {children}
@@ -62,7 +97,7 @@ describe("useApplicantAuth", () => {
       expect(result.current).toBe(mockContextValue);
     });
 
-    it("returns the applicant from context", () => {
+    it('returns the applicant from context', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <ApplicantAuthContext.Provider value={mockContextValue}>
           {children}
@@ -72,11 +107,11 @@ describe("useApplicantAuth", () => {
       const { result } = renderHook(() => useApplicantAuth(), { wrapper });
 
       expect(result.current.applicant).toEqual(mockApplicant);
-      expect(result.current.applicant?.email).toBe("applicant@example.com");
-      expect(result.current.applicant?.first_name).toBe("Test");
+      expect(result.current.applicant?.email).toBe('applicant@example.com');
+      expect(result.current.applicant?.first_name).toBe('Test');
     });
 
-    it("returns isLoading state from context", () => {
+    it('returns isLoading state from context', () => {
       const loadingContext = {
         ...mockContextValue,
         isLoading: true,
@@ -93,7 +128,7 @@ describe("useApplicantAuth", () => {
       expect(result.current.isLoading).toBe(true);
     });
 
-    it("returns tenantSlug from context", () => {
+    it('returns tenantSlug from context', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <ApplicantAuthContext.Provider value={mockContextValue}>
           {children}
@@ -102,10 +137,10 @@ describe("useApplicantAuth", () => {
 
       const { result } = renderHook(() => useApplicantAuth(), { wrapper });
 
-      expect(result.current.tenantSlug).toBe("test-tenant");
+      expect(result.current.tenantSlug).toBe('test-tenant');
     });
 
-    it("returns login function from context", () => {
+    it('returns login function from context', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <ApplicantAuthContext.Provider value={mockContextValue}>
           {children}
@@ -115,10 +150,10 @@ describe("useApplicantAuth", () => {
       const { result } = renderHook(() => useApplicantAuth(), { wrapper });
 
       expect(result.current.login).toBe(mockContextValue.login);
-      expect(typeof result.current.login).toBe("function");
+      expect(typeof result.current.login).toBe('function');
     });
 
-    it("returns register function from context", () => {
+    it('returns register function from context', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <ApplicantAuthContext.Provider value={mockContextValue}>
           {children}
@@ -128,10 +163,10 @@ describe("useApplicantAuth", () => {
       const { result } = renderHook(() => useApplicantAuth(), { wrapper });
 
       expect(result.current.register).toBe(mockContextValue.register);
-      expect(typeof result.current.register).toBe("function");
+      expect(typeof result.current.register).toBe('function');
     });
 
-    it("returns logout function from context", () => {
+    it('returns logout function from context', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <ApplicantAuthContext.Provider value={mockContextValue}>
           {children}
@@ -141,10 +176,10 @@ describe("useApplicantAuth", () => {
       const { result } = renderHook(() => useApplicantAuth(), { wrapper });
 
       expect(result.current.logout).toBe(mockContextValue.logout);
-      expect(typeof result.current.logout).toBe("function");
+      expect(typeof result.current.logout).toBe('function');
     });
 
-    it("returns refreshApplicant function from context", () => {
+    it('returns refreshApplicant function from context', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <ApplicantAuthContext.Provider value={mockContextValue}>
           {children}
@@ -154,10 +189,10 @@ describe("useApplicantAuth", () => {
       const { result } = renderHook(() => useApplicantAuth(), { wrapper });
 
       expect(result.current.refreshApplicant).toBe(mockContextValue.refreshApplicant);
-      expect(typeof result.current.refreshApplicant).toBe("function");
+      expect(typeof result.current.refreshApplicant).toBe('function');
     });
 
-    it("returns null applicant when not authenticated", () => {
+    it('returns null applicant when not authenticated', () => {
       const unauthenticatedContext = {
         ...mockContextValue,
         applicant: null,
@@ -174,10 +209,10 @@ describe("useApplicantAuth", () => {
       expect(result.current.applicant).toBeNull();
     });
 
-    it("returns empty tenantSlug when not set", () => {
+    it('returns empty tenantSlug when not set', () => {
       const noTenantContext = {
         ...mockContextValue,
-        tenantSlug: "",
+        tenantSlug: '',
       };
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -188,7 +223,7 @@ describe("useApplicantAuth", () => {
 
       const { result } = renderHook(() => useApplicantAuth(), { wrapper });
 
-      expect(result.current.tenantSlug).toBe("");
+      expect(result.current.tenantSlug).toBe('');
     });
   });
 });

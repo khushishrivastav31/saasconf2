@@ -17,6 +17,7 @@ import type {
   ApplicantProfile,
   ApplicantLoginRequest,
   ApplicantRegisterRequest,
+  PortalMe,
 } from './types/portal';
 
 // ── Re-exports from @testing-library/react ──────────────────────────────────
@@ -70,13 +71,43 @@ export const mockApplicant: ApplicantProfile = {
 /** The shape returned by makeApplicantAuthContext — matches ApplicantAuthContextType. */
 export interface ApplicantAuthContextValue {
   applicant: ApplicantProfile | null;
+  portalMe: PortalMe | null;
   isLoading: boolean;
   tenantSlug: string;
-  login: (credentials: ApplicantLoginRequest) => Promise<void>;
+  login: (credentials: ApplicantLoginRequest) => Promise<PortalMe>;
   register: (data: ApplicantRegisterRequest) => Promise<string>;
   logout: () => void;
   refreshApplicant: () => Promise<void>;
 }
+
+/** A PortalMe fixture matching mockApplicant (CFP + training both enabled for tests that care). */
+export const mockPortalMe: PortalMe = {
+  id: 'portal-user-1',
+  email: 'speaker@example.com',
+  first_name: 'Jane',
+  last_name: 'Speaker',
+  phone: '555-0100',
+  pronouns: null,
+  title: 'Engineer',
+  company: 'Acme Corp',
+  bio: 'A seasoned conference speaker.',
+  social_links: {},
+  address_line_1: null,
+  address_line_2: null,
+  city: null,
+  postal_code: null,
+  country: null,
+  theme_preference: null,
+  is_active: true,
+  email_verified: true,
+  last_login_at: null,
+  created_at: '2025-01-01T00:00:00Z',
+  has_conference_account: true,
+  has_training_account: false,
+  cfp_applicant_id: 'applicant-1',
+  training_attendee_id: null,
+  training_attendee_status: null,
+};
 
 /**
  * Builds a full ApplicantAuthContext value with vi.fn() stubs for all methods.
@@ -88,11 +119,15 @@ export function makeApplicantAuthContext(
   overrides?: Partial<ApplicantProfile> | null
 ): ApplicantAuthContextValue {
   const applicant = overrides === null ? null : { ...mockApplicant, ...overrides };
+  const portalMe = overrides === null ? null : mockPortalMe;
   return {
     applicant,
+    portalMe,
     isLoading: false,
     tenantSlug: 'acme',
-    login: vi.fn() as unknown as (credentials: ApplicantLoginRequest) => Promise<void>,
+    login: vi.fn().mockResolvedValue(mockPortalMe) as unknown as (
+      credentials: ApplicantLoginRequest
+    ) => Promise<PortalMe>,
     register: vi.fn() as unknown as (data: ApplicantRegisterRequest) => Promise<string>,
     logout: vi.fn() as unknown as () => void,
     refreshApplicant: vi.fn().mockResolvedValue(undefined) as unknown as () => Promise<void>,

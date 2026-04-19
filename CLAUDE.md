@@ -82,17 +82,19 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed** (2026-04-19, pushed): **GDPR Phase 4 — portal self-service export + erasure** (commit pending from prior session recovery; see below). Backend split + allowlist + canary scan + 4 portal endpoints + composite `/portal/me` extension.
-- **In progress — pending commit approval (COMMIT 1 of portal unification Phase 2.5)**: **Backend dual-token preparation**. Files:
-  - New: `backend/app/core/security/portal_compat.py` — `decode_portal_or_applicant_token()` returns `(token_type, payload)` for either JWT issuer (same secret, differ by `type` claim).
-  - New: `backend/app/core/portal_linkage.py` — `ensure_portal_user_for_applicant()` creates/links a portal_user row for an orphan CFP applicant (migration 192 excluded any applicant with empty `password_hash`); idempotent, reuses an existing portal_user under the same email_hash instead of duplicating.
-  - Modified: `backend/app/core/applicant_dependencies.py::get_current_applicant` — now accepts both token types. For `portal_access` tokens, resolves CFPApplicant via `portal_user_id == sub`; training-only portal users get 401.
-  - Modified: `backend/app/api/v1/cfp_portal/auth.py::login_applicant` — on successful legacy login, invokes `ensure_portal_user_for_applicant` so dormant orphans self-heal on next login.
-  - Modified: `backend/app/api/v1/portal_auth.py::get_portal_profile` (`/portal/unified/me`) — now returns the flattened composite profile (pronouns, title, company, bio, social_links, full address, theme_preference, has_*_account, *_id) so the unified frontend has one "who am I" call. Added `PATCH /portal/unified/me` (`PortalMePatch`) for UI-only preference updates — currently just theme_preference, validated as `"light"|"dark"`.
-  - Migration `203_portal_user_theme_preference.py`: adds `portal_users.theme_preference VARCHAR(5) NULL`, backfills from linked `cfp_applicants.theme_preference` where the portal_user has none.
-  - Model: `PortalUser.theme_preference` added. `lookups.py::PORTAL_EXPORT_FIELDS["portal_users"]` extended with `theme_preference` (the allowlist coverage guard caught this automatically).
-  - Script: `backend/scripts/backfill_orphan_portal_users.py` — one-shot CLI (`python -m scripts.backfill_orphan_portal_users`) to heal all orphans in bulk per environment; safe to re-run.
-  - Tests: `backend/tests/test_portal_dual_token.py` — 11 new tests across 3 classes (`TestDualTokenAcceptance` ×4: applicant token, portal token, training-only portal_user gets 401, admin token rejected; `TestOrphanAutoHeal` ×4: ensure-new, ensure-dedupe-to-existing, legacy-login-heals, backfill-script-heals; `TestCompositePortalMe` ×3: composite fields, PATCH theme, reject invalid theme).
-  - All green: backend mypy clean, ruff clean, **25/25 new+Phase 4 tests pass**, **full backend suite 2921 pass / 56 skip / 0 fail** (after adding `theme_preference` to allowlist).
-- **Next after commit**: Commit 2 (frontend unified auth context + API client merge — `ApplicantAuthContext` + `portalApi.ts` + `trainingPortalApi.ts` consolidate into a single `PortalAuthContext` + `portalApi.ts` using `portal_access_token` only). Commit 3 (frontend route unification — canonical `/:tenantSlug/portal/*` + permanent redirects from old paths). Commit 4 (cleanup — delete `pages/TrainingPortal/`, `ApplicantAuthContext.tsx`, `config/portalApi.ts` shim). Commit 5 (test-debt backfill). Then stage-deploy + manual portal dry-run. Plan lives at `.claude/plans/portal-unification-phase-2-5.md`.
-- **Status**: `main` clean at origin. Phase 4 bundle + Commit 1 of unification uncommitted — **ask user before committing each**.
+- **Committed locally (not pushed)** — Portal unification Phase 2.5:
+  - `bed34be` Commit 1: backend dual-token + orphan heal + composite `/portal/unified/me`
+  - `fd95d84` Commit 2: unified frontend API client (one `portalApi.ts`, one token pair)
+  - `2696d3a` Commit 3: cross-portal sidebar links + `PrivacyMyDataPanel` in CFP portal
+- **In progress — pending commit approval (Commit 4 of 5)**: **Auth-context unification for training-only users**. Files modified:
+  - `frontend/src/contexts/ApplicantAuthContext.tsx` — now fetches `/portal/unified/me` first (always) and only calls `/portal/me` when `has_conference_account`. Exposes new `portalMe: PortalMe | null` on context. `login()` returns the `PortalMe` payload so callers can branch on capability flags. Training-only users get `applicant: null` + populated `portalMe` (no token clearing).
+  - `frontend/src/pages/portal/PortalLayout.tsx` — when `!applicant` but `portalMe` shows training-only, `<Navigate>` to `/:slug/trainings/portal/dashboard` instead of login redirect.
+  - `frontend/src/pages/portal/LoginPage.tsx` — post-login navigates to trainings dashboard if `has_conference_account === false && has_training_account === true`; else the existing `${basePath}/news` target.
+  - `frontend/src/App.tsx` — `/:tenantSlug/trainings/portal/login` now renders `<LegacyLoginRedirect>` (→ `/:tenantSlug/portal/user/login`). Dropped now-unused `TrainingPortalLogin` lazy import.
+  - `frontend/src/types/portal.ts` — new `PortalMe` interface mirroring backend composite response.
+  - `frontend/src/test-utils.tsx` — `ApplicantAuthContextValue` gets `portalMe`; `makeApplicantAuthContext()` returns a `mockPortalMe` fixture and `login` now resolves to `PortalMe`.
+  - `frontend/src/contexts/__tests__/ApplicantAuthContext.test.tsx` — reworked with URL-keyed `mockPortalGet()` helper; added "training-only user exposes portalMe without applicant" + "training-only login skips /portal/me" cases.
+  - `frontend/src/hooks/__tests__/useApplicantAuth.test.tsx` — mock now includes `portalMe` + missing ApplicantProfile fields (address_*, allow_out_of_timeframe, message_notifications_enabled, theme_preference).
+  - All green: tsc clean, eslint 0 errors (105 pre-existing warnings), **27/27 ApplicantAuth tests pass**, **full frontend suite 1842/1842 pass**, backend mypy + ruff clean, 11/11 dual-token tests pass, OpenAPI schema in sync.
+- **Next after commit**: Commit 5 (cleanup — delete `pages/TrainingPortal/LoginPage.tsx` once Commit 4 is committed, plus leftover training-portal shims; run test-debt backfill). Then ask before pushing to `main`. Plan lives at `.claude/plans/portal-unification-phase-2-5.md`.
+- **Status**: 3 commits on local main ahead of origin. Commit 4 staged-but-uncommitted — **ask user before committing**.

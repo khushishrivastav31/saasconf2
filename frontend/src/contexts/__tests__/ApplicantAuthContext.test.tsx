@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApplicantAuthContext, ApplicantAuthProvider } from '../ApplicantAuthContext';
 import { useContext } from 'react';
+import type { ApplicantProfile, PortalMe } from '../../types/portal';
 
 // Mock the portalApi module
 vi.mock('../../config/portalApi', () => ({
@@ -22,6 +23,91 @@ import portalApi, {
   clearApplicantTokens,
   getApplicantAccessToken,
 } from '../../config/portalApi';
+
+function baseApplicant(overrides: Partial<ApplicantProfile> = {}): ApplicantProfile {
+  return {
+    id: 'applicant-123',
+    email: 'applicant@example.com',
+    first_name: 'Test',
+    last_name: 'Applicant',
+    pronouns: null,
+    phone: null,
+    title: null,
+    company: null,
+    address_line_1: null,
+    address_line_2: null,
+    city: null,
+    postal_code: null,
+    country: null,
+    bio: null,
+    social_links: {},
+    needs_accessibility: false,
+    accessibility_details: null,
+    agrees_to_recording: true,
+    allow_out_of_timeframe: false,
+    message_notifications_enabled: true,
+    theme_preference: null,
+    picture_url: null,
+    video_url: null,
+    created_at: '2024-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+function basePortalMe(overrides: Partial<PortalMe> = {}): PortalMe {
+  return {
+    id: 'portal-user-123',
+    email: 'applicant@example.com',
+    first_name: 'Test',
+    last_name: 'Applicant',
+    phone: null,
+    pronouns: null,
+    title: null,
+    company: null,
+    bio: null,
+    social_links: {},
+    address_line_1: null,
+    address_line_2: null,
+    city: null,
+    postal_code: null,
+    country: null,
+    theme_preference: null,
+    is_active: true,
+    email_verified: true,
+    last_login_at: null,
+    created_at: '2024-01-01T00:00:00Z',
+    has_conference_account: true,
+    has_training_account: false,
+    cfp_applicant_id: 'applicant-123',
+    training_attendee_id: null,
+    training_attendee_status: null,
+    ...overrides,
+  };
+}
+
+/**
+ * Wire `portalApi.get` to respond differently per URL. The context calls
+ * `/portal/unified/me` unconditionally, then `/portal/me` only when the
+ * composite response's `has_conference_account` flag is true.
+ */
+function mockPortalGet(opts: {
+  portalMe?: PortalMe | null;
+  portalMeError?: Error;
+  applicant?: ApplicantProfile | null;
+  applicantError?: Error;
+}) {
+  vi.mocked(portalApi.get).mockImplementation((url: string) => {
+    if (url === '/portal/unified/me') {
+      if (opts.portalMeError) return Promise.reject(opts.portalMeError);
+      return Promise.resolve({ data: opts.portalMe });
+    }
+    if (url === '/portal/me') {
+      if (opts.applicantError) return Promise.reject(opts.applicantError);
+      return Promise.resolve({ data: opts.applicant });
+    }
+    return Promise.reject(new Error(`Unexpected URL: ${url}`));
+  });
+}
 
 // Helper to create a fresh QueryClient for each test
 function createTestQueryClient() {
@@ -63,6 +149,13 @@ function TestConsumer() {
   return (
     <div>
       <span data-testid="applicant">{context?.applicant ? context.applicant.email : 'null'}</span>
+      <span data-testid="portal-me">{context?.portalMe ? context.portalMe.email : 'null'}</span>
+      <span data-testid="has-conf">
+        {context?.portalMe?.has_conference_account ? 'true' : 'false'}
+      </span>
+      <span data-testid="has-training">
+        {context?.portalMe?.has_training_account ? 'true' : 'false'}
+      </span>
       <span data-testid="loading">{context?.isLoading ? 'true' : 'false'}</span>
       <span data-testid="tenant-slug">{context?.tenantSlug || 'empty'}</span>
     </div>
@@ -99,27 +192,11 @@ describe('ApplicantAuthContext', () => {
     });
 
     it('starts with isLoading true and fetches applicant when token exists', async () => {
-      const mockApplicant = {
-        id: 'applicant-123',
-        email: 'applicant@example.com',
-        first_name: 'Test',
-        last_name: 'Applicant',
-        pronouns: null,
-        phone: null,
-        title: null,
-        company: null,
-        bio: null,
-        social_links: {},
-        needs_accessibility: false,
-        accessibility_details: null,
-        agrees_to_recording: true,
-        picture_url: null,
-        video_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-      };
-
       vi.mocked(getApplicantAccessToken).mockReturnValue('valid-token');
-      vi.mocked(portalApi.get).mockResolvedValue({ data: mockApplicant });
+      mockPortalGet({
+        portalMe: basePortalMe({ email: 'applicant@example.com' }),
+        applicant: baseApplicant({ email: 'applicant@example.com' }),
+      });
 
       render(
         <TestWrapper>
@@ -132,6 +209,7 @@ describe('ApplicantAuthContext', () => {
       });
 
       expect(screen.getByTestId('applicant')).toHaveTextContent('applicant@example.com');
+      expect(portalApi.get).toHaveBeenCalledWith('/portal/unified/me');
       expect(portalApi.get).toHaveBeenCalledWith('/portal/me');
     });
 
@@ -150,6 +228,36 @@ describe('ApplicantAuthContext', () => {
 
       expect(screen.getByTestId('tenant-slug')).toHaveTextContent('my-company');
     });
+
+    it('exposes portalMe without applicant for training-only users', async () => {
+      vi.mocked(getApplicantAccessToken).mockReturnValue('training-token');
+      mockPortalGet({
+        portalMe: basePortalMe({
+          has_conference_account: false,
+          has_training_account: true,
+          cfp_applicant_id: null,
+          training_attendee_id: 'attendee-1',
+          email: 'trainee@example.com',
+        }),
+      });
+
+      render(
+        <TestWrapper>
+          <TestConsumer />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      });
+
+      expect(screen.getByTestId('applicant')).toHaveTextContent('null');
+      expect(screen.getByTestId('portal-me')).toHaveTextContent('trainee@example.com');
+      expect(screen.getByTestId('has-conf')).toHaveTextContent('false');
+      expect(screen.getByTestId('has-training')).toHaveTextContent('true');
+      expect(portalApi.get).toHaveBeenCalledWith('/portal/unified/me');
+      expect(portalApi.get).not.toHaveBeenCalledWith('/portal/me');
+    });
   });
 
   describe('login function', () => {
@@ -161,31 +269,15 @@ describe('ApplicantAuthContext', () => {
         expires_in: 3600,
       };
 
-      const mockApplicant = {
-        id: 'applicant-123',
-        email: 'logged-in@example.com',
-        first_name: 'Logged',
-        last_name: 'In',
-        pronouns: 'she/her',
-        phone: '+1234567890',
-        title: 'Developer',
-        company: 'Tech Corp',
-        bio: 'A developer bio',
-        social_links: { linkedin: 'https://linkedin.com/in/test' },
-        needs_accessibility: false,
-        accessibility_details: null,
-        agrees_to_recording: true,
-        picture_url: null,
-        video_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-      };
-
       vi.mocked(getApplicantAccessToken).mockReturnValue(null);
       vi.mocked(portalApi.post).mockResolvedValue({ data: mockTokenResponse });
-      vi.mocked(portalApi.get).mockResolvedValue({ data: mockApplicant });
+      mockPortalGet({
+        portalMe: basePortalMe({ email: 'logged-in@example.com' }),
+        applicant: baseApplicant({ email: 'logged-in@example.com', first_name: 'Logged' }),
+      });
 
       let loginFn:
-        | ((credentials: { email: string; password: string }) => Promise<void>)
+        | ((credentials: { email: string; password: string }) => Promise<PortalMe>)
         | undefined;
 
       render(
@@ -222,6 +314,7 @@ describe('ApplicantAuthContext', () => {
       });
 
       expect(setApplicantTokens).toHaveBeenCalledWith('access-token-123', 'refresh-token-123');
+      expect(portalApi.get).toHaveBeenCalledWith('/portal/unified/me');
       expect(portalApi.get).toHaveBeenCalledWith('/portal/me');
 
       await waitFor(() => {
@@ -229,12 +322,66 @@ describe('ApplicantAuthContext', () => {
       });
     });
 
+    it('returns PortalMe for training-only login and skips /portal/me', async () => {
+      const mockTokenResponse = {
+        access_token: 'access-token-123',
+        refresh_token: 'refresh-token-123',
+        token_type: 'bearer',
+        expires_in: 3600,
+      };
+
+      vi.mocked(getApplicantAccessToken).mockReturnValue(null);
+      vi.mocked(portalApi.post).mockResolvedValue({ data: mockTokenResponse });
+      mockPortalGet({
+        portalMe: basePortalMe({
+          has_conference_account: false,
+          has_training_account: true,
+          cfp_applicant_id: null,
+          training_attendee_id: 'attendee-1',
+          email: 'trainee@example.com',
+        }),
+      });
+
+      let loginFn:
+        | ((credentials: { email: string; password: string }) => Promise<PortalMe>)
+        | undefined;
+      let lastLoginResult: PortalMe | null = null;
+
+      render(
+        <TestWrapper companySlug="test-company">
+          <ApplicantAuthContext.Consumer>
+            {(context) => {
+              loginFn = context?.login;
+              return <div data-testid="loading">{context?.isLoading ? 'true' : 'false'}</div>;
+            }}
+          </ApplicantAuthContext.Consumer>
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      });
+
+      await act(async () => {
+        lastLoginResult = (await loginFn?.({
+          email: 'trainee@example.com',
+          password: 'pw',
+        })) as PortalMe;
+      });
+
+      expect(lastLoginResult).not.toBeNull();
+      expect(lastLoginResult!.has_training_account).toBe(true);
+      expect(lastLoginResult!.has_conference_account).toBe(false);
+      expect(portalApi.get).toHaveBeenCalledWith('/portal/unified/me');
+      expect(portalApi.get).not.toHaveBeenCalledWith('/portal/me');
+    });
+
     it('throws error on login failure', async () => {
       vi.mocked(getApplicantAccessToken).mockReturnValue(null);
       vi.mocked(portalApi.post).mockRejectedValue(new Error('Invalid credentials'));
 
       let loginFn:
-        | ((credentials: { email: string; password: string }) => Promise<void>)
+        | ((credentials: { email: string; password: string }) => Promise<PortalMe>)
         | undefined;
 
       render(
@@ -358,27 +505,11 @@ describe('ApplicantAuthContext', () => {
 
   describe('logout function', () => {
     it('clears applicant and tokens on logout', async () => {
-      const mockApplicant = {
-        id: 'applicant-123',
-        email: 'test@example.com',
-        first_name: 'Test',
-        last_name: 'Applicant',
-        pronouns: null,
-        phone: null,
-        title: null,
-        company: null,
-        bio: null,
-        social_links: {},
-        needs_accessibility: false,
-        accessibility_details: null,
-        agrees_to_recording: true,
-        picture_url: null,
-        video_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-      };
-
       vi.mocked(getApplicantAccessToken).mockReturnValue('valid-token');
-      vi.mocked(portalApi.get).mockResolvedValue({ data: mockApplicant });
+      mockPortalGet({
+        portalMe: basePortalMe({ email: 'test@example.com' }),
+        applicant: baseApplicant({ email: 'test@example.com' }),
+      });
 
       let logoutFn: (() => void) | undefined;
 
@@ -417,27 +548,11 @@ describe('ApplicantAuthContext', () => {
 
   describe('applicant fetch on mount with existing token', () => {
     it('fetches applicant data when token exists on mount', async () => {
-      const mockApplicant = {
-        id: 'applicant-123',
-        email: 'existing@example.com',
-        first_name: 'Existing',
-        last_name: 'Applicant',
-        pronouns: 'he/him',
-        phone: '+1987654321',
-        title: 'Speaker',
-        company: 'Conference Co',
-        bio: 'An existing applicant bio',
-        social_links: { twitter: 'https://twitter.com/test' },
-        needs_accessibility: true,
-        accessibility_details: 'Wheelchair access needed',
-        agrees_to_recording: false,
-        picture_url: 'https://example.com/photo.jpg',
-        video_url: 'https://youtube.com/watch?v=123',
-        created_at: '2024-01-01T00:00:00Z',
-      };
-
       vi.mocked(getApplicantAccessToken).mockReturnValue('existing-token');
-      vi.mocked(portalApi.get).mockResolvedValue({ data: mockApplicant });
+      mockPortalGet({
+        portalMe: basePortalMe({ email: 'existing@example.com' }),
+        applicant: baseApplicant({ email: 'existing@example.com', first_name: 'Existing' }),
+      });
 
       render(
         <TestWrapper>
@@ -452,12 +567,13 @@ describe('ApplicantAuthContext', () => {
       });
 
       expect(screen.getByTestId('applicant')).toHaveTextContent('existing@example.com');
+      expect(portalApi.get).toHaveBeenCalledWith('/portal/unified/me');
       expect(portalApi.get).toHaveBeenCalledWith('/portal/me');
     });
 
     it('clears tokens when applicant fetch fails with existing token', async () => {
       vi.mocked(getApplicantAccessToken).mockReturnValue('invalid-token');
-      vi.mocked(portalApi.get).mockRejectedValue(new Error('Unauthorized'));
+      mockPortalGet({ portalMeError: new Error('Unauthorized') });
 
       render(
         <TestWrapper>
@@ -471,6 +587,7 @@ describe('ApplicantAuthContext', () => {
 
       expect(clearApplicantTokens).toHaveBeenCalled();
       expect(screen.getByTestId('applicant')).toHaveTextContent('null');
+      expect(screen.getByTestId('portal-me')).toHaveTextContent('null');
     });
 
     it('does not fetch applicant when no token exists', async () => {
@@ -493,36 +610,33 @@ describe('ApplicantAuthContext', () => {
 
   describe('refreshApplicant function', () => {
     it('refreshes applicant data when called', async () => {
-      const initialApplicant = {
-        id: 'applicant-123',
+      const initialApplicant = baseApplicant({
         email: 'initial@example.com',
         first_name: 'Initial',
-        last_name: 'Applicant',
-        pronouns: null,
-        phone: null,
-        title: null,
-        company: null,
-        bio: null,
-        social_links: {},
-        needs_accessibility: false,
-        accessibility_details: null,
-        agrees_to_recording: true,
-        picture_url: null,
-        video_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-      };
-
-      const updatedApplicant = {
-        ...initialApplicant,
+      });
+      const updatedApplicant = baseApplicant({
         email: 'updated@example.com',
         first_name: 'Updated',
         bio: 'Updated bio',
-      };
+      });
+      const initialPortalMe = basePortalMe({ email: 'initial@example.com' });
+      const updatedPortalMe = basePortalMe({ email: 'updated@example.com' });
 
       vi.mocked(getApplicantAccessToken).mockReturnValue('valid-token');
-      vi.mocked(portalApi.get)
-        .mockResolvedValueOnce({ data: initialApplicant })
-        .mockResolvedValueOnce({ data: updatedApplicant });
+
+      let callIndex = 0;
+      vi.mocked(portalApi.get).mockImplementation((url: string) => {
+        if (url === '/portal/unified/me') {
+          const data = callIndex === 0 ? initialPortalMe : updatedPortalMe;
+          return Promise.resolve({ data });
+        }
+        if (url === '/portal/me') {
+          const data = callIndex === 0 ? initialApplicant : updatedApplicant;
+          callIndex += 1;
+          return Promise.resolve({ data });
+        }
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
+      });
 
       let refreshApplicantFn: (() => Promise<void>) | undefined;
 
@@ -553,7 +667,8 @@ describe('ApplicantAuthContext', () => {
         await refreshApplicantFn?.();
       });
 
-      expect(portalApi.get).toHaveBeenCalledTimes(2);
+      // unified/me + /portal/me each called twice (once on mount, once on refresh)
+      expect(vi.mocked(portalApi.get).mock.calls.length).toBe(4);
       expect(screen.getByTestId('applicant')).toHaveTextContent('updated@example.com');
     });
   });
@@ -581,6 +696,7 @@ describe('ApplicantAuthContext', () => {
 
       expect(contextValue).not.toBeNull();
       expect(contextValue).toHaveProperty('applicant');
+      expect(contextValue).toHaveProperty('portalMe');
       expect(contextValue).toHaveProperty('isLoading');
       expect(contextValue).toHaveProperty('tenantSlug');
       expect(contextValue).toHaveProperty('login');
@@ -604,31 +720,15 @@ describe('ApplicantAuthContext', () => {
         expires_in: 3600,
       };
 
-      const mockApplicant = {
-        id: 'applicant-123',
-        email: 'test@example.com',
-        first_name: 'Test',
-        last_name: 'Applicant',
-        pronouns: null,
-        phone: null,
-        title: null,
-        company: null,
-        bio: null,
-        social_links: {},
-        needs_accessibility: false,
-        accessibility_details: null,
-        agrees_to_recording: true,
-        picture_url: null,
-        video_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-      };
-
       vi.mocked(getApplicantAccessToken).mockReturnValue(null);
       vi.mocked(portalApi.post).mockResolvedValue({ data: mockTokenResponse });
-      vi.mocked(portalApi.get).mockResolvedValue({ data: mockApplicant });
+      mockPortalGet({
+        portalMe: basePortalMe({ email: 'test@example.com' }),
+        applicant: baseApplicant({ email: 'test@example.com' }),
+      });
 
       let loginFn:
-        | ((credentials: { email: string; password: string }) => Promise<void>)
+        | ((credentials: { email: string; password: string }) => Promise<PortalMe>)
         | undefined;
 
       render(

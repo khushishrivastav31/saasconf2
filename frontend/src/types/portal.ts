@@ -48,6 +48,34 @@ export interface ApplicantProfile {
   created_at: string;
 }
 
+export interface PortalMe {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  pronouns: string | null;
+  title: string | null;
+  company: string | null;
+  bio: string | null;
+  social_links: Record<string, string>;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  theme_preference: 'light' | 'dark' | null;
+  is_active: boolean;
+  email_verified: boolean;
+  last_login_at: string | null;
+  created_at: string | null;
+  has_conference_account: boolean;
+  has_training_account: boolean;
+  cfp_applicant_id: string | null;
+  training_attendee_id: string | null;
+  training_attendee_status: string | null;
+}
+
 export interface ApplicantProfileUpdate {
   first_name?: string;
   last_name?: string;

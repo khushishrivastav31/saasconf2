@@ -12,13 +12,15 @@ import type {
   ApplicantLoginRequest,
   ApplicantRegisterRequest,
   ApplicantTokenResponse,
+  PortalMe,
 } from '../types/portal';
 
 interface ApplicantAuthContextType {
   applicant: ApplicantProfile | null;
+  portalMe: PortalMe | null;
   isLoading: boolean;
   tenantSlug: string;
-  login: (credentials: ApplicantLoginRequest) => Promise<void>;
+  login: (credentials: ApplicantLoginRequest) => Promise<PortalMe>;
   register: (data: ApplicantRegisterRequest) => Promise<string>;
   logout: () => void;
   refreshApplicant: () => Promise<void>;
@@ -29,6 +31,7 @@ export const ApplicantAuthContext = createContext<ApplicantAuthContextType | nul
 
 export function ApplicantAuthProvider({ children }: { children: React.ReactNode }) {
   const [applicant, setApplicant] = useState<ApplicantProfile | null>(null);
+  const [portalMe, setPortalMe] = useState<PortalMe | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
   const themeCtx = useContext(ThemeContext);
@@ -38,14 +41,25 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
   const { companySlug } = useParams<{ companySlug: string }>();
   const slug = companySlug || '';
 
-  const fetchApplicant = useCallback(async () => {
+  const fetchApplicant = useCallback(async (): Promise<PortalMe | null> => {
     try {
-      const response = await portalApi.get<ApplicantProfile>('/portal/me');
-      setApplicant(response.data);
-      themeCtxRef.current?.syncFromServer(response.data.theme_preference);
+      const meRes = await portalApi.get<PortalMe>('/portal/unified/me');
+      const me = meRes.data;
+      setPortalMe(me);
+      themeCtxRef.current?.syncFromServer(me.theme_preference);
+
+      if (me.has_conference_account) {
+        const applicantRes = await portalApi.get<ApplicantProfile>('/portal/me');
+        setApplicant(applicantRes.data);
+      } else {
+        setApplicant(null);
+      }
+      return me;
     } catch {
       setApplicant(null);
+      setPortalMe(null);
       clearApplicantTokens();
+      return null;
     }
   }, []);
 
@@ -65,7 +79,7 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
     initAuth();
   }, [fetchApplicant]);
 
-  const login = async (credentials: ApplicantLoginRequest) => {
+  const login = async (credentials: ApplicantLoginRequest): Promise<PortalMe> => {
     const response = await portalApi.post<ApplicantTokenResponse>(
       `/portal/${slug}/unified/login`,
       credentials
@@ -73,7 +87,11 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
     const { access_token, refresh_token } = response.data;
     setApplicantTokens(access_token, refresh_token);
     queryClient.clear();
-    await fetchApplicant();
+    const me = await fetchApplicant();
+    if (!me) {
+      throw new Error('Failed to load portal profile after login');
+    }
+    return me;
   };
 
   const register = async (data: ApplicantRegisterRequest): Promise<string> => {
@@ -84,6 +102,7 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
   const logout = () => {
     clearApplicantTokens();
     setApplicant(null);
+    setPortalMe(null);
     queryClient.clear();
   };
 
@@ -91,6 +110,7 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
     <ApplicantAuthContext.Provider
       value={{
         applicant,
+        portalMe,
         isLoading,
         tenantSlug: slug,
         login,

@@ -194,7 +194,7 @@ function AcademicCapIcon() {
 }
 
 function PortalLayout() {
-  const { applicant, isLoading, logout } = useApplicantAuth();
+  const { applicant, portalMe, isLoading, logout } = useApplicantAuth();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -339,6 +339,9 @@ function PortalLayout() {
   }
 
   if (!applicant) {
+    if (portalMe && !portalMe.has_conference_account && portalMe.has_training_account) {
+      return <Navigate to={`/${companySlug}/trainings/portal/dashboard`} replace />;
+    }
     return <Navigate to={`${basePath}/user/login`} replace />;
   }
 

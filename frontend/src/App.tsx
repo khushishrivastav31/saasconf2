@@ -76,7 +76,6 @@ const PublicTrainingPortalPage = lazy(() => import('./pages/PublicTrainingPortal
 
 // Training Portal (authenticated)
 const TrainingPortalLayout = lazy(() => import('./pages/TrainingPortal/PortalLayout'));
-const TrainingPortalLogin = lazy(() => import('./pages/TrainingPortal/LoginPage'));
 const TrainingPortalSetPassword = lazy(() => import('./pages/TrainingPortal/SetPasswordPage'));
 const TrainingPortalDashboard = lazy(() => import('./pages/TrainingPortal/DashboardPage'));
 const TrainingPortalDetail = lazy(() => import('./pages/TrainingPortal/TrainingDetailPage'));
@@ -456,7 +455,7 @@ function App() {
           />
 
           {/* Training Portal — login + set-password (public) */}
-          <Route path=":tenantSlug/trainings/portal/login" element={<TrainingPortalLogin />} />
+          <Route path=":tenantSlug/trainings/portal/login" element={<LegacyLoginRedirect />} />
           <Route
             path=":tenantSlug/trainings/portal/set-password"
             element={<TrainingPortalSetPassword />}

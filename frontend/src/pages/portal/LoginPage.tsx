@@ -56,9 +56,13 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login({ email, password });
+      const me = await login({ email, password });
       sessionStorage.setItem('just_logged_in', 'true');
-      navigate(`${basePath}/news`);
+      if (!me.has_conference_account && me.has_training_account) {
+        navigate(`/${companySlug}/trainings/portal/dashboard`);
+      } else {
+        navigate(`${basePath}/news`);
+      }
     } catch (err: unknown) {
       // Check if this is a tenant admin redirect response
       if (axios.isAxiosError(err) && err.response?.status === 403) {
