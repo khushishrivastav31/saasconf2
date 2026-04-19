@@ -27,6 +27,7 @@ from app.api.v1 import (
     portal,
     portal_auth,
     portal_templates,
+    privacy_requests,
     program,
     pronoun_options,
     registration_question_answers,
@@ -71,6 +72,9 @@ api_router.include_router(
 )
 # Tenant company management (tenant admin)
 api_router.include_router(tenant_company.router, prefix="/my-company", tags=["My Company"])
+
+# GDPR privacy requests (tenant admin)
+api_router.include_router(privacy_requests.router, prefix="/privacy-requests", tags=["Privacy Requests"])
 
 # System email templates (tenant admin)
 api_router.include_router(

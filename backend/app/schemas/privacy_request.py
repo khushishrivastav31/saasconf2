@@ -1,6 +1,7 @@
 """Pydantic schemas for GDPR privacy requests (Art. 15 export / Art. 17 erasure)."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -12,7 +13,7 @@ class PrivacyRequestCreate(BaseModel):
     """Input payload for creating a new privacy request."""
 
     request_type: PrivacyRequestType
-    subject_emails: list[EmailStr] = Field(min_length=1, max_length=10)
+    subject_emails: list[EmailStr] = Field(min_length=1, max_length=25)
     notes: str | None = Field(default=None, max_length=2000)
 
 
@@ -21,6 +22,12 @@ class PrivacyRequestReview(BaseModel):
 
     approve: bool
     rejection_reason: str | None = Field(default=None, max_length=2000)
+
+
+class PrivacyRequestReject(BaseModel):
+    """Dedicated reject payload — ``rejection_reason`` is required."""
+
+    rejection_reason: str = Field(min_length=1, max_length=2000)
 
 
 class PrivacyRequestResponse(BaseModel):
@@ -43,8 +50,38 @@ class PrivacyRequestResponse(BaseModel):
     reviewed_at: datetime | None
     executed_at: datetime | None
     completion_artifact_url: str | None
-    execution_manifest: dict | None
+    execution_manifest: dict[str, Any] | None
     rejection_reason: str | None
     notes: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PrivacyRequestListItem(BaseModel):
+    """Lighter list-view row — omits the decrypted subject emails.
+
+    The list view could otherwise pay one Fernet decrypt per row. Surfacing
+    only ``subject_count`` keeps the list endpoint cheap; the detail endpoint
+    returns the full ``PrivacyRequestResponse`` when a row is opened.
+    """
+
+    id: UUID
+    tenant_id: UUID
+    request_type: PrivacyRequestType
+    subject_count: int
+    status: PrivacyRequestStatus
+    created_by: UUID | None
+    created_at: datetime
+    reviewed_by: UUID | None
+    reviewed_at: datetime | None
+    executed_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GenerateExportResponse(BaseModel):
+    """Result of a successful ``/generate-export`` call."""
+
+    download_url: str
+    record_counts: dict[str, int]
+    executed_at: datetime

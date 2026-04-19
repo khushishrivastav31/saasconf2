@@ -24,4 +24,66 @@ export interface EmailDefaults {
   tenant_api_key_set: boolean;
 }
 
-export type MyCompanyTab = 'company' | 'email';
+export type MyCompanyTab = 'company' | 'email' | 'privacy';
+
+// ── GDPR Privacy Requests (Art. 15 / 17) ──────────────────────────────
+
+export type PrivacyRequestType = 'export' | 'erasure';
+export type PrivacyRequestStatus =
+  | 'pending_review'
+  | 'approved'
+  | 'rejected'
+  | 'executing'
+  | 'completed'
+  | 'failed';
+
+export interface PrivacyRequestListItem {
+  id: string;
+  tenant_id: string;
+  request_type: PrivacyRequestType;
+  subject_count: number;
+  status: PrivacyRequestStatus;
+  created_by: string | null;
+  created_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  executed_at: string | null;
+}
+
+export interface PrivacyRequestListResponse {
+  items: PrivacyRequestListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export interface PrivacyRequest {
+  id: string;
+  tenant_id: string;
+  request_type: PrivacyRequestType;
+  subject_emails: string[];
+  status: PrivacyRequestStatus;
+  created_by: string | null;
+  portal_user_id: string | null;
+  created_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  executed_at: string | null;
+  completion_artifact_url: string | null;
+  execution_manifest: Record<string, unknown> | null;
+  rejection_reason: string | null;
+  notes: string | null;
+}
+
+export interface PrivacyRequestCreateInput {
+  request_type: PrivacyRequestType;
+  subject_emails: string[];
+  notes?: string | null;
+}
+
+export interface GenerateExportResponse {
+  download_url: string;
+  record_counts: Record<string, number>;
+  executed_at: string;
+}

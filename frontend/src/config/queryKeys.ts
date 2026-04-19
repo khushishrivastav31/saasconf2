@@ -83,6 +83,13 @@ export const queryKeys = {
       ['bookable-sessions', conferenceId, optionId] as const,
   },
 
+  // ── GDPR Privacy Requests ──────────────────────────────────────
+  privacyRequests: {
+    all: ['privacy-requests'] as const,
+    list: (params: Record<string, unknown>) => ['privacy-requests', 'list', params] as const,
+    detail: (id: string) => ['privacy-requests', 'detail', id] as const,
+  },
+
   // ── Deadlines ──────────────────────────────────────────────────
   deadlines: {
     byConference: (conferenceId: string) => ['conference-deadlines', conferenceId] as const,

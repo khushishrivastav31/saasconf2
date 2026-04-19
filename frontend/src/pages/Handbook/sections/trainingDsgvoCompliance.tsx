@@ -30,7 +30,7 @@ export const trainingDsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Fast subject lookup</strong>: training attendees (central + parking lot), training registrations, training registration attendees, offer attendees, trainers, customers, and training invoices all carry an indexed SHA-256 email hash.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>PII encryption at rest</strong>: trainer, customer, and training-invoice email / phone / VAT number fields are Fernet-encrypted (plaintext columns no longer exist).</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Subject-scoped audit trail</strong>: opening a training-attendee detail panel writes a <code>training_attendee.view</code> audit entry tagged with the subject\u2019s email hash. Invoice views share the same <code>invoice.view</code> code as the conferences module.</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Ops-side export</strong>: SaaSConf support can produce a single ZIP covering every row touching a subject across the training data model. Admin-facing UI is Phase 2.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Self-serve export UI (Phase 2 \u2014 live)</strong>: tenant admins log, approve/reject, and generate subject-data exports directly from <strong>My Company \u2192 Privacy Requests</strong>. The same backend lookup powers both conference and training data.</li>
 </ul>`,
           }}
         />
@@ -47,9 +47,8 @@ export const trainingDsgvoComplianceCategory: HandbookCategory = {
 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Art. 15 \u2014 Access / Export</h3>
 <p class="text-gray-700 dark:text-gray-300 my-2">The subject asks: <em>\u201cWhat personal data of mine do you hold?\u201d</em></p>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300"><span class="text-emerald-700 dark:text-emerald-400 font-medium">Live via ops (Phase 1)</span>: email SaaSConf support with the subject\u2019s email. Support runs <code>python -m scripts.export_subject_data</code>, which does an indexed hash lookup across the training data model \u2014 central <code>training_attendees</code> (including parking-lot entries), every <code>training_registration</code> / <code>training_registration_attendee</code> / <code>offer_attendee</code> row, any linked training invoices, trainer or customer records where the subject\u2019s email matches, plus audit events tagged with the subject\u2019s email hash \u2014 and returns a ZIP with one JSON file per table and a <code>manifest.json</code> summary.</li>
-<li class="text-gray-700 dark:text-gray-300">The request is tracked in the <code>privacy_requests</code> table (requestor, reviewer, outcome).</li>
-<li class="text-gray-700 dark:text-gray-300"><span class="text-amber-700 dark:text-amber-400 font-medium">Phase 2</span>: a <strong>Privacy Requests</strong> tab under <em>Tenant Settings</em> exposes the same export as a button \u2014 no ops email needed.</li>
+<li class="text-gray-700 dark:text-gray-300"><span class="text-emerald-700 dark:text-emerald-400 font-medium">Live today</span>: open <strong>My Company \u2192 Privacy Requests \u2192 New request</strong>, choose <em>Export</em>, paste the subject\u2019s email(s) (up to 25 for family / joint bookings), then click <strong>Generate export</strong>. The server runs an indexed SHA-256 hash lookup across the training data model \u2014 central <code>training_attendees</code> (including parking-lot entries), every <code>training_registration</code> / <code>training_registration_attendee</code> / <code>offer_attendee</code> row, any linked training invoices, trainer or customer records where the subject\u2019s email matches, plus audit events tagged with the subject\u2019s email hash \u2014 and materialises a ZIP with one JSON file per table and a <code>manifest.json</code> summary. Download link is valid for 7 days; after that, regenerate.</li>
+<li class="text-gray-700 dark:text-gray-300">Every request (creation, review, execution, download) is tracked in the <code>privacy_requests</code> table and the <code>audit_logs</code> table, each tagged with the subject\u2019s email hash.</li>
 </ul>
 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Art. 16 \u2014 Rectification</h3>
 <p class="text-gray-700 dark:text-gray-300 my-2">The subject asks: <em>\u201cFix my data \u2014 it\u2019s wrong.\u201d</em> <span class="text-emerald-700 dark:text-emerald-400 font-medium">Live today</span> \u2014 the normal admin edit UIs <em>are</em> the rectification mechanism.</p>
@@ -80,14 +79,82 @@ export const trainingDsgvoComplianceCategory: HandbookCategory = {
       ),
     },
     {
+      id: 'training-dsgvo-handling-a-request',
+      title: 'Handling a subject request',
+      categoryId: 'category-training-dsgvo',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Training subjects (attendees, trainers, customer contacts) can exercise their rights through any channel. This is the procedural playbook you run every time someone asks, before you open the Privacy Requests tab.</p>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">What a training subject can ask you</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cWhat data do you hold on me?\u201d</strong> \u2014 Art. 15 access. Reply with the export ZIP (training attendees, registrations, offer attendees, trainers, customers, linked invoices, audit trail).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cFix my data.\u201d</strong> \u2014 Art. 16 rectification. Edit the row in the relevant Trainings tab (Attendees / Registrations / Offers / Customers / Trainers / Invoices). No Privacy Request row needed unless the subject specifically asks for a paper trail.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cDelete me.\u201d</strong> \u2014 Art. 17 erasure. Log it. <strong>Training invoices retained under HGB \u00a7257 cannot be deleted for 10 years</strong> \u2014 explain that in your reply; it is <em>not</em> grounds to refuse the whole request.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cExport my data for use elsewhere.\u201d</strong> \u2014 Art. 20 portability. Satisfied by the Art. 15 JSON ZIP.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cStop emailing me about future trainings.\u201d</strong> \u2014 Art. 21 objection. Remove from the relevant reminder / marketing list; no deletion required.</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">The channels you have to accept</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Email, web form, postal letter, phone, in person, during a training session</strong> \u2014 all equally valid. A request in a support ticket or a reply to a reminder email counts.</li>
+<li class="text-gray-700 dark:text-gray-300">The clock starts <em>when the request arrives</em>, not when you log it. Log it the same day so the timeline is honest.</li>
+<li class="text-gray-700 dark:text-gray-300">You cannot demand a specific form, and you cannot charge (exceptions below).</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Identity verification \u2014 proportionate, not paranoid</h3>
+<p class="text-gray-700 dark:text-gray-300 my-2">Art. 12(6) lets you ask for identity confirmation only when you have <em>reasonable doubts</em>. Proportionality rules:</p>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Request from the subject\u2019s registered email</strong>: treat as verified \u2014 no ID check.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Request from a different address</strong>: reply to the registered address first to confirm the request is genuine.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Corporate-booking case</strong>: if the customer-contact person asks for data about <em>their</em> attendees, treat each attendee as a separate subject \u2014 the company contact is not automatically authorised to speak for them. Ask the contact to route the request through each attendee, or verify each attendee directly.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>High-risk request</strong> (erasure, request touching Art. 9 accommodation data): a redacted photo ID is acceptable \u2014 delete it as soon as verification is done; do not store it.</li>
+<li class="text-gray-700 dark:text-gray-300">Never demand ID for routine corrections.</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">The one-month response window (Art. 12(3))</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Respond <strong>within one calendar month</strong> of receipt \u2014 even if the response is \u201cwe need more time\u201d or \u201cwe\u2019re refusing, here\u2019s why\u201d.</li>
+<li class="text-gray-700 dark:text-gray-300">For genuinely complex cases (multiple trainings, archived customer records), you may extend by <strong>up to two further months</strong>, but you must tell the subject <em>within the first month</em> and give a reason. Note this in the Privacy Request\u2019s notes field.</li>
+<li class="text-gray-700 dark:text-gray-300">The Privacy Requests tab shows an <span class="text-amber-700 dark:text-amber-400 font-medium">amber badge after 21 days</span> so you move before the deadline slips.</li>
+<li class="text-gray-700 dark:text-gray-300">Response is <strong>free</strong>. Only charge (or refuse) if the request is \u201cmanifestly unfounded or excessive\u201d \u2014 and document the reason in the rejection field.</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Standard workflow</h3>
+<ol class="list-decimal list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Acknowledge</strong> receipt the same day (\u201cWe received your request on &lt;date&gt; and will respond by &lt;date + 1 month&gt;\u201d).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Verify identity</strong> proportionately (see above).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Log</strong> in <strong>My Company \u2192 Privacy Requests \u2192 New request</strong>. The export covers <em>both</em> conference and training data in one ZIP \u2014 you do not need to log two separate requests for a subject who appears in both modules.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Fulfil</strong>: for export, click <em>Generate export</em> and send the ZIP to the verified address. For erasure, approve or reject; the rejection reason you enter is what the subject will see.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Reply</strong> in plain language (Art. 12(1)): attach or link to the ZIP; for erasure, list what was deleted and which training invoices stay under HGB \u00a7257.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Close the loop</strong> in the Privacy Requests tab; the status + audit trail are your proof of compliance.</li>
+</ol>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">When you can lawfully say no</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Training-invoice retention</strong> (HGB \u00a7257 / AO \u00a7147) overrides erasure for up to 10 years after year-end of issue.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Trainer contractual retention</strong>: ongoing contracts may justify keeping trainer contact data until the contract ends \u2014 document the basis.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Identity cannot be confirmed</strong> after a reasonable verification attempt (Art. 12(6)).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Manifestly unfounded or excessive</strong> repeat requests (Art. 12(5)).</li>
+<li class="text-gray-700 dark:text-gray-300">Any refusal must be explained and logged via the rejection-reason field. The subject always retains the right to complain to a supervisory authority \u2014 mention that in your reply.</li>
+</ul>`,
+          }}
+        />
+      ),
+    },
+    {
       id: 'training-dsgvo-privacy-requests',
       title: 'Privacy requests',
       categoryId: 'category-training-dsgvo',
       content: () => (
         <div
           dangerouslySetInnerHTML={{
-            __html: `<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Today (Phase 1):</strong> forward any incoming subject request for a training attendee / registrant / trainer / customer to SaaSConf support. We run the export (or, case-by-case, partial erasure) from ops tooling and record the request, reviewer, and outcome in the <code>privacy_requests</code> table.</p>
-<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Phase 2 (planned):</strong> a <strong>Privacy Requests</strong> tab under tenant settings, letting you log requests, approve portal self-service actions, generate export ZIPs, and (Phase 3) preview/execute erasure plans.</p>
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Live today (Phase 2):</strong> open <strong>My Company \u2192 Privacy Requests</strong>. The tab is tenant-wide \u2014 the same backend export covers both conference and training data for a subject in a single ZIP, so you log each request once.</p>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">What admins can do in this tab</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>New request</strong> \u2014 log an incoming Art. 15 (export) or Art. 17 (erasure) request with up to 25 subject emails (family / joint bookings) and free-text notes.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Generate export</strong> \u2014 on <em>export</em> requests, produces the ZIP (hash lookup across 15 tables plus audit events) and marks the request <em>completed</em>. Rate-limited to 10 generate calls per tenant per hour.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Approve erasure</strong> \u2014 marks an <em>erasure</em> request as approved. Actual deletion lands in Phase 3; the approval gives the subject the Art. 12(3) one-month acknowledgement.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Reject</strong> \u2014 either type, with a required reason (e.g. HGB \u00a7257 invoice retention overrides erasure, or identity verification failed).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Filter &amp; search</strong> \u2014 by status, by type, or by subject email (the email is hashed client-side before the GIN-indexed lookup runs).</li>
+</ul>
+<p class="text-gray-700 dark:text-gray-300 my-2">Every action writes an <code>audit_logs</code> row with the acting admin\u2019s <code>user_id</code> and the subject\u2019s <code>subject_email_hash</code>. Requests still pending after 21 days show an amber badge so the Art. 12(3) deadline doesn\u2019t slip. Download links from a completed export are valid for 7 days \u2014 after that, regenerate.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2"><span class="text-amber-700 dark:text-amber-400 font-medium">Phase 3 (planned):</span> add the erasure <em>execution</em> step \u2014 preview the rows that would be deleted / anonymised, choose per-category behaviour, auto-skip in-retention training invoices, then commit.</p>
 <p class="text-gray-700 dark:text-gray-300 my-2">Response window: one month from receiving the request (Art. 12(3)).</p>`,
           }}
         />

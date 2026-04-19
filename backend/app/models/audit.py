@@ -129,6 +129,7 @@ class AuditAction:
 
     # Privacy requests (GDPR Art. 15 / Art. 17)
     PRIVACY_REQUEST_CREATE = "privacy_request.create"
+    PRIVACY_REQUEST_VIEW = "privacy_request.view"
     PRIVACY_REQUEST_APPROVE = "privacy_request.approve"
     PRIVACY_REQUEST_REJECT = "privacy_request.reject"
     PRIVACY_REQUEST_EXECUTE = "privacy_request.execute"

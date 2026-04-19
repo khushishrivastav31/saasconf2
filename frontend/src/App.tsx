@@ -55,6 +55,7 @@ const DashboardPage = lazy(() => import('./pages/portal/DashboardPage'));
 const SubmitPaperPage = lazy(() => import('./pages/portal/SubmitPaperPage'));
 const PaperDetailPage = lazy(() => import('./pages/portal/PaperDetailPage'));
 const ProfilePage = lazy(() => import('./pages/portal/ProfilePage'));
+const PrivacyPage = lazy(() => import('./pages/portal/PrivacyPage'));
 const InvitationsPage = lazy(() => import('./pages/portal/InvitationsPage'));
 const AssignedPapersTab = lazy(() => import('./pages/portal/AssignedPapersTab'));
 const EvaluatedPapersTab = lazy(() => import('./pages/portal/EvaluatedPapersTab'));
@@ -490,6 +491,7 @@ function App() {
             <Route path="papers/new" element={<SubmitPaperPage />} />
             <Route path="papers/:paperId" element={<PaperDetailPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="privacy" element={<PrivacyPage />} />
             <Route path="invitations" element={<InvitationsPage />} />
             <Route path="assigned-papers" element={<AssignedPapersTab />} />
             <Route path="evaluated-papers" element={<EvaluatedPapersTab />} />

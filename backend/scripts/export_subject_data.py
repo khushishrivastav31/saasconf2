@@ -156,8 +156,8 @@ async def build_export(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     emails: list[str],
-) -> bytes:
-    """Collect every row for *emails* under *tenant_id* and return a ZIP blob."""
+) -> tuple[bytes, dict[str, Any]]:
+    """Collect every row for *emails* under *tenant_id* and return ``(zip_blob, manifest)``."""
     email_hashes = [hash_email(e) for e in emails]
 
     sections: dict[str, list[dict[str, Any]]] = {}
@@ -165,7 +165,7 @@ async def build_export(
         sections[spec.name] = await collect_table(db, spec, tenant_id, email_hashes)
     sections["audit_log"] = await collect_audit_log(db, tenant_id, email_hashes)
 
-    manifest = {
+    manifest: dict[str, Any] = {
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "tenant_id": str(tenant_id),
         "subjects": emails,
@@ -184,7 +184,7 @@ async def build_export(
         for name, rows in sections.items():
             path = "audit_log.json" if name == "audit_log" else f"data/{name}.json"
             zf.writestr(path, json.dumps(rows, indent=2, default=str))
-    return buf.getvalue()
+    return buf.getvalue(), manifest
 
 
 async def main() -> None:
@@ -208,7 +208,7 @@ async def main() -> None:
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with session_factory() as db:
-        blob = await build_export(db, tenant_id, args.email)
+        blob, _manifest = await build_export(db, tenant_id, args.email)
 
     out_path.write_bytes(blob)
     print(f"Wrote {len(blob):,} bytes to {out_path}")

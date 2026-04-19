@@ -32,9 +32,9 @@ export const dsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Fast subject lookup</strong>: every table that identifies a data subject (registrations, applicants, invoices, billing contacts, alumni, email logs, audit logs, etc.) now carries a hashed email column (SHA-256 of lowercased \u00b7 trimmed) with its own index. One subject request resolves to a single indexed scan per table \u2014 not a full-table <code>ilike</code>.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>PII encryption at rest</strong>: email, phone, and VAT number fields on Users, Portal Users, Invoices, Billing Contacts, Trainers, and Customers are stored Fernet-encrypted (the plaintext columns no longer exist).</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Subject-scoped audit trail</strong>: opening a registration, invoice, or training attendee detail panel writes an audit entry tagged with the subject\u2019s email hash (see <em>Audit trail</em> below).</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Ops-side export</strong>: SaaSConf support can generate the Art. 15 ZIP from internal tooling on request (one command). The admin-facing UI to self-serve that export is Phase 2.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Self-serve export UI (Phase 2 \u2014 live)</strong>: tenant admins can log, approve/reject, and generate subject-data exports directly from <strong>My Company \u2192 Privacy Requests</strong>. The ZIP download link is valid for 7 days.</li>
 </ul>
-<p class="text-gray-700 dark:text-gray-300 my-2">Admin UI for logging + reviewing subject requests, the per-category erasure preview, and the portal-side <em>My Data</em> tab land in Phases 2\u20134. Each section below calls out what\u2019s live now vs. what\u2019s coming.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2">The per-category erasure preview and the portal-side <em>My Data</em> tab land in Phases 3\u20134. Each section below calls out what\u2019s live now vs. what\u2019s coming.</p>`,
           }}
         />
       ),
@@ -50,9 +50,8 @@ export const dsgvoComplianceCategory: HandbookCategory = {
 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Art. 15 \u2014 Access / Export</h3>
 <p class="text-gray-700 dark:text-gray-300 my-2">The subject asks: <em>\u201cWhat personal data of mine do you hold?\u201d</em></p>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300"><span class="text-emerald-700 dark:text-emerald-400 font-medium">Live via ops (Phase 1)</span>: email SaaSConf support with the subject\u2019s email address. Support runs <code>python -m scripts.export_subject_data</code>, which does an indexed hash lookup across <strong>15 tables</strong> (registrations, billing contacts, CFP applicants, applicant activity logs, email logs, alumni, speakers, sponsors, training attendees / registrations / registration attendees, offer attendees, trainers, customers, audit events) and returns a ZIP with one JSON file per table plus a <code>manifest.json</code> summarising the record counts.</li>
-<li class="text-gray-700 dark:text-gray-300">The request itself is logged in the <code>privacy_requests</code> table (requestor, reviewer, outcome, timestamps) so you have an audit trail even though there is no UI yet.</li>
-<li class="text-gray-700 dark:text-gray-300"><span class="text-amber-700 dark:text-amber-400 font-medium">Phase 2</span>: a <strong>Privacy Requests</strong> tab under <em>Tenant Settings</em> with a \u201cGenerate export\u201d button per request \u2014 no ops email needed.</li>
+<li class="text-gray-700 dark:text-gray-300"><span class="text-emerald-700 dark:text-emerald-400 font-medium">Live today</span>: <strong>My Company \u2192 Privacy Requests \u2192 New request</strong> \u2014 log the subject\u2019s email(s), then click <em>Generate export</em>. The backend does an indexed hash lookup across <strong>15 tables</strong> (registrations, billing contacts, CFP applicants, applicant activity logs, email logs, alumni, training attendees / registrations / registration attendees, offer attendees, users, portal users, invoices, trainers, customers) plus the <code>audit_log</code> and returns a ZIP with one JSON file per table and a <code>manifest.json</code> summarising the record counts. The download link is valid for 7 days \u2014 regenerate if it expires.</li>
+<li class="text-gray-700 dark:text-gray-300">Every request (and every generate / download / reject) is logged in <code>audit_logs</code> against the reviewer\u2019s user id, so you have a permanent compliance trail.</li>
 </ul>
 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Art. 16 \u2014 Rectification</h3>
 <p class="text-gray-700 dark:text-gray-300 my-2">The subject asks: <em>\u201cFix my data \u2014 it\u2019s wrong.\u201d</em> <span class="text-emerald-700 dark:text-emerald-400 font-medium">Live today</span> \u2014 the normal admin edit UIs <em>are</em> the rectification mechanism.</p>
@@ -77,7 +76,65 @@ export const dsgvoComplianceCategory: HandbookCategory = {
 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Art. 21 \u2014 Objection</h3>
 <p class="text-gray-700 dark:text-gray-300 my-2">Handled ad-hoc per scenario (e.g. objection to marketing email) \u2014 for now, remove the subject from the relevant communications list (<em>Settings \u2192 Email preferences</em> / remove from campaign recipients) and document the objection in your own records. Contact support for guidance on edge cases.</p>
 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">What Phase 1 actually makes fast</h3>
-<p class="text-gray-700 dark:text-gray-300 my-2">Every subject-identifying row has an indexed SHA-256 email hash, so a subject lookup returns in milliseconds instead of a full-table <code>ilike</code> scan. The <code>privacy_requests</code> tracking table exists in the database (so ops-run requests can already be recorded); its admin UI ships in Phase 2.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2">Every subject-identifying row has an indexed SHA-256 email hash, so a subject lookup returns in milliseconds instead of a full-table <code>ilike</code> scan. Tenant admins log and fulfil subject requests from <strong>My Company \u2192 Privacy Requests</strong> \u2014 see the dedicated section below.</p>`,
+          }}
+        />
+      ),
+    },
+    {
+      id: 'dsgvo-handling-a-request',
+      title: 'Handling a subject request',
+      categoryId: 'category-dsgvo',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">A data subject can exercise their rights <em>through any channel</em> \u2014 the law does not require a form. This section is the procedural playbook you run every time someone asks, before you ever touch the Privacy Requests tab.</p>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">What a subject can ask you</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cWhat data do you hold about me?\u201d</strong> \u2014 Art. 15 access request. You reply with the export ZIP (all 15 subject-bearing tables + audit trail).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cFix my data, it\u2019s wrong.\u201d</strong> \u2014 Art. 16 rectification. You correct the record in the relevant admin tab; no separate Privacy Request row is needed unless the subject specifically wants a paper trail.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cDelete all my data.\u201d</strong> \u2014 Art. 17 erasure. Log it, approve or reject, and communicate the outcome. Invoices retained under HGB \u00a7257 cannot be deleted \u2014 explain that in your reply; it is <em>not</em> grounds to refuse the whole request.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cGive me my data in a portable format.\u201d</strong> \u2014 Art. 20. Satisfied by the Art. 15 JSON ZIP.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cStop sending me marketing email.\u201d</strong> \u2014 Art. 21 objection. Remove from the relevant list; no deletion required.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>\u201cWho has seen my data?\u201d</strong> \u2014 covered by the subject-scoped audit trail inside the Art. 15 export.</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">The channels you have to accept</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Email, web form, postal letter, phone, in person</strong> \u2014 all equally valid. A request in a support ticket or a reply-to-event-email counts.</li>
+<li class="text-gray-700 dark:text-gray-300">The clock starts <em>when the request arrives</em>, not when you log it in the Privacy Requests tab. Log the request the same day you receive it so the timeline reflects reality.</li>
+<li class="text-gray-700 dark:text-gray-300">You cannot require the subject to use a specific form, and you cannot charge for the request (exceptions below).</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Identity verification \u2014 proportionate, not paranoid</h3>
+<p class="text-gray-700 dark:text-gray-300 my-2">Art. 12(6) lets you ask for \u201cadditional information necessary to confirm the identity of the data subject\u201d \u2014 but only when you have <em>reasonable doubts</em>. The bar is proportionality:</p>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Request comes from the subject\u2019s registered email</strong>: treat as verified. Don\u2019t ask for ID.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Request comes from a different address</strong>: reply to the <em>registered</em> email first to confirm the request is genuine. A round-trip verification email is almost always enough.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>High-risk request</strong> (erasure of a prominent speaker, or a subject whose records include sensitive Art. 9 data): a photo ID confirming name + email is acceptable, but redact anything you don\u2019t need (date of birth, ID number) and delete it as soon as verification is complete \u2014 do not store it.</li>
+<li class="text-gray-700 dark:text-gray-300">Never demand ID for routine corrections (e.g. updating a phone number) \u2014 that\u2019s disproportionate.</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">The one-month response window (Art. 12(3))</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">You must respond <strong>within one calendar month</strong> of receipt \u2014 even if the response is \u201cwe need more time\u201d or \u201cwe\u2019re refusing, here\u2019s why\u201d.</li>
+<li class="text-gray-700 dark:text-gray-300">For genuinely complex or multi-subject cases you may extend by <strong>up to two further months</strong>, but you must tell the subject <em>within the first month</em> and give a reason. Note this in the Privacy Request\u2019s notes field so the audit trail reflects it.</li>
+<li class="text-gray-700 dark:text-gray-300">The Privacy Requests tab shows an <span class="text-amber-700 dark:text-amber-400 font-medium">amber badge after 21 days</span> so you can move before the deadline slips.</li>
+<li class="text-gray-700 dark:text-gray-300">Response is <strong>free of charge</strong>. You can only charge a reasonable fee (or refuse) if the request is \u201cmanifestly unfounded or excessive\u201d \u2014 e.g. the same subject asking for a fresh export every week. Document the reason in the rejection field if you invoke this.</li>
+</ul>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Standard workflow</h3>
+<ol class="list-decimal list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Acknowledge</strong> receipt the same day (\u201cWe received your request on &lt;date&gt; and will respond by &lt;date + 1 month&gt;\u201d).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Verify identity</strong> proportionately (see above).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Log it</strong> in <strong>My Company \u2192 Privacy Requests \u2192 New request</strong>. Use the <em>notes</em> field to capture how the subject reached you and any identity-verification step.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Fulfil</strong>: for export, click <em>Generate export</em> and send the ZIP (or a secure download link) to the verified address. For erasure, approve or reject; if rejecting, the reason you enter is what the subject will see.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Reply</strong> to the subject in plain language \u2014 Art. 12(1) requires a \u201cconcise, transparent, intelligible\u201d response. Attach or link to the ZIP; for erasure, list what was deleted and which invoice rows stay under HGB \u00a7257.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Close the loop</strong> in the Privacy Requests tab; the status + audit trail become your proof of compliance.</li>
+</ol>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">When you can lawfully say no</h3>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Invoice retention</strong> (HGB \u00a7257 / AO \u00a7147) overrides erasure for up to 10 years after year-end of issue.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Identity cannot be confirmed</strong> after a reasonable verification attempt (Art. 12(6)).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Manifestly unfounded or excessive</strong> repeat requests (Art. 12(5)).</li>
+<li class="text-gray-700 dark:text-gray-300">Any refusal must be explained to the subject and logged via the rejection-reason field. The subject always retains the right to complain to a supervisory authority \u2014 mention that in your reply.</li>
+</ul>`,
           }}
         />
       ),
@@ -89,15 +146,17 @@ export const dsgvoComplianceCategory: HandbookCategory = {
       content: () => (
         <div
           dangerouslySetInnerHTML={{
-            __html: `<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Today (Phase 1):</strong> when you receive a subject request, contact SaaSConf support. We run the export or (case-by-case) erasure from ops tooling; the request, reviewer, and outcome are recorded in the <code>privacy_requests</code> table so you have an audit trail.</p>
-<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Phase 2 (planned):</strong> a dedicated <strong>Privacy Requests</strong> tab under tenant settings, letting you:</p>
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Live today</strong>: go to <strong>My Company \u2192 Privacy Requests</strong>. From that tab, tenant admins can:</p>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">Log incoming data-subject requests (access or erasure)</li>
-<li class="text-gray-700 dark:text-gray-300">Approve or reject portal self-service requests</li>
-<li class="text-gray-700 dark:text-gray-300">Generate the subject-data export ZIP and deliver a time-limited download link</li>
-<li class="text-gray-700 dark:text-gray-300">Preview and execute erasure plans with per-category delete / anonymize / skip choices (Phase 3)</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>New request</strong>: log an incoming data-subject request \u2014 pick <em>export</em> (Art. 15) or <em>erasure</em> (Art. 17), paste one or more subject emails (up to 25 for family / joint bookings), add notes.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Generate export</strong>: on an <em>export</em> request, click the button to build the Art. 15 ZIP on demand. The record-count manifest is stored; the download link is valid for 7 days (regenerate if it expires). Rate-limited to 10 exports / tenant / hour.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Approve</strong> (erasure only): marks the request approved \u2014 the actual mechanical deletion lands in Phase 3. Approval itself counts as the Art. 12(3) on-time reply.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Reject</strong>: either type. A non-empty rejection reason is required and becomes part of the permanent record.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Filter &amp; search</strong>: filter by status / type, or paste a subject email to find every request concerning them \u2014 the email is hashed client-side and compared to the GIN-indexed <code>subject_email_hashes</code> column.</li>
 </ul>
-<p class="text-gray-700 dark:text-gray-300 my-2">Response-window reminder: you have one month from receiving the request (Art. 12(3)) \u2014 contact support early rather than late.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2">Every create / view / approve / reject / generate / download action writes an <code>audit_logs</code> row with the admin\u2019s user id and the subject\u2019s email hash, so you have a complete compliance trail.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Phase 3 (planned):</strong> a per-category erasure preview (delete vs. anonymize vs. skip) so you can execute an approved erasure from the same tab.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">Response-window reminder: you have one month from receiving the request (Art. 12(3)). Requests older than 21 days show an amber badge on the detail panel to warn you before the deadline.</p>`,
           }}
         />
       ),

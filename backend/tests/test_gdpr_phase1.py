@@ -263,7 +263,9 @@ async def seeded_subject(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_build_export_emits_seeded_row_and_audit_event(db_session: AsyncSession, seeded_subject) -> None:
     tenant_id, email = seeded_subject
-    blob = await build_export(db_session, tenant_id, [email])
+    blob, manifest_dict = await build_export(db_session, tenant_id, [email])
+    assert manifest_dict["tenant_id"] == str(tenant_id)
+    assert manifest_dict["record_counts"]["registrations"] == 1
 
     with zipfile.ZipFile(io.BytesIO(blob)) as zf:
         names = set(zf.namelist())
@@ -294,7 +296,7 @@ async def test_build_export_emits_seeded_row_and_audit_event(db_session: AsyncSe
 @pytest.mark.asyncio
 async def test_build_export_missing_subject_returns_empty_sections(db_session: AsyncSession, seeded_subject) -> None:
     tenant_id, _email = seeded_subject
-    blob = await build_export(db_session, tenant_id, ["nobody@example.com"])
+    blob, _manifest = await build_export(db_session, tenant_id, ["nobody@example.com"])
 
     with zipfile.ZipFile(io.BytesIO(blob)) as zf:
         manifest = json.loads(zf.read("manifest.json"))

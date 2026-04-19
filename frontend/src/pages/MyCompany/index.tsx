@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import CompanyForm from './CompanyForm';
 import EmailSettingsTab from './EmailSettingsTab';
+import PrivacyRequestsTab from './PrivacyRequestsTab';
 import type { Tenant } from '../../types';
 import type { MyCompanyTab } from './types';
 
@@ -41,6 +42,7 @@ export default function MyCompany() {
   const tabs: { key: MyCompanyTab; label: string }[] = [
     { key: 'company', label: 'Company' },
     { key: 'email', label: 'Email Settings' },
+    { key: 'privacy', label: 'Privacy Requests' },
   ];
 
   return (
@@ -87,6 +89,8 @@ export default function MyCompany() {
           onUpdate={() => queryClient.invalidateQueries({ queryKey: ['my-company'] })}
         />
       )}
+
+      {activeTab === 'privacy' && <PrivacyRequestsTab />}
     </div>
   );
 }
