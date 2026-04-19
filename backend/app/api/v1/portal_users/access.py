@@ -1,6 +1,6 @@
 """Tenant-level portal user admin actions — access, invite, reset, impersonate, merge.
 
-Every handler writes a ``PortalUserHistory`` row *and* an ``AuditLog`` row so
+Every handler writes a ``CustomerEvent`` row *and* an ``AuditLog`` row so
 the user detail panel has a timeline and the global audit log has a
 cross-referenceable trail. Actions operate on the unified ``PortalUser`` and
 respect both training-side and conference-side linked records.
@@ -23,6 +23,7 @@ from app.core.security.pii_crypto import read_pii
 from app.core.utils import utcnow
 from app.models.audit import AuditAction
 from app.models.cfp_applicants import CFPApplicant
+from app.models.customer_event import CustomerEventType
 from app.models.offer_attendee import OfferAttendee
 from app.models.portal_user import PortalRefreshToken
 from app.models.training_attendee import TrainingAttendee
@@ -82,14 +83,14 @@ async def toggle_portal_access(
             TrainingAttendee.tenant_id == current_user.tenant_id,
         )
     )
-    event_type = "portal_deactivated" if deactivating else "portal_activated"
+    training_event_type = "portal_deactivated" if deactivating else "portal_activated"
     notes = "Portal account deactivated" if deactivating else "Portal account activated"
     for att_id in att_result.scalars().all():
         db.add(
             TrainingAttendeeHistory(
                 tenant_id=current_user.tenant_id,
                 attendee_id=att_id,
-                event_type=event_type,
+                event_type=training_event_type,
                 notes=notes,
                 created_by=current_user.user_id,
             )
@@ -99,7 +100,7 @@ async def toggle_portal_access(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
-        event_type=event_type,
+        event_type=(CustomerEventType.PORTAL_DEACTIVATED if deactivating else CustomerEventType.PORTAL_ACTIVATED),
         created_by=current_user.user_id,
         notes=notes,
     )
@@ -153,7 +154,7 @@ async def resend_portal_invite(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
-        event_type="invite_resent",
+        event_type=CustomerEventType.PORTAL_INVITE_RESENT,
         created_by=current_user.user_id,
         notes="Invite email resent",
     )
@@ -223,7 +224,7 @@ async def admin_reset_portal_password(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
-        event_type="password_reset_sent",
+        event_type=CustomerEventType.PORTAL_PASSWORD_RESET_SENT,
         created_by=current_user.user_id,
         notes="Admin-initiated password reset email sent",
     )
@@ -283,7 +284,7 @@ async def impersonate_portal_user(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
-        event_type="impersonated",
+        event_type=CustomerEventType.PORTAL_IMPERSONATED,
         created_by=current_user.user_id,
         notes="Admin started an impersonation session",
     )
@@ -420,7 +421,7 @@ async def merge_portal_users(
         db,
         tenant_id=tenant_id,
         portal_user_id=target.id,
-        event_type="merged_into",
+        event_type=CustomerEventType.PORTAL_MERGED_INTO,
         created_by=current_user.user_id,
         notes=f"Merged from {source_email}",
         meta={

@@ -35,9 +35,9 @@ from app.models.cfp import CallForPapers
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import CFPPaper, PaperStatus
 from app.models.conference import Conference
+from app.models.customer_event import CustomerEvent
 from app.models.location import Location
 from app.models.portal_user import PortalUser
-from app.models.portal_user_history import PortalUserHistory
 from app.models.registration import Registration
 from app.models.tenant import Tenant
 from app.models.training import Training
@@ -432,11 +432,11 @@ class TestToggleAccess:
         assert res.status_code == 200
 
         hist = (
-            (await db_session.execute(select(PortalUserHistory).where(PortalUserHistory.portal_user_id == pu.id)))
+            (await db_session.execute(select(CustomerEvent).where(CustomerEvent.portal_user_id == pu.id)))
             .scalars()
             .all()
         )
-        assert any(h.event_type == "portal_deactivated" for h in hist)
+        assert any(h.event_type == "portal.deactivated" for h in hist)
 
         audits = (
             (
@@ -476,11 +476,11 @@ class TestEmailActions:
         mock_send.assert_awaited_once()
 
         hist = (
-            (await db_session.execute(select(PortalUserHistory).where(PortalUserHistory.portal_user_id == pu.id)))
+            (await db_session.execute(select(CustomerEvent).where(CustomerEvent.portal_user_id == pu.id)))
             .scalars()
             .all()
         )
-        assert any(h.event_type == "invite_resent" for h in hist)
+        assert any(h.event_type == "portal.invite_resent" for h in hist)
 
         audits = (
             (await db_session.execute(select(AuditLog).where(AuditLog.action == AuditAction.PORTAL_USER_RESEND_INVITE)))
@@ -506,11 +506,11 @@ class TestEmailActions:
         assert res.status_code == 200
 
         hist = (
-            (await db_session.execute(select(PortalUserHistory).where(PortalUserHistory.portal_user_id == pu.id)))
+            (await db_session.execute(select(CustomerEvent).where(CustomerEvent.portal_user_id == pu.id)))
             .scalars()
             .all()
         )
-        assert any(h.event_type == "password_reset_sent" for h in hist)
+        assert any(h.event_type == "portal.password_reset_sent" for h in hist)
 
     @pytest.mark.asyncio
     async def test_impersonate_returns_access_token_and_writes_history(
@@ -530,11 +530,11 @@ class TestEmailActions:
         assert data["portal_user_email"] == pu.email
 
         hist = (
-            (await db_session.execute(select(PortalUserHistory).where(PortalUserHistory.portal_user_id == pu.id)))
+            (await db_session.execute(select(CustomerEvent).where(CustomerEvent.portal_user_id == pu.id)))
             .scalars()
             .all()
         )
-        assert any(h.event_type == "impersonated" for h in hist)
+        assert any(h.event_type == "portal.impersonated" for h in hist)
 
     @pytest.mark.asyncio
     async def test_impersonate_blocked_for_inactive_user(
@@ -586,14 +586,15 @@ class TestMerge:
         src_exists = await db_session.execute(select(PortalUser).where(PortalUser.id == source.id))
         assert src_exists.scalar_one_or_none() is None
 
-        # Target timeline carries a merged_into row.
+        # Target timeline carries a portal.merged_into row.
         hist = (
-            (await db_session.execute(select(PortalUserHistory).where(PortalUserHistory.portal_user_id == target.id)))
+            (await db_session.execute(select(CustomerEvent).where(CustomerEvent.portal_user_id == target.id)))
             .scalars()
             .all()
         )
-        merged = [h for h in hist if h.event_type == "merged_into"]
+        merged = [h for h in hist if h.event_type == "portal.merged_into"]
         assert len(merged) == 1
+        assert merged[0].meta is not None
         assert merged[0].meta["source_user_id"] == str(source.id)
 
     @pytest.mark.asyncio

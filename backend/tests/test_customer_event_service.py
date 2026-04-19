@@ -1,16 +1,20 @@
-"""Tests for ``CustomerEventService`` + portal dual-write parity.
+"""Tests for ``CustomerEventService`` + portal admin write-path.
 
 Phase 3 of the unified customer architecture (see
-``.claude/plans/smooth-sprouting-perlis.md``). Covers:
+``.claude/plans/smooth-sprouting-perlis.md``) introduced
+``CustomerEventService`` + dual-write to both ``portal_user_history``
+and ``customer_events``. Phase 6 removed the legacy insert — these
+tests now assert the canonical row lands in ``customer_events``.
+
+Covers:
 
 * Service-level validation: enum-only ``event_type``, domain/prefix
   match, non-empty ``subject_email_hash``, known ``actor_kind`` /
   ``domain``.
-* Dual-write parity: every admin action through the
-  ``/portal-users/*`` router writes a row to **both**
-  ``portal_user_history`` AND ``customer_events``, with matching
-  ``notes`` / ``meta`` / ``created_by`` and the canonical namespaced
-  ``event_type``.
+* Admin write-path: every action through the ``/portal-users/*``
+  router writes a ``customer_events`` row with the canonical
+  namespaced ``event_type`` and the right ``notes`` / ``meta`` /
+  ``created_by``.
 """
 
 from __future__ import annotations
@@ -44,7 +48,6 @@ from app.models.customer_event import (
     CustomerEventType,
 )
 from app.models.portal_user import PortalUser
-from app.models.portal_user_history import PortalUserHistory
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.services.customer_event_service import CustomerEventService
@@ -232,17 +235,7 @@ class TestServiceValidation:
         assert row.domain == "training"
 
 
-# ── Dual-write parity via the admin router ─────────────────────────────
-
-
-async def _count_history(db: AsyncSession, portal_user_id: uuid.UUID, event_type: str) -> int:
-    res = await db.execute(
-        select(PortalUserHistory).where(
-            PortalUserHistory.portal_user_id == portal_user_id,
-            PortalUserHistory.event_type == event_type,
-        )
-    )
-    return len(res.scalars().all())
+# ── Admin-router write path → customer_events ──────────────────────────
 
 
 async def _customer_event(db: AsyncSession, portal_user_id: uuid.UUID, event_type: str) -> CustomerEvent | None:
@@ -255,9 +248,9 @@ async def _customer_event(db: AsyncSession, portal_user_id: uuid.UUID, event_typ
     return res.scalar_one_or_none()
 
 
-class TestPortalDualWriteParity:
+class TestPortalAdminWritesCustomerEvent:
     @pytest.mark.asyncio
-    async def test_toggle_access_dual_writes(
+    async def test_toggle_access_writes_customer_event(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -265,7 +258,7 @@ class TestPortalDualWriteParity:
         admin_ces: User,
         portal_user_ces: PortalUser,
     ):
-        """Deactivate → both tables get a row, with canonical namespacing on the new one."""
+        """Deactivate → one customer_events row with namespaced event_type."""
         token = _admin_token(admin_ces)
         r = await client.put(
             f"/api/v1/portal-users/{portal_user_ces.id}/toggle-access",
@@ -273,8 +266,6 @@ class TestPortalDualWriteParity:
         )
         assert r.status_code == 200
 
-        # Legacy row uses bare event_type; new row uses namespaced form.
-        assert await _count_history(db_session, portal_user_ces.id, "portal_deactivated") == 1
         ev = await _customer_event(db_session, portal_user_ces.id, "portal.deactivated")
         assert ev is not None
         assert ev.domain == "portal"
@@ -284,7 +275,7 @@ class TestPortalDualWriteParity:
         assert ev.notes == "Portal account deactivated"
 
     @pytest.mark.asyncio
-    async def test_resend_invite_dual_writes(
+    async def test_resend_invite_writes_customer_event(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -300,14 +291,13 @@ class TestPortalDualWriteParity:
             )
         assert r.status_code == 200
 
-        assert await _count_history(db_session, portal_user_ces.id, "invite_resent") == 1
         ev = await _customer_event(db_session, portal_user_ces.id, "portal.invite_resent")
         assert ev is not None
         assert ev.notes == "Invite email resent"
         assert ev.created_by == admin_ces.id
 
     @pytest.mark.asyncio
-    async def test_reset_password_dual_writes(
+    async def test_reset_password_writes_customer_event(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -323,14 +313,13 @@ class TestPortalDualWriteParity:
             )
         assert r.status_code == 200
 
-        assert await _count_history(db_session, portal_user_ces.id, "password_reset_sent") == 1
         ev = await _customer_event(db_session, portal_user_ces.id, "portal.password_reset_sent")
         assert ev is not None
         assert ev.domain == "portal"
         assert ev.notes == "Admin-initiated password reset email sent"
 
     @pytest.mark.asyncio
-    async def test_impersonate_dual_writes(
+    async def test_impersonate_writes_customer_event(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -345,14 +334,13 @@ class TestPortalDualWriteParity:
         )
         assert r.status_code == 200
 
-        assert await _count_history(db_session, portal_user_ces.id, "impersonated") == 1
         ev = await _customer_event(db_session, portal_user_ces.id, "portal.impersonated")
         assert ev is not None
         assert ev.actor_kind == ACTOR_ADMIN
         assert ev.notes == "Admin started an impersonation session"
 
     @pytest.mark.asyncio
-    async def test_merge_dual_writes_into_target(
+    async def test_merge_writes_merged_into_customer_event(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -387,7 +375,6 @@ class TestPortalDualWriteParity:
         )
         assert r.status_code == 200
 
-        assert await _count_history(db_session, target.id, "merged_into") == 1
         ev = await _customer_event(db_session, target.id, "portal.merged_into")
         assert ev is not None
         assert ev.meta is not None

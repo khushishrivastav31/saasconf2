@@ -13,29 +13,15 @@ from app.core.security.pii_crypto import read_pii
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import CFPPaper, PaperStatus
 from app.models.conference import Conference
-from app.models.customer_event import ACTOR_ADMIN, DOMAIN_PORTAL, CustomerEventType
+from app.models.customer_event import ACTOR_ADMIN, DOMAIN_PORTAL, CustomerEvent, CustomerEventType
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
 from app.models.portal_user import PortalUser
-from app.models.portal_user_history import PortalUserHistory
 from app.models.registration import Registration
 from app.models.training_attendee import TrainingAttendee
 from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 from app.services.customer_event_service import CustomerEventService
-
-# Legacy portal_user_history.event_type strings → namespaced CustomerEventType.
-# portal_users/access.py still writes the bare strings; this map translates
-# them during the dual-write phase so customer_events uses the canonical form.
-_LEGACY_PORTAL_EVENT_MAP: dict[str, CustomerEventType] = {
-    "portal_activated": CustomerEventType.PORTAL_ACTIVATED,
-    "portal_deactivated": CustomerEventType.PORTAL_DEACTIVATED,
-    "invite_resent": CustomerEventType.PORTAL_INVITE_RESENT,
-    "password_reset_sent": CustomerEventType.PORTAL_PASSWORD_RESET_SENT,
-    "impersonated": CustomerEventType.PORTAL_IMPERSONATED,
-    "merged_from": CustomerEventType.PORTAL_MERGED_FROM,
-    "merged_into": CustomerEventType.PORTAL_MERGED_INTO,
-}
 
 
 async def get_portal_user(db: AsyncSession, user_id: UUID, tenant_id: UUID) -> PortalUser:
@@ -158,45 +144,31 @@ async def write_history(
     *,
     tenant_id: UUID,
     portal_user_id: UUID,
-    event_type: str,
+    event_type: CustomerEventType,
     created_by: UUID | None,
     notes: str | None = None,
     meta: dict[str, Any] | None = None,
-) -> PortalUserHistory:
-    """Append a PortalUserHistory row *and* the canonical customer_events row.
+) -> CustomerEvent | None:
+    """Record a portal-domain customer_events row for an admin action.
 
-    Dual-write is Phase 3 of the unified customer architecture
-    (see ``.claude/plans/smooth-sprouting-perlis.md``). Both rows are
-    staged on the session; the caller commits them atomically with the
-    surrounding domain work. Once Phase 5 flips the reader, the legacy
-    ``portal_user_history`` insert can be dropped (Phase 6).
+    Thin wrapper around :meth:`CustomerEventService.record` — resolves the
+    ``subject_email_hash`` from the portal user (identity-map hit when the
+    handler already loaded it via ``get_portal_user``). Phase 6 of the
+    unified customer architecture: the legacy ``portal_user_history``
+    insert is gone; ``customer_events`` is now the only sink.
     """
-    entry = PortalUserHistory(
+    pu = await db.get(PortalUser, portal_user_id)
+    if pu is None or not pu.email_hash:
+        return None
+    return CustomerEventService.record(
+        db,
         tenant_id=tenant_id,
         portal_user_id=portal_user_id,
+        subject_email_hash=pu.email_hash,
+        domain=DOMAIN_PORTAL,
         event_type=event_type,
+        actor_kind=ACTOR_ADMIN,
+        created_by=created_by,
         notes=notes,
         meta=meta,
-        created_by=created_by,
     )
-    db.add(entry)
-
-    customer_event_type = _LEGACY_PORTAL_EVENT_MAP.get(event_type)
-    if customer_event_type is not None:
-        # Identity-map hit when the handler already loaded the user via
-        # get_portal_user — no extra round-trip in the common path.
-        pu = await db.get(PortalUser, portal_user_id)
-        if pu is not None and pu.email_hash:
-            CustomerEventService.record(
-                db,
-                tenant_id=tenant_id,
-                portal_user_id=portal_user_id,
-                subject_email_hash=pu.email_hash,
-                domain=DOMAIN_PORTAL,
-                event_type=customer_event_type,
-                actor_kind=ACTOR_ADMIN,
-                created_by=created_by,
-                notes=notes,
-                meta=meta,
-            )
-    return entry
