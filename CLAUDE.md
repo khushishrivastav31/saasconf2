@@ -86,15 +86,12 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
   - `bed34be` Commit 1: backend dual-token + orphan heal + composite `/portal/unified/me`
   - `fd95d84` Commit 2: unified frontend API client (one `portalApi.ts`, one token pair)
   - `2696d3a` Commit 3: cross-portal sidebar links + `PrivacyMyDataPanel` in CFP portal
-- **In progress — pending commit approval (Commit 4 of 5)**: **Auth-context unification for training-only users**. Files modified:
-  - `frontend/src/contexts/ApplicantAuthContext.tsx` — now fetches `/portal/unified/me` first (always) and only calls `/portal/me` when `has_conference_account`. Exposes new `portalMe: PortalMe | null` on context. `login()` returns the `PortalMe` payload so callers can branch on capability flags. Training-only users get `applicant: null` + populated `portalMe` (no token clearing).
-  - `frontend/src/pages/portal/PortalLayout.tsx` — when `!applicant` but `portalMe` shows training-only, `<Navigate>` to `/:slug/trainings/portal/dashboard` instead of login redirect.
-  - `frontend/src/pages/portal/LoginPage.tsx` — post-login navigates to trainings dashboard if `has_conference_account === false && has_training_account === true`; else the existing `${basePath}/news` target.
-  - `frontend/src/App.tsx` — `/:tenantSlug/trainings/portal/login` now renders `<LegacyLoginRedirect>` (→ `/:tenantSlug/portal/user/login`). Dropped now-unused `TrainingPortalLogin` lazy import.
-  - `frontend/src/types/portal.ts` — new `PortalMe` interface mirroring backend composite response.
-  - `frontend/src/test-utils.tsx` — `ApplicantAuthContextValue` gets `portalMe`; `makeApplicantAuthContext()` returns a `mockPortalMe` fixture and `login` now resolves to `PortalMe`.
-  - `frontend/src/contexts/__tests__/ApplicantAuthContext.test.tsx` — reworked with URL-keyed `mockPortalGet()` helper; added "training-only user exposes portalMe without applicant" + "training-only login skips /portal/me" cases.
-  - `frontend/src/hooks/__tests__/useApplicantAuth.test.tsx` — mock now includes `portalMe` + missing ApplicantProfile fields (address_*, allow_out_of_timeframe, message_notifications_enabled, theme_preference).
-  - All green: tsc clean, eslint 0 errors (105 pre-existing warnings), **27/27 ApplicantAuth tests pass**, **full frontend suite 1842/1842 pass**, backend mypy + ruff clean, 11/11 dual-token tests pass, OpenAPI schema in sync.
-- **Next after commit**: Commit 5 (cleanup — delete `pages/TrainingPortal/LoginPage.tsx` once Commit 4 is committed, plus leftover training-portal shims; run test-debt backfill). Then ask before pushing to `main`. Plan lives at `.claude/plans/portal-unification-phase-2-5.md`.
-- **Status**: 3 commits on local main ahead of origin. Commit 4 staged-but-uncommitted — **ask user before committing**.
+  - `fce4bf3` Commit 4: `ApplicantAuthContext` uses `/portal/unified/me`, exposes `portalMe`, training-only users routed to the trainings dashboard post-login; legacy `/trainings/portal/login` redirects to unified login.
+- **In progress — pending commit approval (Commit 5 of 5 — minimal cleanup)**: delete `frontend/src/pages/TrainingPortal/LoginPage.tsx` (unreferenced since Commit 4). Other TrainingPortal pages (DashboardPage, PortalLayout, SetPasswordPage, TrainingDetailPage, PrivacyPage) remain in use.
+- **Verification before commit**: tsc clean, eslint 0 errors (105 pre-existing warnings), **full frontend suite 1842/1842 pass**.
+- **Deferred** (recommended for a separate PR, not blocking Phase 2.5 push):
+  - Test-debt backfill from the original plan (5 files: UsersTab, conference_booking_history, training_user_management, training_files, new portal page tests).
+  - Full `ApplicantAuthContext` → `PortalAuthContext` rename (still live at 12 call-sites).
+  - Dual-token compat removal once no legacy `applicant_access` tokens remain in the wild.
+- **Next after commit**: ask the user whether to push the 5-commit Phase 2.5 stack to `main`. Plan lives at `.claude/plans/portal-unification-phase-2-5.md`.
+- **Status**: 4 commits on local main ahead of origin. Commit 5 staged-but-uncommitted — **ask user before committing**.
