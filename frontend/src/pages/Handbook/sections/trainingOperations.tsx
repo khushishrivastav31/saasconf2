@@ -211,5 +211,25 @@ export const trainingOperationsCategory: HandbookCategory = {
         />
       ),
     },
+    {
+      id: 't-users',
+      title: 'Users',
+      categoryId: 'category-t-operations',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Training-scoped user view for editing the people who signed up for your trainings. Navigate to <strong>Users</strong> in the sidebar. Opening a user uses the same layout as <strong>Conferences &rarr; Users</strong> so you don\u2019t relearn the page when switching modules.</p>
+<strong>Layout:</strong> a header with avatar, name, email, and status chip (Active / Parked / Inactive), then a tab bar:
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Profile</strong> \u2014 sectioned form (Media &rarr; Identity &rarr; Address &rarr; Bio) with one Save button at the bottom. If the attendee doesn\u2019t have a portal account yet, this tab links to the Portal Account tab where you can create one.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Portal Account</strong> \u2014 account status (active, password set, email verified, last login, created) plus the five admin actions: <em>Toggle access</em>, <em>Resend invite</em>, <em>Reset password</em>, <em>Impersonate</em>, and <em>Merge with&hellip;</em>. No portal account yet? The tab shows a one-click <em>Create portal account</em>.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Activity</strong> \u2014 the unified customer timeline: portal actions, training events (registered, parked, reassigned, offer assigned, deactivated, reactivated), CFP paper submit/accept/reject/withdraw, conference registrations, and merges \u2014 so the person\u2019s whole history is one click away.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Registrations</strong> \u2014 all training registrations and offer links for this user, with counts in the tab.</li>
+</ul>
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Where to find related actions:</strong> the <em>Attendees</em> registry above is training-centric (who is on which training). The <em>Users</em> page is person-centric \u2014 use it when you want the whole picture for one individual across trainings and conferences.</p>`,
+          }}
+        />
+      ),
+    },
   ],
 };
