@@ -4,6 +4,7 @@ import api from '../../config/api';
 import CompanyForm from './CompanyForm';
 import EmailSettingsTab from './EmailSettingsTab';
 import PrivacyRequestsTab from './PrivacyRequestsTab';
+import UsersTab from './UsersTab';
 import type { Tenant } from '../../types';
 import type { MyCompanyTab } from './types';
 
@@ -42,6 +43,7 @@ export default function MyCompany() {
   const tabs: { key: MyCompanyTab; label: string }[] = [
     { key: 'company', label: 'Company' },
     { key: 'email', label: 'Email Settings' },
+    { key: 'users', label: 'Users' },
     { key: 'privacy', label: 'Privacy Requests' },
   ];
 
@@ -50,7 +52,7 @@ export default function MyCompany() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Company</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Manage your company information, email settings, and templates
+          Manage your company information, email settings, portal users, and privacy requests
         </p>
       </div>
 
@@ -89,6 +91,8 @@ export default function MyCompany() {
           onUpdate={() => queryClient.invalidateQueries({ queryKey: ['my-company'] })}
         />
       )}
+
+      {activeTab === 'users' && <UsersTab />}
 
       {activeTab === 'privacy' && <PrivacyRequestsTab />}
     </div>

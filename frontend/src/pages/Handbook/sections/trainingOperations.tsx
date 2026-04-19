@@ -205,7 +205,8 @@ export const trainingOperationsCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Current placement:</strong> Shows which training(s) the attendee is currently assigned to</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Status:</strong> Active, Parked, or Inactive. An attendee is shown as Inactive when their status is explicitly "inactive" (via the Deactivate button on the parking lot or user profile) or when they are parked but their portal account is deactivated. The parking lot hides inactive users. Use the Deactivate / Reactivate actions on the attendee to change status; toggling portal access does not change the attendee status directly.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Search &amp; filter:</strong> Find attendees by name, email, or training</li>
-</ul>`,
+</ul>
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Portal account admin actions &amp; history:</strong> For the unified, tenant-wide portal-user admin view (covering both training-side and conference-side accounts), open <strong>My Company &rarr; Users</strong>. Five actions are available \u2014 <em>Toggle access</em>, <em>Resend invite</em>, <em>Reset password</em>, <em>Impersonate</em>, <em>Merge with...</em> \u2014 each writes an audit log and a per-user history entry shown on the <em>History</em> tab. Deactivation is blocked while the user has a non-parked attendee on an active training registration or an accepted offer.</p>`,
           }}
         />
       ),

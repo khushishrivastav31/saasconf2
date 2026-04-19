@@ -24,7 +24,77 @@ export interface EmailDefaults {
   tenant_api_key_set: boolean;
 }
 
-export type MyCompanyTab = 'company' | 'email' | 'privacy';
+export type MyCompanyTab = 'company' | 'email' | 'privacy' | 'users';
+
+// ── Portal Users (tenant admin) ───────────────────────────────────────
+
+export interface PortalUserListItem {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  is_active: boolean;
+  has_password: boolean;
+  email_verified: boolean;
+  last_login_at: string | null;
+  created_at: string | null;
+  training_attendee_status: string | null;
+  has_cfp_link: boolean;
+  has_registration_link: boolean;
+}
+
+export interface PortalUserListResponse {
+  items: PortalUserListItem[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export interface PortalUserLinkages {
+  training_attendee_count: number;
+  training_attendee_status: string | null;
+  cfp_applicant_count: number;
+  registration_count: number;
+}
+
+export interface PortalUserDetail {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  pronouns: string | null;
+  title: string | null;
+  company: string | null;
+  bio: string | null;
+  social_links: Record<string, string>;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  is_active: boolean;
+  has_password: boolean;
+  email_verified: boolean;
+  last_login_at: string | null;
+  created_at: string | null;
+  picture_id?: string;
+  picture_filename?: string;
+  video_id?: string;
+  video_filename?: string;
+  linkages: PortalUserLinkages;
+}
+
+export interface PortalUserHistoryEntry {
+  id: string;
+  source: 'admin' | 'training';
+  event_type: string;
+  notes: string | null;
+  meta: Record<string, unknown> | null;
+  created_by: string | null;
+  created_at: string;
+}
 
 // ── GDPR Privacy Requests (Art. 15 / 17) ──────────────────────────────
 

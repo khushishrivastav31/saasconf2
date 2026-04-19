@@ -7,13 +7,17 @@ One email = one portal account across both conferences and trainings.
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone, read_pii
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.portal_user_history import PortalUserHistory
 
 
 class PortalUser(Base):
@@ -57,6 +61,13 @@ class PortalUser(Base):
     # Legacy (tenant_id, email) unique index retired in migration 199; uniqueness
     # is enforced via (tenant_id, email_hash) created in migration 197.
     __table_args__ = (Index("idx_portal_users_tenant", "tenant_id"),)
+
+    history: Mapped[list["PortalUserHistory"]] = relationship(
+        "PortalUserHistory",
+        back_populates="portal_user",
+        cascade="all, delete-orphan",
+        order_by="PortalUserHistory.created_at.desc()",
+    )
 
     @property
     def email(self) -> str | None:

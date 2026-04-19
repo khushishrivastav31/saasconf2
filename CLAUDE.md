@@ -82,13 +82,19 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **In progress — pending commit approval**: Portal erasure request email notifications.
-  - New module `backend/app/core/email/privacy.py` with two fire-and-forget senders:
-    - `send_privacy_request_user_confirmation` — confirms to the subject
-    - `send_privacy_request_admin_notification` — alerts tenant contact
-  - Wired into `backend/app/api/v1/portal/privacy.py` `create_portal_privacy_request` erasure branch only (export already returns a download URL inline).
-  - Tenant contact resolver: first `tenant.contact_persons[*].email` → fallback `tenant.resend_from_email` → skip.
-  - `backend/tests/test_portal_privacy_emails.py` — 13 tests (helpers + endpoint wiring).
-- **Verification**: mypy clean (665 files); ruff check/format clean; `tests/test_portal_privacy_emails.py` + `tests/test_gdpr_phase[1-4].py` = 69/69 pass; full backend suite running in bg task b6zg0di9q.
-- **Prior work pushed**: Phase 2.5 portal unification (commits `bed34be` → `fce4bf3` + cleanup) is on `origin/main`.
-- **Status**: two modified files + one new file + one new test file uncommitted — **ask user before committing**.
+- **In progress — pending commit approval**: Tenant-level MyCompany → Users admin (Option 2 per user directive "go for 2. Important is to have a history").
+  - **Backend** (new `/api/v1/portal-users/*` router, 9 routes):
+    - `backend/app/api/v1/portal_users/_helpers.py` — shared helpers incl. `has_active_assignment()` covering training-side (non-parked attendee + active placement + non-cancelled registration OR accepted offer) and conference-side (CFPPaper not draft/rejected OR Registration on active conference).
+    - `backend/app/api/v1/portal_users/access.py` — 5 actions (toggle-access, resend-invite, reset-password, impersonate, merge). Each writes both `AuditLog` + `PortalUserHistory`.
+    - `backend/app/api/v1/portal_users/listing.py` — list + detail + profile update, with linkage hints.
+    - `backend/app/api/v1/portal_users/history.py` — history endpoint.
+    - `backend/app/models/portal_user_history.py` (migration 204) + 5 new audit actions.
+  - **Frontend** (new `frontend/src/pages/MyCompany/UsersTab/`):
+    - `index.tsx` list, `UserDetailPanel.tsx` with 3 tabs (Profile / Linkages / History), `HistoryPanel.tsx`, `MergeDialog.tsx`, `constants.ts`.
+    - Wired into `MyCompany/index.tsx` as 4th tab between Email and Privacy.
+    - Types extended in `MyCompany/types.ts` (PortalUserListItem, PortalUserDetail, PortalUserHistoryEntry).
+  - **Handbook**: updated people.tsx 3-3 (conference users) + trainingOperations.tsx t-attendees-central to point admins to the new unified panel.
+  - **Training-side UsersTab kept**: attendee-specific actions stay on `/trainings/users/*`; new tenant-level panel is additive.
+- **Verification**: backend mypy clean (672 files); ruff check/format clean on `app/` + new test file; `tests/test_portal_users_admin.py` = 15/15 pass; full backend suite running in bg task bb27h55g8. Frontend tsc clean, eslint 0 errors, **vitest 1846/1846 pass** (incl. 4 new `MyCompany/__tests__/UsersTab.test.tsx` cases).
+- **Prior work pushed**: Phase 2.5 portal unification + GDPR Phases 1-4 are on `origin/main`.
+- **Status**: uncommitted — new `app/api/v1/portal_users/` package, new `app/models/portal_user_history.py`, migration 204, modifications to router.py/audit.py/models/__init__.py, new `test_portal_users_admin.py`, new `frontend/src/pages/MyCompany/UsersTab/` + `__tests__/UsersTab.test.tsx`, and small type/handbook edits — **ask user before committing**.

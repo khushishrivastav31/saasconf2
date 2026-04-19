@@ -143,3 +143,10 @@ class AuditAction:
     PLATFORM_CURRENCY_CREATE = "platform_currency.create"
     PLATFORM_CURRENCY_UPDATE = "platform_currency.update"
     PLATFORM_CURRENCY_DELETE = "platform_currency.delete"
+
+    # Portal-user admin actions (tenant-level MyCompany → Users page)
+    PORTAL_USER_TOGGLE_ACCESS = "portal_user.toggle_access"
+    PORTAL_USER_RESEND_INVITE = "portal_user.resend_invite"
+    PORTAL_USER_RESET_PASSWORD = "portal_user.reset_password"
+    PORTAL_USER_IMPERSONATE = "portal_user.impersonate"
+    PORTAL_USER_MERGE = "portal_user.merge"
