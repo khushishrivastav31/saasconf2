@@ -183,7 +183,8 @@ export const trainingDsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Request deletion</strong>: lands in the admin <em>Privacy Requests</em> queue in <code>pending_review</code>. Humans still execute the erasure with Phase 3\u2019s preview + type-to-confirm <code>ERASE</code> barrier \u2014 portal users cannot bypass review.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>My requests</strong>: a history table of the user\u2019s own requests with status badges and a re-download link while the 7-day window is open.</li>
 </ul>
-<p class="text-gray-700 dark:text-gray-300 my-2">The <code>subject_emails</code> field is always stamped from the caller\u2019s authenticated session \u2014 a portal user cannot file a request for somebody else.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2">The <code>subject_emails</code> field is always stamped from the caller\u2019s authenticated session \u2014 a portal user cannot file a request for somebody else.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">Submitting a deletion request automatically emails both the subject (as a confirmation of receipt) and your tenant contact (first entry of <strong>My Company \u2192 Contact persons</strong>, with a fallback to your Resend sender address) with a link back to the <em>Privacy Requests</em> panel. The row is always persisted; if no contact email is configured the admin notification is skipped with an info log. Export requests skip these emails because the user already receives the ZIP inline.</p>`,
           }}
         />
       ),

@@ -184,7 +184,8 @@ export const dsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Request deletion</strong>: submits an Art. 17 request in <code>pending_review</code> state straight into the admin <em>Privacy Requests</em> queue. Actual deletion still goes through Phase 3\u2019s per-table preview + type-to-confirm <code>ERASE</code> barrier \u2014 portal users cannot bypass human review.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>My requests</strong>: lists the caller\u2019s own request history with status badges; completed exports stay downloadable for 7 days.</li>
 </ul>
-<p class="text-gray-700 dark:text-gray-300 my-2">Portal users can never file a request on somebody else\u2019s behalf \u2014 <code>subject_emails</code> is always stamped from their authenticated session, never accepted from the client.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2">Portal users can never file a request on somebody else\u2019s behalf \u2014 <code>subject_emails</code> is always stamped from their authenticated session, never accepted from the client.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">Filing a deletion request fires two fire-and-forget emails: a confirmation to the subject (so they have a paper trail of \u201cyour request was received\u201d), and a notification to your tenant contact (first entry of <strong>My Company \u2192 Contact persons</strong>, falling back to your Resend sender address) with a link back into the <em>Privacy Requests</em> panel. If neither contact is configured the request still lands in the queue \u2014 the email is just skipped with an info log. Export requests do <em>not</em> send these emails because the user receives the ZIP inline.</p>`,
           }}
         />
       ),
