@@ -406,6 +406,13 @@ async def login_applicant(
             detail="Email not verified. Please check your inbox for the verification link.",
         )
 
+    # Auto-heal orphan applicants: migration 192 left portal_user_id NULL for any
+    # applicant that had no password_hash at migration time. Now that they have one
+    # (they just authenticated), link them so the unified portal works next time.
+    from app.core.portal_linkage import ensure_portal_user_for_applicant
+
+    await ensure_portal_user_for_applicant(db, applicant)
+
     # Create tokens
     access_token = create_applicant_access_token(
         applicant_id=applicant.id,

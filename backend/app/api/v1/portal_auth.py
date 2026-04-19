@@ -315,17 +315,21 @@ async def get_portal_profile(
     request: Request,
     db: DbSessionDep,
 ) -> dict:
-    """Get current portal user profile with linked conference + training data."""
+    """Get current portal user profile with linked conference + training data.
+
+    The unified frontend layout treats this as the single source of truth for
+    "who am I" — hence the flattened profile fields (theme, address, bio) that
+    the old cfp-only ``/portal/me`` used to return. The ``has_*_account`` flags
+    tell the UI which tabs to surface; the flattened ids let callers deep-link
+    into conference- or training-specific detail endpoints.
+    """
     user = await _get_current_portal_user(request, db)
 
-    # Get linked training attendee info
+    from app.models.cfp_applicants import CFPApplicant
     from app.models.training_attendee import TrainingAttendee
 
     ta_result = await db.execute(select(TrainingAttendee).where(TrainingAttendee.portal_user_id == user.id))
     training_attendee = ta_result.scalar_one_or_none()
-
-    # Get linked CFP applicant info
-    from app.models.cfp_applicants import CFPApplicant
 
     cfp_result = await db.execute(select(CFPApplicant).where(CFPApplicant.portal_user_id == user.id))
     cfp_applicant = cfp_result.scalar_one_or_none()
@@ -336,6 +340,17 @@ async def get_portal_profile(
         "first_name": user.first_name,
         "last_name": user.last_name,
         "phone": read_pii(user, "phone"),
+        "pronouns": user.pronouns,
+        "title": user.title,
+        "company": user.company,
+        "bio": user.bio,
+        "social_links": user.social_links or {},
+        "address_line_1": user.address_line_1,
+        "address_line_2": user.address_line_2,
+        "city": user.city,
+        "postal_code": user.postal_code,
+        "country": user.country,
+        "theme_preference": user.theme_preference,
         "is_active": user.is_active,
         "email_verified": user.email_verified_at is not None,
         "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
@@ -346,6 +361,38 @@ async def get_portal_profile(
         "training_attendee_status": training_attendee.status if training_attendee else None,
         "cfp_applicant_id": str(cfp_applicant.id) if cfp_applicant else None,
     }
+
+
+class PortalMePatch(BaseModel):
+    """Partial update for portal profile — currently theme only.
+
+    Name/email changes flow through the legacy module-specific endpoints so the
+    update hits the linked CFP applicant / training attendee rows too. Theme is
+    a pure UI preference that lives only on the portal_user.
+    """
+
+    theme_preference: str | None = None
+
+
+@router.patch("/portal/unified/me")
+async def patch_portal_profile(
+    data: PortalMePatch,
+    request: Request,
+    db: DbSessionDep,
+) -> dict:
+    """Update the current portal user's UI preferences."""
+    user = await _get_current_portal_user(request, db)
+
+    if data.theme_preference is not None and data.theme_preference not in ("light", "dark"):
+        raise HTTPException(status_code=422, detail="theme_preference must be 'light' or 'dark'")
+
+    if data.theme_preference is not None:
+        user.theme_preference = data.theme_preference
+
+    await db.commit()
+    await db.refresh(user)
+
+    return {"id": str(user.id), "theme_preference": user.theme_preference}
 
 
 @router.get("/portal/unified/my-trainings")

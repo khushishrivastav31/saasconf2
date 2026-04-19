@@ -10995,6 +10995,76 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/portal/me/privacy-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Portal Privacy Requests
+     * @description Paginated list of the caller's own privacy requests, newest first.
+     */
+    get: operations['list_portal_privacy_requests_api_v1_portal_me_privacy_requests_get'];
+    put?: never;
+    /**
+     * Create Portal Privacy Request
+     * @description Create a privacy request for the current portal user.
+     *
+     *     Response shape depends on the type:
+     *     * ``export`` → :class:`PortalExportCreateResponse` (includes a ready
+     *       ``download_url``).
+     *     * ``erasure`` → :class:`PortalPrivacyRequestResponse` (queued in
+     *       ``pending_review`` status).
+     */
+    post: operations['create_portal_privacy_request_api_v1_portal_me_privacy_requests_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/portal/me/privacy-requests/{request_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Portal Privacy Request
+     * @description Fetch detail for one of the caller's own privacy requests.
+     */
+    get: operations['get_portal_privacy_request_api_v1_portal_me_privacy_requests__request_id__get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/portal/me/privacy-requests/{request_id}/download': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download Portal Privacy Export
+     * @description Stream the Art. 15 export ZIP. 410 Gone after the 7-day window.
+     */
+    get: operations['download_portal_privacy_export_api_v1_portal_me_privacy_requests__request_id__download_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/portal/{tenant_slug}/unified/login': {
     parameters: {
       query?: never;
@@ -11085,6 +11155,12 @@ export type paths = {
     /**
      * Get Portal Profile
      * @description Get current portal user profile with linked conference + training data.
+     *
+     *     The unified frontend layout treats this as the single source of truth for
+     *     "who am I" — hence the flattened profile fields (theme, address, bio) that
+     *     the old cfp-only ``/portal/me`` used to return. The ``has_*_account`` flags
+     *     tell the UI which tabs to surface; the flattened ids let callers deep-link
+     *     into conference- or training-specific detail endpoints.
      */
     get: operations['get_portal_profile_api_v1_portal_unified_me_get'];
     put?: never;
@@ -11092,7 +11168,11 @@ export type paths = {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Patch Portal Profile
+     * @description Update the current portal user's UI preferences.
+     */
+    patch: operations['patch_portal_profile_api_v1_portal_unified_me_patch'];
     trace?: never;
   };
   '/api/v1/portal/unified/my-trainings': {
@@ -20974,6 +21054,18 @@ export type components = {
       /** Password */
       password: string;
     };
+    /**
+     * PortalMePatch
+     * @description Partial update for portal profile — currently theme only.
+     *
+     *     Name/email changes flow through the legacy module-specific endpoints so the
+     *     update hits the linked CFP applicant / training attendee rows too. Theme is
+     *     a pure UI preference that lives only on the portal_user.
+     */
+    PortalMePatch: {
+      /** Theme Preference */
+      theme_preference?: string | null;
+    };
     /** PortalNewsArticle */
     PortalNewsArticle: {
       /**
@@ -21145,6 +21237,51 @@ export type components = {
       } | null;
       /** Cospeaker Emails */
       cospeaker_emails?: string[] | null;
+    };
+    /**
+     * PortalPrivacyRequestCreate
+     * @description Input payload for a portal-originated privacy request.
+     *
+     *     ``subject_emails`` is NOT accepted from the client — the portal resolves
+     *     it from the authenticated portal user's own email. This prevents a logged-
+     *     in portal user from creating a request for somebody else's data.
+     */
+    PortalPrivacyRequestCreate: {
+      request_type: components['schemas']['PrivacyRequestType'];
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * PortalPrivacyRequestResponse
+     * @description Trimmed response for a portal-scoped privacy request.
+     *
+     *     Excludes ``subject_emails`` (the user already knows their own email),
+     *     ``execution_manifest`` (bulky + potentially sensitive), ``created_by``
+     *     and ``reviewed_by`` (staff user UUIDs), and ``tenant_id``.
+     */
+    PortalPrivacyRequestResponse: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      request_type: components['schemas']['PrivacyRequestType'];
+      status: components['schemas']['PrivacyRequestStatus'];
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Reviewed At */
+      reviewed_at: string | null;
+      /** Executed At */
+      executed_at: string | null;
+      /** Completion Artifact Url */
+      completion_artifact_url: string | null;
+      /** Rejection Reason */
+      rejection_reason: string | null;
+      /** Notes */
+      notes: string | null;
     };
     /** PortalRefreshRequest */
     PortalRefreshRequest: {
@@ -53333,6 +53470,135 @@ export interface operations {
       };
     };
   };
+  list_portal_privacy_requests_api_v1_portal_me_privacy_requests_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_portal_privacy_request_api_v1_portal_me_privacy_requests_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PortalPrivacyRequestCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_portal_privacy_request_api_v1_portal_me_privacy_requests__request_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PortalPrivacyRequestResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  download_portal_privacy_export_api_v1_portal_me_privacy_requests__request_id__download_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   portal_login_api_v1_portal__tenant_slug__unified_login_post: {
     parameters: {
       query?: never;
@@ -53495,6 +53761,41 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+    };
+  };
+  patch_portal_profile_api_v1_portal_unified_me_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PortalMePatch'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };

@@ -212,6 +212,7 @@ PORTAL_EXPORT_FIELDS: dict[str, frozenset[str]] = {
             "city",
             "postal_code",
             "country",
+            "theme_preference",
             "email_verified_at",
             "last_login_at",
             "created_at",
