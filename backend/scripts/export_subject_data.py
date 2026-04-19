@@ -37,7 +37,6 @@ import json
 import sys
 import uuid
 import zipfile
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -48,54 +47,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
+from app.core.gdpr.lookups import LOOKUPS, LookupSpec
 from app.core.security.pii_crypto import hash_email
-from app.models.alumni import Alumni
-from app.models.applicant_activity import ApplicantActivityLog
 from app.models.audit import AuditLog
-from app.models.cfp_applicants import CFPApplicant
-from app.models.customer import Customer
-from app.models.email_log import EmailLog
-from app.models.invoice import Invoice
-from app.models.offer_attendee import OfferAttendee
-from app.models.portal_user import PortalUser
-from app.models.registration import BillingProfile, Registration
-from app.models.trainer import Trainer
-from app.models.training_attendee import TrainingAttendee
-from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
-from app.models.user import User
-
-
-@dataclass(frozen=True)
-class LookupSpec:
-    """One table's email-hash lookup.
-
-    ``model`` is the SQLAlchemy model, ``hash_attr`` is the attribute name
-    on the model that holds the hash (e.g. ``"email_hash"`` or
-    ``"contact_email_hash"``).
-    """
-
-    name: str
-    model: type
-    hash_attr: str
-
-
-LOOKUPS: list[LookupSpec] = [
-    LookupSpec("users", User, "email_hash"),
-    LookupSpec("portal_users", PortalUser, "email_hash"),
-    LookupSpec("invoices", Invoice, "recipient_email_hash"),
-    LookupSpec("billing_profiles", BillingProfile, "contact_email_hash"),
-    LookupSpec("trainers", Trainer, "email_hash"),
-    LookupSpec("customers", Customer, "email_hash"),
-    LookupSpec("registrations", Registration, "email_hash"),
-    LookupSpec("cfp_applicants", CFPApplicant, "email_hash"),
-    LookupSpec("training_attendees", TrainingAttendee, "email_hash"),
-    LookupSpec("training_registrations", TrainingRegistration, "contact_email_hash"),
-    LookupSpec("training_registration_attendees", TrainingRegistrationAttendee, "email_hash"),
-    LookupSpec("offer_attendees", OfferAttendee, "email_hash"),
-    LookupSpec("alumni", Alumni, "email_hash"),
-    LookupSpec("email_logs", EmailLog, "recipient_email_hash"),
-    LookupSpec("applicant_activity_logs", ApplicantActivityLog, "applicant_email_hash"),
-]
 
 
 def _serialize(value: Any) -> Any:

@@ -4,6 +4,7 @@ import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
 import { parseApiError } from '../../utils/apiError';
 import { useToast } from '../../components/Toast';
+import ExecuteErasureModal from './ExecuteErasureModal';
 import type { GenerateExportResponse, PrivacyRequest, PrivacyRequestStatus } from './types';
 
 const STATUS_STYLES: Record<PrivacyRequestStatus, string> = {
@@ -40,6 +41,7 @@ export default function PrivacyRequestDetailPanel({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [downloading, setDownloading] = useState(false);
+  const [erasureOpen, setErasureOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery<PrivacyRequest>({
     queryKey: queryKeys.privacyRequests.detail(requestId),
@@ -56,7 +58,7 @@ export default function PrivacyRequestDetailPanel({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.privacyRequests.all });
-      showToast('Erasure approved (queued for Phase 3)', 'success');
+      showToast('Erasure approved — open Execute erasure to commit.', 'success');
     },
     onError: (err) => showToast(parseApiError(err), 'error'),
   });
@@ -228,6 +230,15 @@ export default function PrivacyRequestDetailPanel({
             Reject
           </button>
         )}
+        {data.status === 'approved' && data.request_type === 'erasure' && (
+          <button
+            type="button"
+            onClick={() => setErasureOpen(true)}
+            className="px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700"
+          >
+            Execute erasure
+          </button>
+        )}
         {data.status === 'completed' && data.request_type === 'export' && (
           <button
             type="button"
@@ -239,6 +250,14 @@ export default function PrivacyRequestDetailPanel({
           </button>
         )}
       </div>
+      <ExecuteErasureModal
+        request={erasureOpen ? data : null}
+        onClose={() => setErasureOpen(false)}
+        onCompleted={() => {
+          setErasureOpen(false);
+          queryClient.invalidateQueries({ queryKey: queryKeys.privacyRequests.all });
+        }}
+      />
     </div>
   );
 }

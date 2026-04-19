@@ -87,3 +87,29 @@ export interface GenerateExportResponse {
   record_counts: Record<string, number>;
   executed_at: string;
 }
+
+export type ErasureAction = 'delete' | 'anonymize' | 'skip';
+
+export interface ErasureTableEntry {
+  table: string;
+  count: number;
+  row_ids: string[];
+  default_action: ErasureAction;
+  allowed_actions: ErasureAction[];
+  locked_reason: string | null;
+}
+
+export interface ErasurePreviewResponse {
+  entries: ErasureTableEntry[];
+  summary: { to_delete: number; to_anonymize: number; to_skip: number };
+}
+
+export interface ErasureManifestEntry {
+  action: ErasureAction;
+  affected: number;
+}
+
+export interface ErasureExecuteResponse {
+  executed_at: string;
+  manifest: Record<string, ErasureManifestEntry>;
+}

@@ -24,6 +24,7 @@ from sqlalchemy import desc, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.gdpr.erasure import build_preview, execute_erasure
 from app.core.pagination import calculate_pages, paginate
 from app.core.rate_limiter import tenant_limiter
 from app.core.security.pii_crypto import hash_email
@@ -34,6 +35,11 @@ from app.models.privacy_request import (
     PrivacyRequestType,
 )
 from app.schemas.privacy_request import (
+    ErasureExecuteRequest,
+    ErasureExecuteResponse,
+    ErasureManifestEntrySchema,
+    ErasurePreviewResponse,
+    ErasureTableEntrySchema,
     GenerateExportResponse,
     PrivacyRequestCreate,
     PrivacyRequestListItem,
@@ -386,6 +392,120 @@ async def generate_privacy_export(
         download_url=pr.completion_artifact_url or "",
         record_counts=manifest.get("record_counts", {}),
         executed_at=now,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Erasure preview + execute (erasure type only, execute is rate-limited)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{request_id}/preview-erasure", response_model=ErasurePreviewResponse)
+async def preview_privacy_erasure(
+    request_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> ErasurePreviewResponse:
+    """Enumerate rows that would be touched by an erasure. Read-only."""
+    tenant_id = _require_tenant(current_user)
+    pr = await _load_for_tenant(db, request_id, tenant_id)
+
+    if pr.request_type != PrivacyRequestType.ERASURE.value:
+        raise ValidationError("Only erasure requests have a preview.")
+    if pr.status not in (
+        PrivacyRequestStatus.APPROVED.value,
+        PrivacyRequestStatus.PENDING_REVIEW.value,
+    ):
+        raise ValidationError(f"Cannot preview erasure in status '{pr.status}'")
+    if not pr.subject_email_hashes:
+        raise ValidationError("Privacy request has no subject email hashes on file.")
+
+    preview = await build_preview(db, tenant_id, list(pr.subject_email_hashes))
+    return ErasurePreviewResponse(
+        entries=[
+            ErasureTableEntrySchema(
+                table=e.table,
+                count=e.count,
+                row_ids=e.row_ids,
+                default_action=e.default_action,
+                allowed_actions=list(e.allowed_actions),
+                locked_reason=e.locked_reason,
+            )
+            for e in preview.entries
+        ],
+        summary=preview.summary,
+    )
+
+
+@router.post("/{request_id}/execute-erasure", response_model=ErasureExecuteResponse)
+@tenant_limiter.limit("5/hour")
+async def execute_privacy_erasure(
+    request: Request,
+    request_id: UUID,
+    payload: ErasureExecuteRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> ErasureExecuteResponse:
+    """Commit the chosen erasure actions. Irreversible."""
+    tenant_id = _require_tenant(current_user)
+    pr = await _load_for_tenant(db, request_id, tenant_id)
+
+    if pr.request_type != PrivacyRequestType.ERASURE.value:
+        raise ValidationError("Only erasure requests can be executed.")
+    if pr.status != PrivacyRequestStatus.APPROVED.value:
+        raise ValidationError(f"Cannot execute erasure in status '{pr.status}'")
+    if not pr.subject_email_hashes:
+        raise ValidationError("Privacy request has no subject email hashes on file.")
+
+    email_hashes = list(pr.subject_email_hashes)
+    preview = await build_preview(db, tenant_id, email_hashes)
+
+    try:
+        manifest = await execute_erasure(
+            db,
+            tenant_id,
+            email_hashes,
+            dict(payload.table_actions),
+            preview=preview,
+        )
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
+
+    now = datetime.now(UTC)
+    manifest_dict = manifest.to_dict()
+
+    first_hash = pr.subject_email_hashes[0] if pr.subject_email_hashes else None
+    # Audit written BEFORE the rows are finalised so a rollback in commit()
+    # removes the audit entry — we never claim to have erased data we didn't.
+    db.add(
+        BaseService.create_audit_log(
+            tenant_id=tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.PRIVACY_REQUEST_EXECUTE_ERASURE,
+            resource_type="privacy_request",
+            resource_id=pr.id,
+            details={
+                "actions": {t: m["action"] for t, m in manifest_dict.items()},
+                "record_counts": {t: m["affected"] for t, m in manifest_dict.items()},
+            },
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            subject_email_hash=first_hash,
+        )
+    )
+
+    pr.status = PrivacyRequestStatus.COMPLETED.value
+    pr.executed_at = now
+    pr.execution_manifest = {"erasure": manifest_dict, "executed_at": now.isoformat()}
+
+    await db.commit()
+    await db.refresh(pr)
+
+    return ErasureExecuteResponse(
+        executed_at=now,
+        manifest={
+            k: ErasureManifestEntrySchema(action=v["action"], affected=v["affected"]) for k, v in manifest_dict.items()
+        },
     )
 
 

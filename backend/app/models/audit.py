@@ -133,6 +133,7 @@ class AuditAction:
     PRIVACY_REQUEST_APPROVE = "privacy_request.approve"
     PRIVACY_REQUEST_REJECT = "privacy_request.reject"
     PRIVACY_REQUEST_EXECUTE = "privacy_request.execute"
+    PRIVACY_REQUEST_EXECUTE_ERASURE = "privacy_request.execute_erasure"
     PRIVACY_REQUEST_EXPORT_DOWNLOAD = "privacy_request.export_download"
 
     # Platform currency management

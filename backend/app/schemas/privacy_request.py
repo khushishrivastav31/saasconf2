@@ -1,12 +1,14 @@
 """Pydantic schemas for GDPR privacy requests (Art. 15 export / Art. 17 erasure)."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.privacy_request import PrivacyRequestStatus, PrivacyRequestType
+
+ErasureActionLiteral = Literal["delete", "anonymize", "skip"]
 
 
 class PrivacyRequestCreate(BaseModel):
@@ -85,3 +87,43 @@ class GenerateExportResponse(BaseModel):
     download_url: str
     record_counts: dict[str, int]
     executed_at: datetime
+
+
+class ErasureTableEntrySchema(BaseModel):
+    """One row in the erasure preview — per PII-owning table."""
+
+    table: str
+    count: int
+    row_ids: list[UUID]
+    default_action: ErasureActionLiteral
+    allowed_actions: list[ErasureActionLiteral]
+    locked_reason: str | None = None
+
+
+class ErasurePreviewResponse(BaseModel):
+    """Preview payload returned before the admin commits an erasure."""
+
+    entries: list[ErasureTableEntrySchema]
+    summary: dict[str, int]
+
+
+class ErasureExecuteRequest(BaseModel):
+    """Body for ``POST /privacy-requests/{id}/execute-erasure``.
+
+    ``table_actions`` is ``{table_name: "delete" | "anonymize" | "skip"}``.
+    Tables omitted from the payload fall back to the preview's default.
+    """
+
+    table_actions: dict[str, ErasureActionLiteral] = Field(default_factory=dict)
+
+
+class ErasureManifestEntrySchema(BaseModel):
+    action: ErasureActionLiteral
+    affected: int
+
+
+class ErasureExecuteResponse(BaseModel):
+    """Result of a successful ``/execute-erasure`` call."""
+
+    executed_at: datetime
+    manifest: dict[str, ErasureManifestEntrySchema]

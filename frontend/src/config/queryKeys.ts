@@ -88,6 +88,7 @@ export const queryKeys = {
     all: ['privacy-requests'] as const,
     list: (params: Record<string, unknown>) => ['privacy-requests', 'list', params] as const,
     detail: (id: string) => ['privacy-requests', 'detail', id] as const,
+    preview: (id: string) => ['privacy-requests', 'preview', id] as const,
   },
 
   // ── Deadlines ──────────────────────────────────────────────────
