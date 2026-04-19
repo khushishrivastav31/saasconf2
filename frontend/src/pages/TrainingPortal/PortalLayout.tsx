@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router';
-import { clearPortalTokens, getPortalTenantSlug } from './trainingPortalApi';
+import { clearPortalTokens, getPortalTenantSlug } from '../../config/portalApi';
 
 const PortalLayout = React.memo(function PortalLayout() {
   const navigate = useNavigate();

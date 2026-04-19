@@ -67,7 +67,7 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
 
   const login = async (credentials: ApplicantLoginRequest) => {
     const response = await portalApi.post<ApplicantTokenResponse>(
-      `/portal/${slug}/login`,
+      `/portal/${slug}/unified/login`,
       credentials
     );
     const { access_token, refresh_token } = response.data;

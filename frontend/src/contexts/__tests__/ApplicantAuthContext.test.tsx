@@ -216,7 +216,7 @@ describe('ApplicantAuthContext', () => {
         await loginFn?.({ email: 'test@example.com', password: 'password123' });
       });
 
-      expect(portalApi.post).toHaveBeenCalledWith('/portal/test-company/login', {
+      expect(portalApi.post).toHaveBeenCalledWith('/portal/test-company/unified/login', {
         email: 'test@example.com',
         password: 'password123',
       });

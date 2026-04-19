@@ -159,22 +159,22 @@ describe('portalApi.ts', () => {
       setApplicantTokens('test-access-token', 'test-refresh-token');
 
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'applicant_access_token',
+        'portal_access_token',
         'test-access-token'
       );
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'applicant_refresh_token',
+        'portal_refresh_token',
         'test-refresh-token'
       );
     });
 
     it('getApplicantAccessToken retrieves access token from localStorage', async () => {
-      localStorageMock.setItem('applicant_access_token', 'my-access-token');
+      localStorageMock.setItem('portal_access_token', 'my-access-token');
       const { getApplicantAccessToken } = await import('../portalApi');
 
       const token = getApplicantAccessToken();
 
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('applicant_access_token');
+      expect(localStorageMock.getItem).toHaveBeenCalledWith('portal_access_token');
       expect(token).toBe('my-access-token');
     });
 
@@ -187,12 +187,12 @@ describe('portalApi.ts', () => {
     });
 
     it('getApplicantRefreshToken retrieves refresh token from localStorage', async () => {
-      localStorageMock.setItem('applicant_refresh_token', 'my-refresh-token');
+      localStorageMock.setItem('portal_refresh_token', 'my-refresh-token');
       const { getApplicantRefreshToken } = await import('../portalApi');
 
       const token = getApplicantRefreshToken();
 
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('applicant_refresh_token');
+      expect(localStorageMock.getItem).toHaveBeenCalledWith('portal_refresh_token');
       expect(token).toBe('my-refresh-token');
     });
 
@@ -205,14 +205,14 @@ describe('portalApi.ts', () => {
     });
 
     it('clearApplicantTokens removes both tokens from localStorage', async () => {
-      localStorageMock.setItem('applicant_access_token', 'access-token');
-      localStorageMock.setItem('applicant_refresh_token', 'refresh-token');
+      localStorageMock.setItem('portal_access_token', 'access-token');
+      localStorageMock.setItem('portal_refresh_token', 'refresh-token');
       const { clearApplicantTokens } = await import('../portalApi');
 
       clearApplicantTokens();
 
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('applicant_access_token');
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('applicant_refresh_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('portal_access_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('portal_refresh_token');
     });
   });
 
@@ -224,7 +224,7 @@ describe('portalApi.ts', () => {
     });
 
     it('adds Authorization header when applicant token exists', async () => {
-      localStorageMock.setItem('applicant_access_token', 'applicant-token');
+      localStorageMock.setItem('portal_access_token', 'applicant-token');
       const { portalApi } = await import('../portalApi');
 
       const requestInterceptor = vi.mocked(portalApi.interceptors.request.use).mock
@@ -349,7 +349,7 @@ describe('portalApi.ts', () => {
 
     it('attempts token refresh on 401 when refresh token and slug exist', async () => {
       mockLocation.pathname = '/company-slug/portal/dashboard';
-      localStorageMock.setItem('applicant_refresh_token', 'valid-refresh-token');
+      localStorageMock.setItem('portal_refresh_token', 'valid-refresh-token');
 
       (axios.post as Mock).mockResolvedValueOnce({
         data: {
@@ -390,14 +390,14 @@ describe('portalApi.ts', () => {
       }
 
       expect(axios.post).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/portal/company-slug/refresh'),
+        expect.stringContaining('/api/v1/portal/company-slug/unified/refresh'),
         { refresh_token: 'valid-refresh-token' }
       );
     });
 
     it('clears tokens on refresh failure without redirect', async () => {
       mockLocation.pathname = '/company-slug/portal/dashboard';
-      localStorageMock.setItem('applicant_refresh_token', 'expired-refresh-token');
+      localStorageMock.setItem('portal_refresh_token', 'expired-refresh-token');
 
       (axios.post as Mock).mockRejectedValueOnce(new Error('Refresh failed'));
 
@@ -424,8 +424,8 @@ describe('portalApi.ts', () => {
 
       await expect(errorInterceptor(mockError)).rejects.toThrow('Refresh failed');
 
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('applicant_access_token');
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('applicant_refresh_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('portal_access_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('portal_refresh_token');
       // Portal API does not redirect, unlike main API
       expect(mockLocation.href).toBe('');
     });
@@ -450,7 +450,7 @@ describe('portalApi.ts', () => {
 
     it('handles 401 when no company slug can be extracted', async () => {
       mockLocation.pathname = '/admin/dashboard'; // Not a portal URL
-      localStorageMock.setItem('applicant_refresh_token', 'valid-refresh-token');
+      localStorageMock.setItem('portal_refresh_token', 'valid-refresh-token');
 
       const { portalApi } = await import('../portalApi');
 
@@ -475,8 +475,8 @@ describe('portalApi.ts', () => {
 
       // Should reject without attempting refresh when slug is empty
       await expect(errorInterceptor(mockError)).rejects.toEqual(mockError);
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('applicant_access_token');
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('applicant_refresh_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('portal_access_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('portal_refresh_token');
     });
   });
 
@@ -498,7 +498,7 @@ describe('portalApi.ts', () => {
 
       // Verify it uses applicant-specific keys
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'applicant_access_token',
+        'portal_access_token',
         'applicant-access'
       );
       expect(localStorageMock.setItem).not.toHaveBeenCalledWith('access_token', expect.anything());

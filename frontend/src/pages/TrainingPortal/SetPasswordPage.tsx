@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { trainingPortalApi, getPortalTenantSlug } from './trainingPortalApi';
+import { portalApi, getPortalTenantSlug } from '../../config/portalApi';
 import { AxiosError } from 'axios';
 
 export default function SetPasswordPage() {
@@ -31,7 +31,7 @@ export default function SetPasswordPage() {
     setIsLoading(true);
 
     try {
-      await trainingPortalApi.post(`/portal/${tenantSlug}/unified/reset-password`, {
+      await portalApi.post(`/portal/${tenantSlug}/unified/reset-password`, {
         token,
         password,
       });

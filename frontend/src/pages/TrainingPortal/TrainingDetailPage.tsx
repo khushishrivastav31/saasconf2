@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router';
-import { trainingPortalApi } from './trainingPortalApi';
+import { portalApi } from '../../config/portalApi';
 
 interface TrainingDetail {
   id: number;
@@ -27,9 +27,7 @@ const TrainingDetailPage = React.memo(function TrainingDetailPage() {
   } = useQuery<TrainingDetail>({
     queryKey: ['portal-training-detail', registrationId],
     queryFn: async () => {
-      const response = await trainingPortalApi.get(
-        `/portal/unified/my-trainings/${registrationId}`
-      );
+      const response = await portalApi.get(`/portal/unified/my-trainings/${registrationId}`);
       return response.data;
     },
     enabled: !!registrationId,
@@ -165,9 +163,7 @@ function TrainingFiles({ registrationId }: { registrationId: string }) {
   const { data, isLoading } = useQuery({
     queryKey: ['portal-training-files', registrationId],
     queryFn: async () => {
-      const res = await trainingPortalApi.get(
-        `/portal/unified/my-trainings/${registrationId}/files`
-      );
+      const res = await portalApi.get(`/portal/unified/my-trainings/${registrationId}/files`);
       return res.data as {
         items: Array<{
           id: string;
@@ -191,7 +187,7 @@ function TrainingFiles({ registrationId }: { registrationId: string }) {
 
   const handleDownload = async (fileId: string, filename: string) => {
     try {
-      const res = await trainingPortalApi.get(`/attachments/${fileId}/download`, {
+      const res = await portalApi.get(`/attachments/${fileId}/download`, {
         responseType: 'blob',
       });
       const url = URL.createObjectURL(res.data);

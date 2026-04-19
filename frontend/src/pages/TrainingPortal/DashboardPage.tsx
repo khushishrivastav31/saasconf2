@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { trainingPortalApi, getPortalTenantSlug } from './trainingPortalApi';
+import { portalApi, getPortalTenantSlug } from '../../config/portalApi';
 
 interface TrainingRegistration {
   id: number;
@@ -36,7 +36,7 @@ const DashboardPage = React.memo(function DashboardPage() {
   } = useQuery<TrainingRegistration[]>({
     queryKey: ['portal-my-trainings'],
     queryFn: async () => {
-      const response = await trainingPortalApi.get('/portal/unified/my-trainings');
+      const response = await portalApi.get('/portal/unified/my-trainings');
       return response.data;
     },
   });

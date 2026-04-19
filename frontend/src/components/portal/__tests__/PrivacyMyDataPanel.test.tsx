@@ -11,8 +11,8 @@ import type {
   PortalPrivacyRequestResponse,
 } from '../../../pages/MyCompany/types';
 
-vi.mock('../../../pages/TrainingPortal/trainingPortalApi', () => ({
-  trainingPortalApi: {
+vi.mock('../../../config/portalApi', () => ({
+  portalApi: {
     get: vi.fn(),
     post: vi.fn(),
     defaults: { baseURL: 'http://localhost:8000/api/v1' },
@@ -20,9 +20,9 @@ vi.mock('../../../pages/TrainingPortal/trainingPortalApi', () => ({
   getPortalAccessToken: () => 'fake-token',
 }));
 
-import { trainingPortalApi } from '../../../pages/TrainingPortal/trainingPortalApi';
+import { portalApi } from '../../../config/portalApi';
 
-const mockApi = vi.mocked(trainingPortalApi);
+const mockApi = vi.mocked(portalApi);
 
 function renderPanel() {
   const client = createTestQueryClient();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { trainingPortalApi, setPortalTokens, getPortalTenantSlug } from './trainingPortalApi';
+import { portalApi, setPortalTokens, getPortalTenantSlug } from '../../config/portalApi';
 import { AxiosError } from 'axios';
 
 export default function LoginPage() {
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await trainingPortalApi.post(`/portal/${tenantSlug}/unified/login`, {
+      const response = await portalApi.post(`/portal/${tenantSlug}/unified/login`, {
         email,
         password,
       });

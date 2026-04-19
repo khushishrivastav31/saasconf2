@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
-import {
-  getPortalAccessToken,
-  trainingPortalApi,
-} from '../../pages/TrainingPortal/trainingPortalApi';
+import { getPortalAccessToken, portalApi } from '../../config/portalApi';
 import { queryKeys } from '../../config/queryKeys';
 import { parseApiError } from '../../utils/apiError';
 import { useToast } from '../Toast';
@@ -39,7 +36,7 @@ function formatDate(iso: string): string {
 
 async function downloadExportZip(url: string, filename: string): Promise<void> {
   const token = getPortalAccessToken();
-  const base = trainingPortalApi.defaults.baseURL?.replace(/\/api\/v1$/, '') ?? '';
+  const base = portalApi.defaults.baseURL?.replace(/\/api\/v1$/, '') ?? '';
   const resp = await fetch(`${base}${url}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -66,7 +63,7 @@ const PrivacyMyDataPanel = React.memo(function PrivacyMyDataPanel() {
   const listQuery = useQuery<PortalPrivacyRequestListResponse>({
     queryKey: queryKeys.portalPrivacyRequests.list(1, 50),
     queryFn: async () => {
-      const res = await trainingPortalApi.get<PortalPrivacyRequestListResponse>(
+      const res = await portalApi.get<PortalPrivacyRequestListResponse>(
         '/portal/me/privacy-requests',
         { params: { page: 1, page_size: 50 } }
       );
@@ -76,10 +73,9 @@ const PrivacyMyDataPanel = React.memo(function PrivacyMyDataPanel() {
 
   const exportMutation = useMutation({
     mutationFn: async () => {
-      const res = await trainingPortalApi.post<PortalExportCreateResponse>(
-        '/portal/me/privacy-requests',
-        { request_type: 'export' }
-      );
+      const res = await portalApi.post<PortalExportCreateResponse>('/portal/me/privacy-requests', {
+        request_type: 'export',
+      });
       return res.data;
     },
     onSuccess: async (data) => {
@@ -96,7 +92,7 @@ const PrivacyMyDataPanel = React.memo(function PrivacyMyDataPanel() {
 
   const erasureMutation = useMutation({
     mutationFn: async () => {
-      const res = await trainingPortalApi.post<PortalPrivacyRequestResponse>(
+      const res = await portalApi.post<PortalPrivacyRequestResponse>(
         '/portal/me/privacy-requests',
         {
           request_type: 'erasure',
