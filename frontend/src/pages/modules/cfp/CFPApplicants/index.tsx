@@ -10,7 +10,6 @@ import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
 import { ChevronLeftIcon, CloseIcon } from '../../../ConferenceDetail/icons';
 import { ApplicantForm } from './ApplicantForm';
-import { ApplicantPapers } from './ApplicantPapers';
 import type { ApplicantFormData } from './ApplicantForm';
 
 interface ApplicantListResponse {
@@ -418,24 +417,19 @@ export default function CFPApplicants({
           conferenceId={effectiveConferenceId}
         />
       ) : selectedApplicant ? (
-        <div className="space-y-6">
-          <ApplicantForm
-            applicant={selectedApplicant}
-            onSave={isAdmin ? handleUpdate : () => {}}
-            onCancel={() => {
-              setSelectedApplicantId(null);
-              setError(null);
-            }}
-            onDelete={isAdmin ? () => setDeleteTarget(selectedApplicant) : undefined}
-            isSaving={updateMutation.isPending}
-            isDeleting={deleteMutation.isPending}
-            error={error}
-            conferenceId={effectiveConferenceId}
-          />
-
-          {/* Papers */}
-          <ApplicantPapers applicantId={selectedApplicant.id} />
-        </div>
+        <ApplicantForm
+          applicant={selectedApplicant}
+          onSave={isAdmin ? handleUpdate : () => {}}
+          onCancel={() => {
+            setSelectedApplicantId(null);
+            setError(null);
+          }}
+          onDelete={isAdmin ? () => setDeleteTarget(selectedApplicant) : undefined}
+          isSaving={updateMutation.isPending}
+          isDeleting={deleteMutation.isPending}
+          error={error}
+          conferenceId={effectiveConferenceId}
+        />
       ) : applicants.length > 0 || (isStandalone && filterConferenceId) ? (
         <div className="space-y-3">
           {/* Conference filter + Search */}

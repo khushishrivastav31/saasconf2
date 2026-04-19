@@ -1,18 +1,23 @@
 import { useCallback, useRef, useState } from 'react';
+import BackLink from '../../../../../components/userDetail/BackLink';
+import CustomerTimelineCard from '../../../../../components/CustomerTimelineCard';
+import FormSection from '../../../../../components/userDetail/FormSection';
+import TabBar, { type TabDescriptor } from '../../../../../components/userDetail/TabBar';
+import UserDetailHeader from '../../../../../components/userDetail/UserDetailHeader';
 import MergeDialog from '../MergeDialog';
-import type { DetailTab, EditableProfile, PortalUser } from '../types';
-import UserDetailHeader from './UserDetailHeader';
-import DetailTabs from './DetailTabs';
+import type { EditableProfile, PortalUser } from '../types';
 import NoPortalAccountNotice from './NoPortalAccountNotice';
 import ProfileMediaFields from './ProfileMediaFields';
-import ProfileFormFields from './ProfileFormFields';
 import PortalAccountSection from './PortalAccountSection';
 import RegistrationsList from './RegistrationsList';
 import OfferLinksTable from './OfferLinksTable';
-import ActivityHistory from './ActivityHistory';
+import IdentitySection from './profile/IdentitySection';
+import AddressSection from './profile/AddressSection';
+import BioSection from './profile/BioSection';
 import { useUserDetailData } from './useUserDetailData';
 import { useUserDetailMutations } from './useUserDetailMutations';
-import { sectionCls } from './styles';
+
+type DetailTab = 'profile' | 'portal' | 'activity' | 'registrations';
 
 interface Props {
   selectedUser: PortalUser;
@@ -62,24 +67,29 @@ export default function UserDetailPanel({ selectedUser, items, onBack }: Props) 
   const profile = profileQuery.data;
   const hasPortal = !!currentUser.portal_user_id;
 
+  const statusTone =
+    profile?.status === 'inactive'
+      ? 'inactive'
+      : profile?.status === 'parked'
+        ? 'parked'
+        : 'active';
+  const statusLabel =
+    profile?.status === 'inactive'
+      ? 'Inactive'
+      : profile?.status === 'parked'
+        ? 'Parked'
+        : 'Active';
+
+  const tabs: TabDescriptor<DetailTab>[] = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'portal', label: 'Portal Account' },
+    { id: 'activity', label: 'Activity' },
+    { id: 'registrations', label: 'Registrations', count: profile?.registrations.length ?? 0 },
+  ];
+
   return (
     <div>
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-4"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to users
-      </button>
+      <BackLink onClick={onBack} />
 
       {profileQuery.isLoading ? (
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">Loading profile...</div>
@@ -90,86 +100,131 @@ export default function UserDetailPanel({ selectedUser, items, onBack }: Props) 
       ) : (
         <div className="space-y-4">
           <UserDetailHeader
-            profile={profile}
-            onReactivate={() => mutations.reactivateAttendee.mutate()}
-            isReactivating={mutations.reactivateAttendee.isPending}
+            firstName={profile.first_name}
+            lastName={profile.last_name}
+            email={profile.email}
+            pictureUrl={formData?.picture_url ?? null}
+            statusLabel={statusLabel}
+            statusTone={statusTone}
+            primaryAction={
+              profile.status === 'inactive'
+                ? {
+                    label: 'Reactivate',
+                    onClick: () => mutations.reactivateAttendee.mutate(),
+                    loading: mutations.reactivateAttendee.isPending,
+                    loadingLabel: 'Reactivating...',
+                  }
+                : null
+            }
           />
 
-          <DetailTabs
-            active={detailTab}
-            registrationCount={profile.registrations.length}
-            onChange={setDetailTab}
-          />
+          <TabBar tabs={tabs} active={detailTab} onChange={setDetailTab} />
 
           {detailTab === 'profile' && (
             <div className="space-y-4">
               {!hasPortal ? (
-                <NoPortalAccountNotice
-                  profile={profile}
-                  onCreate={() => mutations.createPortalAccount.mutate()}
-                  isCreating={mutations.createPortalAccount.isPending}
-                />
+                <FormSection>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Profile editing is available once a portal account is linked. Open the{' '}
+                    <button
+                      type="button"
+                      onClick={() => setDetailTab('portal')}
+                      className="text-primary-600 dark:text-primary-400 hover:underline"
+                    >
+                      Portal Account
+                    </button>{' '}
+                    tab to create one.
+                  </p>
+                </FormSection>
               ) : editableQuery.isLoading || !formData ? (
                 <div className="text-center py-12 text-gray-400 dark:text-gray-500">
                   Loading profile form...
                 </div>
               ) : (
                 <>
-                  <div className={sectionCls}>
-                    <div className="px-6 py-6 space-y-6">
-                      <ProfileMediaFields
-                        firstName={formData.first_name}
-                        lastName={formData.last_name}
-                        pictureUrl={formData.picture_url}
-                        videoUrl={formData.video_url}
-                        onUploadPicture={(file) => mutations.uploadPicture.mutate(file)}
-                        onDeletePicture={() => mutations.deletePicture.mutate()}
-                        onUploadVideo={(file) => mutations.uploadVideo.mutate(file)}
-                        onDeleteVideo={() => mutations.deleteVideo.mutate()}
-                        pictureUploading={mutations.uploadPicture.isPending}
-                        pictureDeleting={mutations.deletePicture.isPending}
-                        videoUploading={mutations.uploadVideo.isPending}
-                        videoDeleting={mutations.deleteVideo.isPending}
-                      />
+                  <FormSection title="Media">
+                    <ProfileMediaFields
+                      firstName={formData.first_name}
+                      lastName={formData.last_name}
+                      pictureUrl={formData.picture_url}
+                      videoUrl={formData.video_url}
+                      onUploadPicture={(file) => mutations.uploadPicture.mutate(file)}
+                      onDeletePicture={() => mutations.deletePicture.mutate()}
+                      onUploadVideo={(file) => mutations.uploadVideo.mutate(file)}
+                      onDeleteVideo={() => mutations.deleteVideo.mutate()}
+                      pictureUploading={mutations.uploadPicture.isPending}
+                      pictureDeleting={mutations.deletePicture.isPending}
+                      videoUploading={mutations.uploadVideo.isPending}
+                      videoDeleting={mutations.deleteVideo.isPending}
+                    />
+                  </FormSection>
 
-                      <ProfileFormFields formData={formData} updateField={updateField} />
+                  <FormSection title="Identity">
+                    <IdentitySection formData={formData} updateField={updateField} />
+                  </FormSection>
 
-                      <div className="flex justify-end pt-2">
-                        <button
-                          type="button"
-                          onClick={handleSaveProfile}
-                          disabled={mutations.saveProfile.isPending}
-                          className="px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-40 transition-colors"
-                        >
-                          {mutations.saveProfile.isPending ? 'Saving...' : 'Save Profile'}
-                        </button>
-                      </div>
-                    </div>
+                  <FormSection title="Address">
+                    <AddressSection formData={formData} updateField={updateField} />
+                  </FormSection>
+
+                  <FormSection title="Bio">
+                    <BioSection formData={formData} updateField={updateField} />
+                  </FormSection>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveProfile}
+                      disabled={mutations.saveProfile.isPending}
+                      className="px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-40 transition-colors"
+                    >
+                      {mutations.saveProfile.isPending ? 'Saving...' : 'Save Profile'}
+                    </button>
                   </div>
-
-                  <PortalAccountSection
-                    portalAccount={profile.portal_account}
-                    portalUserId={currentUser.portal_user_id!}
-                    onToggleAccess={() =>
-                      mutations.toggleAccess.mutate(currentUser.portal_user_id!)
-                    }
-                    onResendInvite={() =>
-                      mutations.resendInvite.mutate(currentUser.portal_user_id!)
-                    }
-                    onResetPassword={() =>
-                      mutations.resetPassword.mutate(currentUser.portal_user_id!)
-                    }
-                    onImpersonate={() => mutations.impersonate.mutate(currentUser.portal_user_id!)}
-                    onRequestMerge={() => setMergeTarget(currentUser.portal_user_id)}
-                    isTogglingAccess={mutations.toggleAccess.isPending}
-                    isResendingInvite={mutations.resendInvite.isPending}
-                    isResettingPassword={mutations.resetPassword.isPending}
-                    isImpersonating={mutations.impersonate.isPending}
-                  />
                 </>
               )}
+            </div>
+          )}
 
-              <ActivityHistory history={profile.history} />
+          {detailTab === 'portal' && (
+            <div className="space-y-4">
+              {hasPortal && currentUser.portal_user_id ? (
+                <PortalAccountSection
+                  portalAccount={profile.portal_account}
+                  portalUserId={currentUser.portal_user_id}
+                  onToggleAccess={() => mutations.toggleAccess.mutate(currentUser.portal_user_id!)}
+                  onResendInvite={() => mutations.resendInvite.mutate(currentUser.portal_user_id!)}
+                  onResetPassword={() =>
+                    mutations.resetPassword.mutate(currentUser.portal_user_id!)
+                  }
+                  onImpersonate={() => mutations.impersonate.mutate(currentUser.portal_user_id!)}
+                  onRequestMerge={() => setMergeTarget(currentUser.portal_user_id)}
+                  isTogglingAccess={mutations.toggleAccess.isPending}
+                  isResendingInvite={mutations.resendInvite.isPending}
+                  isResettingPassword={mutations.resetPassword.isPending}
+                  isImpersonating={mutations.impersonate.isPending}
+                />
+              ) : (
+                <NoPortalAccountNotice
+                  profile={profile}
+                  onCreate={() => mutations.createPortalAccount.mutate()}
+                  isCreating={mutations.createPortalAccount.isPending}
+                />
+              )}
+            </div>
+          )}
+
+          {detailTab === 'activity' && (
+            <div className="space-y-4">
+              {hasPortal && currentUser.portal_user_id ? (
+                <CustomerTimelineCard portalUserId={currentUser.portal_user_id} />
+              ) : (
+                <FormSection>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Activity is available once a portal account is linked.
+                  </p>
+                </FormSection>
+              )}
             </div>
           )}
 

@@ -15,7 +15,11 @@ import MediaPreviewModal from '../../../../../components/MediaPreviewModal';
 import { ErrorBanner } from '../../../../../components/common/ErrorBanner';
 import PortalAccountCard from '../../../../../components/PortalAccountCard';
 import CustomerTimelineCard from '../../../../../components/CustomerTimelineCard';
+import FormSection from '../../../../../components/userDetail/FormSection';
+import TabBar, { type TabDescriptor } from '../../../../../components/userDetail/TabBar';
+import UserDetailHeader from '../../../../../components/userDetail/UserDetailHeader';
 import type { Applicant, PronounOption, UserRole } from '../../../../../types';
+import { ApplicantPapers } from '../ApplicantPapers';
 
 import MediaUploadField from './MediaUploadField';
 import IdentityFields from './IdentityFields';
@@ -27,6 +31,8 @@ import FormActions from './FormActions';
 import { convertSocialLinks, emptyForm, type ApplicantFormData } from './types';
 
 export type { ApplicantFormData } from './types';
+
+type CFPTab = 'profile' | 'account' | 'activity' | 'papers';
 
 function buildFormState(applicant: Applicant | null): ApplicantFormData {
   if (!applicant) return emptyForm;
@@ -75,6 +81,7 @@ export function ApplicantForm({
 }) {
   const isEditing = !!applicant;
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
+  const [activeTab, setActiveTab] = useState<CFPTab>('profile');
 
   const { data: pronounOptions } = useQuery({
     queryKey: queryKeys.pronounOptions,
@@ -136,6 +143,7 @@ export function ApplicantForm({
     setVideoPreview(null);
     setVideoError(null);
     setPhoneError(null);
+    setActiveTab('profile');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicant?.id, applicantRolesKey]);
 
@@ -215,103 +223,151 @@ export function ApplicantForm({
   const openMediaPreview = (src: string, type: 'image' | 'video') =>
     setMediaPreview({ open: true, src, type });
 
+  const tabs: TabDescriptor<CFPTab>[] = applicant?.portal_user_id
+    ? [
+        { id: 'profile', label: 'Profile' },
+        { id: 'account', label: 'Portal Account' },
+        { id: 'activity', label: 'Activity' },
+        { id: 'papers', label: 'Papers' },
+      ]
+    : isEditing
+      ? [
+          { id: 'profile', label: 'Profile' },
+          { id: 'papers', label: 'Papers' },
+        ]
+      : [{ id: 'profile', label: 'Profile' }];
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <ErrorBanner message={error} />
 
-      {applicant?.portal_user_id && (
+      {isEditing && applicant && (
+        <UserDetailHeader
+          firstName={applicant.first_name}
+          lastName={applicant.last_name}
+          email={applicant.email}
+          pictureUrl={applicant.picture_url}
+        />
+      )}
+
+      {isEditing && <TabBar tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+
+      {activeTab === 'profile' && (
         <>
-          <PortalAccountCard portalUserId={applicant.portal_user_id} />
-          <CustomerTimelineCard portalUserId={applicant.portal_user_id} />
+          <FormSection title="Media">
+            <div className="space-y-5">
+              <MediaUploadField
+                kind="image"
+                label="Picture"
+                acceptedFormats={ACCEPTED_IMAGE_FORMATS}
+                helpText="JPEG, PNG, WebP, TIFF, or BMP. Min 600x600px (300 DPI)."
+                previewSrc={picturePreviewSrc}
+                error={pictureError}
+                onFileChange={handlePictureChange}
+                onPreviewClick={(src) => openMediaPreview(src, 'image')}
+              />
+              <MediaUploadField
+                kind="video"
+                label="Video"
+                acceptedFormats={ACCEPTED_VIDEO_FORMATS}
+                helpText="MP4, MOV, WebM, AVI, or MKV. Max 5MB."
+                previewSrc={videoPreviewSrc}
+                error={videoError}
+                onFileChange={handleVideoChange}
+                onPreviewClick={(src) => openMediaPreview(src, 'video')}
+              />
+            </div>
+          </FormSection>
+
+          <FormSection title="Identity">
+            <IdentityFields
+              formData={formData}
+              setFormData={setFormData}
+              emailError={emailError}
+              setEmailError={setEmailError}
+              phoneError={phoneError}
+              setPhoneError={setPhoneError}
+              pronounOptions={pronounOptions}
+            />
+          </FormSection>
+
+          <FormSection title="Address">
+            <AddressFields formData={formData} setFormData={setFormData} />
+          </FormSection>
+
+          <FormSection title="Account">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Password{' '}
+                  {isEditing ? (
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">
+                      (leave blank to keep current)
+                    </span>
+                  ) : (
+                    <span className="text-red-500">*</span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData((d) => ({ ...d, password: e.target.value }))}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                  required={!isEditing}
+                  minLength={6}
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          <FormSection title="Bio">
+            <RichTextEditor
+              value={formData.bio}
+              onChange={(html) => setFormData((d) => ({ ...d, bio: html }))}
+              placeholder="Brief biography..."
+              rows={4}
+            />
+          </FormSection>
+
+          {conferenceId && userRoles && userRoles.length > 0 && (
+            <FormSection title="Roles">
+              <RolesField formData={formData} setFormData={setFormData} userRoles={userRoles} />
+            </FormSection>
+          )}
+
+          <FormSection title="Social Links">
+            <SocialLinksEditor key={socialLinksKey} formData={formData} setFormData={setFormData} />
+          </FormSection>
+
+          <FormSection title="Preferences">
+            <CheckboxFields formData={formData} setFormData={setFormData} />
+          </FormSection>
+
+          <FormActions
+            isEditing={isEditing}
+            isSaving={isSaving}
+            isDeleting={isDeleting}
+            onCancel={onCancel}
+            onDelete={onDelete}
+            saveStatus={saveStatus}
+            submitDisabled={!!pictureError || !!videoError || !!phoneError}
+          />
         </>
       )}
 
-      <MediaUploadField
-        kind="image"
-        label="Picture"
-        acceptedFormats={ACCEPTED_IMAGE_FORMATS}
-        helpText="JPEG, PNG, WebP, TIFF, or BMP. Min 600×600px (300 DPI)."
-        previewSrc={picturePreviewSrc}
-        error={pictureError}
-        onFileChange={handlePictureChange}
-        onPreviewClick={(src) => openMediaPreview(src, 'image')}
-      />
-
-      <MediaUploadField
-        kind="video"
-        label="Video"
-        acceptedFormats={ACCEPTED_VIDEO_FORMATS}
-        helpText="MP4, MOV, WebM, AVI, or MKV. Max 5MB."
-        previewSrc={videoPreviewSrc}
-        error={videoError}
-        onFileChange={handleVideoChange}
-        onPreviewClick={(src) => openMediaPreview(src, 'video')}
-      />
-
-      <IdentityFields
-        formData={formData}
-        setFormData={setFormData}
-        emailError={emailError}
-        setEmailError={setEmailError}
-        phoneError={phoneError}
-        setPhoneError={setPhoneError}
-        pronounOptions={pronounOptions}
-      />
-
-      <AddressFields formData={formData} setFormData={setFormData} />
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Password{' '}
-            {isEditing ? (
-              <span className="text-gray-400 dark:text-gray-500 font-normal">
-                (leave blank to keep current)
-              </span>
-            ) : (
-              <span className="text-red-500">*</span>
-            )}
-          </label>
-          <input
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData((d) => ({ ...d, password: e.target.value }))}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-            required={!isEditing}
-            minLength={6}
-          />
+      {activeTab === 'account' && applicant?.portal_user_id && (
+        <div className="space-y-4">
+          <PortalAccountCard portalUserId={applicant.portal_user_id} />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Short Bio
-        </label>
-        <RichTextEditor
-          value={formData.bio}
-          onChange={(html) => setFormData((d) => ({ ...d, bio: html }))}
-          placeholder="Brief biography..."
-          rows={4}
-        />
-      </div>
-
-      {conferenceId && userRoles && userRoles.length > 0 && (
-        <RolesField formData={formData} setFormData={setFormData} userRoles={userRoles} />
       )}
 
-      <SocialLinksEditor key={socialLinksKey} formData={formData} setFormData={setFormData} />
+      {activeTab === 'activity' && applicant?.portal_user_id && (
+        <div className="space-y-4">
+          <CustomerTimelineCard portalUserId={applicant.portal_user_id} />
+        </div>
+      )}
 
-      <CheckboxFields formData={formData} setFormData={setFormData} />
-
-      <FormActions
-        isEditing={isEditing}
-        isSaving={isSaving}
-        isDeleting={isDeleting}
-        onCancel={onCancel}
-        onDelete={onDelete}
-        saveStatus={saveStatus}
-        submitDisabled={!!pictureError || !!videoError || !!phoneError}
-      />
+      {activeTab === 'papers' && applicant && <ApplicantPapers applicantId={applicant.id} />}
 
       <MediaPreviewModal
         open={mediaPreview.open}

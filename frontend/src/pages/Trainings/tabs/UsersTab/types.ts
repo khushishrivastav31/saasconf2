@@ -103,5 +103,3 @@ export interface EditableProfile {
   picture_url: string | null;
   video_url: string | null;
 }
-
-export type DetailTab = 'profile' | 'registrations';

@@ -35,17 +35,19 @@ test.describe('Conference CFP Users — Portal Account card', () => {
     const emailField = page.getByLabel(/email/i).first();
     await expect(emailField).toBeVisible({ timeout: 10000 });
 
-    // The Portal Account card is conditional on the applicant having a linked
-    // portal user. If it's present, assert the five actions render.
-    const portalHeader = page.getByRole('heading', { name: /portal account/i });
-    const isLinked = await softVisible(portalHeader, 5000);
+    // The Portal Account tab is conditional on the applicant having a linked
+    // portal user. If it's present, navigate to it and assert the five actions render.
+    const portalTab = page.getByRole('button', { name: /^Portal Account$/i });
+    const isLinked = await softVisible(portalTab, 5000);
     if (!isLinked) {
       test.skip(
         true,
-        'Selected applicant has no linked portal user — Portal Account card correctly absent.'
+        'Selected applicant has no linked portal user — Portal Account tab correctly absent.'
       );
       return;
     }
+    await portalTab.click();
+    await expect(page.getByRole('heading', { name: /portal account/i })).toBeVisible();
 
     // Five expected actions. Deactivate/Activate label depends on is_active, so match either.
     await expect(page.getByRole('button', { name: /Deactivate|Activate/i })).toBeVisible();
@@ -55,12 +57,12 @@ test.describe('Conference CFP Users — Portal Account card', () => {
     await expect(page.getByRole('button', { name: /Merge with/i })).toBeVisible();
 
     // Opening the Merge dialog must not submit the underlying applicant form.
-    // The dialog is a sibling overlay; the form's Save button remains visible.
+    // The dialog is a sibling overlay; the Portal Account tab controls stay visible.
     await page.getByRole('button', { name: /Merge with/i }).click();
     await expect(page.getByRole('dialog', { name: /merge users/i })).toBeVisible({
       timeout: 5000,
     });
-    await expect(page.getByRole('button', { name: /save changes/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Impersonate/i })).toBeVisible();
 
     // Close the dialog to leave the page in a clean state.
     await page.getByRole('button', { name: /cancel/i }).first().click();

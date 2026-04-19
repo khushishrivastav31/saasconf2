@@ -82,7 +82,26 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **In progress — pending commit approval**: Conference-side customer events (CFP paper lifecycle + conference registrations + merge company meta).
+- **In progress — pending commit approval**: Unified user-view redesign (conferences + trainings) for structural + visual parity.
+  - **Scope**: both the CFP Applicant form (Conferences → Users) and the training attendee detail (Trainings → Users) now share a common layout — header with avatar + status chip, then a tab bar with Profile / Activity / (Papers or Registrations), then a sectioned form inside Profile.
+  - **New shared primitives** (`frontend/src/components/userDetail/`):
+    - `UserDetailHeader.tsx` — avatar (img or initials), name, email, status chip (active/inactive/parked/neutral), optional primary action (e.g. Reactivate).
+    - `TabBar.tsx` — generic tab bar with labels + optional counts, typed via `TabDescriptor<T>`.
+    - `FormSection.tsx` — card wrapper with optional heading + description, used for each form section.
+    - `BackLink.tsx` — shared "Back to users" link.
+  - **Training side** (`frontend/src/pages/Trainings/tabs/UsersTab/UserDetailPanel/`):
+    - Deleted `DetailTabs.tsx`, `UserDetailHeader.tsx`, `ActivityHistory.tsx`, `ProfileFormFields.tsx`.
+    - New sub-folder `profile/` with `IdentitySection.tsx`, `AddressSection.tsx`, `BioSection.tsx`.
+    - `index.tsx` rewired to three tabs — **Profile** (Media → Identity → Address → Bio + Save), **Activity** (PortalAccountSection + CustomerTimelineCard — unified timeline replaces training-only event list), **Registrations** (RegistrationsList + OfferLinksTable).
+    - `types.ts`: dropped the old `DetailTab` union (now local to `index.tsx`).
+  - **CFP side** (`frontend/src/pages/modules/cfp/CFPApplicants/ApplicantForm/index.tsx`):
+    - Added UserDetailHeader + TabBar around the form; three tabs — **Profile** (Media → Identity → Address → Account → Bio → Roles → Social → Preferences → FormActions), **Activity** (PortalAccountCard + CustomerTimelineCard, moved from inline position), **Papers** (ApplicantPapers, moved from parent).
+    - Parent `CFPApplicants/index.tsx` no longer renders `ApplicantPapers` as a sibling — it's now inside the form under the Papers tab.
+  - **Handbook** (`frontend/src/pages/Handbook/sections/people.tsx`): new "User View (unified layout)" block documents the shared header + Profile/Activity/(Papers|Registrations) tabs so admins know the layout is consistent across modules.
+  - **Verification**: `tsc --noEmit` clean; `eslint` clean on touched folders (one pre-existing `max-lines` warning on the CFP list file, unchanged by this refactor); `vitest` = 1864/1864; backend untouched (no `.py` file changed).
+  - **Status**: uncommitted — `git status` shows 8 M/D files + new `frontend/src/components/userDetail/` + new `frontend/.../UserDetailPanel/profile/`. **Ask user before committing**.
+
+- **Committed** (`55e72ec`): Conference-side customer events (CFP paper lifecycle + conference registrations + merge company meta).
   - Builds on Phases 2–6 of the unified customer architecture (already on `origin/main`: Phase 5 = `7dda83c`, Phase 6 = `7636315`) and the CFP Applicant Portal Account panel (previous uncommitted step).
   - **No DB migration needed** — `customer_events.event_type` is `String(60)` (accepts new enum string values) and `meta` is `JSONB` (accepts new keys). Just new enum values + writers + UI formatting.
   - **Backend writers**:
