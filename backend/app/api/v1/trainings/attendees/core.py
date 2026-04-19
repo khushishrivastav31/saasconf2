@@ -10,6 +10,7 @@ from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
 from app.core.security.pii_crypto import hash_email
 from app.models.audit import AuditAction
+from app.models.customer_event import CustomerEventType
 from app.models.offer_attendee import OfferAttendee
 from app.models.portal_user import PortalUser
 from app.models.training import Training
@@ -18,6 +19,7 @@ from app.models.training_attendee_history import TrainingAttendeeHistory
 from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 from app.services.base import BaseService
+from app.services.customer_event_service import CustomerEventService
 
 from ._helpers import get_or_create_central_attendee
 
@@ -60,6 +62,17 @@ async def backfill_central_attendees(
                     source_id=ra.id,
                 )
             )
+            CustomerEventService.record_for_attendee(
+                db,
+                att,
+                event_type=CustomerEventType.TRAINING_REGISTERED,
+                created_by=current_user.user_id,
+                meta={
+                    "placement_id": str(placement_id) if placement_id else None,
+                    "source_type": "registration",
+                    "source_id": str(ra.id),
+                },
+            )
 
     oa_result = await db.execute(
         select(OfferAttendee).where(
@@ -84,6 +97,17 @@ async def backfill_central_attendees(
                     source_type="offer",
                     source_id=oa.id,
                 )
+            )
+            CustomerEventService.record_for_attendee(
+                db,
+                att,
+                event_type=CustomerEventType.TRAINING_OFFER_ASSIGNED,
+                created_by=current_user.user_id,
+                meta={
+                    "placement_id": str(oa.placement_id) if oa.placement_id else None,
+                    "source_type": "offer",
+                    "source_id": str(oa.id),
+                },
             )
 
     await db.commit()

@@ -19,18 +19,24 @@ event is atomic with its surrounding domain work.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security.pii_crypto import hash_email
 from app.models.customer_event import (
+    ACTOR_ADMIN,
     ACTOR_SYSTEM,
+    DOMAIN_TRAINING,
     VALID_ACTOR_KINDS,
     VALID_DOMAINS,
     CustomerEvent,
     CustomerEventType,
 )
+
+if TYPE_CHECKING:
+    from app.models.training_attendee import TrainingAttendee
 
 
 class CustomerEventService:
@@ -79,3 +85,38 @@ class CustomerEventService:
         )
         db.add(entry)
         return entry
+
+    @staticmethod
+    def record_for_attendee(
+        db: AsyncSession,
+        att: TrainingAttendee,
+        *,
+        event_type: CustomerEventType,
+        actor_kind: str = ACTOR_ADMIN,
+        created_by: UUID | None = None,
+        notes: str | None = None,
+        meta: dict[str, Any] | None = None,
+    ) -> CustomerEvent:
+        """Record a ``training.*`` event tied to a ``TrainingAttendee``.
+
+        Resolves ``subject_email_hash`` from ``att.email_hash`` (falls back to
+        hashing ``att.email`` if unset on a historic row) and auto-wires the
+        polymorphic ``related_entity_type``/``related_entity_id`` pointer so
+        the timeline reader can surface "events for this attendee" via the
+        ``idx_customer_events_related`` index.
+        """
+        subject_hash = att.email_hash or (hash_email(att.email) if att.email else "")
+        return CustomerEventService.record(
+            db,
+            tenant_id=att.tenant_id,
+            portal_user_id=att.portal_user_id,
+            subject_email_hash=subject_hash,
+            domain=DOMAIN_TRAINING,
+            event_type=event_type,
+            actor_kind=actor_kind,
+            created_by=created_by,
+            notes=notes,
+            meta=meta,
+            related_entity_type="training_attendee",
+            related_entity_id=att.id,
+        )

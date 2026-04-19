@@ -13,6 +13,7 @@ from app.core.exceptions import ConflictError, NotFoundError
 from app.core.portal_security import generate_password_reset_token
 from app.core.security.pii_crypto import read_pii
 from app.core.utils import utcnow
+from app.models.customer_event import CustomerEventType
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
 from app.models.portal_user import PortalRefreshToken
@@ -20,6 +21,7 @@ from app.models.training_attendee import TrainingAttendee
 from app.models.training_attendee_history import TrainingAttendeeHistory
 from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
+from app.services.customer_event_service import CustomerEventService
 
 from ._helpers import get_portal_user
 
@@ -101,22 +103,32 @@ async def toggle_portal_access(
     user.is_active = not user.is_active
 
     att_result = await db.execute(
-        select(TrainingAttendee.id).where(
+        select(TrainingAttendee).where(
             TrainingAttendee.portal_user_id == user.id,
             TrainingAttendee.tenant_id == current_user.tenant_id,
         )
     )
     event_type = "portal_deactivated" if deactivating else "portal_activated"
+    customer_event_type = (
+        CustomerEventType.TRAINING_DEACTIVATED if deactivating else CustomerEventType.TRAINING_REACTIVATED
+    )
     notes = "Portal account deactivated" if deactivating else "Portal account activated"
-    for att_id in att_result.scalars().all():
+    for att in att_result.scalars().all():
         db.add(
             TrainingAttendeeHistory(
                 tenant_id=current_user.tenant_id,
-                attendee_id=att_id,
+                attendee_id=att.id,
                 event_type=event_type,
                 notes=notes,
                 created_by=current_user.user_id,
             )
+        )
+        CustomerEventService.record_for_attendee(
+            db,
+            att,
+            event_type=customer_event_type,
+            created_by=current_user.user_id,
+            notes=notes,
         )
 
     await db.commit()

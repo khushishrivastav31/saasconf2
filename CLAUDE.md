@@ -82,19 +82,18 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **In progress — pending commit approval**: Tenant-level MyCompany → Users admin (Option 2 per user directive "go for 2. Important is to have a history").
-  - **Backend** (new `/api/v1/portal-users/*` router, 9 routes):
-    - `backend/app/api/v1/portal_users/_helpers.py` — shared helpers incl. `has_active_assignment()` covering training-side (non-parked attendee + active placement + non-cancelled registration OR accepted offer) and conference-side (CFPPaper not draft/rejected OR Registration on active conference).
-    - `backend/app/api/v1/portal_users/access.py` — 5 actions (toggle-access, resend-invite, reset-password, impersonate, merge). Each writes both `AuditLog` + `PortalUserHistory`.
-    - `backend/app/api/v1/portal_users/listing.py` — list + detail + profile update, with linkage hints.
-    - `backend/app/api/v1/portal_users/history.py` — history endpoint.
-    - `backend/app/models/portal_user_history.py` (migration 204) + 5 new audit actions.
-  - **Frontend** (new `frontend/src/pages/MyCompany/UsersTab/`):
-    - `index.tsx` list, `UserDetailPanel.tsx` with 3 tabs (Profile / Linkages / History), `HistoryPanel.tsx`, `MergeDialog.tsx`, `constants.ts`.
-    - Wired into `MyCompany/index.tsx` as 4th tab between Email and Privacy.
-    - Types extended in `MyCompany/types.ts` (PortalUserListItem, PortalUserDetail, PortalUserHistoryEntry).
-  - **Handbook**: updated people.tsx 3-3 (conference users) + trainingOperations.tsx t-attendees-central to point admins to the new unified panel.
-  - **Training-side UsersTab kept**: attendee-specific actions stay on `/trainings/users/*`; new tenant-level panel is additive.
-- **Verification**: backend mypy clean (672 files); ruff check/format clean on `app/` + new test file; `tests/test_portal_users_admin.py` = 15/15 pass; full backend suite running in bg task bb27h55g8. Frontend tsc clean, eslint 0 errors, **vitest 1846/1846 pass** (incl. 4 new `MyCompany/__tests__/UsersTab.test.tsx` cases).
-- **Prior work pushed**: Phase 2.5 portal unification + GDPR Phases 1-4 are on `origin/main`.
-- **Status**: uncommitted — new `app/api/v1/portal_users/` package, new `app/models/portal_user_history.py`, migration 204, modifications to router.py/audit.py/models/__init__.py, new `test_portal_users_admin.py`, new `frontend/src/pages/MyCompany/UsersTab/` + `__tests__/UsersTab.test.tsx`, and small type/handbook edits — **ask user before committing**.
+- **In progress — pending commit approval**: Phase 4 of unified customer architecture (`.claude/plans/smooth-sprouting-perlis.md`) — dual-write training events to `customer_events`.
+  - Phase 2 (DONE, `946c5b6`): `customer_events` table + migration 205 + backfill + tests.
+  - Phase 3 (DONE, `27ed506`): `CustomerEventService` + dual-write from `portal_users/access.py` (5 portal actions).
+  - **Phase 4 (this change)**: added `CustomerEventService.record_for_attendee(...)` helper; dual-wrote every TrainingAttendeeHistory call site:
+    - `attendees/parking.py` (park-by-source, park, deactivate, reactivate) → `training.parked` / `training.deactivated` / `training.reactivated`.
+    - `attendees/reassignment.py` (reassign) → `training.reassigned` with `new_registration_id` meta.
+    - `attendees/core.py` (backfill: both registration + offer branches) → `training.registered` / `training.offer_assigned`.
+    - `user_management/access.py` (training-side toggle-access) → `training.deactivated` / `training.reactivated` per linked attendee (query changed from `select(TrainingAttendee.id)` to `select(TrainingAttendee)` to get full objects).
+  - New test file `backend/tests/test_customer_event_training_writes.py` — 9 tests, all passing, covering dual-write parity + per-endpoint event type + meta payload.
+- **Phases 5-6 pending**:
+  - Phase 5: flip `portal_users/history.py` reader from merged-source to single `customer_events` query + update UI (`source` → `domain`, namespaced `event_type`).
+  - Phase 6: stop writing `portal_user_history` from `_helpers.py`.
+- **Verification**: `ruff check app/` + `ruff format --check app/` clean (675 files); `mypy app/` clean (675 files); `pytest tests/test_customer_event_training_writes.py -v` = 9/9 pass; related suites (customer_events, customer_event_service, training_attendee_reassign, portal_users_admin, training_portal) = 83/83 pass; full backend sweep running in background task `bp1xh50ur`.
+- **Prior work pushed**: Phase 2 + Phase 3 on `origin/main`; MyCompany → Users admin + GDPR Phases 1-4 also on `origin/main`.
+- **Status**: uncommitted — modifications to `customer_event_service.py`, `attendees/parking.py`, `attendees/reassignment.py`, `attendees/core.py`, `user_management/access.py`; new `tests/test_customer_event_training_writes.py` — **ask user before committing**.

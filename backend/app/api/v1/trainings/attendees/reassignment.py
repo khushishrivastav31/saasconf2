@@ -20,12 +20,14 @@ from app.core.attendee_reassignment import (
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
 from app.core.training_registration_emails import send_training_invoice_email
+from app.models.customer_event import CustomerEventType
 from app.models.tenant import Tenant
 from app.models.training import Training
 from app.models.training_attendee import TrainingAttendee
 from app.models.training_attendee_history import TrainingAttendeeHistory
 from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistrationAttendee
+from app.services.customer_event_service import CustomerEventService
 
 from ._helpers import get_training_name_for_placement
 
@@ -199,6 +201,18 @@ async def reassign_attendee(
             notes=reassign_note,
             created_by=current_user.user_id,
         )
+    )
+    CustomerEventService.record_for_attendee(
+        db,
+        att,
+        event_type=CustomerEventType.TRAINING_REASSIGNED,
+        created_by=current_user.user_id,
+        notes=reassign_note,
+        meta={
+            "placement_id": str(placement_uuid),
+            "source_type": "registration",
+            "new_registration_id": str(new_registration.id),
+        },
     )
 
     await db.commit()

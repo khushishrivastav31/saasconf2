@@ -9,11 +9,13 @@ from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.models.customer_event import CustomerEventType
 from app.models.offer_attendee import OfferAttendee
 from app.models.portal_user import PortalUser
 from app.models.training_attendee import TrainingAttendee
 from app.models.training_attendee_history import TrainingAttendeeHistory
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
+from app.services.customer_event_service import CustomerEventService
 
 from ._helpers import get_or_create_central_attendee
 
@@ -87,6 +89,7 @@ async def park_by_source(
         raise HTTPException(status_code=422, detail="Could not create central attendee (missing email)")
 
     att.status = "parked"
+    source_ref = registration_id if registration_id else source_uuid
     db.add(
         TrainingAttendeeHistory(
             tenant_id=tenant_id,
@@ -94,10 +97,22 @@ async def park_by_source(
             event_type="parked",
             placement_id=placement_id,
             source_type=data.source_type,
-            source_id=registration_id if registration_id else source_uuid,
+            source_id=source_ref,
             notes=data.reason,
             created_by=current_user.user_id,
         )
+    )
+    CustomerEventService.record_for_attendee(
+        db,
+        att,
+        event_type=CustomerEventType.TRAINING_PARKED,
+        created_by=current_user.user_id,
+        notes=data.reason,
+        meta={
+            "placement_id": str(placement_id) if placement_id else None,
+            "source_type": data.source_type,
+            "source_id": str(source_ref),
+        },
     )
     await db.commit()
 
@@ -186,6 +201,18 @@ async def park_attendee(
         created_by=current_user.user_id,
     )
     db.add(history)
+    CustomerEventService.record_for_attendee(
+        db,
+        att,
+        event_type=CustomerEventType.TRAINING_PARKED,
+        created_by=current_user.user_id,
+        notes=notes_str,
+        meta={
+            "placement_id": str(placement_id) if placement_id else None,
+            "source_type": data.source_type,
+            "source_id": str(source_uuid),
+        },
+    )
     await db.commit()
 
     return {"id": str(att.id), "status": att.status}
@@ -218,14 +245,22 @@ async def deactivate_attendee(
         raise HTTPException(status_code=422, detail="Only parked attendees can be deactivated.")
 
     att.status = "inactive"
+    deactivate_notes = data.notes or "Deactivated from parking lot"
     db.add(
         TrainingAttendeeHistory(
             tenant_id=current_user.tenant_id,
             attendee_id=att.id,
             event_type="deactivated",
-            notes=data.notes or "Deactivated from parking lot",
+            notes=deactivate_notes,
             created_by=current_user.user_id,
         )
+    )
+    CustomerEventService.record_for_attendee(
+        db,
+        att,
+        event_type=CustomerEventType.TRAINING_DEACTIVATED,
+        created_by=current_user.user_id,
+        notes=deactivate_notes,
     )
     await db.commit()
     return {"id": str(att.id), "status": att.status}
@@ -276,6 +311,13 @@ async def reactivate_attendee(
                 notes="Attendee reactivated",
                 created_by=current_user.user_id,
             )
+        )
+        CustomerEventService.record_for_attendee(
+            db,
+            att,
+            event_type=CustomerEventType.TRAINING_REACTIVATED,
+            created_by=current_user.user_id,
+            notes="Attendee reactivated",
         )
 
     if portal_user is not None and portal_user.is_active is False:
