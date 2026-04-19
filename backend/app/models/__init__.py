@@ -29,6 +29,16 @@ from app.models.cfp_papers import (
 )
 from app.models.conference import Conference
 from app.models.customer import Customer
+from app.models.customer_event import (  # noqa: F401
+    ACTOR_ADMIN,
+    ACTOR_ATTENDEE,
+    ACTOR_PORTAL_USER,
+    ACTOR_SYSTEM,
+    VALID_ACTOR_KINDS,
+    VALID_DOMAINS,
+    CustomerEvent,
+    CustomerEventType,
+)
 from app.models.customer_offer import CustomerOffer
 from app.models.deadline import Deadline
 from app.models.email_log import EmailLog

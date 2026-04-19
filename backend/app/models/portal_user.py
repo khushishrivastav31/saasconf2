@@ -17,6 +17,7 @@ from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone, re
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.customer_event import CustomerEvent
     from app.models.portal_user_history import PortalUserHistory
 
 
@@ -67,6 +68,13 @@ class PortalUser(Base):
         back_populates="portal_user",
         cascade="all, delete-orphan",
         order_by="PortalUserHistory.created_at.desc()",
+    )
+    # customer_events uses SET NULL rather than cascade-delete so that a
+    # merged user's history survives via subject_email_hash.
+    customer_events: Mapped[list["CustomerEvent"]] = relationship(
+        "CustomerEvent",
+        back_populates="portal_user",
+        order_by="CustomerEvent.created_at.desc()",
     )
 
     @property
