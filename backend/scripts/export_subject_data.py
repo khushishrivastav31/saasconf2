@@ -1,7 +1,8 @@
 """Export all data SaaSConf holds about a data subject (GDPR Art. 15).
 
-Ops-only CLI. No HTTP interface in Phase 1 — this is the *subject data
-collector* that Phase 2 will call from a background worker.
+Ops-only CLI. Delegates to :func:`app.core.gdpr.export.build_export` so the
+script, the admin ``/generate-export`` endpoint, and the portal self-serve
+export path all share one implementation.
 
 Usage::
 
@@ -11,134 +12,24 @@ Usage::
         --email alt@example.com \\
         --out /tmp/subject-export.zip
 
-Output ZIP layout::
-
-    manifest.json       — summary + request metadata
-    data/<model>.json   — rows per PII-owning table (one file per table)
-    audit_log.json      — audit events scoped to any of the subject emails
-
-``data/<model>.json`` is always written even if empty (makes the schema
-of the export machine-verifiable).
-
-Lookup is by ``email_hash`` — migration 200 backfilled that column on
-every subject-identifying table, and the 6 encrypted tables have had
-``email_hash`` since migration 197. The script never queries plaintext
-email for matching, so it works whether the table still holds plaintext
-(Registration, Alumni, etc.) or only ciphertext (User, PortalUser,
-Invoice, BillingProfile, Trainer, Customer).
+The CLI always runs in ``mode="admin"`` (full column dump). Portal mode is
+only reachable via the authenticated HTTP path.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import io
-import json
 import sys
 import uuid
-import zipfile
-from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
-from app.core.gdpr.lookups import LOOKUPS, LookupSpec
-from app.core.security.pii_crypto import hash_email
-from app.models.audit import AuditLog
-
-
-def _serialize(value: Any) -> Any:
-    """Convert a SQLAlchemy attribute value to JSON-safe form."""
-    if isinstance(value, uuid.UUID):
-        return str(value)
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, bytes):
-        return value.hex()
-    if isinstance(value, set):
-        return sorted(_serialize(v) for v in value)
-    return value
-
-
-def row_to_dict(row: Any) -> dict[str, Any]:
-    """Dump a Mapped-column snapshot of *row* — no @property accessors.
-
-    We want to capture what's physically stored. Property-based decryption
-    is handled separately in the manifest note so the subject can verify
-    what we hold vs. what we show.
-    """
-    out: dict[str, Any] = {}
-    for col in row.__table__.columns:
-        out[col.name] = _serialize(getattr(row, col.name))
-    return out
-
-
-async def collect_table(
-    db: AsyncSession,
-    spec: LookupSpec,
-    tenant_id: uuid.UUID,
-    email_hashes: list[str],
-) -> list[dict[str, Any]]:
-    hash_col = getattr(spec.model, spec.hash_attr)
-    conditions: list[Any] = [hash_col.in_(email_hashes)]
-    if hasattr(spec.model, "tenant_id"):
-        conditions.append(spec.model.tenant_id == tenant_id)  # type: ignore[attr-defined]
-    result: Any = await db.execute(select(spec.model).where(*conditions))
-    return [row_to_dict(r) for r in result.scalars().all()]
-
-
-async def collect_audit_log(
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    email_hashes: list[str],
-) -> list[dict[str, Any]]:
-    result = await db.execute(
-        select(AuditLog).where(
-            AuditLog.tenant_id == tenant_id,
-            AuditLog.subject_email_hash.in_(email_hashes),
-        )
-    )
-    return [row_to_dict(r) for r in result.scalars().all()]
-
-
-async def build_export(
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    emails: list[str],
-) -> tuple[bytes, dict[str, Any]]:
-    """Collect every row for *emails* under *tenant_id* and return ``(zip_blob, manifest)``."""
-    email_hashes = [hash_email(e) for e in emails]
-
-    sections: dict[str, list[dict[str, Any]]] = {}
-    for spec in LOOKUPS:
-        sections[spec.name] = await collect_table(db, spec, tenant_id, email_hashes)
-    sections["audit_log"] = await collect_audit_log(db, tenant_id, email_hashes)
-
-    manifest: dict[str, Any] = {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
-        "tenant_id": str(tenant_id),
-        "subjects": emails,
-        "subject_email_hashes": email_hashes,
-        "record_counts": {name: len(rows) for name, rows in sections.items()},
-        "notes": [
-            "Row snapshots reflect physical column storage (Mapped columns only).",
-            "Encrypted columns appear as ciphertext; use the app to decrypt via the tenant's PII key.",
-            "Hash columns are SHA-256(lower(trim(email))) — identifiers, not reversible.",
-        ],
-    }
-
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("manifest.json", json.dumps(manifest, indent=2, default=str))
-        for name, rows in sections.items():
-            path = "audit_log.json" if name == "audit_log" else f"data/{name}.json"
-            zf.writestr(path, json.dumps(rows, indent=2, default=str))
-    return buf.getvalue(), manifest
+from app.core.gdpr.export import build_export
 
 
 async def main() -> None:

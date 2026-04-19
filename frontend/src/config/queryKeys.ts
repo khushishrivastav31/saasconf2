@@ -91,6 +91,14 @@ export const queryKeys = {
     preview: (id: string) => ['privacy-requests', 'preview', id] as const,
   },
 
+  // ── Portal self-service privacy ──────────────────────────────────
+  portalPrivacyRequests: {
+    all: ['portal-privacy-requests'] as const,
+    list: (page: number, pageSize: number) =>
+      ['portal-privacy-requests', 'list', page, pageSize] as const,
+    detail: (id: string) => ['portal-privacy-requests', 'detail', id] as const,
+  },
+
   // ── Deadlines ──────────────────────────────────────────────────
   deadlines: {
     byConference: (conferenceId: string) => ['conference-deadlines', conferenceId] as const,

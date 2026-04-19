@@ -44,7 +44,7 @@ from app.models.training_registration import (
     TrainingRegistrationAttendee,
 )
 from app.services.base import BaseService
-from scripts.export_subject_data import build_export
+from app.core.gdpr.export import build_export
 
 # ---------------------------------------------------------------------------
 # Model @validates hooks — 9 subject-identifying tables

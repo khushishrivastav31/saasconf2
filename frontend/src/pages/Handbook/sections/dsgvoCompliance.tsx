@@ -34,8 +34,8 @@ export const dsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Subject-scoped audit trail</strong>: opening a registration, invoice, or training attendee detail panel writes an audit entry tagged with the subject\u2019s email hash (see <em>Audit trail</em> below).</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Self-serve export UI (Phase 2 \u2014 live)</strong>: tenant admins can log, approve/reject, and generate subject-data exports directly from <strong>My Company \u2192 Privacy Requests</strong>. The ZIP download link is valid for 7 days.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Per-category erasure execution (Phase 3 \u2014 live)</strong>: approved erasure requests open a per-table preview with delete / anonymize / skip defaults, a type-to-confirm <code>ERASE</code> barrier, and automatic skip-locking of invoices under HGB \u00a7257.</li>
-</ul>
-<p class="text-gray-700 dark:text-gray-300 my-2">The portal-side <em>My Data</em> tab (self-serve export + erasure request from the registrant side) lands in Phase 4. Each section below calls out what\u2019s live now vs. what\u2019s coming.</p>`,
+<li class="text-gray-700 dark:text-gray-300"><strong>Portal self-service (Phase 4 \u2014 live)</strong>: signed-in portal users can download their own data (export runs inline, allowlist-guarded so staff notes never ship) and submit deletion requests that land in the admin <em>Privacy Requests</em> queue for review.</li>
+</ul>`,
           }}
         />
       ),
@@ -177,12 +177,14 @@ export const dsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Portal \u2192 My Papers</strong> (CFP applicants): edit submitted abstracts, affiliation, accessibility notes until submission deadline.</li>
 <li class="text-gray-700 dark:text-gray-300">All portal logins now verify the user via the indexed <code>email_hash</code> column (never a full-table scan), and the portal user\u2019s email / phone are Fernet-encrypted at rest.</li>
 </ul>
-<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">What's coming for portal users (Phase 4)</h3>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Portal self-service (Phase 4 \u2014 live)</h3>
+<p class="text-gray-700 dark:text-gray-300 my-2">Signed-in portal users open <strong>Portal \u2192 Privacy</strong> and see two buttons plus their request history.</p>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300"><strong>My Data \u2192 Export</strong>: download the same Art. 15 ZIP the admin-side export produces \u2014 auto-approved, no admin involvement.</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>My Data \u2192 Request deletion</strong>: submit an Art. 17 request that lands in the admin <em>Privacy Requests</em> tab for approval (Phase 2 + Phase 3 feed into this).</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>My Data \u2192 Consent log</strong>: view and revoke marketing / analytics consents.</li>
-</ul>`,
+<li class="text-gray-700 dark:text-gray-300"><strong>Download my data</strong>: creates the privacy request, runs the export inline, and streams the ZIP back. No admin involvement. Rate-limited to 3 export + deletion requests per day per IP. The export uses an <em>explicit allowlist</em> (defined in <code>backend/app/core/gdpr/lookups.py</code>) so internal staff notes, admin annotation columns, and payment-processor identifiers are never included \u2014 a CI-time coverage guard + runtime canary byte-scan prevent regressions.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Request deletion</strong>: submits an Art. 17 request in <code>pending_review</code> state straight into the admin <em>Privacy Requests</em> queue. Actual deletion still goes through Phase 3\u2019s per-table preview + type-to-confirm <code>ERASE</code> barrier \u2014 portal users cannot bypass human review.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>My requests</strong>: lists the caller\u2019s own request history with status badges; completed exports stay downloadable for 7 days.</li>
+</ul>
+<p class="text-gray-700 dark:text-gray-300 my-2">Portal users can never file a request on somebody else\u2019s behalf \u2014 <code>subject_emails</code> is always stamped from their authenticated session, never accepted from the client.</p>`,
           }}
         />
       ),

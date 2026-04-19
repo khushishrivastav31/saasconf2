@@ -113,3 +113,38 @@ export interface ErasureExecuteResponse {
   executed_at: string;
   manifest: Record<string, ErasureManifestEntry>;
 }
+
+// ── Portal self-service (GDPR Phase 4) ────────────────────────────────
+
+export interface PortalPrivacyRequestResponse {
+  id: string;
+  request_type: PrivacyRequestType;
+  status: PrivacyRequestStatus;
+  created_at: string;
+  reviewed_at: string | null;
+  executed_at: string | null;
+  completion_artifact_url: string | null;
+  rejection_reason: string | null;
+  notes: string | null;
+}
+
+export interface PortalPrivacyRequestListResponse {
+  items: PortalPrivacyRequestResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export interface PortalExportCreateResponse {
+  id: string;
+  status: PrivacyRequestStatus;
+  download_url: string;
+  record_counts: Record<string, number>;
+  executed_at: string;
+}
+
+export interface PortalPrivacyRequestCreateInput {
+  request_type: PrivacyRequestType;
+  notes?: string | null;
+}

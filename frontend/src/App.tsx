@@ -80,6 +80,7 @@ const TrainingPortalLogin = lazy(() => import('./pages/TrainingPortal/LoginPage'
 const TrainingPortalSetPassword = lazy(() => import('./pages/TrainingPortal/SetPasswordPage'));
 const TrainingPortalDashboard = lazy(() => import('./pages/TrainingPortal/DashboardPage'));
 const TrainingPortalDetail = lazy(() => import('./pages/TrainingPortal/TrainingDetailPage'));
+const TrainingPortalPrivacy = lazy(() => import('./pages/TrainingPortal/PrivacyPage'));
 
 function LazyFallback() {
   return (
@@ -473,6 +474,7 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<TrainingPortalDashboard />} />
             <Route path="training/:registrationId" element={<TrainingPortalDetail />} />
+            <Route path="privacy" element={<TrainingPortalPrivacy />} />
           </Route>
 
           {/* CFP Applicant Portal — authenticated routes */}

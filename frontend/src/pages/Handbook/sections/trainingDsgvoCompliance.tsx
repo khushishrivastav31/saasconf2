@@ -32,6 +32,7 @@ export const trainingDsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Subject-scoped audit trail</strong>: opening a training-attendee detail panel writes a <code>training_attendee.view</code> audit entry tagged with the subject\u2019s email hash. Invoice views share the same <code>invoice.view</code> code as the conferences module.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Self-serve export UI (Phase 2 \u2014 live)</strong>: tenant admins log, approve/reject, and generate subject-data exports directly from <strong>My Company \u2192 Privacy Requests</strong>. The same backend lookup powers both conference and training data.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Per-category erasure execution (Phase 3 \u2014 live)</strong>: approved erasure requests open a per-table preview with delete / anonymize / skip defaults, a type-to-confirm <code>ERASE</code> barrier, and automatic skip-locking of training invoices under HGB \u00a7257.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Portal self-service (Phase 4 \u2014 live)</strong>: training-portal users open <strong>Privacy</strong> in their portal and can download their own data (inline export, strict allowlist) or submit a deletion request that lands in the admin <em>Privacy Requests</em> queue for review.</li>
 </ul>`,
           }}
         />
@@ -175,12 +176,14 @@ export const trainingDsgvoComplianceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Training portal \u2192 Invoices</strong>: download PDFs of their own training invoices \u2014 partial Art. 15 / Art. 20 coverage.</li>
 <li class="text-gray-700 dark:text-gray-300">Portal logins use the indexed <code>email_hash</code> column (never a full-table scan), and portal-user email / phone are Fernet-encrypted at rest.</li>
 </ul>
-<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">What\u2019s coming for portal users (Phase 4)</h3>
+<h3 class="font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">Portal self-service (Phase 4 \u2014 live)</h3>
+<p class="text-gray-700 dark:text-gray-300 my-2">Training-portal users open <strong>Privacy</strong> in the portal navigation.</p>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300"><strong>My Data \u2192 Export</strong>: download the same Art. 15 ZIP the admin-side export produces \u2014 auto-approved for the signed-in user.</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>My Data \u2192 Request deletion</strong>: submit an Art. 17 request that lands in the admin <em>Privacy Requests</em> tab for approval.</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>My Data \u2192 Consent log</strong>: view and revoke marketing / reminder-email consents.</li>
-</ul>`,
+<li class="text-gray-700 dark:text-gray-300"><strong>Download my data</strong>: the same Art. 15 export the admin can generate \u2014 but driven off a strict allowlist so internal staff notes, admin comments, and payment-processor identifiers never ship to the user. A schema coverage guard and runtime canary byte-scan enforce this at CI time. Rate-limited 3/day per IP.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Request deletion</strong>: lands in the admin <em>Privacy Requests</em> queue in <code>pending_review</code>. Humans still execute the erasure with Phase 3\u2019s preview + type-to-confirm <code>ERASE</code> barrier \u2014 portal users cannot bypass review.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>My requests</strong>: a history table of the user\u2019s own requests with status badges and a re-download link while the 7-day window is open.</li>
+</ul>
+<p class="text-gray-700 dark:text-gray-300 my-2">The <code>subject_emails</code> field is always stamped from the caller\u2019s authenticated session \u2014 a portal user cannot file a request for somebody else.</p>`,
           }}
         />
       ),

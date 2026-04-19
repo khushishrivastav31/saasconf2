@@ -135,6 +135,9 @@ class AuditAction:
     PRIVACY_REQUEST_EXECUTE = "privacy_request.execute"
     PRIVACY_REQUEST_EXECUTE_ERASURE = "privacy_request.execute_erasure"
     PRIVACY_REQUEST_EXPORT_DOWNLOAD = "privacy_request.export_download"
+    PRIVACY_REQUEST_PORTAL_CREATE = "privacy_request.portal_create"
+    PRIVACY_REQUEST_PORTAL_EXPORT = "privacy_request.portal_export"
+    PRIVACY_REQUEST_PORTAL_DOWNLOAD = "privacy_request.portal_download"
 
     # Platform currency management
     PLATFORM_CURRENCY_CREATE = "platform_currency.create"

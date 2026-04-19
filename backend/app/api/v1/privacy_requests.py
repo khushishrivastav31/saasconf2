@@ -25,6 +25,7 @@ from sqlalchemy import desc, select
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.gdpr.erasure import build_preview, execute_erasure
+from app.core.gdpr.export import build_export
 from app.core.pagination import calculate_pages, paginate
 from app.core.rate_limiter import tenant_limiter
 from app.core.security.pii_crypto import hash_email
@@ -47,7 +48,6 @@ from app.schemas.privacy_request import (
     PrivacyRequestResponse,
 )
 from app.services.base import BaseService
-from scripts.export_subject_data import build_export
 
 router = APIRouter()
 

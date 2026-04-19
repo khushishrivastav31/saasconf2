@@ -60,6 +60,12 @@ const PortalLayout = React.memo(function PortalLayout() {
               >
                 My Trainings
               </Link>
+              <Link
+                to={`/${tenantSlug}/trainings/portal/privacy`}
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+              >
+                Privacy
+              </Link>
             </nav>
           </div>
 
@@ -170,6 +176,12 @@ const PortalLayout = React.memo(function PortalLayout() {
             className="block min-h-[44px] py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
           >
             My Trainings
+          </Link>
+          <Link
+            to={`/${tenantSlug}/trainings/portal/privacy`}
+            className="block min-h-[44px] py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+          >
+            Privacy
           </Link>
         </nav>
       </header>

@@ -127,3 +127,53 @@ class ErasureExecuteResponse(BaseModel):
 
     executed_at: datetime
     manifest: dict[str, ErasureManifestEntrySchema]
+
+
+# --- Portal self-serve (Phase 4) ------------------------------------------
+
+
+class PortalPrivacyRequestCreate(BaseModel):
+    """Input payload for a portal-originated privacy request.
+
+    ``subject_emails`` is NOT accepted from the client — the portal resolves
+    it from the authenticated portal user's own email. This prevents a logged-
+    in portal user from creating a request for somebody else's data.
+    """
+
+    request_type: PrivacyRequestType
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class PortalPrivacyRequestResponse(BaseModel):
+    """Trimmed response for a portal-scoped privacy request.
+
+    Excludes ``subject_emails`` (the user already knows their own email),
+    ``execution_manifest`` (bulky + potentially sensitive), ``created_by``
+    and ``reviewed_by`` (staff user UUIDs), and ``tenant_id``.
+    """
+
+    id: UUID
+    request_type: PrivacyRequestType
+    status: PrivacyRequestStatus
+    created_at: datetime
+    reviewed_at: datetime | None
+    executed_at: datetime | None
+    completion_artifact_url: str | None
+    rejection_reason: str | None
+    notes: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PortalExportCreateResponse(BaseModel):
+    """Result of a portal-originated ``request_type="export"`` POST.
+
+    Export runs inline (no admin approval); the download URL is valid for
+    the 7-day retention window enforced server-side.
+    """
+
+    id: UUID
+    status: PrivacyRequestStatus
+    download_url: str
+    record_counts: dict[str, int]
+    executed_at: datetime
