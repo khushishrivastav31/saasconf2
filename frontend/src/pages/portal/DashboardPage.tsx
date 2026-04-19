@@ -1,11 +1,18 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import portalApi from '../../config/portalApi';
 import { usePortalBasePath } from '../../hooks/usePortalBasePath';
 import { formatDate } from '../../utils/formatDate';
 import type { PortalPaperListResponse, PortalPaper } from '../../types/portal';
 import PaperStatusLifeline from '../../components/PaperStatusLifeline';
+
+interface TrainingRegistrationSummary {
+  id: number;
+  training_name: string;
+  training_date: string | null;
+  status: string;
+}
 
 interface ConferenceGroup {
   conferenceId: string | null;
@@ -15,6 +22,7 @@ interface ConferenceGroup {
 
 function DashboardPage() {
   const basePath = usePortalBasePath();
+  const { companySlug } = useParams<{ companySlug: string }>();
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data, isLoading } = useQuery({
@@ -25,6 +33,18 @@ function DashboardPage() {
     },
     refetchInterval: 30000,
   });
+
+  const { data: trainingRegistrations } = useQuery({
+    queryKey: ['portal-my-trainings'],
+    queryFn: async () => {
+      const res = await portalApi.get<TrainingRegistrationSummary[]>(
+        '/portal/unified/my-trainings'
+      );
+      return res.data;
+    },
+    staleTime: 60000,
+  });
+  const trainingCount = trainingRegistrations?.length ?? 0;
 
   const papers = useMemo(() => data?.items || [], [data?.items]);
   const paperCount = papers.length;
@@ -72,7 +92,33 @@ function DashboardPage() {
   }, [filteredPapers]);
 
   return (
-    <div>
+    <div className="space-y-6">
+      {trainingCount > 0 && (
+        <Link
+          to={`/${companySlug}/trainings/portal/dashboard`}
+          className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              My Trainings
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300">
+                {trainingCount}
+              </span>
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              View your training registrations and materials.
+            </p>
+          </div>
+          <svg
+            className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      )}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
