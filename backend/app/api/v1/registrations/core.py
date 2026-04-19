@@ -20,6 +20,7 @@ from app.core.user_auto_creation import create_user_for_registration
 from app.core.vat_validation import validate_vat_number
 from app.models.audit import AuditAction
 from app.models.booking import BookingOption, BookingPeriod
+from app.models.customer_event import ACTOR_ADMIN, DOMAIN_REGISTRATION, CustomerEventType
 from app.models.invoice import Invoice
 from app.models.registration import (
     BillingProfile,
@@ -37,6 +38,7 @@ from app.schemas.registration import (
     UnifiedRegistrationResponse,
 )
 from app.services.base import BaseService
+from app.services.customer_event_service import CustomerEventService
 
 from ._helpers import (
     _auto_add_alumni,
@@ -282,6 +284,26 @@ async def create_registration(
             )
         )
 
+        assert reg.email_hash is not None  # @validates("email") populates this
+        CustomerEventService.record(
+            db,
+            tenant_id=tenant_id,
+            portal_user_id=None,
+            subject_email_hash=reg.email_hash,
+            domain=DOMAIN_REGISTRATION,
+            event_type=CustomerEventType.REGISTRATION_REGISTERED,
+            actor_kind=ACTOR_ADMIN,
+            created_by=current_user.user_id,
+            related_entity_type="registration",
+            related_entity_id=reg.id,
+            meta={
+                "registration_id": str(reg.id),
+                "conference_name": conference.name,
+                "booking_option_name": opt_map[att.booking_option_id].name,
+                "company_name": billing.company_name,
+            },
+        )
+
     # Auto-generate invoice for all registrations
     invoice = await create_invoice_for_registrations(db, registrations, billing, conference, tenant_id, current_user)
 
@@ -412,6 +434,7 @@ async def update_registration(
         raise NotFoundError(f"Registration '{registration_id}' not found")
 
     update_data = data.model_dump(exclude_unset=True)
+    old_status = reg.status
 
     # Validate email uniqueness if changed
     if "email" in update_data:
@@ -427,6 +450,34 @@ async def update_registration(
     # Auto-add to alumni when status changes to PAID
     if "status" in update_data and update_data["status"] == RegistrationStatus.PAID.value:
         await _auto_add_alumni(db, reg)
+
+    # Emit customer event when a registration is cancelled.
+    if (
+        "status" in update_data
+        and update_data["status"] == RegistrationStatus.CANCELLED.value
+        and old_status != RegistrationStatus.CANCELLED.value
+    ):
+        conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+        opt_map_for_meta = await _get_option_name_map(db, conference_id, tenant_id)
+        assert reg.email_hash is not None
+        CustomerEventService.record(
+            db,
+            tenant_id=tenant_id,
+            portal_user_id=None,
+            subject_email_hash=reg.email_hash,
+            domain=DOMAIN_REGISTRATION,
+            event_type=CustomerEventType.REGISTRATION_CANCELLED,
+            actor_kind=ACTOR_ADMIN,
+            created_by=current_user.user_id,
+            related_entity_type="registration",
+            related_entity_id=reg.id,
+            meta={
+                "registration_id": str(reg.id),
+                "conference_name": conference.name,
+                "booking_option_name": opt_map_for_meta.get(reg.booking_option_id),
+                "company_name": reg.billing_profile.company_name if reg.billing_profile else None,
+            },
+        )
 
     await db.commit()
     await db.refresh(reg)

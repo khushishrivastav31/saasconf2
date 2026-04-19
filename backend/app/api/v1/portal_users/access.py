@@ -416,6 +416,9 @@ async def merge_portal_users(
     source_email = read_pii(source, "email")
     target_email = read_pii(target, "email")
 
+    source_company = source.company
+    target_company = target.company
+
     # Pre-delete history writes — source's row will vanish with the CASCADE.
     await write_history(
         db,
@@ -428,6 +431,9 @@ async def merge_portal_users(
             "source_user_id": str(source.id),
             "source_email": source_email,
             "merged_records": merged_records,
+            "source_company": source_company,
+            "target_company": target_company,
+            "company_changed": source_company != target_company,
         },
     )
 

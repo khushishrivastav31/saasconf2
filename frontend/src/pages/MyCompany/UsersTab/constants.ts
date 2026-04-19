@@ -19,14 +19,17 @@ export const EVENT_LABELS: Record<string, string> = {
   'training.offer_removed': 'Removed from offer',
   'training.deactivated': 'Attendee deactivated',
   'training.reactivated': 'Attendee reactivated',
+  // cfp.* — paper lifecycle (main speaker + cospeakers)
+  'cfp.submitted': 'Paper submitted',
+  'cfp.accepted': 'Paper accepted',
+  'cfp.rejected': 'Paper rejected',
+  'cfp.withdrawn': 'Paper withdrawn',
+  // registration.* — conference registration lifecycle
+  'registration.registered': 'Registered (conference)',
+  'registration.cancelled': 'Registration cancelled',
   // Forward-compat stubs — writers land in follow-up PRs, labels ready today.
-  'cfp.submitted': 'CFP submitted',
-  'cfp.accepted': 'CFP accepted',
-  'cfp.rejected': 'CFP rejected',
   'messaging.received': 'Message received',
   'messaging.sent': 'Message sent',
-  'registration.created': 'Registration created',
-  'registration.cancelled': 'Registration cancelled',
   'billing.invoice_sent': 'Invoice sent',
   'billing.invoice_paid': 'Invoice paid',
 };
@@ -50,10 +53,11 @@ export const EVENT_COLORS: Record<string, string> = {
   'cfp.submitted': 'text-blue-600 dark:text-blue-400',
   'cfp.accepted': 'text-green-600 dark:text-green-400',
   'cfp.rejected': 'text-red-600 dark:text-red-400',
+  'cfp.withdrawn': 'text-gray-500 dark:text-gray-400',
+  'registration.registered': 'text-green-600 dark:text-green-400',
+  'registration.cancelled': 'text-red-600 dark:text-red-400',
   'messaging.received': 'text-primary-600 dark:text-primary-400',
   'messaging.sent': 'text-primary-600 dark:text-primary-400',
-  'registration.created': 'text-green-600 dark:text-green-400',
-  'registration.cancelled': 'text-red-600 dark:text-red-400',
   'billing.invoice_sent': 'text-blue-600 dark:text-blue-400',
   'billing.invoice_paid': 'text-green-600 dark:text-green-400',
 };

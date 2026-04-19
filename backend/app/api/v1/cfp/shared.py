@@ -1,12 +1,14 @@
 """Shared helper functions for CFP sub-modules."""
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.attachment_urls import batch_get_attachment_urls, get_latest_attachment_url
-from app.core.dependencies import DbSessionDep
+from app.core.dependencies import CurrentUser, DbSessionDep
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
     CFPApplicant,
@@ -18,6 +20,7 @@ from app.models.cfp import (
     PaperStatus,
 )
 from app.models.conference import Conference
+from app.models.customer_event import ACTOR_ADMIN, DOMAIN_CFP, CustomerEventType
 from app.models.review import PaperReview, ReviewQuestion, ReviewStatus
 from app.models.settings import SessionType, UserRole, UserRoleAssignment
 from app.schemas.cfp import (
@@ -28,6 +31,7 @@ from app.schemas.cfp import (
     PaperReviewSummary,
     TopicResponse,
 )
+from app.services.customer_event_service import CustomerEventService
 
 MODULE_CODE = "cfp"
 
@@ -673,3 +677,57 @@ async def _build_paper_response(
         created_at=paper.created_at,
         updated_at=paper.updated_at,
     )
+
+
+async def _record_paper_customer_event(
+    db: AsyncSession,
+    paper: CFPPaper,
+    event_type: CustomerEventType,
+    current_user: CurrentUser,
+) -> None:
+    """Write one ``customer_events`` row per speaker on the paper.
+
+    Covers the main speaker and every cospeaker listed in
+    ``paper.cospeaker_associations`` (regardless of invitation status — the
+    paper affects their timeline either way).  The handler must have eager-
+    loaded ``main_speaker`` and ``cospeaker_associations.applicant`` (the
+    standard ``_paper_eager_options`` does).
+    """
+    conf_result = await db.execute(
+        select(Conference.name)
+        .join(ConferenceCFP, Conference.id == ConferenceCFP.conference_id)
+        .where(ConferenceCFP.cfp_id == paper.cfp_id)
+        .limit(1)
+    )
+    conference_name = conf_result.scalar_one_or_none()
+
+    meta: dict[str, Any] = {
+        "paper_id": str(paper.id),
+        "paper_title": paper.title,
+    }
+    if conference_name:
+        meta["conference_name"] = conference_name
+
+    applicants: list[CFPApplicant] = []
+    if paper.main_speaker is not None:
+        applicants.append(paper.main_speaker)
+    applicants.extend(assoc.applicant for assoc in paper.cospeaker_associations if assoc.applicant is not None)
+
+    seen: set[UUID] = set()
+    for applicant in applicants:
+        if applicant.id in seen or not applicant.email_hash:
+            continue
+        seen.add(applicant.id)
+        CustomerEventService.record(
+            db,
+            tenant_id=paper.tenant_id,
+            portal_user_id=applicant.portal_user_id,
+            subject_email_hash=applicant.email_hash,
+            domain=DOMAIN_CFP,
+            event_type=event_type,
+            actor_kind=ACTOR_ADMIN,
+            created_by=current_user.user_id,
+            related_entity_type="cfp_paper",
+            related_entity_id=paper.id,
+            meta=meta,
+        )

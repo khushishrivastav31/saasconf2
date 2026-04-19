@@ -82,23 +82,30 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **In progress — pending commit approval**: Conference-side Portal Account panel (follow-up to Phases 2–6 of the unified customer architecture).
-  - Phases 2–6 DONE and pushed to `origin/main` (Phase 5 = `7dda83c`, Phase 6 = `7636315`). `portal_user_history` writes removed; `customer_events` is the single timeline source.
-  - **This change** — extend the 5-button "Portal Account" admin panel (Toggle Access / Resend Invite / Reset Password / Impersonate / Merge) from My Company → Users → Detail to the CFP Applicant edit form under Conferences → Users.
-    - Backend: added `portal_user_id: UUID | None` to `ApplicantResponse` (`backend/app/schemas/cfp_applicants.py`); populated in all 5 `ApplicantResponse(...)` constructors across `cfp/applicants.py` and `cfp/shared.py`.
-    - Frontend: added `portal_user_id: string \| null` to `Applicant` type (`frontend/src/types/cfp.ts`).
-    - New reusable components:
-      - `frontend/src/components/PortalAccountActions.tsx` — 5 action buttons (all `type="button"` — safe to embed in a form) + Merge dialog state.
-      - `frontend/src/components/PortalAccountCard.tsx` — wraps Actions with a status row (Status / Password / Email verified / Last login / Created); fetches detail via `GET /portal-users/:id`.
-    - `MergeDialog.tsx` rewritten to drop the `items` prop and look up the source user via `GET /portal-users?search=<email>&per_page=5` — works in any context, not just the list view.
-    - `UserDetailPanel.tsx` refactored: drops ~100 lines of duplicated mutation hooks, now uses `<PortalAccountActions>`; `items` prop removed from both panel and `UsersTab/index.tsx` caller.
-    - `ApplicantForm.tsx` — `<PortalAccountCard portalUserId={applicant.portal_user_id} />` rendered at the top of the form when the applicant has a linked portal user.
-    - Handbook updated: `frontend/src/pages/Handbook/sections/people.tsx` CFP Portal Users section notes the Portal Account card is also available on the Applicant form.
-    - **New tests (all passing)**:
-      - Backend: `TestApplicantResponsePortalUserId` class appended to `backend/tests/test_cfp_admin_deep.py` — 3 tests covering list (linked/unlinked) + update returning `portal_user_id`.
-      - Frontend vitest: `frontend/src/components/__tests__/PortalAccountCard.test.tsx` (3 tests) + `frontend/src/components/__tests__/MergeDialog.test.tsx` (3 tests, API-lookup path).
-      - E2E: `frontend/e2e/conference-cfp-applicant-account.spec.ts` — opens a CFP applicant, asserts the 5 Portal Account buttons when linked, and checks the Merge dialog does not submit the underlying form. Filename deliberately avoids "portal" so it binds to the `admin-tests` Playwright project (verified via `playwright test --list`).
-    - **Incidental infra fixes in `backend/tests/conftest.py`** (silences noise only — no behaviour change): (1) switched `Base.metadata.sorted_tables` → `Base.metadata.tables.values()` at both cleanup sites to silence SAWarning about tenants/users FK cycle (CASCADE makes sort order irrelevant); (2) moved `_mock_resend_client` fixture below the app imports to clear 9 pre-existing E402 errors.
-- **Verification**: `tsc --noEmit` clean; eslint clean on touched files (only pre-existing `ApplicantForm.tsx:max-lines` warning); `mypy app/` clean (675 files); `ruff check`/`format --check` clean on all touched backend files; `vitest` on 3 test files = 11/11; backend `pytest tests/test_cfp_admin_deep.py tests/test_portal_users_admin.py tests/test_customer_event_service.py tests/test_customer_events.py` = 94/94.
-- **Status**: uncommitted — see `git status` — **ask user before committing**.
-- **Follow-ups on the plan**: migration 206 dropping `portal_user_history` (one release later); messaging + CFP writer wire-up (deferred).
+- **In progress — pending commit approval**: Conference-side customer events (CFP paper lifecycle + conference registrations + merge company meta).
+  - Builds on Phases 2–6 of the unified customer architecture (already on `origin/main`: Phase 5 = `7dda83c`, Phase 6 = `7636315`) and the CFP Applicant Portal Account panel (previous uncommitted step).
+  - **No DB migration needed** — `customer_events.event_type` is `String(60)` (accepts new enum string values) and `meta` is `JSONB` (accepts new keys). Just new enum values + writers + UI formatting.
+  - **Backend writers**:
+    - CFP papers (`backend/app/api/v1/cfp/shared.py`): new `_record_paper_customer_event(paper, event_type, ...)` helper. Dedupes `main_speaker` + `cospeaker_associations` by `applicant.id`, skips applicants with missing `email_hash`, emits one `customer_events` row per speaker with `domain="cfp"`, `related_entity_type="cfp_paper"`, `meta={paper_id, paper_title, conference_name}`.
+    - Paper submit (`cfp/papers.py` applicant submit path) → `CustomerEventType.CFP_SUBMITTED`.
+    - Paper unsubmit → `CFP_WITHDRAWN`.
+    - Admin paper status transitions (via `_CFP_EVENT_BY_STATUS` dispatch): `ACCEPTED` → `CFP_ACCEPTED`; `REJECTED` → `CFP_REJECTED`; `DRAFT` (from submitted) → `CFP_WITHDRAWN`. Intermediate review states emit nothing.
+    - Registrations (`backend/app/api/v1/registrations/core.py`):
+      - `create_registration`: per-attendee, after `db.flush()`, emits `REGISTRATION_REGISTERED` with `portal_user_id=None`, `subject_email_hash=reg.email_hash` (auto-populated by `@validates("email")`), meta `{registration_id, conference_name, booking_option_name, company_name}`.
+      - `update_registration`: captures `old_status` before setattr loop; emits `REGISTRATION_CANCELLED` only on actual status transition to `CANCELLED`.
+    - Merge (`backend/app/api/v1/portal_users/access.py`): captures `source.company` + `target.company` before merge, adds `source_company`, `target_company`, `company_changed: bool` to the existing `portal.merged_into` meta.
+  - **Frontend**:
+    - `UsersTab/constants.ts`: `EVENT_LABELS` relabeled to "Paper submitted/accepted/rejected/withdrawn" + "Registered (conference)" + "Registration cancelled"; added `cfp.withdrawn`; renamed `registration.created` → `registration.registered`. Colors mirrored in `EVENT_COLORS`.
+    - `UsersTab/HistoryPanel.tsx`: new `buildMetaLines(entry)` helper with typed `str(meta, key)` lookup. Renders CFP meta (`Paper: …` / `Conference: …`), Registration meta (`Conference` / `Booking` / `Company`), and merge company transition (`Company: {src} → {tgt}`) when `portal.merged_into` meta has `company_changed === true`. Rendered as `<ul>` below `entry.notes`.
+    - New reusable component `frontend/src/components/CustomerTimelineCard.tsx` — wraps `HistoryPanel` with a card header ("Activity"); rendered below `PortalAccountCard` in `pages/modules/cfp/CFPApplicants/ApplicantForm/index.tsx` so admins see the full unified timeline inline on the CFP Applicant form (same data as My Company → Users → History).
+    - Handbook (`frontend/src/pages/Handbook/sections/people.tsx`) — CFP Portal Users section describes the unified customer timeline across Portal / Training / CFP / Registration domains, notes the company transition line on merges, and the inline **Activity** card on the applicant form.
+  - **New tests**:
+    - Backend: `backend/tests/test_customer_events_conference.py` — 8 tests across 3 classes. `TestCFPPaperEvents`: submit with main + 2 cospeakers (3 rows); accept with 1 cospeaker (2 rows); reject single row; unsubmit emits `cfp.withdrawn`. `TestRegistrationEvents`: create via POST + cancel via PUT, both with booking + company meta. `TestMergeCompanyMeta`: differing companies sets `company_changed=true` + source/target names; same companies sets `company_changed=false`.
+    - Frontend: `frontend/src/pages/MyCompany/__tests__/UsersTab.test.tsx` — 3 new history-rendering tests for CFP paper submission meta, registration booking/company meta, and merge company-change transition.
+  - **Backfill for existing data**:
+    - New `backend/scripts/backfill_conference_customer_events.py` — emits `cfp.submitted` + terminal (`cfp.accepted` / `cfp.rejected`) rows for every existing CFPPaper (main + cospeakers deduped, skipping missing `email_hash`), and `registration.registered` + optional `registration.cancelled` rows for every existing Registration. Idempotent: loads existing `(subject_email_hash, event_type, related_entity_id)` keys per tenant+domain and skips them, so re-runs are no-ops. Uses `SELECT set_config('app.is_super_admin', 'true', true)` (SET LOCAL does not support bound parameters).
+    - Run once per deploy: `cd backend && venv/bin/python -m scripts.backfill_conference_customer_events`. Confirmed on dev DB: **first run** inserted `cfp=124 + reg=6`, **second run** `cfp=0/skipped=124, reg=0/skipped=6`. Coverage jumped from 2 of 44 portal users with events → **41 of 44**.
+    - New test: `backend/tests/test_backfill_conference_customer_events.py` — 6 tests (accepted/rejected/pure-draft/idempotent for CFP; registered+cancelled/paid-only for registrations).
+- **Verification (all green)**: `mypy app/` clean (675 files); `ruff check` / `ruff format --check` clean on all touched files + scripts; `tsc --noEmit` clean; `eslint` clean on touched frontend files; backend `pytest tests/test_backfill_conference_customer_events.py tests/test_customer_events_conference.py tests/test_customer_events.py tests/test_customer_event_service.py tests/test_portal_users_admin.py tests/test_cfp_admin_deep.py tests/test_registration.py` = 151/151; frontend `vitest` on `PortalAccountCard.test.tsx` = 3/3 (historical UsersTab + MergeDialog tests untouched by this step).
+- **Status**: uncommitted — see `git status` — **ask user before committing**. Backfill script must be run on staging after deploy: `cd backend && venv/bin/python -m scripts.backfill_conference_customer_events`.
+- **Follow-ups on the plan**: migration 206 dropping `portal_user_history` (one release later); messaging writer wire-up (deferred).

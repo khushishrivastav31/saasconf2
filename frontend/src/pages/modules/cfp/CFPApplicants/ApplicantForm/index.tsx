@@ -14,6 +14,7 @@ import RichTextEditor from '../../../../../components/common/RichTextEditor';
 import MediaPreviewModal from '../../../../../components/MediaPreviewModal';
 import { ErrorBanner } from '../../../../../components/common/ErrorBanner';
 import PortalAccountCard from '../../../../../components/PortalAccountCard';
+import CustomerTimelineCard from '../../../../../components/CustomerTimelineCard';
 import type { Applicant, PronounOption, UserRole } from '../../../../../types';
 
 import MediaUploadField from './MediaUploadField';
@@ -218,7 +219,12 @@ export function ApplicantForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       <ErrorBanner message={error} />
 
-      {applicant?.portal_user_id && <PortalAccountCard portalUserId={applicant.portal_user_id} />}
+      {applicant?.portal_user_id && (
+        <>
+          <PortalAccountCard portalUserId={applicant.portal_user_id} />
+          <CustomerTimelineCard portalUserId={applicant.portal_user_id} />
+        </>
+      )}
 
       <MediaUploadField
         kind="image"

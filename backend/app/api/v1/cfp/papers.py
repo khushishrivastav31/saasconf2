@@ -27,6 +27,7 @@ from app.models.cfp import (
     CFPPaperCospeaker,
     PaperStatus,
 )
+from app.models.customer_event import CustomerEventType
 from app.models.review import PaperReview
 from app.schemas.cfp import (
     PaperAssignmentListResponse,
@@ -51,6 +52,7 @@ from .shared import (
     _build_paper_response,
     _build_paper_responses_batch,
     _paper_eager_options,
+    _record_paper_customer_event,
     _reload_paper,
     _sync_speaker_role,
 )
@@ -379,6 +381,18 @@ async def update_paper(
             assigned_by=current_user.user_id,
         )
 
+        # Emit a customer_events row for the speaker(s) when the admin moves a
+        # paper to a customer-visible terminal state. Intermediate review steps
+        # (in_evaluation / evaluated / final_consideration) don't surface.
+        _CFP_EVENT_BY_STATUS = {
+            PaperStatus.ACCEPTED.value: CustomerEventType.CFP_ACCEPTED,
+            PaperStatus.REJECTED.value: CustomerEventType.CFP_REJECTED,
+            PaperStatus.DRAFT.value: CustomerEventType.CFP_WITHDRAWN,
+        }
+        event_type = _CFP_EVENT_BY_STATUS.get(update_data["status"])
+        if event_type is not None:
+            await _record_paper_customer_event(db, paper, event_type, current_user)
+
     # Update remaining fields
     for field, value in update_data.items():
         setattr(paper, field, value)
@@ -432,6 +446,8 @@ async def submit_paper(
 
     paper.status = PaperStatus.SUBMITTED.value
     paper.submitted_at = utcnow()
+
+    await _record_paper_customer_event(db, paper, CustomerEventType.CFP_SUBMITTED, current_user)
 
     # Audit log
     audit_log = AuditLog(
@@ -497,6 +513,8 @@ async def unsubmit_paper(
             CFPPaperAssignment.tenant_id == current_user.tenant_id,
         )
     )
+
+    await _record_paper_customer_event(db, paper, CustomerEventType.CFP_WITHDRAWN, current_user)
 
     # Audit log
     audit_log = AuditLog(

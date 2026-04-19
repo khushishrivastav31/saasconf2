@@ -50,6 +50,7 @@ export default function HistoryPanel({ userId }: Props) {
         const domainColor =
           DOMAIN_COLORS[entry.domain] ??
           'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        const metaLines = buildMetaLines(entry);
         return (
           <li key={`${entry.domain}-${entry.id}`} className="px-6 py-4">
             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -66,9 +67,53 @@ export default function HistoryPanel({ userId }: Props) {
             {entry.notes && (
               <p className="text-sm text-gray-700 dark:text-gray-300">{entry.notes}</p>
             )}
+            {metaLines.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">
+                {metaLines.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            )}
           </li>
         );
       })}
     </ol>
   );
+}
+
+function str(meta: Record<string, unknown> | null, key: string): string | null {
+  if (!meta) return null;
+  const v = meta[key];
+  return typeof v === 'string' && v.length > 0 ? v : null;
+}
+
+function buildMetaLines(entry: CustomerEventEntry): string[] {
+  const meta = entry.meta;
+  const lines: string[] = [];
+
+  if (entry.domain === 'cfp') {
+    const title = str(meta, 'paper_title');
+    const conf = str(meta, 'conference_name');
+    if (title) lines.push(`Paper: ${title}`);
+    if (conf) lines.push(`Conference: ${conf}`);
+    return lines;
+  }
+
+  if (entry.domain === 'registration') {
+    const conf = str(meta, 'conference_name');
+    const booking = str(meta, 'booking_option_name');
+    const company = str(meta, 'company_name');
+    if (conf) lines.push(`Conference: ${conf}`);
+    if (booking) lines.push(`Booking: ${booking}`);
+    if (company) lines.push(`Company: ${company}`);
+    return lines;
+  }
+
+  if (entry.event_type === 'portal.merged_into' && meta?.company_changed === true) {
+    const src = str(meta, 'source_company') ?? '—';
+    const tgt = str(meta, 'target_company') ?? '—';
+    lines.push(`Company: ${src} → ${tgt}`);
+  }
+
+  return lines;
 }

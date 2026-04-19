@@ -171,7 +171,7 @@ describe('MyCompany UsersTab', () => {
     expect(screen.getByText(/^Portal$/)).toBeInTheDocument();
   });
 
-  it('renders forward-compat domain chips for cfp and messaging events', async () => {
+  it('renders cfp paper submissions with paper title and conference meta', async () => {
     mockApi.get
       .mockResolvedValueOnce({ data: { items: [listItem], total: 1, page: 1, per_page: 50 } })
       .mockResolvedValueOnce({ data: detail })
@@ -182,8 +182,12 @@ describe('MyCompany UsersTab', () => {
               id: 'h-cfp',
               domain: 'cfp',
               event_type: 'cfp.submitted',
-              notes: 'Talk proposal submitted',
-              meta: null,
+              notes: null,
+              meta: {
+                paper_id: 'paper-1',
+                paper_title: 'Observability at Scale',
+                conference_name: 'DevCon 2026',
+              },
               created_by: null,
               created_at: '2026-04-15T10:00:00Z',
             },
@@ -208,10 +212,90 @@ describe('MyCompany UsersTab', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^history$/i }));
     await waitFor(() => {
-      expect(screen.getByText(/CFP submitted/)).toBeInTheDocument();
+      expect(screen.getByText(/Paper submitted/)).toBeInTheDocument();
     });
+    expect(screen.getByText(/Paper: Observability at Scale/)).toBeInTheDocument();
+    expect(screen.getByText(/Conference: DevCon 2026/)).toBeInTheDocument();
     expect(screen.getByText(/Message received/)).toBeInTheDocument();
     expect(screen.getByText(/^CFP$/)).toBeInTheDocument();
     expect(screen.getByText(/^Messaging$/)).toBeInTheDocument();
+  });
+
+  it('renders registration events with booking and company meta', async () => {
+    mockApi.get
+      .mockResolvedValueOnce({ data: { items: [listItem], total: 1, page: 1, per_page: 50 } })
+      .mockResolvedValueOnce({ data: detail })
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: 'h-reg',
+              domain: 'registration',
+              event_type: 'registration.registered',
+              notes: null,
+              meta: {
+                registration_id: 'reg-1',
+                conference_name: 'DevCon 2026',
+                booking_option_name: 'Full Conference',
+                company_name: 'Acme GmbH',
+              },
+              created_by: null,
+              created_at: '2026-04-12T10:00:00Z',
+            },
+          ],
+          total: 1,
+        },
+      });
+    renderWithProviders(<UsersTab />);
+    await waitFor(() => expect(screen.getByText(/Alice Ng/)).toBeInTheDocument());
+    await userEvent.click(screen.getByText(/alice@example.com/));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Deactivate/i })).toBeInTheDocument()
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^history$/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Registered \(conference\)/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Conference: DevCon 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Booking: Full Conference/)).toBeInTheDocument();
+    expect(screen.getByText(/Company: Acme GmbH/)).toBeInTheDocument();
+  });
+
+  it('renders merge event with company change transition when companies differ', async () => {
+    mockApi.get
+      .mockResolvedValueOnce({ data: { items: [listItem], total: 1, page: 1, per_page: 50 } })
+      .mockResolvedValueOnce({ data: detail })
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: 'h-merge',
+              domain: 'portal',
+              event_type: 'portal.merged_into',
+              notes: 'Merged from b@x.example.com',
+              meta: {
+                source_user_id: 'pu-src',
+                source_email: 'b@x.example.com',
+                source_company: 'OldCo',
+                target_company: 'NewCo',
+                company_changed: true,
+              },
+              created_by: null,
+              created_at: '2026-04-11T10:00:00Z',
+            },
+          ],
+          total: 1,
+        },
+      });
+    renderWithProviders(<UsersTab />);
+    await waitFor(() => expect(screen.getByText(/Alice Ng/)).toBeInTheDocument());
+    await userEvent.click(screen.getByText(/alice@example.com/));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Deactivate/i })).toBeInTheDocument()
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^history$/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Company: OldCo → NewCo/)).toBeInTheDocument();
+    });
   });
 });

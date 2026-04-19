@@ -76,7 +76,17 @@ class CustomerEventType(StrEnum):
     TRAINING_DEACTIVATED = "training.deactivated"
     TRAINING_REACTIVATED = "training.reactivated"
 
-    # ── cfp.* / registration.* / messaging.* / billing.* ────────────────
+    # ── cfp.* ─ paper lifecycle (main speaker + cospeakers) ─────────────
+    CFP_SUBMITTED = "cfp.submitted"
+    CFP_ACCEPTED = "cfp.accepted"
+    CFP_REJECTED = "cfp.rejected"
+    CFP_WITHDRAWN = "cfp.withdrawn"
+
+    # ── registration.* ─ conference registration lifecycle ──────────────
+    REGISTRATION_REGISTERED = "registration.registered"
+    REGISTRATION_CANCELLED = "registration.cancelled"
+
+    # ── messaging.* / billing.* ─────────────────────────────────────────
     # Reserved for forward-compat. Writers will be wired in follow-up PRs.
 
 
