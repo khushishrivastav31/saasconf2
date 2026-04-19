@@ -97,6 +97,7 @@ class ApplicantResponse(BaseModel):
 
     id: UUID
     tenant_id: UUID
+    portal_user_id: UUID | None = None
     first_name: str
     last_name: str
     pronouns: str | None = None

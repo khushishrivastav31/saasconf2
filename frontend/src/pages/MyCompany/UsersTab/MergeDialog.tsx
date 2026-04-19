@@ -6,15 +6,15 @@ import type { PortalUserListItem } from '../types';
 
 interface Props {
   targetUserId: string;
-  items: PortalUserListItem[];
   onClose: () => void;
   onMerged: () => void;
 }
 
-export default function MergeDialog({ targetUserId, items, onClose, onMerged }: Props) {
+export default function MergeDialog({ targetUserId, onClose, onMerged }: Props) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [sourceEmail, setSourceEmail] = useState('');
+  const [lookupPending, setLookupPending] = useState(false);
 
   const mergeMutation = useMutation({
     mutationFn: ({ targetId, sourceId }: { targetId: string; sourceId: string }) =>
@@ -29,15 +29,29 @@ export default function MergeDialog({ targetUserId, items, onClose, onMerged }: 
     onError: () => showToast('Failed to merge users', 'error'),
   });
 
-  const handleMerge = () => {
-    const target = sourceEmail.trim().toLowerCase();
-    const source = items.find((u) => u.email.toLowerCase() === target && u.id !== targetUserId);
-    if (!source) {
-      showToast('Source user not found in this page. Search for them first.', 'error');
-      return;
+  const handleMerge = async () => {
+    const needle = sourceEmail.trim().toLowerCase();
+    if (!needle) return;
+    setLookupPending(true);
+    try {
+      const res = await api.get('/portal-users', {
+        params: { search: needle, per_page: 5 },
+      });
+      const items = (res.data?.items ?? []) as PortalUserListItem[];
+      const source = items.find((u) => u.email.toLowerCase() === needle && u.id !== targetUserId);
+      if (!source) {
+        showToast('Source user not found.', 'error');
+        return;
+      }
+      mergeMutation.mutate({ targetId: targetUserId, sourceId: source.id });
+    } catch {
+      showToast('Failed to look up source user', 'error');
+    } finally {
+      setLookupPending(false);
     }
-    mergeMutation.mutate({ targetId: targetUserId, sourceId: source.id });
   };
+
+  const isWorking = lookupPending || mergeMutation.isPending;
 
   return (
     <div
@@ -69,17 +83,19 @@ export default function MergeDialog({ targetUserId, items, onClose, onMerged }: 
         />
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleMerge}
-            disabled={!sourceEmail || mergeMutation.isPending}
+            disabled={!sourceEmail || isWorking}
             className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg disabled:opacity-40"
           >
-            {mergeMutation.isPending ? 'Merging...' : 'Merge'}
+            {isWorking ? 'Merging...' : 'Merge'}
           </button>
         </div>
       </div>

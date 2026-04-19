@@ -14,6 +14,7 @@ import {
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import MediaPreviewModal from '../../../../components/MediaPreviewModal';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import PortalAccountCard from '../../../../components/PortalAccountCard';
 import { DeleteIcon } from '../../../ConferenceDetail/icons';
 import type { Applicant, PronounOption, UserRole } from '../../../../types';
 import { SPEAKER_SOCIAL_PLATFORMS } from '../../../../config/socialPlatforms';
@@ -308,6 +309,8 @@ export function ApplicantForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <ErrorBanner message={error} />
+
+      {applicant?.portal_user_id && <PortalAccountCard portalUserId={applicant.portal_user_id} />}
 
       {/* Picture */}
       <div>

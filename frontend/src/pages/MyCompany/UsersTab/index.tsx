@@ -33,13 +33,7 @@ export default function UsersTab() {
     'px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100';
 
   if (selectedUserId) {
-    return (
-      <UserDetailPanel
-        userId={selectedUserId}
-        items={items}
-        onBack={() => setSelectedUserId(null)}
-      />
-    );
+    return <UserDetailPanel userId={selectedUserId} onBack={() => setSelectedUserId(null)} />;
   }
 
   return (

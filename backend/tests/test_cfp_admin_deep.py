@@ -30,6 +30,7 @@ from app.models.cfp_papers import (
 )
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
+from app.models.portal_user import PortalUser
 from app.models.review import (
     PaperReview,
     ReviewCriterion,
@@ -2174,3 +2175,84 @@ class TestAdminApplicantDuplicate:
         )
         assert resp.status_code == 409
         assert "already exists" in resp.json()["detail"]
+
+
+# ============================================================================
+# Admin Applicant — portal_user_id on ApplicantResponse
+# ============================================================================
+
+
+class TestApplicantResponsePortalUserId:
+    """ApplicantResponse must include portal_user_id so the admin form can render
+    the Portal Account card when the applicant is linked to a portal user."""
+
+    @pytest.mark.asyncio
+    async def test_list_returns_portal_user_id_when_linked(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        applicant: CFPApplicant,
+    ) -> None:
+        pu = PortalUser(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            email=f"linked-{uuid.uuid4().hex[:6]}@example.com",
+            first_name="Linked",
+            last_name="User",
+            is_active=True,
+        )
+        db_session.add(pu)
+        await db_session.commit()
+        applicant.portal_user_id = pu.id
+        await db_session.commit()
+
+        resp = await client.get("/api/v1/cfp/applicants", headers=_admin_headers(tenant_admin_user))
+        assert resp.status_code == 200
+        items = {item["id"]: item for item in resp.json()["items"]}
+        assert str(applicant.id) in items
+        assert items[str(applicant.id)]["portal_user_id"] == str(pu.id)
+
+    @pytest.mark.asyncio
+    async def test_list_returns_null_portal_user_id_when_unlinked(
+        self,
+        client: AsyncClient,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        applicant: CFPApplicant,
+    ) -> None:
+        resp = await client.get("/api/v1/cfp/applicants", headers=_admin_headers(tenant_admin_user))
+        assert resp.status_code == 200
+        items = {item["id"]: item for item in resp.json()["items"]}
+        assert items[str(applicant.id)]["portal_user_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_update_returns_portal_user_id(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        applicant: CFPApplicant,
+    ) -> None:
+        pu = PortalUser(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            email=f"upd-{uuid.uuid4().hex[:6]}@example.com",
+            first_name="Upd",
+            last_name="User",
+            is_active=True,
+        )
+        db_session.add(pu)
+        await db_session.commit()
+        applicant.portal_user_id = pu.id
+        await db_session.commit()
+
+        resp = await client.put(
+            f"/api/v1/cfp/applicants/{applicant.id}",
+            json={"bio": "updated bio"},
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["portal_user_id"] == str(pu.id)

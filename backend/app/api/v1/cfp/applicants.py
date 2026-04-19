@@ -174,6 +174,7 @@ async def list_applicants(
         ApplicantResponse(
             id=a.id,
             tenant_id=a.tenant_id,
+            portal_user_id=a.portal_user_id,
             first_name=a.first_name,
             last_name=a.last_name,
             email=a.email,
@@ -259,6 +260,7 @@ async def create_applicant(
     return ApplicantResponse(
         id=applicant.id,
         tenant_id=applicant.tenant_id,
+        portal_user_id=applicant.portal_user_id,
         first_name=applicant.first_name,
         last_name=applicant.last_name,
         email=applicant.email,
@@ -332,6 +334,7 @@ async def update_applicant(
     return ApplicantResponse(
         id=applicant.id,
         tenant_id=applicant.tenant_id,
+        portal_user_id=applicant.portal_user_id,
         first_name=applicant.first_name,
         last_name=applicant.last_name,
         email=applicant.email,

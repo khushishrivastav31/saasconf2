@@ -1,32 +1,25 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import api from '../../../config/api';
-import { useToast } from '../../../components/Toast';
-import type { PortalUserDetail, PortalUserListItem } from '../types';
+import PortalAccountActions from '../../../components/PortalAccountActions';
+import type { PortalUserDetail } from '../types';
 import { formatDateTime } from './constants';
 import HistoryPanel from './HistoryPanel';
-import MergeDialog from './MergeDialog';
 
 interface Props {
   userId: string;
-  items: PortalUserListItem[];
   onBack: () => void;
 }
 
 type DetailTab = 'profile' | 'linkages' | 'history';
 
-const btnCls =
-  'px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40';
 const sectionCls = 'bg-white dark:bg-gray-800 rounded-lg shadow';
 const sectionHeadingCls = 'text-base font-semibold text-gray-900 dark:text-gray-100';
 const labelCls = 'text-xs font-medium text-gray-500 dark:text-gray-400 uppercase';
 const valueCls = 'text-sm text-gray-900 dark:text-gray-100';
 
-export default function UserDetailPanel({ userId, items, onBack }: Props) {
+export default function UserDetailPanel({ userId, onBack }: Props) {
   const [tab, setTab] = useState<DetailTab>('profile');
-  const [showMerge, setShowMerge] = useState(false);
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['portal-user-detail', userId],
@@ -34,62 +27,6 @@ export default function UserDetailPanel({ userId, items, onBack }: Props) {
       const res = await api.get(`/portal-users/${userId}`);
       return res.data as PortalUserDetail;
     },
-  });
-
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['portal-users'] });
-    queryClient.invalidateQueries({ queryKey: ['portal-user-detail', userId] });
-    queryClient.invalidateQueries({ queryKey: ['portal-user-history', userId] });
-  };
-
-  const toggleAccess = useMutation({
-    mutationFn: () => api.put(`/portal-users/${userId}/toggle-access`),
-    onSuccess: (res) => {
-      invalidateAll();
-      showToast(res.data.message ?? 'Access updated', 'success');
-    },
-    onError: (err: unknown) => {
-      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-      if (axiosErr?.response?.status === 409) {
-        showToast(
-          axiosErr.response.data?.detail || 'Cannot deactivate: user has active assignments',
-          'error'
-        );
-      } else {
-        showToast('Failed to update access', 'error');
-      }
-    },
-  });
-
-  const resendInvite = useMutation({
-    mutationFn: () => api.post(`/portal-users/${userId}/resend-invite`),
-    onSuccess: () => {
-      invalidateAll();
-      showToast('Invite email sent', 'success');
-    },
-    onError: () => showToast('Failed to send invite', 'error'),
-  });
-
-  const resetPassword = useMutation({
-    mutationFn: () => api.post(`/portal-users/${userId}/reset-password`),
-    onSuccess: () => {
-      invalidateAll();
-      showToast('Password reset email sent', 'success');
-    },
-    onError: () => showToast('Failed to send reset email', 'error'),
-  });
-
-  const impersonate = useMutation({
-    mutationFn: () => api.post(`/portal-users/${userId}/impersonate`),
-    onSuccess: (res) => {
-      invalidateAll();
-      const { access_token, portal_user_name } = res.data;
-      localStorage.setItem('portal_access_token', access_token);
-      const tenantSlug = window.location.pathname.split('/')[2] || '';
-      window.open(`/${tenantSlug}/portal/dashboard`, '_blank');
-      showToast(`Viewing portal as ${portal_user_name}`, 'info');
-    },
-    onError: () => showToast('Failed to impersonate user', 'error'),
   });
 
   if (isLoading || !user) {
@@ -107,18 +44,6 @@ export default function UserDetailPanel({ userId, items, onBack }: Props) {
 
   return (
     <div className="space-y-4">
-      {showMerge && (
-        <MergeDialog
-          targetUserId={userId}
-          items={items}
-          onClose={() => setShowMerge(false)}
-          onMerged={() => {
-            setShowMerge(false);
-            onBack();
-          }}
-        />
-      )}
-
       <div className="flex items-center justify-between">
         <button onClick={onBack} className="text-sm text-primary-600 dark:text-primary-400">
           ← Back to users
@@ -171,41 +96,12 @@ export default function UserDetailPanel({ userId, items, onBack }: Props) {
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-2">
-          <button
-            onClick={() => toggleAccess.mutate()}
-            disabled={toggleAccess.isPending}
-            className={btnCls}
-          >
-            {toggleAccess.isPending ? '...' : user.is_active ? 'Deactivate' : 'Activate'}
-          </button>
-          <button
-            onClick={() => resendInvite.mutate()}
-            disabled={resendInvite.isPending}
-            className={btnCls}
-          >
-            {resendInvite.isPending ? '...' : 'Resend invite'}
-          </button>
-          <button
-            onClick={() => resetPassword.mutate()}
-            disabled={resetPassword.isPending}
-            className={btnCls}
-          >
-            {resetPassword.isPending ? '...' : 'Reset password'}
-          </button>
-          <button
-            onClick={() => impersonate.mutate()}
-            disabled={impersonate.isPending || !user.is_active}
-            className="px-3 py-1.5 text-xs font-medium border border-primary-300 dark:border-primary-700 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-700 dark:text-primary-300 disabled:opacity-40"
-          >
-            {impersonate.isPending ? '...' : 'Impersonate'}
-          </button>
-          <button
-            onClick={() => setShowMerge(true)}
-            className="px-3 py-1.5 text-xs font-medium border border-amber-300 dark:border-amber-700 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-700 dark:text-amber-300"
-          >
-            Merge with...
-          </button>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <PortalAccountActions
+            portalUserId={userId}
+            isActive={user.is_active}
+            onAfterMerge={onBack}
+          />
         </div>
       </div>
 

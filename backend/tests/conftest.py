@@ -30,6 +30,16 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ["RATELIMIT_ENABLED"] = "false"  # Disable rate limiting in tests
 os.environ["TESTING"] = "true"  # Disable background email tasks in tests
 
+from app.core.security import create_access_token, hash_password
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import app
+from app.models.conference import Conference
+from app.models.invoice import Invoice
+from app.models.module import Module, TenantModule
+from app.models.tenant import Tenant
+from app.models.user import User, UserRole
+
 
 @pytest.fixture(autouse=True)
 def _mock_resend_client(request):
@@ -46,16 +56,6 @@ def _mock_resend_client(request):
     with patch("app.core.email._get_resend", return_value=mock_resend):
         yield
 
-
-from app.core.security import create_access_token, hash_password
-from app.db.base import Base
-from app.db.session import get_db
-from app.main import app
-from app.models.conference import Conference
-from app.models.invoice import Invoice
-from app.models.module import Module, TenantModule
-from app.models.tenant import Tenant
-from app.models.user import User, UserRole
 
 # ── Test database engine ─────────────────────────────────────────────────
 # NullPool prevents connection reuse across event loops, avoiding
@@ -89,7 +89,7 @@ async def _drop_tables() -> None:
     """Drop all tables using raw SQL to handle circular FK dependencies."""
     async with test_engine.begin() as conn:
         # Get all table names from our metadata
-        table_names = [f'"{t.name}"' for t in Base.metadata.sorted_tables]
+        table_names = [f'"{t.name}"' for t in Base.metadata.tables.values()]
         if table_names:
             # Use CASCADE to handle circular dependencies (tenants <-> users)
             await conn.execute(text(f"DROP TABLE IF EXISTS {', '.join(table_names)} CASCADE"))
@@ -123,7 +123,7 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     # test's db_session cleanup runs (causing FK violations).
     async with test_engine.begin() as conn:
         await conn.execute(RLS_BYPASS)
-        table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+        table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.tables.values())
         if table_names:
             await conn.execute(text(f"TRUNCATE TABLE {table_names} CASCADE"))
 

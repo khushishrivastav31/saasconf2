@@ -85,6 +85,7 @@ async def _build_applicant_response(
     return ApplicantResponse(
         id=applicant.id,
         tenant_id=applicant.tenant_id,
+        portal_user_id=applicant.portal_user_id,
         first_name=applicant.first_name,
         last_name=applicant.last_name,
         email=applicant.email,
@@ -362,6 +363,7 @@ async def _build_paper_responses_batch(
         return ApplicantResponse(
             id=applicant.id,
             tenant_id=applicant.tenant_id,
+            portal_user_id=applicant.portal_user_id,
             first_name=applicant.first_name,
             last_name=applicant.last_name,
             email=applicant.email,

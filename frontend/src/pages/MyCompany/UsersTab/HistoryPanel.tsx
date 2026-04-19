@@ -66,11 +66,6 @@ export default function HistoryPanel({ userId }: Props) {
             {entry.notes && (
               <p className="text-sm text-gray-700 dark:text-gray-300">{entry.notes}</p>
             )}
-            {entry.meta && Object.keys(entry.meta).length > 0 && (
-              <pre className="mt-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded p-2 overflow-x-auto">
-                {JSON.stringify(entry.meta, null, 2)}
-              </pre>
-            )}
           </li>
         );
       })}

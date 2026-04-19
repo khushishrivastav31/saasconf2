@@ -82,18 +82,23 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **In progress — pending commit approval**: Phase 4 of unified customer architecture (`.claude/plans/smooth-sprouting-perlis.md`) — dual-write training events to `customer_events`.
-  - Phase 2 (DONE, `946c5b6`): `customer_events` table + migration 205 + backfill + tests.
-  - Phase 3 (DONE, `27ed506`): `CustomerEventService` + dual-write from `portal_users/access.py` (5 portal actions).
-  - **Phase 4 (this change)**: added `CustomerEventService.record_for_attendee(...)` helper; dual-wrote every TrainingAttendeeHistory call site:
-    - `attendees/parking.py` (park-by-source, park, deactivate, reactivate) → `training.parked` / `training.deactivated` / `training.reactivated`.
-    - `attendees/reassignment.py` (reassign) → `training.reassigned` with `new_registration_id` meta.
-    - `attendees/core.py` (backfill: both registration + offer branches) → `training.registered` / `training.offer_assigned`.
-    - `user_management/access.py` (training-side toggle-access) → `training.deactivated` / `training.reactivated` per linked attendee (query changed from `select(TrainingAttendee.id)` to `select(TrainingAttendee)` to get full objects).
-  - New test file `backend/tests/test_customer_event_training_writes.py` — 9 tests, all passing, covering dual-write parity + per-endpoint event type + meta payload.
-- **Phases 5-6 pending**:
-  - Phase 5: flip `portal_users/history.py` reader from merged-source to single `customer_events` query + update UI (`source` → `domain`, namespaced `event_type`).
-  - Phase 6: stop writing `portal_user_history` from `_helpers.py`.
-- **Verification**: `ruff check app/` + `ruff format --check app/` clean (675 files); `mypy app/` clean (675 files); `pytest tests/test_customer_event_training_writes.py -v` = 9/9 pass; related suites (customer_events, customer_event_service, training_attendee_reassign, portal_users_admin, training_portal) = 83/83 pass; full backend sweep running in background task `bp1xh50ur`.
-- **Prior work pushed**: Phase 2 + Phase 3 on `origin/main`; MyCompany → Users admin + GDPR Phases 1-4 also on `origin/main`.
-- **Status**: uncommitted — modifications to `customer_event_service.py`, `attendees/parking.py`, `attendees/reassignment.py`, `attendees/core.py`, `user_management/access.py`; new `tests/test_customer_event_training_writes.py` — **ask user before committing**.
+- **In progress — pending commit approval**: Conference-side Portal Account panel (follow-up to Phases 2–6 of the unified customer architecture).
+  - Phases 2–6 DONE and pushed to `origin/main` (Phase 5 = `7dda83c`, Phase 6 = `7636315`). `portal_user_history` writes removed; `customer_events` is the single timeline source.
+  - **This change** — extend the 5-button "Portal Account" admin panel (Toggle Access / Resend Invite / Reset Password / Impersonate / Merge) from My Company → Users → Detail to the CFP Applicant edit form under Conferences → Users.
+    - Backend: added `portal_user_id: UUID | None` to `ApplicantResponse` (`backend/app/schemas/cfp_applicants.py`); populated in all 5 `ApplicantResponse(...)` constructors across `cfp/applicants.py` and `cfp/shared.py`.
+    - Frontend: added `portal_user_id: string \| null` to `Applicant` type (`frontend/src/types/cfp.ts`).
+    - New reusable components:
+      - `frontend/src/components/PortalAccountActions.tsx` — 5 action buttons (all `type="button"` — safe to embed in a form) + Merge dialog state.
+      - `frontend/src/components/PortalAccountCard.tsx` — wraps Actions with a status row (Status / Password / Email verified / Last login / Created); fetches detail via `GET /portal-users/:id`.
+    - `MergeDialog.tsx` rewritten to drop the `items` prop and look up the source user via `GET /portal-users?search=<email>&per_page=5` — works in any context, not just the list view.
+    - `UserDetailPanel.tsx` refactored: drops ~100 lines of duplicated mutation hooks, now uses `<PortalAccountActions>`; `items` prop removed from both panel and `UsersTab/index.tsx` caller.
+    - `ApplicantForm.tsx` — `<PortalAccountCard portalUserId={applicant.portal_user_id} />` rendered at the top of the form when the applicant has a linked portal user.
+    - Handbook updated: `frontend/src/pages/Handbook/sections/people.tsx` CFP Portal Users section notes the Portal Account card is also available on the Applicant form.
+    - **New tests (all passing)**:
+      - Backend: `TestApplicantResponsePortalUserId` class appended to `backend/tests/test_cfp_admin_deep.py` — 3 tests covering list (linked/unlinked) + update returning `portal_user_id`.
+      - Frontend vitest: `frontend/src/components/__tests__/PortalAccountCard.test.tsx` (3 tests) + `frontend/src/components/__tests__/MergeDialog.test.tsx` (3 tests, API-lookup path).
+      - E2E: `frontend/e2e/conference-cfp-applicant-account.spec.ts` — opens a CFP applicant, asserts the 5 Portal Account buttons when linked, and checks the Merge dialog does not submit the underlying form. Filename deliberately avoids "portal" so it binds to the `admin-tests` Playwright project (verified via `playwright test --list`).
+    - **Incidental infra fixes in `backend/tests/conftest.py`** (silences noise only — no behaviour change): (1) switched `Base.metadata.sorted_tables` → `Base.metadata.tables.values()` at both cleanup sites to silence SAWarning about tenants/users FK cycle (CASCADE makes sort order irrelevant); (2) moved `_mock_resend_client` fixture below the app imports to clear 9 pre-existing E402 errors.
+- **Verification**: `tsc --noEmit` clean; eslint clean on touched files (only pre-existing `ApplicantForm.tsx:max-lines` warning); `mypy app/` clean (675 files); `ruff check`/`format --check` clean on all touched backend files; `vitest` on 3 test files = 11/11; backend `pytest tests/test_cfp_admin_deep.py tests/test_portal_users_admin.py tests/test_customer_event_service.py tests/test_customer_events.py` = 94/94.
+- **Status**: uncommitted — see `git status` — **ask user before committing**.
+- **Follow-ups on the plan**: migration 206 dropping `portal_user_history` (one release later); messaging + CFP writer wire-up (deferred).

@@ -228,6 +228,7 @@ export interface ApplicantRoleInfo {
 export interface Applicant {
   id: string;
   tenant_id: string;
+  portal_user_id: string | null;
   first_name: string;
   last_name: string;
   pronouns: string | null;
