@@ -46,6 +46,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy application code
 COPY alembic.ini .
 COPY app ./app
+COPY scripts ./scripts
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' --uid 1001 appuser \
