@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import {
   conferenceHandbookCategories,
   trainingHandbookCategories,
@@ -14,13 +15,10 @@ interface HandbookProps {
 export default function Handbook({ type }: HandbookProps) {
   const categories = useMemo(
     () => (type === 'trainings' ? trainingHandbookCategories : conferenceHandbookCategories),
-    [type],
+    [type]
   );
 
-  const allSections = useMemo(
-    () => categories.flatMap((cat) => cat.sections),
-    [categories],
-  );
+  const allSections = useMemo(() => categories.flatMap((cat) => cat.sections), [categories]);
 
   const [activeSection, setActiveSection] = useState(allSections[0]?.id || '');
   const [tocOpen, setTocOpen] = useState(false);
@@ -61,7 +59,7 @@ export default function Handbook({ type }: HandbookProps) {
           }
         }
       },
-      { rootMargin: '-80px 0px -60% 0px', threshold: 0 },
+      { rootMargin: '-80px 0px -60% 0px', threshold: 0 }
     );
 
     const refs = sectionRefs.current;
@@ -82,18 +80,35 @@ export default function Handbook({ type }: HandbookProps) {
   }, []);
 
   const scrollToSection = useCallback((id: string) => {
-    setTocOpen(false);
-    setSearchQuery('');
-    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Flush the state updates first so the target section is no longer
+    // hidden by the search filter when we call scrollIntoView — otherwise
+    // we scroll to a display:none element and the call is a silent no-op.
+    flushSync(() => {
+      setTocOpen(false);
+      setSearchQuery('');
+    });
+    const el = sectionRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.history.replaceState(null, '', `#${id}`);
+      setActiveSection(id);
+    }
   }, []);
 
   const matchingSectionIds = useMemo(() => {
-    if (!searchQuery.trim()) return null; // null = show all
-    const q = searchQuery.toLowerCase();
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return null; // null = show all
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
     return new Set(
       allSections
-        .filter((s: HandbookSection) => (sectionTexts[s.id] ?? s.title.toLowerCase()).includes(q))
-        .map((s: HandbookSection) => s.id),
+        .filter((s: HandbookSection) => {
+          const body = sectionTexts[s.id] ?? s.title.toLowerCase();
+          const title = s.title.toLowerCase();
+          // A section matches if every token appears in the body OR
+          // every token appears in the title (title-only hits still count).
+          return tokens.every((t) => body.includes(t)) || tokens.every((t) => title.includes(t));
+        })
+        .map((s: HandbookSection) => s.id)
     );
   }, [searchQuery, sectionTexts, allSections]);
 
@@ -205,7 +220,7 @@ export default function Handbook({ type }: HandbookProps) {
                 {categories.map((category) => {
                   const isCollapsed = collapsedCategories.has(category.id);
                   const hasVisibleSections = category.sections.some(
-                    (s) => !matchingSectionIds || matchingSectionIds.has(s.id),
+                    (s) => !matchingSectionIds || matchingSectionIds.has(s.id)
                   );
 
                   if (!hasVisibleSections && searchQuery) return null;
@@ -270,7 +285,7 @@ export default function Handbook({ type }: HandbookProps) {
               {categories.map((category) => {
                 const isCollapsed = collapsedCategories.has(category.id);
                 const hasVisibleSections = category.sections.some(
-                  (s) => !matchingSectionIds || matchingSectionIds.has(s.id),
+                  (s) => !matchingSectionIds || matchingSectionIds.has(s.id)
                 );
 
                 if (!hasVisibleSections && searchQuery) return null;
