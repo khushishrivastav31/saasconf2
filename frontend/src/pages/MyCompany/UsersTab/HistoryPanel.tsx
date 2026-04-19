@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../config/api';
-import type { PortalUserHistoryEntry } from '../types';
+import type { CustomerEventEntry } from '../types';
 import {
+  DOMAIN_COLORS,
+  DOMAIN_LABELS,
   EVENT_COLORS,
   EVENT_LABELS,
-  SOURCE_COLORS,
-  SOURCE_LABELS,
   formatDateTime,
 } from './constants';
 
@@ -18,7 +18,7 @@ export default function HistoryPanel({ userId }: Props) {
     queryKey: ['portal-user-history', userId],
     queryFn: async () => {
       const res = await api.get(`/portal-users/${userId}/history`);
-      return res.data as { items: PortalUserHistoryEntry[]; total: number };
+      return res.data as { items: CustomerEventEntry[]; total: number };
     },
     staleTime: 10_000,
   });
@@ -46,17 +46,17 @@ export default function HistoryPanel({ userId }: Props) {
       {entries.map((entry) => {
         const label = EVENT_LABELS[entry.event_type] ?? entry.event_type;
         const color = EVENT_COLORS[entry.event_type] ?? 'text-gray-600 dark:text-gray-300';
-        const sourceLabel = SOURCE_LABELS[entry.source] ?? entry.source;
-        const sourceColor =
-          SOURCE_COLORS[entry.source] ??
+        const domainLabel = DOMAIN_LABELS[entry.domain] ?? entry.domain;
+        const domainColor =
+          DOMAIN_COLORS[entry.domain] ??
           'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
         return (
-          <li key={`${entry.source}-${entry.id}`} className="px-6 py-4">
+          <li key={`${entry.domain}-${entry.id}`} className="px-6 py-4">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span
-                className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${sourceColor}`}
+                className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${domainColor}`}
               >
-                {sourceLabel}
+                {domainLabel}
               </span>
               <span className={`text-sm font-semibold ${color}`}>{label}</span>
               <span className="text-xs text-gray-400 dark:text-gray-500">

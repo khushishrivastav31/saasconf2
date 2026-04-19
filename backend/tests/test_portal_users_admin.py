@@ -637,10 +637,10 @@ class TestHistoryEndpoint:
         assert res.status_code == 200
         items = res.json()["items"]
         assert len(items) == 2
-        assert items[0]["event_type"] == "portal_activated"
-        assert items[0]["source"] == "admin"
-        assert items[1]["event_type"] == "portal_deactivated"
-        assert items[1]["source"] == "admin"
+        assert items[0]["event_type"] == "portal.activated"
+        assert items[0]["domain"] == "portal"
+        assert items[1]["event_type"] == "portal.deactivated"
+        assert items[1]["domain"] == "portal"
 
     @pytest.mark.asyncio
     async def test_history_merges_training_attendee_events(
@@ -652,7 +652,12 @@ class TestHistoryEndpoint:
     ):
         """Training-side events (parked/registered/reassigned/etc.) appear
         next to admin actions on the unified history feed."""
-        from app.models.training_attendee_history import TrainingAttendeeHistory
+        from app.models.customer_event import (
+            ACTOR_ADMIN,
+            DOMAIN_TRAINING,
+            CustomerEventType,
+        )
+        from app.services.customer_event_service import CustomerEventService
 
         pu = await _make_portal_user(db_session, tenant_pu, "histmerge")
         attendee = TrainingAttendee(
@@ -668,22 +673,23 @@ class TestHistoryEndpoint:
         db_session.add(attendee)
         await db_session.flush()
 
-        db_session.add(
-            TrainingAttendeeHistory(
+        assert pu.email_hash is not None
+        for event_type, notes in (
+            (CustomerEventType.TRAINING_REGISTERED, "Signed up through the portal"),
+            (CustomerEventType.TRAINING_PARKED, "Training full"),
+        ):
+            CustomerEventService.record(
+                db_session,
                 tenant_id=tenant_pu.id,
-                attendee_id=attendee.id,
-                event_type="registered",
-                notes="Signed up through the portal",
+                portal_user_id=pu.id,
+                subject_email_hash=pu.email_hash,
+                domain=DOMAIN_TRAINING,
+                event_type=event_type,
+                actor_kind=ACTOR_ADMIN,
+                notes=notes,
+                related_entity_type="training_attendee",
+                related_entity_id=attendee.id,
             )
-        )
-        db_session.add(
-            TrainingAttendeeHistory(
-                tenant_id=tenant_pu.id,
-                attendee_id=attendee.id,
-                event_type="parked",
-                notes="Training full",
-            )
-        )
         await db_session.commit()
 
         token = _make_token(admin_pu)
@@ -692,10 +698,69 @@ class TestHistoryEndpoint:
         res = await client.get(f"/api/v1/portal-users/{pu.id}/history", headers=auth_headers(token))
         assert res.status_code == 200
         items = res.json()["items"]
-        sources = {(i["source"], i["event_type"]) for i in items}
-        assert ("admin", "portal_deactivated") in sources
-        assert ("training", "registered") in sources
-        assert ("training", "parked") in sources
+        stream = {(i["domain"], i["event_type"]) for i in items}
+        assert ("portal", "portal.deactivated") in stream
+        assert ("training", "training.registered") in stream
+        assert ("training", "training.parked") in stream
+
+    @pytest.mark.asyncio
+    async def test_history_resolves_merged_subject_via_email_hash(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_pu: User,
+        tenant_pu: Tenant,
+    ):
+        """After merge, the source portal_user is deleted; SET NULL nulls
+        ``portal_user_id`` on its customer_events rows. The merged subject
+        still has to show those events, resolved via ``subject_email_hash``."""
+        from app.models.customer_event import (
+            ACTOR_ADMIN,
+            DOMAIN_TRAINING,
+            CustomerEvent,
+            CustomerEventType,
+        )
+        from app.services.customer_event_service import CustomerEventService
+
+        pu = await _make_portal_user(db_session, tenant_pu, "histmerge2")
+        assert pu.email_hash is not None
+
+        # Write two events that are "unlinked" (portal_user_id is NULL) but
+        # carry the same email_hash — simulating the post-merge state.
+        for event_type in (CustomerEventType.TRAINING_REGISTERED, CustomerEventType.TRAINING_PARKED):
+            CustomerEventService.record(
+                db_session,
+                tenant_id=tenant_pu.id,
+                portal_user_id=None,
+                subject_email_hash=pu.email_hash,
+                domain=DOMAIN_TRAINING,
+                event_type=event_type,
+                actor_kind=ACTOR_ADMIN,
+            )
+        await db_session.commit()
+
+        # Sanity: rows exist but are unlinked.
+        unlinked = (
+            (
+                await db_session.execute(
+                    select(CustomerEvent).where(
+                        CustomerEvent.tenant_id == tenant_pu.id,
+                        CustomerEvent.subject_email_hash == pu.email_hash,
+                        CustomerEvent.portal_user_id.is_(None),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(unlinked) == 2
+
+        token = _make_token(admin_pu)
+        res = await client.get(f"/api/v1/portal-users/{pu.id}/history", headers=auth_headers(token))
+        assert res.status_code == 200
+        types = {i["event_type"] for i in res.json()["items"]}
+        assert "training.registered" in types
+        assert "training.parked" in types
 
 
 # ── RLS isolation ──────────────────────────────────────────────────────

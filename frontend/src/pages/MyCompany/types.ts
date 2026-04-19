@@ -86,9 +86,17 @@ export interface PortalUserDetail {
   linkages: PortalUserLinkages;
 }
 
-export interface PortalUserHistoryEntry {
+export type CustomerEventDomain =
+  | 'portal'
+  | 'training'
+  | 'cfp'
+  | 'registration'
+  | 'messaging'
+  | 'billing';
+
+export interface CustomerEventEntry {
   id: string;
-  source: 'admin' | 'training';
+  domain: CustomerEventDomain;
   event_type: string;
   notes: string | null;
   meta: Record<string, unknown> | null;

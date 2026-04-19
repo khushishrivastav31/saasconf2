@@ -133,8 +133,8 @@ describe('MyCompany UsersTab', () => {
           items: [
             {
               id: 'h-1',
-              source: 'admin',
-              event_type: 'invite_resent',
+              domain: 'portal',
+              event_type: 'portal.invite_resent',
               notes: 'Invite resent by admin',
               meta: null,
               created_by: 'admin-1',
@@ -142,8 +142,8 @@ describe('MyCompany UsersTab', () => {
             },
             {
               id: 'h-2',
-              source: 'training',
-              event_type: 'registered',
+              domain: 'training',
+              event_type: 'training.registered',
               notes: 'Registered for Python 101',
               meta: { placement_id: 'p-1' },
               created_by: null,
@@ -168,6 +168,50 @@ describe('MyCompany UsersTab', () => {
     });
     expect(screen.getByText(/Registered for Python 101/)).toBeInTheDocument();
     expect(screen.getByText(/^Training$/)).toBeInTheDocument();
-    expect(screen.getByText(/^Admin$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Portal$/)).toBeInTheDocument();
+  });
+
+  it('renders forward-compat domain chips for cfp and messaging events', async () => {
+    mockApi.get
+      .mockResolvedValueOnce({ data: { items: [listItem], total: 1, page: 1, per_page: 50 } })
+      .mockResolvedValueOnce({ data: detail })
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: 'h-cfp',
+              domain: 'cfp',
+              event_type: 'cfp.submitted',
+              notes: 'Talk proposal submitted',
+              meta: null,
+              created_by: null,
+              created_at: '2026-04-15T10:00:00Z',
+            },
+            {
+              id: 'h-msg',
+              domain: 'messaging',
+              event_type: 'messaging.received',
+              notes: 'Portal message received',
+              meta: null,
+              created_by: null,
+              created_at: '2026-04-14T10:00:00Z',
+            },
+          ],
+          total: 2,
+        },
+      });
+    renderWithProviders(<UsersTab />);
+    await waitFor(() => expect(screen.getByText(/Alice Ng/)).toBeInTheDocument());
+    await userEvent.click(screen.getByText(/alice@example.com/));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Deactivate/i })).toBeInTheDocument()
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^history$/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/CFP submitted/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Message received/)).toBeInTheDocument();
+    expect(screen.getByText(/^CFP$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Messaging$/)).toBeInTheDocument();
   });
 });

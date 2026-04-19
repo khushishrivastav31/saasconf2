@@ -1,16 +1,16 @@
-"""Tenant-level portal user history — chronological unified timeline.
+"""Tenant-level portal user history — unified ``customer_events`` reader.
 
-Merges two sources newest-first:
+Reads exclusively from the canonical ``customer_events`` table (added
+in migration 205, dual-written in phases 3 + 4). Each row carries a
+namespaced ``event_type`` (``portal.activated``, ``training.parked``,
+``cfp.submitted``, ``messaging.received``, ...) and a ``domain`` chip
+so the UI can group events without a second query.
 
-* ``portal_user_history`` — admin actions on the portal user itself
-  (toggle-access, invite/password emails, impersonate, merge).
-* ``training_attendee_history`` — training-side events (registered, parked,
-  reassigned, cancelled, offer_assigned, offer_removed) from every
-  ``TrainingAttendee`` row linked to the portal user.
-
-Conference-side rows (registrations, CFP papers) do not have a dedicated
-history table today, so they are not included here — the *Linkages* tab on
-the detail panel still surfaces counts for those.
+Lookup strategy: ``portal_user_id`` is the primary key, but a merged
+portal user has its row SET NULL'd. ``subject_email_hash`` is always
+set and is the stable identity across merges/deletes — we OR both
+conditions so a merged subject's full history still surfaces on the
+surviving account.
 """
 
 from __future__ import annotations
@@ -19,13 +19,10 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy import or_, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
-from app.models.portal_user_history import PortalUserHistory
-from app.models.training_attendee import TrainingAttendee
-from app.models.training_attendee_history import TrainingAttendeeHistory
+from app.models.customer_event import CustomerEvent
 
 from ._helpers import get_portal_user
 
@@ -39,69 +36,37 @@ async def get_portal_user_history(
     db: DbSessionDep,
     limit: int = 100,
 ) -> dict[str, Any]:
-    """Return the merged chronological action log for a portal user."""
-    await get_portal_user(db, user_id, current_user.tenant_id)
+    """Return the chronological customer-event stream for a portal user."""
+    user = await get_portal_user(db, user_id, current_user.tenant_id)
 
     limit = max(1, min(limit, 500))
 
-    admin_result = await db.execute(
-        select(PortalUserHistory)
-        .options(joinedload(PortalUserHistory.portal_user))
+    conds = [CustomerEvent.portal_user_id == user_id]
+    if user.email_hash:
+        conds.append(CustomerEvent.subject_email_hash == user.email_hash)
+
+    result = await db.execute(
+        select(CustomerEvent)
         .where(
-            PortalUserHistory.portal_user_id == user_id,
-            PortalUserHistory.tenant_id == current_user.tenant_id,
+            CustomerEvent.tenant_id == current_user.tenant_id,
+            or_(*conds),
         )
-        .order_by(PortalUserHistory.created_at.desc())
+        .order_by(CustomerEvent.created_at.desc())
         .limit(limit)
     )
-    admin_rows = admin_result.unique().scalars().all()
+    rows = result.scalars().all()
 
-    attendee_result = await db.execute(
-        select(TrainingAttendeeHistory)
-        .join(TrainingAttendee, TrainingAttendeeHistory.attendee_id == TrainingAttendee.id)
-        .where(
-            TrainingAttendee.portal_user_id == user_id,
-            TrainingAttendee.tenant_id == current_user.tenant_id,
-            TrainingAttendeeHistory.tenant_id == current_user.tenant_id,
-        )
-        .order_by(TrainingAttendeeHistory.created_at.desc())
-        .limit(limit)
-    )
-    attendee_rows = attendee_result.scalars().all()
+    items = [
+        {
+            "id": str(r.id),
+            "domain": r.domain,
+            "event_type": r.event_type,
+            "notes": r.notes,
+            "meta": r.meta or {},
+            "created_by": str(r.created_by) if r.created_by else None,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
 
-    combined: list[dict[str, Any]] = []
-
-    for r in admin_rows:
-        combined.append(
-            {
-                "id": str(r.id),
-                "source": "admin",
-                "event_type": r.event_type,
-                "notes": r.notes,
-                "meta": r.meta or {},
-                "created_by": str(r.created_by) if r.created_by else None,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-            }
-        )
-
-    for a in attendee_rows:
-        combined.append(
-            {
-                "id": str(a.id),
-                "source": "training",
-                "event_type": a.event_type,
-                "notes": a.notes,
-                "meta": {
-                    "placement_id": str(a.placement_id) if a.placement_id else None,
-                    "source_type": a.source_type,
-                    "source_id": str(a.source_id) if a.source_id else None,
-                },
-                "created_by": str(a.created_by) if a.created_by else None,
-                "created_at": a.created_at.isoformat() if a.created_at else None,
-            }
-        )
-
-    combined.sort(key=lambda e: e["created_at"] or "", reverse=True)
-    combined = combined[:limit]
-
-    return {"items": combined, "total": len(combined)}
+    return {"items": items, "total": len(items)}
