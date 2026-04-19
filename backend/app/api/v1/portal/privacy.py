@@ -43,6 +43,11 @@ from sqlalchemy import desc, select
 
 from app.api.v1.portal_auth import _get_current_portal_user
 from app.core.dependencies import DbSessionDep, get_client_ip
+from app.core.email import send_email_background
+from app.core.email.privacy import (
+    send_privacy_request_admin_notification,
+    send_privacy_request_user_confirmation,
+)
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.gdpr.export import build_export
 from app.core.rate_limiter import limiter
@@ -54,6 +59,7 @@ from app.models.privacy_request import (
     PrivacyRequestStatus,
     PrivacyRequestType,
 )
+from app.models.tenant import Tenant
 from app.schemas.privacy_request import (
     PortalExportCreateResponse,
     PortalPrivacyRequestCreate,
@@ -170,6 +176,26 @@ async def create_portal_privacy_request(
     if payload.request_type == PrivacyRequestType.ERASURE:
         await db.commit()
         await db.refresh(pr)
+
+        tenant_name = await db.scalar(select(Tenant.name).where(Tenant.id == user.tenant_id))
+        send_email_background(
+            send_privacy_request_user_confirmation,
+            db,
+            tenant_id=user.tenant_id,
+            recipient_email=email,
+            request_type=pr.request_type,
+            notes=pr.notes,
+            tenant_name=tenant_name or "",
+        )
+        send_email_background(
+            send_privacy_request_admin_notification,
+            db,
+            tenant_id=user.tenant_id,
+            request_type=pr.request_type,
+            subject_email=email,
+            notes=pr.notes,
+        )
+
         return _to_portal_response(pr)
 
     # Export: run the build inline so the user gets an immediate download.
