@@ -95,7 +95,7 @@ async def toggle_portal_access(
             )
         )
 
-    write_history(
+    await write_history(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
@@ -149,7 +149,7 @@ async def resend_portal_invite(
         )
     )
 
-    write_history(
+    await write_history(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
@@ -219,7 +219,7 @@ async def admin_reset_portal_password(
         )
     )
 
-    write_history(
+    await write_history(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
@@ -279,7 +279,7 @@ async def impersonate_portal_user(
 
     access_token = create_portal_access_token(user.id, user.tenant_id)
 
-    write_history(
+    await write_history(
         db,
         tenant_id=current_user.tenant_id,
         portal_user_id=user.id,
@@ -416,7 +416,7 @@ async def merge_portal_users(
     target_email = read_pii(target, "email")
 
     # Pre-delete history writes — source's row will vanish with the CASCADE.
-    write_history(
+    await write_history(
         db,
         tenant_id=tenant_id,
         portal_user_id=target.id,
