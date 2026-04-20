@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -299,7 +300,7 @@ DEFAULT_SCORE_SCALES = [
 
 # Default Invoice Settings
 # Used to populate invoice configuration when not explicitly set
-DEFAULT_INVOICE_SETTINGS: dict[str, str | int | dict | None] = {
+DEFAULT_INVOICE_SETTINGS: dict[str, Any] = {
     "invoice_number_template": "[ConferenceSlug]_[YYYY]_[Count]",
     "invoice_counter_reset": "yearly",  # or "daily"
     "invoice_counter_value": 1,
