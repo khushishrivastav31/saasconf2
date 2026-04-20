@@ -1,6 +1,7 @@
 """Stripe webhook endpoints for payment notifications."""
 
 import logging
+from decimal import Decimal
 from uuid import UUID
 
 import stripe
@@ -155,7 +156,7 @@ async def stripe_webhook(
                 user=None,  # Webhook, no user
                 stripe_object_id=payment_intent.id,
                 stripe_object_type="payment_intent",
-                amount=float(payment_intent.amount) / 100,
+                amount=Decimal(payment_intent.amount) / 100,
                 currency=payment_intent.currency.upper(),
                 metadata={
                     "payment_method": payment_intent.payment_method,
@@ -196,7 +197,7 @@ async def stripe_webhook(
                 user=None,
                 stripe_object_id=payment_intent.id,
                 stripe_object_type="payment_intent",
-                amount=float(payment_intent.amount) / 100,
+                amount=Decimal(payment_intent.amount) / 100,
                 currency=payment_intent.currency.upper(),
                 error_message=payment_intent.last_payment_error.get("message")
                 if payment_intent.last_payment_error

@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
@@ -89,8 +90,8 @@ class Training(Base):
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Pricing
-    regular_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    early_bird_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    regular_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    early_bird_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
 
     # Catalog references
     language_id: Mapped[uuid.UUID | None] = mapped_column(

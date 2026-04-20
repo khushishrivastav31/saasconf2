@@ -1,6 +1,7 @@
 """Invoice Stripe integration endpoints."""
 
 import logging
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -205,7 +206,7 @@ async def sync_all_stripe_payments(
                     user=current_user,
                     stripe_object_id=payment_intent.id,
                     stripe_object_type="payment_intent",
-                    amount=float(payment_intent.amount) / 100,
+                    amount=Decimal(payment_intent.amount) / 100,
                     currency=payment_intent.currency.upper(),
                     metadata={
                         "payment_method": payment_intent.payment_method,
@@ -255,7 +256,7 @@ async def sync_all_stripe_payments(
                         user=current_user,
                         stripe_object_id=payment_intent.id,
                         stripe_object_type="payment_intent",
-                        amount=float(payment_intent.amount) / 100,
+                        amount=Decimal(payment_intent.amount) / 100,
                         currency=payment_intent.currency.upper(),
                         error_message=payment_intent.last_payment_error.message
                         if payment_intent.last_payment_error
