@@ -75,12 +75,12 @@ async def list_paper_assignments(
     paper_ids = list({a.paper_id for a in assignments})
     member_ids = list({a.committee_member_id for a in assignments})
 
-    papers_map: dict = {}
+    papers_map: dict[UUID, CFPPaper] = {}
     if paper_ids:
         paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id.in_(paper_ids)))
         papers_map = {p.id: p for p in paper_result.scalars().all()}
 
-    members_map: dict = {}
+    members_map: dict[UUID, CFPCommitteeMember] = {}
     if member_ids:
         member_result = await db.execute(
             select(CFPCommitteeMember)
@@ -99,8 +99,8 @@ async def list_paper_assignments(
                 paper_id=a.paper_id,
                 paper_title=paper.title if paper else "",
                 committee_member_id=a.committee_member_id,
-                committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
-                committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
+                committee_member_first_name=(member.applicant.first_name if member and member.applicant else ""),
+                committee_member_last_name=(member.applicant.last_name if member and member.applicant else ""),
                 is_anonymous=a.is_anonymous,
                 assigned_at=a.assigned_at,
             )

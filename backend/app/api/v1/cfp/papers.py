@@ -620,7 +620,7 @@ async def get_paper_assignments(
 
     # Batch-load all committee members to avoid N+1
     member_ids = list({a.committee_member_id for a in assignments})
-    members_map: dict = {}
+    members_map: dict[UUID, CFPCommitteeMember] = {}
     if member_ids:
         member_result = await db.execute(
             select(CFPCommitteeMember)
@@ -638,8 +638,8 @@ async def get_paper_assignments(
                 paper_id=a.paper_id,
                 paper_title=paper.title,
                 committee_member_id=a.committee_member_id,
-                committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
-                committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
+                committee_member_first_name=(member.applicant.first_name if member and member.applicant else ""),
+                committee_member_last_name=(member.applicant.last_name if member and member.applicant else ""),
                 is_anonymous=a.is_anonymous,
                 assigned_at=a.assigned_at,
             )
