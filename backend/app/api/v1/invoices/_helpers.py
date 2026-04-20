@@ -6,7 +6,7 @@ from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import AuthorizationError
 from app.models.invoice import Invoice
-from app.schemas.invoice import InvoiceResponse
+from app.schemas.invoice import InvoiceResponse, VatRequirement, VatWarning
 
 
 async def require_invoice_admin(
@@ -35,8 +35,8 @@ async def require_invoice_admin(
 
 def build_invoice_response(
     invoice: Invoice,
-    vat_warnings: list | None = None,
-    vat_requirement: dict | None = None,
+    vat_warnings: list[VatWarning] | None = None,
+    vat_requirement: VatRequirement | None = None,
     related_invoice_number: str | None = None,
 ) -> InvoiceResponse:
     """Build invoice response with events and optional metadata.
