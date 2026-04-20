@@ -162,9 +162,9 @@ ignore_missing_imports = true
 module = "app.db.migrations.*"
 ignore_errors = true
 
-# API route modules — `arg-type` stays suppressed pending UUID | None narrowing
-# across conference/location dependency helpers and SQLAlchemy `unaccent_ilike`
-# signatures. `attr-defined` has been fully cleared.
+# API route modules — `arg-type` stays suppressed pending `UUID | None` narrowing
+# across conference/location dependency helpers (separate cleanup PR).
+# `unaccent_ilike` signature was widened in app/core/search.py (2026-04).
 [[tool.mypy.overrides]]
 module = "app.api.v1.*"
 disable_error_code = ["arg-type"]
