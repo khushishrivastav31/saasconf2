@@ -613,12 +613,14 @@ async def export_sessions(
 
     # Fetch all time slots
     day_ids = list(days.keys())
-    slots_result = await db.execute(
-        select(ProgramTimeSlot)
-        .where(ProgramTimeSlot.program_day_id.in_(day_ids) if day_ids else False)
-        .order_by(ProgramTimeSlot.sort_order)
-    )
-    slots = {s.id: s for s in slots_result.scalars().all()}
+    slots: dict[UUID, ProgramTimeSlot] = {}
+    if day_ids:
+        slots_result = await db.execute(
+            select(ProgramTimeSlot)
+            .where(ProgramTimeSlot.program_day_id.in_(day_ids))
+            .order_by(ProgramTimeSlot.sort_order)
+        )
+        slots = {s.id: s for s in slots_result.scalars().all()}
 
     # Fetch all tracks
     tracks_result = await db.execute(
