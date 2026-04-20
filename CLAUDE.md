@@ -19,18 +19,19 @@ SaaSConf is a **multi-tenant SaaS platform** for conference and training managem
 9. **Ask Before Commit** — Do NOT automatically commit. User approval required.
 10. **Commit + Push** — Conventional commits (`feat:`, `fix:`, `refactor:`). Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>. Push to main triggers staging deploy.
 
-## GitHub Workflow (branch → commit → push → PR)
+## GitHub Workflow (solo-dev: one approval, auto-merge on green)
 
-**Never commit or push to `main` directly.** All changes go through a topic branch + PR.
+**Never commit or push to `main` directly.** All changes route through a topic branch + PR, but the PR auto-merges when CI passes so the user doesn't click through the GitHub UI.
 
-1. **Detect change intent** — on the FIRST `Edit`/`Write` of a session when the current branch is `main`, pause before touching files and propose a topic branch. Suggested name: `<type>/<short-kebab-topic>` where `<type>` matches the coming commit prefix (`feat/`, `fix/`, `refactor/`, `chore/`, `docs/`). Example: `feat/pii-dual-write`. Create with `git checkout -b <name>` after user approves the name.
-2. **Develop + verify on branch** — run the full mypy + ruff + pytest + tsc + eslint + vitest sweep as usual.
-3. **Ask before commit** — user approval required every time. Use conventional commits + `Co-Authored-By`.
-4. **Ask before push** — `git push -u origin <branch>` (never `origin main`). User approval required every time. **Push approval auto-authorises the PR step** — after the push succeeds, immediately run `gh pr create` without a separate ask.
-5. **Auto-create PR after push** — title ≤70 chars (conventional-commit style); body = `## Summary` bullets + `## Test plan` checklist + Claude-Code footer. Return the PR URL.
-6. **Merge is the user's call** — never merge the PR yourself; user merges via GitHub UI so branch protection + review stay enforced.
+1. **Silent branch creation** — on the FIRST `Edit`/`Write` of a session when the current branch is `main`, run `git checkout -b <type>/<short-kebab-topic>` without asking (branch creation is free, reversible, and invisible). `<type>` matches the coming commit prefix (`feat/`, `fix/`, `refactor/`, `chore/`, `docs/`). Mention the branch name you picked so the user can course-correct.
+2. **Develop + verify on branch** — full mypy + ruff + pytest + tsc + eslint + vitest sweep (per the Development Workflow section above).
+3. **Single "ship it" approval** — when the sweep is green, present the proposed commit message + scope + PR title and ask once. On approval, execute atomically: `git add <files>` → `git commit` → `git push -u origin <branch>` → `gh pr create` → `gh pr merge --auto --squash`. Return the PR URL. One approval gate, not three.
+4. **CI gates the merge** — GitHub auto-merges only when CI is green. Red CI leaves the PR open; surface the failure.
+5. **Never merge manually** — don't run `gh pr merge` without `--auto`. CI must gate.
 
-Exceptions (still ask first): truly trivial single-line doc fixes can go straight to `main` if the user explicitly says "push to main — trivial".
+Escape hatches (still ask first):
+- **"commit only"** — commit + push, open PR, but **no** `--auto` flag. PR stays open for manual merge.
+- **"push to main — trivial"** — single-line doc fixes may go straight to `main`. User must say this literal phrase.
 
 ## Architecture
 - **Backend**: FastAPI + SQLAlchemy async + PostgreSQL (port 8000)
