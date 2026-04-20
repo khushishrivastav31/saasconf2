@@ -305,11 +305,15 @@ class EmailRecipient:
 
 async def resolve_registrations(
     db: AsyncSession,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
     conference_id: UUID,
     filters: dict | None = None,
 ) -> list[EmailRecipient]:
-    """Query registrations matching filters, return email recipients."""
+    """Query registrations matching filters, return email recipients.
+
+    ``tenant_id`` accepts ``None``; a ``None`` value filters ``IS NULL`` and
+    produces an empty list (super-admin without a tenant claim sees no recipients).
+    """
     query = select(Registration).where(
         Registration.tenant_id == tenant_id,
         Registration.conference_id == conference_id,
@@ -361,11 +365,15 @@ async def resolve_registrations(
 
 async def resolve_sponsors(
     db: AsyncSession,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
     conference_id: UUID,
     filters: dict | None = None,
 ) -> list[EmailRecipient]:
-    """Query sponsors matching filters, extract contact person emails."""
+    """Query sponsors matching filters, extract contact person emails.
+
+    ``tenant_id`` accepts ``None``; a ``None`` value filters ``IS NULL`` and
+    produces an empty list (super-admin without a tenant claim sees no recipients).
+    """
     query = select(Sponsor).where(
         Sponsor.tenant_id == tenant_id,
         Sponsor.conference_id == conference_id,

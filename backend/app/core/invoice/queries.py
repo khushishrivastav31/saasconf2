@@ -14,7 +14,7 @@ async def get_invoice_with_events(
     db: AsyncSession,
     invoice_id: UUID,
     conference_id: UUID,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
 ) -> Invoice:
     """Fetch invoice with events loaded, raise 404 if not found.
 
@@ -22,7 +22,9 @@ async def get_invoice_with_events(
         db: Database session
         invoice_id: Invoice ID
         conference_id: Conference ID (for scoping)
-        tenant_id: Tenant ID (for multi-tenancy isolation)
+        tenant_id: Tenant ID (for multi-tenancy isolation). ``None`` is accepted
+            so ``CurrentUser.tenant_id`` passes through directly; a ``None``
+            matches no row and still raises ``NotFoundError``.
 
     Returns:
         Invoice model with events relationship loaded

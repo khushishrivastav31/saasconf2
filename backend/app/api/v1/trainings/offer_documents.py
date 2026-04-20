@@ -53,8 +53,11 @@ def _generate_document_filename(customer_name: str, user_first: str, user_last: 
     return f"{date_str}_{customer_part}_{initials}"
 
 
-async def _get_offer(db: DbSessionDep, offer_id: UUID, tenant_id: UUID) -> CustomerOffer:
-    """Fetch offer with customer loaded, or raise 404."""
+async def _get_offer(db: DbSessionDep, offer_id: UUID, tenant_id: UUID | None) -> CustomerOffer:
+    """Fetch offer with customer loaded, or raise 404.
+
+    ``tenant_id`` accepts ``None``; a ``None`` value matches no row and still 404s.
+    """
     result = await db.execute(
         select(CustomerOffer)
         .options(joinedload(CustomerOffer.customer))

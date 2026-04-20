@@ -135,9 +135,12 @@ async def _get_sponsor(
     db: DbSessionDep,
     conference_id: UUID,
     sponsor_id: UUID,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
 ) -> Sponsor:
-    """Fetch sponsor or raise 404."""
+    """Fetch sponsor or raise 404.
+
+    ``tenant_id`` accepts ``None``; a ``None`` value matches no row and still 404s.
+    """
     result = await db.execute(
         select(Sponsor).where(
             Sponsor.id == sponsor_id,

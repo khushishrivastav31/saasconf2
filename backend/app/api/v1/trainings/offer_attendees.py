@@ -21,8 +21,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/offers/{offer_id}/attendees", tags=["offer-attendees"])
 
 
-async def _get_offer(db: DbSessionDep, offer_id: UUID, tenant_id: UUID) -> CustomerOffer:
-    """Get an offer or raise NotFoundError."""
+async def _get_offer(db: DbSessionDep, offer_id: UUID, tenant_id: UUID | None) -> CustomerOffer:
+    """Get an offer or raise NotFoundError.
+
+    ``tenant_id`` accepts ``None``; a ``None`` value matches no row and still 404s.
+    """
     result = await db.execute(
         select(CustomerOffer).where(CustomerOffer.id == offer_id, CustomerOffer.tenant_id == tenant_id)
     )

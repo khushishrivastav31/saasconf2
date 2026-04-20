@@ -37,11 +37,12 @@ class BaseService:
     async def resolve_conference(
         db: AsyncSession,
         conference_id: UUID,
-        tenant_id: UUID,
+        tenant_id: UUID | None,
     ) -> Conference:
         """Fetch a conference and verify it belongs to *tenant_id*.
 
-        Raises ``NotFoundError`` when no matching conference exists.
+        ``tenant_id`` accepts ``None`` so ``CurrentUser.tenant_id`` passes through
+        directly; a ``None`` value matches no row and still raises ``NotFoundError``.
         """
         result = await db.execute(
             select(Conference).where(

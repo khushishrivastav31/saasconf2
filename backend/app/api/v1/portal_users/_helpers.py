@@ -24,8 +24,12 @@ from app.models.training_registration import TrainingRegistration, TrainingRegis
 from app.services.customer_event_service import CustomerEventService
 
 
-async def get_portal_user(db: AsyncSession, user_id: UUID, tenant_id: UUID) -> PortalUser:
-    """Get portal user by ID, ensuring tenant isolation."""
+async def get_portal_user(db: AsyncSession, user_id: UUID, tenant_id: UUID | None) -> PortalUser:
+    """Get portal user by ID, ensuring tenant isolation.
+
+    ``tenant_id`` accepts ``None`` so ``CurrentUser.tenant_id`` passes through
+    directly; a ``None`` value matches no row and still raises ``NotFoundError``.
+    """
     result = await db.execute(select(PortalUser).where(PortalUser.id == user_id, PortalUser.tenant_id == tenant_id))
     user = result.scalar_one_or_none()
     if not user:
