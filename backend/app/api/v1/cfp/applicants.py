@@ -138,7 +138,7 @@ async def list_applicants(
     """
     query = (
         select(CFPApplicant)
-        .where(CFPApplicant.tenant_id == current_user.tenant_id)
+        .where(CFPApplicant.tenant_id == current_user.require_tenant_id())
         .order_by(CFPApplicant.last_name, CFPApplicant.first_name)
     )
 
@@ -166,8 +166,12 @@ async def list_applicants(
 
     # Batch-fetch picture URLs, video URLs, and roles to avoid N+1
     applicant_ids = [a.id for a in applicants]
-    picture_urls = await _batch_get_attachment_urls(db, applicant_ids, "applicant_picture", current_user.tenant_id)
-    video_urls = await _batch_get_attachment_urls(db, applicant_ids, "applicant_video", current_user.tenant_id)
+    picture_urls = await _batch_get_attachment_urls(
+        db, applicant_ids, "applicant_picture", current_user.require_tenant_id()
+    )
+    video_urls = await _batch_get_attachment_urls(
+        db, applicant_ids, "applicant_video", current_user.require_tenant_id()
+    )
     roles_map = await _batch_get_applicant_roles(db, applicant_ids)
 
     items = [
@@ -214,7 +218,7 @@ async def create_applicant(
     # Check for duplicate email within tenant
     existing = await db.execute(
         select(CFPApplicant.id).where(
-            CFPApplicant.tenant_id == current_user.tenant_id,
+            CFPApplicant.tenant_id == current_user.require_tenant_id(),
             CFPApplicant.email == applicant_data.email,
         )
     )
@@ -223,7 +227,7 @@ async def create_applicant(
 
     social_links_dict = applicant_data.social_links.model_dump() if applicant_data.social_links else {}
     applicant = CFPApplicant(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         first_name=applicant_data.first_name,
         last_name=applicant_data.last_name,
         email=applicant_data.email,
@@ -250,7 +254,7 @@ async def create_applicant(
     roles: list[ApplicantRoleInfo] = []
     if applicant_data.role_ids:
         await _sync_role_assignments(
-            db, applicant.id, current_user.tenant_id, applicant_data.role_ids, current_user.user_id
+            db, applicant.id, current_user.require_tenant_id(), applicant_data.role_ids, current_user.user_id
         )
         roles = await _get_applicant_roles(db, applicant.id)
 
@@ -294,7 +298,7 @@ async def update_applicant(
     result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.id == applicant_id,
-            CFPApplicant.tenant_id == current_user.tenant_id,
+            CFPApplicant.tenant_id == current_user.require_tenant_id(),
         )
     )
     applicant = result.scalar_one_or_none()
@@ -319,7 +323,7 @@ async def update_applicant(
     # Handle role_ids separately — sync assignments
     role_ids = update_data.pop("role_ids", None)
     if role_ids is not None:
-        await _sync_role_assignments(db, applicant.id, current_user.tenant_id, role_ids, current_user.user_id)
+        await _sync_role_assignments(db, applicant.id, current_user.require_tenant_id(), role_ids, current_user.user_id)
 
     for field, value in update_data.items():
         setattr(applicant, field, value)
@@ -327,8 +331,8 @@ async def update_applicant(
     await db.commit()
     await db.refresh(applicant)
 
-    picture_url = await _get_applicant_picture_url(db, applicant.id, current_user.tenant_id)
-    video_url = await _get_applicant_video_url(db, applicant.id, current_user.tenant_id)
+    picture_url = await _get_applicant_picture_url(db, applicant.id, current_user.require_tenant_id())
+    video_url = await _get_applicant_video_url(db, applicant.id, current_user.require_tenant_id())
     roles = await _get_applicant_roles(db, applicant.id)
 
     return ApplicantResponse(
@@ -368,7 +372,7 @@ async def delete_applicant(
     result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.id == applicant_id,
-            CFPApplicant.tenant_id == current_user.tenant_id,
+            CFPApplicant.tenant_id == current_user.require_tenant_id(),
         )
     )
     applicant = result.scalar_one_or_none()
@@ -408,7 +412,7 @@ async def delete_applicant(
     # Delete any associated attachments (pictures and videos)
     attachments_result = await db.execute(
         select(Attachment).where(
-            Attachment.tenant_id == current_user.tenant_id,
+            Attachment.tenant_id == current_user.require_tenant_id(),
             Attachment.entity_type.in_(["applicant_picture", "applicant_video"]),
             Attachment.entity_id == applicant_id,
         )
@@ -418,7 +422,7 @@ async def delete_applicant(
 
     # Log account deletion event before deleting
     activity_log = ApplicantActivityLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         applicant_id=None,  # Will be deleted, so set to None
         applicant_email=applicant.email,
         applicant_first_name=applicant.first_name,

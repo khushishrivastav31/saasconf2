@@ -113,7 +113,7 @@ async def check_trainer_availability(
         .where(
             ProgramYearTraining.id == placement_id,
             ProgramYearTraining.program_year_id == year_id,
-            ProgramYearTraining.tenant_id == current_user.tenant_id,
+            ProgramYearTraining.tenant_id == current_user.require_tenant_id(),
         )
     )
     placement = result.scalar_one_or_none()
@@ -124,13 +124,13 @@ async def check_trainer_availability(
     trainer_result = await db.execute(
         select(Trainer).where(
             Trainer.id == trainer_id,
-            Trainer.tenant_id == current_user.tenant_id,
+            Trainer.tenant_id == current_user.require_tenant_id(),
         )
     )
     if not trainer_result.scalar_one_or_none():
         raise NotFoundError("Trainer not found")
 
-    conflicts = await _check_trainer_conflicts(db, trainer_id, placement, current_user.tenant_id)
+    conflicts = await _check_trainer_conflicts(db, trainer_id, placement, current_user.require_tenant_id())
     return AvailabilityCheckResponse(available=len(conflicts) == 0, conflicts=conflicts)
 
 
@@ -153,7 +153,7 @@ async def assign_trainer_to_placement(
         select(ProgramYearTraining).where(
             ProgramYearTraining.id == placement_id,
             ProgramYearTraining.program_year_id == year_id,
-            ProgramYearTraining.tenant_id == current_user.tenant_id,
+            ProgramYearTraining.tenant_id == current_user.require_tenant_id(),
         )
     )
     if not result.scalar_one_or_none():
@@ -163,7 +163,7 @@ async def assign_trainer_to_placement(
     trainer_result = await db.execute(
         select(Trainer).where(
             Trainer.id == payload.trainer_id,
-            Trainer.tenant_id == current_user.tenant_id,
+            Trainer.tenant_id == current_user.require_tenant_id(),
         )
     )
     trainer = trainer_result.scalar_one_or_none()
@@ -181,7 +181,7 @@ async def assign_trainer_to_placement(
         raise ConflictError("Trainer is already assigned to this placement")
 
     assignment = PlacementTrainer(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         placement_id=placement_id,
         trainer_id=payload.trainer_id,
     )
@@ -189,7 +189,7 @@ async def assign_trainer_to_placement(
     await db.flush()
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="placement_trainer.assign",
         resource_type="placement_trainer",
@@ -226,7 +226,7 @@ async def remove_trainer_from_placement(
         select(PlacementTrainer).where(
             PlacementTrainer.id == assignment_id,
             PlacementTrainer.placement_id == placement_id,
-            PlacementTrainer.tenant_id == current_user.tenant_id,
+            PlacementTrainer.tenant_id == current_user.require_tenant_id(),
         )
     )
     assignment = result.scalar_one_or_none()
@@ -236,7 +236,7 @@ async def remove_trainer_from_placement(
     await db.delete(assignment)
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="placement_trainer.remove",
         resource_type="placement_trainer",

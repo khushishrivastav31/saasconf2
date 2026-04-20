@@ -71,12 +71,12 @@ async def list_service_providers(
 ) -> ServiceProviderListResponse:
     """List service providers for a location."""
 
-    await _get_location_or_404(db, location_id, current_user.tenant_id)
+    await _get_location_or_404(db, location_id, current_user.require_tenant_id())
 
     result = await db.execute(
         select(ServiceProvider)
         .where(
-            ServiceProvider.tenant_id == current_user.tenant_id,
+            ServiceProvider.tenant_id == current_user.require_tenant_id(),
             ServiceProvider.location_id == location_id,
         )
         .order_by(ServiceProvider.company_name)
@@ -99,10 +99,10 @@ async def create_service_provider(
 ) -> ServiceProviderResponse:
     """Create a new service provider for a location."""
 
-    await _get_location_or_404(db, location_id, current_user.tenant_id)
+    await _get_location_or_404(db, location_id, current_user.require_tenant_id())
 
     sp = ServiceProvider(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         location_id=location_id,
         company_name=sp_data.company_name,
         service_description=sp_data.service_description,
@@ -121,7 +121,7 @@ async def create_service_provider(
     db.add(sp)
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="service_provider.create",
         resource_type="service_provider",
@@ -155,7 +155,7 @@ async def update_service_provider(
         select(ServiceProvider).where(
             ServiceProvider.id == provider_id,
             ServiceProvider.location_id == location_id,
-            ServiceProvider.tenant_id == current_user.tenant_id,
+            ServiceProvider.tenant_id == current_user.require_tenant_id(),
         )
     )
     sp = result.scalar_one_or_none()
@@ -168,7 +168,7 @@ async def update_service_provider(
         setattr(sp, field, value)
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="service_provider.update",
         resource_type="service_provider",
@@ -199,7 +199,7 @@ async def delete_service_provider(
         select(ServiceProvider).where(
             ServiceProvider.id == provider_id,
             ServiceProvider.location_id == location_id,
-            ServiceProvider.tenant_id == current_user.tenant_id,
+            ServiceProvider.tenant_id == current_user.require_tenant_id(),
         )
     )
     sp = result.scalar_one_or_none()
@@ -213,12 +213,12 @@ async def delete_service_provider(
         sa_delete(Attachment).where(
             Attachment.entity_type == "service_provider",
             Attachment.entity_id == provider_id,
-            Attachment.tenant_id == current_user.tenant_id,
+            Attachment.tenant_id == current_user.require_tenant_id(),
         )
     )
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="service_provider.delete",
         resource_type="service_provider",

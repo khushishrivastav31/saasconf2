@@ -73,7 +73,7 @@ async def list_attendees(
     placement_id: UUID | None = Query(None),
 ) -> list[OfferAttendeeResponse]:
     """List attendees for an offer, optionally filtered by placement."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await _get_offer(db, offer_id, tenant_id)
 
     query = select(OfferAttendee).where(
@@ -97,7 +97,7 @@ async def create_attendee(
     request: Request,
 ) -> OfferAttendeeResponse:
     """Create an attendee for an offer placement."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await _get_offer(db, offer_id, tenant_id)
     await _validate_placement(db, payload.placement_id, offer_id, tenant_id)
 
@@ -147,7 +147,7 @@ async def update_attendee(
     request: Request,
 ) -> OfferAttendeeResponse:
     """Update an offer attendee."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await _get_offer(db, offer_id, tenant_id)
 
     result = await db.execute(
@@ -209,7 +209,7 @@ async def patch_attendee(
     db: DbSessionDep,
 ) -> OfferAttendeeResponse:
     """Patch exam fields on an offer attendee."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await _get_offer(db, offer_id, tenant_id)
 
     result = await db.execute(
@@ -241,7 +241,7 @@ async def delete_attendee(
     request: Request,
 ) -> dict:
     """Delete an offer attendee."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await _get_offer(db, offer_id, tenant_id)
 
     result = await db.execute(

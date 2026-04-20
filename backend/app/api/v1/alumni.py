@@ -64,11 +64,11 @@ async def list_alumni(
     search: str | None = None,
 ) -> AlumniListResponse:
     """List alumni for a conference with pagination and search."""
-    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     query = select(Alumni).where(
         Alumni.conference_id == conference_id,
-        Alumni.tenant_id == current_user.tenant_id,
+        Alumni.tenant_id == current_user.require_tenant_id(),
     )
 
     if search:
@@ -104,7 +104,7 @@ async def create_alumni(
 ) -> AlumniResponse:
     """Add a single alumni record."""
     await check_conference_admin(conference_id, current_user, db)
-    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     # Check uniqueness
     existing = await db.execute(
@@ -119,7 +119,7 @@ async def create_alumni(
         raise ConflictError(f"Alumni with email '{data.email}' already exists for this conference")
 
     alumni = Alumni(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         email=data.email.lower(),
         first_name=data.first_name,
@@ -130,7 +130,7 @@ async def create_alumni(
     )
 
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.ALUMNI_CREATE,
         resource_type=ResourceType.ALUMNI,
@@ -166,7 +166,7 @@ async def update_alumni(
         Alumni,
         alumni_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Alumni",
     )
 
@@ -226,7 +226,7 @@ async def update_alumni(
     if email_changed or name_changed:
         applicant_result = await db.execute(
             select(CFPApplicant).where(
-                CFPApplicant.tenant_id == current_user.tenant_id,
+                CFPApplicant.tenant_id == current_user.require_tenant_id(),
                 func.lower(CFPApplicant.email) == old_email,
             )
         )
@@ -241,7 +241,7 @@ async def update_alumni(
             propagated_to.append("portal_user")
 
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.ALUMNI_UPDATE,
         resource_type=ResourceType.ALUMNI,
@@ -281,13 +281,13 @@ async def delete_alumni(
         Alumni,
         alumni_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Alumni",
     )
 
     name = f"{alumni.first_name} {alumni.last_name}"
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.ALUMNI_DELETE,
         resource_type=ResourceType.ALUMNI,
@@ -316,7 +316,7 @@ async def import_alumni_csv(
 ) -> AlumniImportResult:
     """Bulk import alumni from a CSV file."""
     await check_conference_admin(conference_id, current_user, db)
-    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     content = await file.read()
     # Try UTF-8 BOM first, then plain UTF-8, then latin-1
@@ -347,7 +347,7 @@ async def import_alumni_csv(
     existing_result = await db.execute(
         select(func.lower(Alumni.email)).where(
             Alumni.conference_id == conference_id,
-            Alumni.tenant_id == current_user.tenant_id,
+            Alumni.tenant_id == current_user.require_tenant_id(),
         )
     )
     existing_emails: set[str] = {row[0] for row in existing_result.all()}
@@ -382,7 +382,7 @@ async def import_alumni_csv(
             last_name = "-"
 
         alumni = Alumni(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             conference_id=conference_id,
             email=email,
             first_name=first_name[:255],
@@ -400,7 +400,7 @@ async def import_alumni_csv(
 
     # Audit log
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.ALUMNI_IMPORT,
         resource_type=ResourceType.ALUMNI,
@@ -432,13 +432,13 @@ async def export_alumni_csv(
 ) -> StreamingResponse:
     """Export alumni for a conference as CSV."""
     await check_conference_admin(conference_id, current_user, db)
-    conference = await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    conference = await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     result = await db.execute(
         select(Alumni)
         .where(
             Alumni.conference_id == conference_id,
-            Alumni.tenant_id == current_user.tenant_id,
+            Alumni.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(Alumni.last_name, Alumni.first_name)
         .limit(50000)

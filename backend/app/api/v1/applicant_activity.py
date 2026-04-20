@@ -131,7 +131,7 @@ async def list_applicant_activities(
     Only accessible by tenant admins.
     """
     query = _build_activity_query(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         applicant_id=applicant_id,
         activity_type=activity_type,
         start_date=start_date,
@@ -174,7 +174,7 @@ async def list_applicant_activities_grouped(
     subquery = select(
         ApplicantActivityLog.applicant_email,
         func.max(ApplicantActivityLog.created_at).label("last_activity"),
-    ).where(ApplicantActivityLog.tenant_id == current_user.tenant_id)
+    ).where(ApplicantActivityLog.tenant_id == current_user.require_tenant_id())
 
     if activity_type:
         subquery = subquery.where(ApplicantActivityLog.activity_type == activity_type)
@@ -210,7 +210,7 @@ async def list_applicant_activities_grouped(
     for email in emails:
         activities_query = (
             select(ApplicantActivityLog)
-            .where(ApplicantActivityLog.tenant_id == current_user.tenant_id)
+            .where(ApplicantActivityLog.tenant_id == current_user.require_tenant_id())
             .where(ApplicantActivityLog.applicant_email == email)
         )
 
@@ -272,7 +272,7 @@ async def export_applicant_activities(
     Only accessible by tenant admins.
     """
     query = _build_activity_query(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         applicant_id=applicant_id,
         activity_type=activity_type,
         start_date=start_date,

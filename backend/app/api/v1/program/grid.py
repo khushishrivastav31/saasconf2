@@ -39,14 +39,14 @@ async def get_full_grid(
     db: DbSessionDep,
 ) -> ProgramFullGridResponse:
     """Get complete program grid for all days."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     # Get all days
     days_result = await db.execute(
         select(ProgramDay)
         .where(
             ProgramDay.conference_id == conference_id,
-            ProgramDay.tenant_id == current_user.tenant_id,
+            ProgramDay.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(ProgramDay.sort_order, ProgramDay.date)
     )
@@ -57,7 +57,7 @@ async def get_full_grid(
         select(ProgramTrack)
         .where(
             ProgramTrack.conference_id == conference_id,
-            ProgramTrack.tenant_id == current_user.tenant_id,
+            ProgramTrack.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(ProgramTrack.sort_order)
     )
@@ -80,7 +80,7 @@ async def get_full_grid(
     sessions_result = await db.execute(
         select(ProgramSession).where(
             ProgramSession.conference_id == conference_id,
-            ProgramSession.tenant_id == current_user.tenant_id,
+            ProgramSession.tenant_id == current_user.require_tenant_id(),
         )
     )
     all_sessions = sessions_result.scalars().all()
@@ -150,14 +150,14 @@ async def get_day_grid(
     db: DbSessionDep,
 ) -> ProgramGridResponse:
     """Get program grid for a specific day."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     # Get day with slots
     day_result = await db.execute(
         select(ProgramDay).where(
             ProgramDay.id == day_id,
             ProgramDay.conference_id == conference_id,
-            ProgramDay.tenant_id == current_user.tenant_id,
+            ProgramDay.tenant_id == current_user.require_tenant_id(),
         )
     )
     day = day_result.scalar_one_or_none()
@@ -169,7 +169,7 @@ async def get_day_grid(
         select(ProgramTrack)
         .where(
             ProgramTrack.conference_id == conference_id,
-            ProgramTrack.tenant_id == current_user.tenant_id,
+            ProgramTrack.tenant_id == current_user.require_tenant_id(),
             ProgramTrack.program_day_id == day_id,
         )
         .order_by(ProgramTrack.sort_order)
@@ -188,7 +188,7 @@ async def get_day_grid(
     sessions_result = await db.execute(
         select(ProgramSession).where(
             ProgramSession.start_slot_id.in_(slot_ids),
-            ProgramSession.tenant_id == current_user.tenant_id,
+            ProgramSession.tenant_id == current_user.require_tenant_id(),
         )
     )
     sessions = sessions_result.scalars().all()

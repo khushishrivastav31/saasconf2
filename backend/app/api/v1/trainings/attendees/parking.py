@@ -42,7 +42,7 @@ async def park_by_source(
 
     Automatically creates a central TrainingAttendee if one doesn't exist yet.
     """
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     source_uuid = UUID(data.source_id)
     placement_id: UUID | None = None
     att: TrainingAttendee | None = None
@@ -130,7 +130,7 @@ async def park_attendee(
     result = await db.execute(
         select(TrainingAttendee).where(
             TrainingAttendee.id == attendee_id,
-            TrainingAttendee.tenant_id == current_user.tenant_id,
+            TrainingAttendee.tenant_id == current_user.require_tenant_id(),
         )
     )
     att = result.scalar_one_or_none()
@@ -148,7 +148,7 @@ async def park_attendee(
         reg_att_result = await db.execute(
             select(TrainingRegistrationAttendee).where(
                 TrainingRegistrationAttendee.id == source_uuid,
-                TrainingRegistrationAttendee.tenant_id == current_user.tenant_id,
+                TrainingRegistrationAttendee.tenant_id == current_user.require_tenant_id(),
             )
         )
         reg_att = reg_att_result.scalar_one_or_none()
@@ -168,7 +168,7 @@ async def park_attendee(
         offer_att_result = await db.execute(
             select(OfferAttendee).where(
                 OfferAttendee.id == source_uuid,
-                OfferAttendee.tenant_id == current_user.tenant_id,
+                OfferAttendee.tenant_id == current_user.require_tenant_id(),
             )
         )
         offer_att = offer_att_result.scalar_one_or_none()
@@ -191,7 +191,7 @@ async def park_attendee(
     notes_str = json.dumps(notes_obj) if notes_obj else data.reason
 
     history = TrainingAttendeeHistory(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         attendee_id=att.id,
         event_type="parked",
         placement_id=placement_id,
@@ -235,7 +235,7 @@ async def deactivate_attendee(
     result = await db.execute(
         select(TrainingAttendee).where(
             TrainingAttendee.id == attendee_id,
-            TrainingAttendee.tenant_id == current_user.tenant_id,
+            TrainingAttendee.tenant_id == current_user.require_tenant_id(),
         )
     )
     att = result.scalar_one_or_none()
@@ -248,7 +248,7 @@ async def deactivate_attendee(
     deactivate_notes = data.notes or "Deactivated from parking lot"
     db.add(
         TrainingAttendeeHistory(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             attendee_id=att.id,
             event_type="deactivated",
             notes=deactivate_notes,
@@ -284,7 +284,7 @@ async def reactivate_attendee(
     result = await db.execute(
         select(TrainingAttendee).where(
             TrainingAttendee.id == attendee_id,
-            TrainingAttendee.tenant_id == current_user.tenant_id,
+            TrainingAttendee.tenant_id == current_user.require_tenant_id(),
         )
     )
     att = result.scalar_one_or_none()
@@ -305,7 +305,7 @@ async def reactivate_attendee(
         att.status = "active"
         db.add(
             TrainingAttendeeHistory(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 attendee_id=att.id,
                 event_type="reactivated",
                 notes="Attendee reactivated",

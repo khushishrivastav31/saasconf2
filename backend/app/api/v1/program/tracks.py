@@ -37,11 +37,11 @@ async def list_tracks(
     is_active: bool | None = None,
 ) -> ProgramTrackListResponse:
     """List all tracks for a conference, optionally filtered by day."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     query = select(ProgramTrack).where(
         ProgramTrack.conference_id == conference_id,
-        ProgramTrack.tenant_id == current_user.tenant_id,
+        ProgramTrack.tenant_id == current_user.require_tenant_id(),
     )
 
     if day_id is not None:
@@ -82,7 +82,7 @@ async def create_track(
 ) -> ProgramTrackResponse:
     """Create a new track."""
     await check_conference_admin(conference_id, current_user, db)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     # Validate day exists
     day_result = await db.execute(
@@ -100,7 +100,7 @@ async def create_track(
         loc_result = await db.execute(
             select(Location).where(
                 Location.id == track_data.location_id,
-                Location.tenant_id == current_user.tenant_id,
+                Location.tenant_id == current_user.require_tenant_id(),
             )
         )
         loc = loc_result.scalar_one_or_none()
@@ -109,7 +109,7 @@ async def create_track(
         location_name = loc.name
 
     track = ProgramTrack(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference.id,
         program_day_id=track_data.program_day_id,
         name=track_data.name,
@@ -123,7 +123,7 @@ async def create_track(
 
     db.add(
         AuditLog(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="program_track.create",
             resource_type="program_track",
@@ -153,14 +153,14 @@ async def reorder_tracks(
 ) -> ProgramTrackListResponse:
     """Reorder tracks."""
     await check_conference_admin(conference_id, current_user, db)
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     # Fetch all tracks
     result = await db.execute(
         select(ProgramTrack).where(
             ProgramTrack.id.in_(reorder_data.track_ids),
             ProgramTrack.conference_id == conference_id,
-            ProgramTrack.tenant_id == current_user.tenant_id,
+            ProgramTrack.tenant_id == current_user.require_tenant_id(),
         )
     )
     tracks = {t.id: t for t in result.scalars().all()}
@@ -174,7 +174,7 @@ async def reorder_tracks(
 
     db.add(
         AuditLog(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="program_track.reorder",
             resource_type="program_track",
@@ -206,13 +206,13 @@ async def update_track(
 ) -> ProgramTrackResponse:
     """Update a track."""
     await check_conference_admin(conference_id, current_user, db)
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     result = await db.execute(
         select(ProgramTrack).where(
             ProgramTrack.id == track_id,
             ProgramTrack.conference_id == conference_id,
-            ProgramTrack.tenant_id == current_user.tenant_id,
+            ProgramTrack.tenant_id == current_user.require_tenant_id(),
         )
     )
     track = result.scalar_one_or_none()
@@ -237,7 +237,7 @@ async def update_track(
 
     db.add(
         AuditLog(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="program_track.update",
             resource_type="program_track",
@@ -274,13 +274,13 @@ async def delete_track(
 ) -> None:
     """Delete a track. Sessions using this track will have start_track_id set to NULL."""
     await check_conference_admin(conference_id, current_user, db)
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     result = await db.execute(
         select(ProgramTrack).where(
             ProgramTrack.id == track_id,
             ProgramTrack.conference_id == conference_id,
-            ProgramTrack.tenant_id == current_user.tenant_id,
+            ProgramTrack.tenant_id == current_user.require_tenant_id(),
         )
     )
     track = result.scalar_one_or_none()
@@ -289,7 +289,7 @@ async def delete_track(
 
     db.add(
         AuditLog(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="program_track.delete",
             resource_type="program_track",
