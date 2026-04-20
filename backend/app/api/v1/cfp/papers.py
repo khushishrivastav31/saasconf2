@@ -118,7 +118,7 @@ async def list_papers(
 ) -> PaperListResponse:
     """List papers for the current tenant with server-side pagination."""
     # Build base filter (shared between count and data queries)
-    base_filter = select(CFPPaper).where(CFPPaper.tenant_id == current_user.tenant_id)
+    base_filter = select(CFPPaper).where(CFPPaper.tenant_id == current_user.require_tenant_id())
 
     if conference_id:
         base_filter = base_filter.join(ConferenceCFP, CFPPaper.cfp_id == ConferenceCFP.cfp_id).where(
@@ -167,7 +167,7 @@ async def list_papers(
     result = await db.execute(data_query)
     papers = list(result.scalars().all())
 
-    items = await _build_paper_responses_batch(db, papers, current_user.tenant_id)
+    items = await _build_paper_responses_batch(db, papers, current_user.require_tenant_id())
 
     return PaperListResponse(items=items, total=total, page=page, page_size=page_size)
 
@@ -179,7 +179,9 @@ async def get_paper_stats(
     cfp_id: UUID | None = None,
 ) -> PaperStats:
     """Get paper statistics using SQL aggregation."""
-    base = select(CFPPaper.status, func.count(CFPPaper.id)).where(CFPPaper.tenant_id == current_user.tenant_id)
+    base = select(CFPPaper.status, func.count(CFPPaper.id)).where(
+        CFPPaper.tenant_id == current_user.require_tenant_id()
+    )
 
     if cfp_id:
         base = base.where(CFPPaper.cfp_id == cfp_id)
@@ -213,7 +215,7 @@ async def create_paper(
     cfp_result = await db.execute(
         select(CallForPapers).where(
             CallForPapers.id == paper_data.cfp_id,
-            CallForPapers.tenant_id == current_user.tenant_id,
+            CallForPapers.tenant_id == current_user.require_tenant_id(),
         )
     )
     cfp = cfp_result.scalar_one_or_none()
@@ -221,17 +223,19 @@ async def create_paper(
         raise NotFoundError(f"CFP with ID '{paper_data.cfp_id}' not found")
 
     # Validate related entities
-    await validate_main_speaker(db, paper_data.main_speaker_id, current_user.tenant_id)
+    await validate_main_speaker(db, paper_data.main_speaker_id, current_user.require_tenant_id())
     if paper_data.co_speaker_ids:
-        await validate_co_speakers(db, paper_data.co_speaker_ids, paper_data.main_speaker_id, current_user.tenant_id)
+        await validate_co_speakers(
+            db, paper_data.co_speaker_ids, paper_data.main_speaker_id, current_user.require_tenant_id()
+        )
     if paper_data.session_type_id:
-        await validate_session_type(db, paper_data.session_type_id, current_user.tenant_id)
+        await validate_session_type(db, paper_data.session_type_id, current_user.require_tenant_id())
     if paper_data.topic_ids:
-        await validate_topics(db, paper_data.topic_ids, current_user.tenant_id)
+        await validate_topics(db, paper_data.topic_ids, current_user.require_tenant_id())
 
     # Create paper
     paper = CFPPaper(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         cfp_id=paper_data.cfp_id,
         main_speaker_id=paper_data.main_speaker_id,
         session_type_id=paper_data.session_type_id,
@@ -253,7 +257,7 @@ async def create_paper(
 
     # Audit log
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="paper.create",
         resource_type="paper",
@@ -265,9 +269,9 @@ async def create_paper(
     db.add(audit_log)
 
     await db.commit()
-    paper = await _reload_paper(db, paper.id, current_user.tenant_id)
+    paper = await _reload_paper(db, paper.id, current_user.require_tenant_id())
 
-    return await _build_paper_response(db, paper, current_user.tenant_id)
+    return await _build_paper_response(db, paper, current_user.require_tenant_id())
 
 
 @router.get("/papers/{paper_id}", response_model=PaperResponse, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -282,7 +286,7 @@ async def get_paper(
         .options(*_paper_eager_options())
         .where(
             CFPPaper.id == paper_id,
-            CFPPaper.tenant_id == current_user.tenant_id,
+            CFPPaper.tenant_id == current_user.require_tenant_id(),
         )
     )
     paper = result.scalar_one_or_none()
@@ -290,7 +294,7 @@ async def get_paper(
     if not paper:
         raise NotFoundError(f"Paper with ID '{paper_id}' not found")
 
-    return await _build_paper_response(db, paper, current_user.tenant_id)
+    return await _build_paper_response(db, paper, current_user.require_tenant_id())
 
 
 @router.put("/papers/{paper_id}", response_model=PaperResponse, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -307,7 +311,7 @@ async def update_paper(
         .options(*_paper_eager_options())
         .where(
             CFPPaper.id == paper_id,
-            CFPPaper.tenant_id == current_user.tenant_id,
+            CFPPaper.tenant_id == current_user.require_tenant_id(),
         )
     )
     paper = result.scalar_one_or_none()
@@ -319,25 +323,25 @@ async def update_paper(
 
     # Validate main speaker if changing
     if "main_speaker_id" in update_data:
-        await validate_main_speaker(db, update_data["main_speaker_id"], current_user.tenant_id)
+        await validate_main_speaker(db, update_data["main_speaker_id"], current_user.require_tenant_id())
 
     # Validate and sync co-speakers if changing
     if "co_speaker_ids" in update_data:
         co_speaker_ids = update_data.pop("co_speaker_ids")
         main_speaker_id = update_data.get("main_speaker_id", paper.main_speaker_id)
         if co_speaker_ids:
-            await validate_co_speakers(db, co_speaker_ids, main_speaker_id, current_user.tenant_id)
+            await validate_co_speakers(db, co_speaker_ids, main_speaker_id, current_user.require_tenant_id())
         await sync_paper_co_speakers(db, paper_id, co_speaker_ids or [])
 
     # Validate session type if changing
     if update_data.get("session_type_id"):
-        await validate_session_type(db, update_data["session_type_id"], current_user.tenant_id)
+        await validate_session_type(db, update_data["session_type_id"], current_user.require_tenant_id())
 
     # Validate and sync topics if changing
     if "topic_ids" in update_data:
         topic_ids = update_data.pop("topic_ids")
         if topic_ids:
-            await validate_topics(db, topic_ids, current_user.tenant_id)
+            await validate_topics(db, topic_ids, current_user.require_tenant_id())
         await sync_paper_topics(db, paper_id, topic_ids or [])
 
     # level is now a plain string, no enum conversion needed
@@ -359,14 +363,14 @@ async def update_paper(
             await db.execute(
                 delete(PaperReview).where(
                     PaperReview.paper_id == paper_id,
-                    PaperReview.tenant_id == current_user.tenant_id,
+                    PaperReview.tenant_id == current_user.require_tenant_id(),
                 )
             )
             # Delete assignments
             await db.execute(
                 delete(CFPPaperAssignment).where(
                     CFPPaperAssignment.paper_id == paper_id,
-                    CFPPaperAssignment.tenant_id == current_user.tenant_id,
+                    CFPPaperAssignment.tenant_id == current_user.require_tenant_id(),
                 )
             )
 
@@ -375,7 +379,7 @@ async def update_paper(
         await _sync_speaker_role(
             db,
             paper,
-            current_user.tenant_id,
+            current_user.require_tenant_id(),
             new_status=update_data["status"],
             old_status=current_status,
             assigned_by=current_user.user_id,
@@ -399,7 +403,7 @@ async def update_paper(
 
     # Audit log
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="paper.update",
         resource_type="paper",
@@ -411,9 +415,9 @@ async def update_paper(
     db.add(audit_log)
 
     await db.commit()
-    paper = await _reload_paper(db, paper_id, current_user.tenant_id)
+    paper = await _reload_paper(db, paper_id, current_user.require_tenant_id())
 
-    return await _build_paper_response(db, paper, current_user.tenant_id)
+    return await _build_paper_response(db, paper, current_user.require_tenant_id())
 
 
 @router.post(
@@ -431,7 +435,7 @@ async def submit_paper(
         .options(*_paper_eager_options())
         .where(
             CFPPaper.id == paper_id,
-            CFPPaper.tenant_id == current_user.tenant_id,
+            CFPPaper.tenant_id == current_user.require_tenant_id(),
         )
     )
     paper = result.scalar_one_or_none()
@@ -451,7 +455,7 @@ async def submit_paper(
 
     # Audit log
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="paper.submit",
         resource_type="paper",
@@ -463,9 +467,9 @@ async def submit_paper(
     db.add(audit_log)
 
     await db.commit()
-    paper = await _reload_paper(db, paper_id, current_user.tenant_id)
+    paper = await _reload_paper(db, paper_id, current_user.require_tenant_id())
 
-    return await _build_paper_response(db, paper, current_user.tenant_id)
+    return await _build_paper_response(db, paper, current_user.require_tenant_id())
 
 
 @router.post(
@@ -483,7 +487,7 @@ async def unsubmit_paper(
         .options(*_paper_eager_options())
         .where(
             CFPPaper.id == paper_id,
-            CFPPaper.tenant_id == current_user.tenant_id,
+            CFPPaper.tenant_id == current_user.require_tenant_id(),
         )
     )
     paper = result.scalar_one_or_none()
@@ -503,14 +507,14 @@ async def unsubmit_paper(
     await db.execute(
         delete(PaperReview).where(
             PaperReview.paper_id == paper_id,
-            PaperReview.tenant_id == current_user.tenant_id,
+            PaperReview.tenant_id == current_user.require_tenant_id(),
         )
     )
     # Delete assignments
     await db.execute(
         delete(CFPPaperAssignment).where(
             CFPPaperAssignment.paper_id == paper_id,
-            CFPPaperAssignment.tenant_id == current_user.tenant_id,
+            CFPPaperAssignment.tenant_id == current_user.require_tenant_id(),
         )
     )
 
@@ -518,7 +522,7 @@ async def unsubmit_paper(
 
     # Audit log
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="paper.unsubmit",
         resource_type="paper",
@@ -530,9 +534,9 @@ async def unsubmit_paper(
     db.add(audit_log)
 
     await db.commit()
-    paper = await _reload_paper(db, paper_id, current_user.tenant_id)
+    paper = await _reload_paper(db, paper_id, current_user.require_tenant_id())
 
-    return await _build_paper_response(db, paper, current_user.tenant_id)
+    return await _build_paper_response(db, paper, current_user.require_tenant_id())
 
 
 @router.delete("/papers/{paper_id}", dependencies=[Depends(require_module(MODULE_CODE))])
@@ -546,7 +550,7 @@ async def delete_paper(
     result = await db.execute(
         select(CFPPaper).where(
             CFPPaper.id == paper_id,
-            CFPPaper.tenant_id == current_user.tenant_id,
+            CFPPaper.tenant_id == current_user.require_tenant_id(),
         )
     )
     paper = result.scalar_one_or_none()
@@ -559,7 +563,7 @@ async def delete_paper(
     # Delete associated video attachment
     attachments_result = await db.execute(
         select(Attachment).where(
-            Attachment.tenant_id == current_user.tenant_id,
+            Attachment.tenant_id == current_user.require_tenant_id(),
             Attachment.entity_type == "paper_video",
             Attachment.entity_id == paper_id,
         )
@@ -569,7 +573,7 @@ async def delete_paper(
 
     # Audit log
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="paper.delete",
         resource_type="paper",
@@ -598,7 +602,7 @@ async def get_paper_assignments(
 ) -> PaperAssignmentListResponse:
     """Get all assignments for a specific paper."""
     paper_result = await db.execute(
-        select(CFPPaper).where(CFPPaper.id == paper_id, CFPPaper.tenant_id == current_user.tenant_id)
+        select(CFPPaper).where(CFPPaper.id == paper_id, CFPPaper.tenant_id == current_user.require_tenant_id())
     )
     paper = paper_result.scalar_one_or_none()
     if not paper:
@@ -608,7 +612,7 @@ async def get_paper_assignments(
         select(CFPPaperAssignment)
         .where(
             CFPPaperAssignment.paper_id == paper_id,
-            CFPPaperAssignment.tenant_id == current_user.tenant_id,
+            CFPPaperAssignment.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(CFPPaperAssignment.assigned_at.desc())
     )

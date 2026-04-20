@@ -70,7 +70,7 @@ async def list_invoices(
         select(Invoice)
         .where(
             Invoice.conference_id == conference_id,
-            Invoice.tenant_id == current_user.tenant_id,
+            Invoice.tenant_id == current_user.require_tenant_id(),
             Invoice.is_active.is_(True),
         )
         .options(selectinload(Invoice.events))
@@ -106,7 +106,7 @@ async def create_invoice(
 ) -> InvoiceResponse:
     """Create new invoice for conference."""
     await _require_invoice_admin(db, current_user, conference_id)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     # Validate required fields
     validate_recipient_fields(invoice_data)
@@ -116,7 +116,7 @@ async def create_invoice(
 
     # Create invoice
     invoice = Invoice(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference.id,
         invoice_number=invoice_data.invoice_number or None,
         template_type=invoice_data.template_type,
@@ -172,7 +172,7 @@ async def create_invoice(
     # Audit logs
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="invoice.create",
             invoice=invoice,
@@ -182,7 +182,7 @@ async def create_invoice(
     )
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="invoice.vat_calculated",
             invoice=invoice,
@@ -223,7 +223,7 @@ async def search_recipients(
         select(Sponsor)
         .where(
             Sponsor.conference_id == conference_id,
-            Sponsor.tenant_id == current_user.tenant_id,
+            Sponsor.tenant_id == current_user.require_tenant_id(),
             unaccent_ilike(Sponsor.company_name, f"%{q}%"),
         )
         .limit(10)
@@ -238,7 +238,7 @@ async def search_recipients(
         .where(
             UserRole.conference_id == conference_id,
             UserRole.name == "Volunteer",
-            CFPApplicant.tenant_id == current_user.tenant_id,
+            CFPApplicant.tenant_id == current_user.require_tenant_id(),
             or_(
                 unaccent_ilike(CFPApplicant.first_name, f"%{q}%"),
                 unaccent_ilike(CFPApplicant.last_name, f"%{q}%"),
@@ -314,11 +314,11 @@ async def preview_vat_calculation(
 ) -> VatPreviewResponse:
     """Preview VAT calculation without creating invoice."""
     await _require_invoice_admin(db, current_user, conference_id)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     # Create temporary invoice for calculation
     temp_invoice = Invoice(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference.id,
         recipient_country=vat_data.recipient_country,
         recipient_vat_number=vat_data.recipient_vat_number,
@@ -358,7 +358,7 @@ async def get_invoice(
     db: DbSessionDep,
 ) -> InvoiceResponse:
     """Get single invoice by ID."""
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     # Resolve related invoice number if present
     related_number: str | None = None
@@ -369,7 +369,7 @@ async def get_invoice(
     recipient_email = invoice.recipient_email
     db.add(
         BaseService.create_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action=AuditAction.INVOICE_VIEW,
             resource_type="invoice",
@@ -403,7 +403,7 @@ async def update_invoice(
 ) -> InvoiceResponse:
     """Update invoice. Drafts are fully editable; non-drafts only allow status changes."""
     await _require_invoice_admin(db, current_user, conference_id)
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     update_data = invoice_data.model_dump(exclude_unset=True)
     current_status = invoice.status
@@ -451,7 +451,9 @@ async def update_invoice(
 
         from app.core.invoice_number import generate_invoice_number
 
-        update_data["invoice_number"] = await generate_invoice_number(db, conference_id, current_user.tenant_id)
+        update_data["invoice_number"] = await generate_invoice_number(
+            db, conference_id, current_user.require_tenant_id()
+        )
         if not invoice.issue_date:
             update_data["issue_date"] = date_type.today()
 
@@ -463,7 +465,7 @@ async def update_invoice(
     audit_action = "invoice.sent" if (new_status == "sent" and current_status == "draft") else "invoice.update"
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action=audit_action,
             invoice=invoice,
@@ -488,7 +490,7 @@ async def delete_invoice(
 ) -> None:
     """Delete invoice (soft delete). Only allowed for draft invoices."""
     await _require_invoice_admin(db, current_user, conference_id)
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     from fastapi import HTTPException
 
@@ -504,7 +506,7 @@ async def delete_invoice(
 
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="invoice.delete",
             invoice=invoice,

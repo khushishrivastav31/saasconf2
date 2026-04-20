@@ -64,10 +64,10 @@ async def toggle_portal_access(
     conference-side commitment. The blocker side is returned in the error
     detail so the admin knows where to park/unlink first.
     """
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
 
     if user.is_active:
-        has_active, side = await has_active_assignment(db, user, current_user.tenant_id)
+        has_active, side = await has_active_assignment(db, user, current_user.require_tenant_id())
         if has_active:
             side_label = "training" if side == "training" else "conference"
             raise ConflictError(f"Cannot deactivate: user is assigned to an active {side_label}")
@@ -80,7 +80,7 @@ async def toggle_portal_access(
     att_result = await db.execute(
         select(TrainingAttendee.id).where(
             TrainingAttendee.portal_user_id == user.id,
-            TrainingAttendee.tenant_id == current_user.tenant_id,
+            TrainingAttendee.tenant_id == current_user.require_tenant_id(),
         )
     )
     training_event_type = "portal_deactivated" if deactivating else "portal_activated"
@@ -88,7 +88,7 @@ async def toggle_portal_access(
     for att_id in att_result.scalars().all():
         db.add(
             TrainingAttendeeHistory(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 attendee_id=att_id,
                 event_type=training_event_type,
                 notes=notes,
@@ -98,7 +98,7 @@ async def toggle_portal_access(
 
     await write_history(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         portal_user_id=user.id,
         event_type=(CustomerEventType.PORTAL_DEACTIVATED if deactivating else CustomerEventType.PORTAL_ACTIVATED),
         created_by=current_user.user_id,
@@ -106,7 +106,7 @@ async def toggle_portal_access(
     )
     db.add(
         BaseService.create_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action=AuditAction.PORTAL_USER_TOGGLE_ACCESS,
             resource_type="portal_user",
@@ -134,8 +134,8 @@ async def resend_portal_invite(
     from app.core.email import send_email
     from app.models.tenant import Tenant
 
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     if not tenant:
         raise NotFoundError("Tenant not found")
 
@@ -152,7 +152,7 @@ async def resend_portal_invite(
 
     await write_history(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         portal_user_id=user.id,
         event_type=CustomerEventType.PORTAL_INVITE_RESENT,
         created_by=current_user.user_id,
@@ -160,7 +160,7 @@ async def resend_portal_invite(
     )
     db.add(
         BaseService.create_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action=AuditAction.PORTAL_USER_RESEND_INVITE,
             resource_type="portal_user",
@@ -204,8 +204,8 @@ async def admin_reset_portal_password(
     from app.core.email import send_email
     from app.models.tenant import Tenant
 
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     if not tenant:
         raise NotFoundError("Tenant not found")
 
@@ -222,7 +222,7 @@ async def admin_reset_portal_password(
 
     await write_history(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         portal_user_id=user.id,
         event_type=CustomerEventType.PORTAL_PASSWORD_RESET_SENT,
         created_by=current_user.user_id,
@@ -230,7 +230,7 @@ async def admin_reset_portal_password(
     )
     db.add(
         BaseService.create_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action=AuditAction.PORTAL_USER_RESET_PASSWORD,
             resource_type="portal_user",
@@ -273,7 +273,7 @@ async def impersonate_portal_user(
     """Generate a short-lived portal access token for admin impersonation."""
     from app.core.portal_security import create_portal_access_token
 
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
 
     if not user.is_active:
         raise HTTPException(status_code=422, detail="Cannot impersonate a deactivated user")
@@ -282,7 +282,7 @@ async def impersonate_portal_user(
 
     await write_history(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         portal_user_id=user.id,
         event_type=CustomerEventType.PORTAL_IMPERSONATED,
         created_by=current_user.user_id,
@@ -290,7 +290,7 @@ async def impersonate_portal_user(
     )
     db.add(
         BaseService.create_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action=AuditAction.PORTAL_USER_IMPERSONATE,
             resource_type="portal_user",
@@ -331,7 +331,7 @@ async def merge_portal_users(
     """
     from app.models.tenant import Tenant
 
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     source_user_id = UUID(data.source_user_id)
 
     if target_user_id == source_user_id:

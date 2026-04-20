@@ -53,8 +53,8 @@ async def send_invoice(
 ) -> InvoiceResponse:
     """Send or resend invoice PDF via email."""
     await _require_invoice_admin(db, current_user, conference_id)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     # Prepare invoice (assign number, create payment link)
     is_first_send, payment_link_url = await prepare_invoice_for_sending(db, invoice, conference, current_user.user_id)
@@ -69,7 +69,7 @@ async def send_invoice(
     # Audit log
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="invoice.sent" if is_first_send else "invoice.resent",
             invoice=invoice,
@@ -96,8 +96,8 @@ async def cancel_invoice(
 ) -> CancelInvoiceResponse:
     """Cancel invoice and create credit note."""
     await _require_invoice_admin(db, current_user, conference_id)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     if invoice.status not in ("sent", "overdue", "paid"):
         raise HTTPException(
@@ -121,15 +121,17 @@ async def cancel_invoice(
     # Create credit note
     from app.core.invoice_number import generate_cancellation_number
 
-    cancellation_number = await generate_cancellation_number(db, conference_id, current_user.tenant_id)
-    credit_note = create_credit_note_for_invoice(invoice, cancellation_number, current_user.tenant_id, conference_id)
+    cancellation_number = await generate_cancellation_number(db, conference_id, current_user.require_tenant_id())
+    credit_note = create_credit_note_for_invoice(
+        invoice, cancellation_number, current_user.require_tenant_id(), conference_id
+    )
     db.add(credit_note)
 
     # Audit logs
     db.add_all(
         [
             AuditLog(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 user_id=current_user.user_id,
                 action="invoice.cancelled",
                 resource_type="invoice",
@@ -139,7 +141,7 @@ async def cancel_invoice(
                 user_agent=request.headers.get("User-Agent"),
             ),
             AuditLog(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 user_id=current_user.user_id,
                 action="invoice.credit_note_created",
                 resource_type="invoice",
@@ -158,7 +160,12 @@ async def cancel_invoice(
     email_data: list[dict[str, str]] = []
     if body.cancel_registrations:
         registrations_cancelled, access_removed_count, email_data = await cancel_registrations_for_invoice(
-            db, invoice, conference, current_user.tenant_id, current_user.user_id, body.cancellation_email_message
+            db,
+            invoice,
+            conference,
+            current_user.require_tenant_id(),
+            current_user.user_id,
+            body.cancellation_email_message,
         )
         # Validate that registrations were found to cancel
         if registrations_cancelled == 0:
@@ -186,7 +193,7 @@ async def cancel_invoice(
                     conference_name=conference.name,
                     invoice_number=invoice.invoice_number or "DRAFT",
                     conference_id=conference.id,
-                    tenant_id=current_user.tenant_id,
+                    tenant_id=current_user.require_tenant_id(),
                     cancellation_message=body.cancellation_email_message,
                 )
 
@@ -217,8 +224,8 @@ async def replace_invoice(
     Only sent, overdue, or paid invoices can be replaced (not drafts or credit notes).
     """
     await _require_invoice_admin(db, current_user, conference_id)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    old_invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    old_invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     # Validation
     if old_invoice.template_type == "credit_note":
@@ -257,7 +264,7 @@ async def replace_invoice(
         old_invoice=old_invoice,
         conference=conference,
         corrected_fields=corrected_fields,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         current_user=current_user,
         replacement_reason=body.reason,
@@ -269,7 +276,7 @@ async def replace_invoice(
     from app.core.invoice_registration_transfer import transfer_registrations_to_invoice
 
     registrations_transferred = await transfer_registrations_to_invoice(
-        db=db, old_invoice=old_invoice, new_invoice=new_invoice, tenant_id=current_user.tenant_id
+        db=db, old_invoice=old_invoice, new_invoice=new_invoice, tenant_id=current_user.require_tenant_id()
     )
 
     # Deactivate old Stripe payment link if credit_card
@@ -284,11 +291,11 @@ async def replace_invoice(
     # Create credit note
     from app.core.invoice_number import generate_cancellation_number
 
-    cancellation_number = await generate_cancellation_number(db, conference_id, current_user.tenant_id)
+    cancellation_number = await generate_cancellation_number(db, conference_id, current_user.require_tenant_id())
     credit_note = create_credit_note_for_invoice(
         invoice=old_invoice,
         credit_note_number=cancellation_number,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
     )
     db.add(credit_note)
@@ -299,7 +306,7 @@ async def replace_invoice(
     db.add_all(
         [
             AuditLog(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 user_id=current_user.user_id,
                 action="invoice.replaced",
                 resource_type="invoice",
@@ -315,7 +322,7 @@ async def replace_invoice(
                 user_agent=request.headers.get("User-Agent"),
             ),
             AuditLog(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 user_id=current_user.user_id,
                 action="invoice.replacement_created",
                 resource_type="invoice",
@@ -329,7 +336,7 @@ async def replace_invoice(
                 user_agent=request.headers.get("User-Agent"),
             ),
             AuditLog(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 user_id=current_user.user_id,
                 action="invoice.credit_note_created",
                 resource_type="invoice",
@@ -401,7 +408,7 @@ async def mark_invoice_paid(
 ) -> InvoiceResponse:
     """Manually mark bank transfer invoice as paid."""
     await _require_invoice_admin(db, current_user, conference_id)
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     # Validation
     if invoice.template_type != "bank_transfer":
@@ -434,7 +441,7 @@ async def mark_invoice_paid(
     # Audit log
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="invoice.marked_paid",
             invoice=invoice,
@@ -465,7 +472,7 @@ async def reopen_invoice(
 ) -> InvoiceResponse:
     """Reopen paid/cancelled/overdue invoice back to 'sent' status."""
     await _require_invoice_admin(db, current_user, conference_id)
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     # Validation
     if invoice.status == "draft":
@@ -496,7 +503,7 @@ async def reopen_invoice(
     # Audit log
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="invoice.reopened",
             invoice=invoice,
@@ -527,8 +534,8 @@ async def convert_to_credit_card(
 ) -> dict:
     """Convert bank transfer invoice to credit card and generate Stripe payment link."""
     await _require_invoice_admin(db, current_user, conference_id)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.require_tenant_id())
 
     # Validation
     if invoice.template_type != "bank_transfer":
@@ -574,7 +581,7 @@ async def convert_to_credit_card(
     # Audit log
     db.add(
         create_invoice_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action="invoice.converted_to_credit_card",
             invoice=invoice,
