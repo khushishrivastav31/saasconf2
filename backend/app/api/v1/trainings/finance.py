@@ -6,6 +6,8 @@ company data, bank accounts, invoice templates, ZUGFeRD, Stripe,
 and payment reminders.
 """
 
+from typing import cast
+
 from fastapi import APIRouter
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
@@ -13,6 +15,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import ValidationError
 from app.core.html_sanitize import sanitize_html
+from app.models.conference import Conference
 from app.models.tenant import Tenant
 
 router = APIRouter(prefix="/finance", tags=["training-finance"])
@@ -402,7 +405,10 @@ async def preview_training_invoice_pdf(
 
     mock_conf = _MockConference(tenant, preview_settings, currency)
     pdf_bytes = await generate_invoice_pdf_from_data(
-        invoice_data=mock_invoice_data, settings=preview_settings, conference=mock_conf, db=db
+        invoice_data=mock_invoice_data,
+        settings=preview_settings,
+        conference=cast(Conference, mock_conf),
+        db=db,
     )
 
     return StreamingResponse(
