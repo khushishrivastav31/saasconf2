@@ -76,6 +76,19 @@ class CurrentUser:
             return True
         return any(r.scope in ("all", scope) for r in self.tenant_roles)
 
+    def require_tenant_id(self) -> UUID:
+        """Return ``tenant_id`` as non-None, raising if the token lacks a tenant claim.
+
+        Use at the start of tenant-scoped endpoints so the returned ``UUID`` can
+        be passed into services whose signatures are ``tenant_id: UUID``
+        without mypy ``arg-type`` noise. Super-admins lacking a tenant claim
+        cannot operate on tenant-scoped resources; they get a clear 403 here
+        rather than a downstream ``NotFoundError``.
+        """
+        if self.tenant_id is None:
+            raise AuthorizationError("Tenant context required")
+        return self.tenant_id
+
 
 async def get_token_from_header(authorization: Annotated[str | None, Header()] = None) -> str:
     """Extract token from Authorization header."""

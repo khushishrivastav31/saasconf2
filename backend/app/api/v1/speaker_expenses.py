@@ -51,8 +51,8 @@ async def list_expense_tiers(
     db: DbSessionDep,
 ) -> list[ExpenseTierResponse]:
     """List expense tiers for a conference."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    return await svc.list_expense_tiers(db, conference_id=conference.id, tenant_id=current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    return await svc.list_expense_tiers(db, conference_id=conference.id, tenant_id=current_user.require_tenant_id())
 
 
 @router.post("/tiers", response_model=ExpenseTierResponse, status_code=201)
@@ -64,8 +64,10 @@ async def create_expense_tier(
 ) -> ExpenseTierResponse:
     """Create an expense tier."""
     await check_conference_admin(conference_id, current_user, db)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    return await svc.create_expense_tier(db, tenant_id=current_user.tenant_id, conference_id=conference.id, data=data)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    return await svc.create_expense_tier(
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference.id, data=data
+    )
 
 
 @router.put("/tiers/{tier_id}", response_model=ExpenseTierResponse)
@@ -80,7 +82,7 @@ async def update_expense_tier(
     await check_conference_admin(conference_id, current_user, db)
     return await svc.update_expense_tier(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         tier_id=tier_id,
         data=data,
@@ -96,7 +98,9 @@ async def delete_expense_tier(
 ) -> None:
     """Delete an expense tier (nullifies any allowances referencing it)."""
     await check_conference_admin(conference_id, current_user, db)
-    await svc.delete_expense_tier(db, tenant_id=current_user.tenant_id, conference_id=conference_id, tier_id=tier_id)
+    await svc.delete_expense_tier(
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference_id, tier_id=tier_id
+    )
 
 
 # ── Expense Categories ──
@@ -109,8 +113,10 @@ async def list_expense_categories(
     db: DbSessionDep,
 ) -> list[ExpenseCategoryResponse]:
     """List expense categories for a conference."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    return await svc.list_expense_categories(db, conference_id=conference.id, tenant_id=current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    return await svc.list_expense_categories(
+        db, conference_id=conference.id, tenant_id=current_user.require_tenant_id()
+    )
 
 
 @router.post("/categories", response_model=ExpenseCategoryResponse, status_code=201)
@@ -122,9 +128,9 @@ async def create_expense_category(
 ) -> ExpenseCategoryResponse:
     """Create an expense category."""
     await check_conference_admin(conference_id, current_user, db)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await svc.create_expense_category(
-        db, tenant_id=current_user.tenant_id, conference_id=conference.id, data=data
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference.id, data=data
     )
 
 
@@ -140,7 +146,7 @@ async def update_expense_category(
     await check_conference_admin(conference_id, current_user, db)
     return await svc.update_expense_category(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         category_id=category_id,
         data=data,
@@ -157,7 +163,7 @@ async def delete_expense_category(
     """Delete an expense category (only if no expenses reference it)."""
     await check_conference_admin(conference_id, current_user, db)
     await svc.delete_expense_category(
-        db, tenant_id=current_user.tenant_id, conference_id=conference_id, category_id=category_id
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference_id, category_id=category_id
     )
 
 
@@ -171,8 +177,10 @@ async def list_allowance_defaults(
     db: DbSessionDep,
 ) -> list[AllowanceDefaultResponse]:
     """List allowance defaults per session type."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    return await svc.list_allowance_defaults(db, conference_id=conference.id, tenant_id=current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    return await svc.list_allowance_defaults(
+        db, conference_id=conference.id, tenant_id=current_user.require_tenant_id()
+    )
 
 
 @router.post("/allowance-defaults", response_model=AllowanceDefaultResponse, status_code=201)
@@ -184,9 +192,9 @@ async def create_allowance_default(
 ) -> AllowanceDefaultResponse:
     """Create an allowance default for a session type."""
     await check_conference_admin(conference_id, current_user, db)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await svc.create_allowance_default(
-        db, tenant_id=current_user.tenant_id, conference_id=conference.id, data=data
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference.id, data=data
     )
 
 
@@ -202,7 +210,7 @@ async def update_allowance_default(
     await check_conference_admin(conference_id, current_user, db)
     return await svc.update_allowance_default(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         default_id=default_id,
         data=data,
@@ -219,7 +227,7 @@ async def delete_allowance_default(
     """Delete an allowance default."""
     await check_conference_admin(conference_id, current_user, db)
     await svc.delete_allowance_default(
-        db, tenant_id=current_user.tenant_id, conference_id=conference_id, default_id=default_id
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference_id, default_id=default_id
     )
 
 
@@ -233,8 +241,10 @@ async def list_speaker_allowances(
     db: DbSessionDep,
 ) -> list[SpeakerAllowanceResponse]:
     """List per-speaker allowances with claimed/approved totals."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    return await svc.list_speaker_allowances(db, conference_id=conference.id, tenant_id=current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    return await svc.list_speaker_allowances(
+        db, conference_id=conference.id, tenant_id=current_user.require_tenant_id()
+    )
 
 
 @router.put("/allowances/{allowance_id}", response_model=SpeakerAllowanceResponse)
@@ -249,7 +259,7 @@ async def update_speaker_allowance(
     await check_conference_admin(conference_id, current_user, db)
     return await svc.update_speaker_allowance(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         allowance_id=allowance_id,
         data=data,
@@ -268,7 +278,7 @@ async def assign_tier_to_allowance(
     await check_conference_admin(conference_id, current_user, db)
     return await svc.assign_tier_to_allowance(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         allowance_id=allowance_id,
         data=data,
@@ -285,7 +295,7 @@ async def assign_tier_to_speaker(
     """Assign an expense tier to a speaker, creating the allowance if needed."""
     await check_conference_admin(conference_id, current_user, db)
     return await svc.assign_tier_to_speaker(
-        db, tenant_id=current_user.tenant_id, conference_id=conference_id, data=data
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference_id, data=data
     )
 
 
@@ -305,10 +315,10 @@ async def list_speaker_expenses(
     page_size: int = Query(100, ge=1, le=500),
 ) -> SpeakerExpenseListResponse:
     """List all speaker expenses for a conference with filters."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await wsvc.list_speaker_expenses(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference.id,
         status=status,
         category_id=category_id,
@@ -328,9 +338,9 @@ async def create_speaker_expense_admin(
 ) -> SpeakerExpenseResponse:
     """Admin creates an expense on behalf of a speaker."""
     await check_conference_admin(conference_id, current_user, db)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await wsvc.create_speaker_expense_admin(
-        db, tenant_id=current_user.tenant_id, conference_id=conference.id, data=data
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference.id, data=data
     )
 
 
@@ -341,8 +351,8 @@ async def get_expense_stats(
     db: DbSessionDep,
 ) -> ExpenseStatsResponse:
     """Get expense summary statistics."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    return await wsvc.get_expense_stats(db, tenant_id=current_user.tenant_id, conference_id=conference.id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
+    return await wsvc.get_expense_stats(db, tenant_id=current_user.require_tenant_id(), conference_id=conference.id)
 
 
 @router.get("/{expense_id}", response_model=SpeakerExpenseResponse)
@@ -353,9 +363,9 @@ async def get_speaker_expense(
     db: DbSessionDep,
 ) -> SpeakerExpenseResponse:
     """Get a single speaker expense."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await wsvc.get_speaker_expense(
-        db, tenant_id=current_user.tenant_id, conference_id=conference_id, expense_id=expense_id
+        db, tenant_id=current_user.require_tenant_id(), conference_id=conference_id, expense_id=expense_id
     )
 
 
@@ -373,7 +383,7 @@ async def approve_expense(
     await check_conference_admin(conference_id, current_user, db)
     return await wsvc.approve_expense(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         expense_id=expense_id,
         user_id=current_user.user_id,
@@ -392,7 +402,7 @@ async def reject_expense(
     await check_conference_admin(conference_id, current_user, db)
     return await wsvc.reject_expense(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         expense_id=expense_id,
         data=data,
@@ -411,7 +421,7 @@ async def mark_expense_paid(
     await check_conference_admin(conference_id, current_user, db)
     return await wsvc.mark_expense_paid(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         expense_id=expense_id,
         data=data,
