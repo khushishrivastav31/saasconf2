@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -217,9 +217,7 @@ async def update_booking_package(
                 raise ValidationError(f"Booking option with ID '{option_id}' not found in this conference")
 
         # Delete existing associations
-        await db.execute(
-            BookingPackageOption.__table__.delete().where(BookingPackageOption.booking_package_id == package_id)
-        )
+        await db.execute(delete(BookingPackageOption).where(BookingPackageOption.booking_package_id == package_id))
 
         # Create new associations
         for option_id in package_data.option_ids:

@@ -185,7 +185,7 @@ async def get_paper_stats(
         base = base.where(CFPPaper.cfp_id == cfp_id)
 
     result = await db.execute(base.group_by(CFPPaper.status))
-    counts = dict(result.all())
+    counts: dict[str, int] = dict(result.all())
 
     total = sum(counts.values())
     return PaperStats(

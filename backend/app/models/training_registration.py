@@ -13,6 +13,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.training_invoice import TrainingInvoice
+    from app.models.training_program import ProgramYearTraining
 
 
 class TrainingRegistration(Base):
@@ -80,6 +81,9 @@ class TrainingRegistration(Base):
     )
     invoice: Mapped["TrainingInvoice | None"] = relationship(
         "TrainingInvoice", back_populates="registration", uselist=False, lazy="joined"
+    )
+    placement: Mapped["ProgramYearTraining | None"] = relationship(
+        "ProgramYearTraining", foreign_keys=[placement_id], lazy="select"
     )
 
     __table_args__ = (

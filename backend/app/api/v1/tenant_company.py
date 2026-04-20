@@ -1,10 +1,11 @@
 """Tenant company management endpoints (tenant admin only)."""
 
 import time
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, UploadFile
-from sqlalchemy import func, select, update
+from sqlalchemy import CursorResult, func, select, update
 
 from app.config import get_settings
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
@@ -136,10 +137,11 @@ async def upload_my_company_logo(
 
     # Get form data
     form = await request.form()
-    file: UploadFile | None = form.get("file")
+    raw_file = form.get("file")
 
-    if not file:
+    if not isinstance(raw_file, UploadFile):
         raise ValidationError("No file provided")
+    file: UploadFile = raw_file
 
     result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
     tenant = result.scalar_one_or_none()
@@ -365,7 +367,7 @@ async def acknowledge_all_email_failures(
     if current_user.is_super_admin or current_user.tenant_id is None:
         raise ValidationError("This endpoint is for tenant admins only")
 
-    result = await db.execute(
+    update_result = await db.execute(
         update(EmailLog)
         .where(
             EmailLog.tenant_id == current_user.tenant_id,
@@ -379,7 +381,7 @@ async def acknowledge_all_email_failures(
     )
     await db.commit()
 
-    return {"acknowledged_count": result.rowcount}
+    return {"acknowledged_count": cast(CursorResult, update_result).rowcount}
 
 
 @router.post("/validate-vat")

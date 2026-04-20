@@ -250,18 +250,18 @@ async def list_sessions_enriched(
     # Build enriched response items
     items: list[EnrichedSessionResponse] = []
     for session in sessions:
-        slot = slots_map.get(session.start_slot_id)
-        day_id = slot_day_map.get(session.start_slot_id) if slot else None
+        session_slot = slots_map.get(session.start_slot_id)
+        day_id = slot_day_map.get(session.start_slot_id) if session_slot else None
         day = days.get(day_id) if day_id else None
         track = tracks.get(session.start_track_id) if session.start_track_id else None
-        paper = paper_map.get(session.paper_id) if session.paper_id else None
-        speaker = speaker_map.get(paper.main_speaker_id) if paper else None
+        session_paper = paper_map.get(session.paper_id) if session.paper_id else None
+        speaker = speaker_map.get(session_paper.main_speaker_id) if session_paper else None
 
         # Calculate end time from slot span
         end_time = None
-        if slot and day_id:
+        if session_slot and day_id:
             sorted_slots = day_sorted_slots.get(day_id, [])
-            start_idx = next((i for i, s in enumerate(sorted_slots) if s.id == slot.id), None)
+            start_idx = next((i for i, s in enumerate(sorted_slots) if s.id == session_slot.id), None)
             if start_idx is not None:
                 end_idx = min(start_idx + session.slot_span - 1, len(sorted_slots) - 1)
                 end_time = sorted_slots[end_idx].end_time
@@ -279,12 +279,12 @@ async def list_sessions_enriched(
                 color=session.color,
                 notes=session.notes,
                 paper_id=session.paper_id,
-                paper_title=paper.title if paper else None,
-                paper_abstract_short=paper.abstract_short if paper else None,
-                paper_level=paper.level if paper else None,
-                paper_learning_objectives=paper.learning_objectives if paper else None,
-                paper_status=paper.status if paper else None,
-                paper_custom_field_answers=paper.custom_field_answers if paper else None,
+                paper_title=session_paper.title if session_paper else None,
+                paper_abstract_short=session_paper.abstract_short if session_paper else None,
+                paper_level=session_paper.level if session_paper else None,
+                paper_learning_objectives=session_paper.learning_objectives if session_paper else None,
+                paper_status=session_paper.status if session_paper else None,
+                paper_custom_field_answers=session_paper.custom_field_answers if session_paper else None,
                 speaker_name=f"{speaker.first_name} {speaker.last_name}".strip() if speaker else None,
                 speaker_email=speaker.email if speaker else None,
                 speaker_company=speaker.company if speaker else None,
@@ -292,7 +292,7 @@ async def list_sessions_enriched(
                 day_id=day_id,
                 day_name=day.name if day else None,
                 day_date=day.date if day else None,
-                start_time=slot.start_time if slot else None,
+                start_time=session_slot.start_time if session_slot else None,
                 end_time=end_time,
                 track_name=track.name if track else None,
             )

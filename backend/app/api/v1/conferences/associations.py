@@ -223,8 +223,8 @@ async def list_conference_cfps(
         assoc_result = await db.execute(
             select(ConferenceCFP.cfp_id, ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id.in_(cfp_ids))
         )
-        for row in assoc_result:
-            conf_ids_map[row.cfp_id].append(row.conference_id)
+        for assoc_row in assoc_result:
+            conf_ids_map[assoc_row.cfp_id].append(assoc_row.conference_id)
 
     # Batch-query submission counts
     sub_counts: dict[UUID, int] = {cid: 0 for cid in cfp_ids}
@@ -232,8 +232,8 @@ async def list_conference_cfps(
         sub_result = await db.execute(
             select(Submission.cfp_id, func.count()).where(Submission.cfp_id.in_(cfp_ids)).group_by(Submission.cfp_id)
         )
-        for row in sub_result:
-            sub_counts[row[0]] = row[1]
+        for sub_row in sub_result:
+            sub_counts[sub_row[0]] = sub_row[1]
 
     items = [_build_cfp_response(c, conf_ids_map.get(c.id, []), sub_counts.get(c.id, 0)) for c in cfps]
     pages = calculate_pages(result.total, page_size)

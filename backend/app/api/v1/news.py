@@ -299,13 +299,13 @@ async def send_article(
         raise NotFoundError("No recipients found matching the criteria")
 
     # Fetch applicant details for email sending
-    result = await db.execute(
+    applicant_result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.id.in_(list(applicant_ids)),
             CFPApplicant.tenant_id == tenant_id,
         )
     )
-    applicants = result.scalars().all()
+    applicants = applicant_result.scalars().all()
 
     user_result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = user_result.scalar_one()

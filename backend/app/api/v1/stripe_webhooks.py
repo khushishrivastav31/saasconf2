@@ -52,14 +52,14 @@ async def stripe_webhook(
         raise HTTPException(status_code=400, detail="Invalid payload") from e
 
     # Extract invoice_id from metadata
-    metadata = {}
+    metadata: dict = {}
     if event_dict.data.object.get("metadata"):
-        metadata = event_dict.data.object.metadata
+        metadata = dict(event_dict.data.object.metadata)
     elif hasattr(event_dict.data.object, "payment_intent"):
         # For charge events, get metadata from payment_intent
         try:
             pi = stripe.PaymentIntent.retrieve(event_dict.data.object.payment_intent)
-            metadata = pi.metadata
+            metadata = dict(pi.metadata)
         except stripe.error.StripeError as exc:
             logger.warning(
                 "Webhook event %s: failed to retrieve PaymentIntent for charge: %s",
@@ -125,7 +125,7 @@ async def stripe_webhook(
 
         # Idempotency: check if this event was already processed
         already_processed = any(
-            e.metadata and e.metadata.get("webhook_event_id") == event.id for e in (invoice.events or [])
+            e.event_metadata and e.event_metadata.get("webhook_event_id") == event.id for e in (invoice.events or [])
         )
         if already_processed:
             logger.info(f"Webhook event {event.id} already processed for invoice {invoice_id}, skipping")

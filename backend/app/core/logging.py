@@ -7,8 +7,30 @@ Outputs human-readable colored logs in development.
 import logging
 import re
 import sys
+from contextvars import ContextVar
 
 from pythonjsonlogger.json import JsonFormatter
+
+# Per-request correlation ID. Populated by CorrelationIDMiddleware from the
+# incoming X-Request-ID / X-Correlation-ID header (or a fresh uuid4) so any
+# log line or security event emitted while handling that request carries the
+# same id — and downstream calls to `log_security_event` pick it up
+# automatically via `get_request_id()`.
+request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
+
+
+def get_request_id() -> str | None:
+    """Return the current request's correlation ID, or None outside a request."""
+    return request_id_ctx.get()
+
+
+class RequestIDFilter(logging.Filter):
+    """Attach the current request_id (if any) to every LogRecord."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = request_id_ctx.get()
+        return True
+
 
 # Patterns that indicate sensitive data in log messages
 _SENSITIVE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
@@ -59,18 +81,20 @@ def setup_logging(*, debug: bool = False, level: str = "INFO") -> None:
 
     if debug:
         # Human-readable format for development
-        formatter = logging.Formatter(
-            fmt="%(asctime)s %(levelname)-8s %(name)s  %(message)s",
+        formatter: logging.Formatter = logging.Formatter(
+            fmt="%(asctime)s %(levelname)-8s %(name)s [req=%(request_id)s]  %(message)s",
             datefmt="%H:%M:%S",
+            defaults={"request_id": "-"},
         )
     else:
         # JSON format for production log aggregation
         formatter = JsonFormatter(
-            fmt="%(asctime)s %(levelname)s %(name)s %(message)s",
+            fmt="%(asctime)s %(levelname)s %(name)s %(request_id)s %(message)s",
             rename_fields={"asctime": "timestamp", "levelname": "level", "name": "logger"},
         )
 
     handler.setFormatter(formatter)
+    handler.addFilter(RequestIDFilter())
     handler.addFilter(SensitiveFieldFilter())
     root.addHandler(handler)
 
@@ -102,7 +126,7 @@ def log_security_event(
         "tenant_id": str(tenant_id) if tenant_id else None,
         "ip_address": ip_address,
         "user_agent": user_agent,
-        "correlation_id": correlation_id,
+        "correlation_id": correlation_id or request_id_ctx.get(),
     }
     if details:
         extra.update(details)

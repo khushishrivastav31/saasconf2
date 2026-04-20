@@ -4,6 +4,7 @@ import time
 from uuid import UUID
 
 from fastapi import APIRouter, Request
+from fastapi.responses import Response
 from sqlalchemy import select
 
 from app.config import get_settings
@@ -33,10 +34,11 @@ async def upload_tenant_logo(
 
     # Get form data
     form = await request.form()
-    file: UploadFile | None = form.get("file")
+    raw_file = form.get("file")
 
-    if not file:
+    if not isinstance(raw_file, UploadFile):
         raise ValidationError("No file provided")
+    file: UploadFile = raw_file
 
     # Verify tenant exists
     result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
@@ -98,10 +100,8 @@ async def upload_tenant_logo(
 async def get_tenant_logo(
     tenant_id: UUID,
     db: DbSessionDep,
-) -> bytes:
+) -> Response:
     """Get the tenant logo image."""
-    from fastapi.responses import Response
-
     from app.db.session import set_rls_context
     from app.models.attachment import Attachment
 

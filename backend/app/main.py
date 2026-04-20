@@ -152,12 +152,35 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 
 
 class CorrelationIDMiddleware(BaseHTTPMiddleware):
-    """Attach a unique correlation ID to every request/response for tracing."""
+    """Attach a unique correlation ID to every request/response for tracing.
+
+    Honours either ``X-Request-ID`` (preferred, common upstream convention) or
+    ``X-Correlation-ID`` (legacy in-house name). Generates a fresh uuid4 if
+    neither is present. The id is stored on ``request.state`` for ad-hoc use,
+    published into the ``request_id_ctx`` ContextVar so every log line emitted
+    during the request carries it, and tagged onto the Sentry scope so errors
+    group with the originating request.
+    """
 
     async def dispatch(self, request: Request, call_next):
-        correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
+        from app.core.logging import request_id_ctx
+
+        correlation_id = (
+            request.headers.get("X-Request-ID") or request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
+        )
         request.state.correlation_id = correlation_id
-        response = await call_next(request)
+        token = request_id_ctx.set(correlation_id)
+
+        if settings.SENTRY_DSN:
+            import sentry_sdk
+
+            sentry_sdk.set_tag("request_id", correlation_id)
+
+        try:
+            response = await call_next(request)
+        finally:
+            request_id_ctx.reset(token)
+        response.headers["X-Request-ID"] = correlation_id
         response.headers["X-Correlation-ID"] = correlation_id
         return response
 

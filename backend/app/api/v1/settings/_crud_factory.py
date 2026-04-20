@@ -9,13 +9,12 @@ common pattern of:
 """
 
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import DeclarativeBase
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -81,7 +80,7 @@ def create_crud_router(
     *,
     prefix: str,
     entity_name: str,
-    model_class: type[DeclarativeBase],
+    model_class: Any,
     create_schema: type[BaseModel],
     update_schema: type[BaseModel],
     response_schema: type[BaseModel],
@@ -211,7 +210,7 @@ def create_crud_router(
             if existing.scalar_one_or_none():
                 raise ValidationError(_unique_error(field_value))
 
-        data_dict = entity_data.model_dump(exclude=_create_exclude)
+        data_dict = cast(BaseModel, entity_data).model_dump(exclude=_create_exclude)
 
         if pre_create_transform:
             data_dict = await pre_create_transform(data_dict, conference, db)
@@ -293,7 +292,7 @@ def create_crud_router(
                 if existing.scalar_one_or_none():
                     raise ValidationError(_unique_error(new_value))
 
-        update_data = entity_data.model_dump(exclude_unset=True, exclude=_update_exclude)
+        update_data = cast(BaseModel, entity_data).model_dump(exclude_unset=True, exclude=_update_exclude)
         for field, value in update_data.items():
             setattr(entity, field, value)
 

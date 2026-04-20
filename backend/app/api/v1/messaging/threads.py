@@ -81,51 +81,72 @@ async def list_threads(
     tenant_id = current_user.tenant_id
     await get_conference_for_tenant(db, conference_id, tenant_id)
 
-    # Base query
-    query = (
-        select(MessageThread)
+    # Correlated scalar subqueries — attach per-thread aggregates to the base select
+    # so we don't need follow-up batch queries for msg_count, last_message_at,
+    # my_last_read_at, or is_flagged.
+    msg_count_sq = (
+        select(func.count(Message.id))
+        .where(Message.thread_id == MessageThread.id)
+        .correlate(MessageThread)
+        .scalar_subquery()
+    )
+    last_message_at_sq = (
+        select(func.max(Message.created_at))
+        .where(Message.thread_id == MessageThread.id)
+        .correlate(MessageThread)
+        .scalar_subquery()
+    )
+    my_last_read_sq = (
+        select(MessageParticipant.last_read_at)
         .where(
-            MessageThread.tenant_id == tenant_id,
-            MessageThread.conference_id == conference_id,
+            MessageParticipant.thread_id == MessageThread.id,
+            MessageParticipant.participant_type == "user",
+            MessageParticipant.participant_id == current_user.user_id,
         )
-        .order_by(MessageThread.updated_at.desc())
+        .correlate(MessageThread)
+        .scalar_subquery()
+    )
+    is_flagged_sq = (
+        select(ThreadFlag.thread_id)
+        .where(
+            ThreadFlag.thread_id == MessageThread.id,
+            ThreadFlag.user_id == current_user.user_id,
+        )
+        .correlate(MessageThread)
+        .exists()
     )
 
-    # Filter by archived status
+    # Collect filters so we can apply them to both the main query and the count.
+    filters = [
+        MessageThread.tenant_id == tenant_id,
+        MessageThread.conference_id == conference_id,
+    ]
+
     if archived:
-        query = query.where(MessageThread.archived_at.isnot(None))
+        filters.append(MessageThread.archived_at.isnot(None))
     else:
-        query = query.where(MessageThread.archived_at.is_(None))
+        filters.append(MessageThread.archived_at.is_(None))
 
     if search:
         if search_body:
-            # Full-text search: match subject OR message body
             matching_thread_ids = select(Message.thread_id).where(unaccent_ilike(Message.body_html, search)).distinct()
-            query = query.where(
-                unaccent_ilike(MessageThread.subject, search) | MessageThread.id.in_(matching_thread_ids)
-            )
+            filters.append(unaccent_ilike(MessageThread.subject, search) | MessageThread.id.in_(matching_thread_ids))
         else:
-            query = query.where(unaccent_ilike(MessageThread.subject, search))
+            filters.append(unaccent_ilike(MessageThread.subject, search))
     if bulk_id:
-        query = query.where(MessageThread.bulk_id == bulk_id)
+        filters.append(MessageThread.bulk_id == bulk_id)
 
-    # Filter: flagged by current user
     if flagged is True:
         flagged_thread_ids = select(ThreadFlag.thread_id).where(ThreadFlag.user_id == current_user.user_id)
-        query = query.where(MessageThread.id.in_(flagged_thread_ids))
+        filters.append(MessageThread.id.in_(flagged_thread_ids))
 
-    # Filter: has attachments
     if has_attachments is True:
-        query = query.where(MessageThread.has_attachments.is_(True))
+        filters.append(MessageThread.has_attachments.is_(True))
 
-    # Filter: unread only
     if unread_only is True:
         unread_thread_ids = (
             select(MessageParticipant.thread_id)
-            .join(
-                Message,
-                Message.thread_id == MessageParticipant.thread_id,
-            )
+            .join(Message, Message.thread_id == MessageParticipant.thread_id)
             .where(
                 MessageParticipant.participant_type == "user",
                 MessageParticipant.participant_id == current_user.user_id,
@@ -133,11 +154,9 @@ async def list_threads(
             )
             .distinct()
         )
-        query = query.where(MessageThread.id.in_(unread_thread_ids))
+        filters.append(MessageThread.id.in_(unread_thread_ids))
 
-    # Filter: participant name
     if participant_name:
-        # Find threads where any applicant participant matches name
         applicant_ids_q = select(CFPApplicant.id).where(
             (unaccent_ilike(CFPApplicant.first_name, participant_name))
             | (unaccent_ilike(CFPApplicant.last_name, participant_name))
@@ -146,57 +165,57 @@ async def list_threads(
             MessageParticipant.participant_type == "applicant",
             MessageParticipant.participant_id.in_(applicant_ids_q),
         )
-        query = query.where(MessageThread.id.in_(matching_thread_ids_by_name))
+        filters.append(MessageThread.id.in_(matching_thread_ids_by_name))
 
-    # Count
-    count_q = select(func.count()).select_from(query.subquery())
+    # Count — no aggregate subqueries in SELECT, so the planner skips them.
+    count_q = select(func.count()).select_from(select(MessageThread.id).where(*filters).subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
-    # Fetch page
-    threads = (await db.execute(query.offset((page - 1) * page_size).limit(page_size))).scalars().all()
+    # Base query — one round-trip returns threads + aggregates.
+    query = (
+        select(
+            MessageThread,
+            msg_count_sq.label("msg_count"),
+            last_message_at_sq.label("last_message_at"),
+            my_last_read_sq.label("my_last_read_at"),
+            is_flagged_sq.label("is_flagged"),
+        )
+        .where(*filters)
+        .order_by(MessageThread.updated_at.desc())
+    )
 
-    if not threads:
+    # Fetch page with per-thread aggregates in one round-trip.
+    rows = (await db.execute(query.offset((page - 1) * page_size).limit(page_size))).all()
+
+    if not rows:
         return ThreadListResponse(items=[], total=total, page=page, page_size=page_size)
 
+    threads = [r[0] for r in rows]
     thread_ids = [t.id for t in threads]
+    msg_counts = {t.id: r.msg_count or 0 for t, r in zip(threads, rows, strict=True)}
+    last_message_at_by_thread = {t.id: r.last_message_at for t, r in zip(threads, rows, strict=True)}
+    my_last_read_by_thread = {t.id: r.my_last_read_at for t, r in zip(threads, rows, strict=True)}
+    flagged_ids = {t.id for t, r in zip(threads, rows, strict=True) if r.is_flagged}
 
-    # Fetch last message per thread
-    last_msg_subq = (
-        select(
-            Message.thread_id,
-            func.max(Message.created_at).label("max_created"),
+    # Fetch last-message body/sender (we still need these columns; aggregates above
+    # only gave us the timestamp).
+    last_msgs: dict[UUID, Message] = {}
+    thread_ids_with_last = [tid for tid, ts in last_message_at_by_thread.items() if ts is not None]
+    if thread_ids_with_last:
+        last_msgs_result = await db.execute(
+            select(Message).where(
+                Message.thread_id.in_(thread_ids_with_last),
+                Message.created_at.in_(
+                    [last_message_at_by_thread[tid] for tid in thread_ids_with_last if last_message_at_by_thread[tid]]
+                ),
+            )
         )
-        .where(Message.thread_id.in_(thread_ids))
-        .group_by(Message.thread_id)
-        .subquery()
-    )
-    last_msgs_result = await db.execute(
-        select(Message).join(
-            last_msg_subq,
-            (Message.thread_id == last_msg_subq.c.thread_id) & (Message.created_at == last_msg_subq.c.max_created),
-        )
-    )
-    last_msgs = {m.thread_id: m for m in last_msgs_result.scalars()}
+        # (thread_id, created_at) pair uniquely identifies the last message.
+        for m in last_msgs_result.scalars():
+            if last_message_at_by_thread.get(m.thread_id) == m.created_at and m.thread_id not in last_msgs:
+                last_msgs[m.thread_id] = m
 
-    # Message counts
-    count_result = await db.execute(
-        select(Message.thread_id, func.count(Message.id))
-        .where(Message.thread_id.in_(thread_ids))
-        .group_by(Message.thread_id)
-    )
-    msg_counts = dict(count_result.all())
-
-    # Current user's participant read status
-    participant_result = await db.execute(
-        select(MessageParticipant).where(
-            MessageParticipant.thread_id.in_(thread_ids),
-            MessageParticipant.participant_type == "user",
-            MessageParticipant.participant_id == current_user.user_id,
-        )
-    )
-    my_participants = {p.thread_id: p for p in participant_result.scalars()}
-
-    # Fetch all participants for these threads (to find "other" participants)
+    # Fetch all participants for these threads (to find "other" participants).
     all_participants_result = await db.execute(
         select(MessageParticipant).where(MessageParticipant.thread_id.in_(thread_ids))
     )
@@ -219,23 +238,13 @@ async def list_threads(
         if info:
             other_participants_map.setdefault(p.thread_id, []).append(info)
 
-    # Fetch flags for current user
-    flag_result = await db.execute(
-        select(ThreadFlag.thread_id).where(
-            ThreadFlag.thread_id.in_(thread_ids),
-            ThreadFlag.user_id == current_user.user_id,
-        )
-    )
-    flagged_ids = set(flag_result.scalars().all())
-
     items = []
     for thread in threads:
         last_msg = last_msgs.get(thread.id)
-        my_p = my_participants.get(thread.id)
+        my_last_read = my_last_read_by_thread.get(thread.id)
         unread = False
-        if last_msg and my_p:
-            if my_p.last_read_at is None or my_p.last_read_at < last_msg.created_at:
-                unread = True
+        if last_msg and (my_last_read is None or my_last_read < last_msg.created_at):
+            unread = True
 
         last_sender = (
             sender_map.get((last_msg.sender_type, last_msg.sender_id))
@@ -466,11 +475,13 @@ async def create_thread(
         if first_message_id is None:
             first_message_id = msg.id
 
+    # `applicants` is non-empty (checked above), so the loop created at least one thread.
+    assert first_thread is not None
+
     # Link pre-uploaded attachments to the first message
     if data.attachment_ids and first_message_id:
         await _link_attachments_to_message(db, data.attachment_ids, first_message_id, tenant_id)
-        if first_thread:
-            first_thread.has_attachments = True
+        first_thread.has_attachments = True
 
     # Audit log
     recipient_names = ", ".join(f"{a.first_name} {a.last_name}" for a in applicants)

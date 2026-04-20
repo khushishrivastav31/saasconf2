@@ -162,11 +162,12 @@ ignore_missing_imports = true
 module = "app.db.migrations.*"
 ignore_errors = true
 
-# API route modules — heavy SQLAlchemy query usage causes many arg-type/attr-defined
-# false positives. Relax checking here; tighten incrementally.
+# API route modules — `arg-type` stays suppressed pending UUID | None narrowing
+# across conference/location dependency helpers and SQLAlchemy `unaccent_ilike`
+# signatures. `attr-defined` has been fully cleared.
 [[tool.mypy.overrides]]
 module = "app.api.v1.*"
-disable_error_code = ["arg-type", "attr-defined", "union-attr", "assignment", "return-value", "var-annotated"]
+disable_error_code = ["arg-type"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

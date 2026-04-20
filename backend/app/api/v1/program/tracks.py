@@ -253,9 +253,9 @@ async def update_track(
 
     # Get location name if not already fetched
     if location_name is None and track.location_id:
-        loc_result = await db.execute(select(Location.name).where(Location.id == track.location_id))
-        row = loc_result.scalar_one_or_none()
-        location_name = row if row else None
+        loc_result = await db.execute(select(Location).where(Location.id == track.location_id))
+        loc = loc_result.scalar_one_or_none()
+        location_name = loc.name if loc else None
 
     return _build_track_response(track, location_name)
 

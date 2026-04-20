@@ -98,7 +98,7 @@ async def list_my_conferences(
     db: DbSessionDep,
 ) -> dict:
     """List conferences the applicant is associated with (via papers)."""
-    from app.models.cfp import ConferenceCFP
+    from app.models.associations import ConferenceCFP
     from app.models.cfp_papers import CFPPaper
     from app.models.conference import Conference
 

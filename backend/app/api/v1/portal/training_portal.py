@@ -407,9 +407,9 @@ async def get_training_filters(
         )
         if label:
             loc_counts[label] = loc_counts.get(label, 0) + cnt
-    locations = sorted(
+    locations: list[dict[str, str | int]] = sorted(
         [{"value": k, "count": v} for k, v in loc_counts.items()],
-        key=lambda x: x["count"],
+        key=lambda x: int(x["count"]) if isinstance(x["count"], int) else 0,
         reverse=True,
     )
 

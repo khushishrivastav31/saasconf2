@@ -227,8 +227,8 @@ async def upload_offer_template_file(
 
     await db.commit()
     await db.refresh(template)
-    attachment = await _get_file(template_id, db)
-    return _to_response(template, attachment)
+    current_attachment = await _get_file(template_id, db)
+    return _to_response(template, current_attachment)
 
 
 @router.get("/{template_id}/download")

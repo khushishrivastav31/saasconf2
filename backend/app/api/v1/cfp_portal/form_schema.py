@@ -52,25 +52,25 @@ async def get_cfp_paper_form_schema(
 ) -> PaperFormSchemaResponse:
     """Get the paper form schema for a CFP (via its conference), including role-based variants."""
     # Get the CFP
-    result = await db.execute(select(CallForPapers).where(CallForPapers.id == cfp_id))
-    cfp = result.scalar_one_or_none()
+    cfp_result = await db.execute(select(CallForPapers).where(CallForPapers.id == cfp_id))
+    cfp = cfp_result.scalar_one_or_none()
     if not cfp:
         raise NotFoundError(f"CFP with ID '{cfp_id}' not found")
 
     # Get the conference ID for this CFP
-    result = await db.execute(select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == cfp_id))
-    row = result.first()
+    conf_result = await db.execute(select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == cfp_id))
+    row = conf_result.first()
     if not row:
         raise NotFoundError(f"Conference not found for CFP '{cfp_id}'")
     conference_id = row[0]
 
     # Get the form schema for this conference
-    result = await db.execute(
+    schema_result = await db.execute(
         select(ConferencePaperFormSchema)
         .options(selectinload(ConferencePaperFormSchema.fields))
         .where(ConferencePaperFormSchema.conference_id == conference_id)
     )
-    schema = result.scalar_one_or_none()
+    schema = schema_result.scalar_one_or_none()
 
     if not schema:
         # Return default schema if none exists

@@ -82,15 +82,15 @@ async def get_tutorials_stats(
     # Merge: key by session_title, sum attendee counts
     tut_counts: dict[str, int] = {}
     tut_option: dict[str, str | None] = {}
-    for row in main_result.all():
-        key = row.session_title or "Unknown"
-        tut_counts[key] = tut_counts.get(key, 0) + int(row.cnt)
+    for main_row in main_result.all():
+        key = main_row.session_title or "Unknown"
+        tut_counts[key] = tut_counts.get(key, 0) + int(main_row.cnt)
         if key not in tut_option:
-            tut_option[key] = row.option_name
+            tut_option[key] = main_row.option_name
 
-    for row in addon_result.all():
-        key = row.session_title or "Unknown"
-        tut_counts[key] = tut_counts.get(key, 0) + int(row.cnt)
+    for addon_row in addon_result.all():
+        key = addon_row.session_title or "Unknown"
+        tut_counts[key] = tut_counts.get(key, 0) + int(addon_row.cnt)
         if key not in tut_option:
             tut_option[key] = None
 

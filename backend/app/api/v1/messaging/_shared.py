@@ -50,13 +50,31 @@ async def _notify_participants(
             ~((MessageParticipant.participant_type == sender_type) & (MessageParticipant.participant_id == sender_id)),
         )
     )
-    other_participants = result.scalars().all()
+    other_participants = list(result.scalars().all())
+    if not other_participants:
+        return
+
+    # Batch-load applicants + users referenced by participants (avoids per-participant SELECT).
+    applicant_ids = [p.participant_id for p in other_participants if p.participant_type == "applicant"]
+    user_ids = [p.participant_id for p in other_participants if p.participant_type == "user"]
+
+    applicants_by_id: dict[UUID, CFPApplicant] = {}
+    if applicant_ids:
+        app_rows = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids)))
+        applicants_by_id = {a.id: a for a in app_rows.scalars()}
+
+    users_by_id: dict[UUID, User] = {}
+    if user_ids:
+        user_rows = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users_by_id = {u.id: u for u in user_rows.scalars()}
+
+    from app.config import get_settings as _get_settings
+
+    _s = _get_settings()
 
     for p in other_participants:
-        # Check notification preference
         if p.participant_type == "applicant":
-            applicant_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == p.participant_id))
-            applicant = applicant_result.scalar_one_or_none()
+            applicant = applicants_by_id.get(p.participant_id)
             if not applicant or not applicant.message_notifications_enabled:
                 continue
             messages_link = f"{base_url}/{tenant_slug}/portal/messages/{thread.id}"
@@ -71,13 +89,9 @@ async def _notify_participants(
                 messages_link=messages_link,
             )
         elif p.participant_type == "user":
-            user_result = await db.execute(select(User).where(User.id == p.participant_id))
-            user = user_result.scalar_one_or_none()
+            user = users_by_id.get(p.participant_id)
             if not user or not user.message_notifications_enabled:
                 continue
-            from app.config import get_settings as _get_settings
-
-            _s = _get_settings()
             messages_link = (
                 f"{_s.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
             )

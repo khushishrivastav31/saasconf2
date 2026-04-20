@@ -172,11 +172,11 @@ async def submit_answers(
 
     # Validate radio answers have valid options
     for answer in data.answers:
-        q = question_map.get(answer.question_id)
-        if not q:
+        question = question_map.get(answer.question_id)
+        if not question:
             raise ValidationError(f"Unknown question: {answer.question_id}")
-        if q["type"] in ("radio", "dropdown") and answer.answer_value not in q.get("options", []):
-            raise ValidationError(f"Invalid option for question '{q['text']}': {answer.answer_value}")
+        if question["type"] in ("radio", "dropdown") and answer.answer_value not in question.get("options", []):
+            raise ValidationError(f"Invalid option for question '{question['text']}': {answer.answer_value}")
 
     # Load existing answers to handle upsert
     existing_result = await db.execute(

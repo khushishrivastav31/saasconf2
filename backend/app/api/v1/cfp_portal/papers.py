@@ -3,12 +3,13 @@
 from uuid import UUID
 
 from fastapi import APIRouter
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
+from app.core.attachment_urls import PORTAL_PREFIX, batch_get_attachment_urls
 from app.core.email import send_cospeaker_invitation_email, send_email_background
 from app.core.exceptions import AuthorizationError, NotFoundError, SubmissionValidationError, ValidationError
 from app.core.utils import utcnow
@@ -59,39 +60,49 @@ async def list_papers(
     db: DbSessionDep,
 ) -> PortalPaperListResponse:
     """List all papers where the applicant is main speaker or accepted co-speaker."""
-    # Papers as main speaker
-    main_result = await db.execute(
+    # Single query: main-speaker OR accepted-cospeaker, dedup via scalars().unique().
+    stmt = (
         select(CFPPaper)
+        .outerjoin(
+            CFPPaperCospeaker,
+            and_(
+                CFPPaperCospeaker.paper_id == CFPPaper.id,
+                CFPPaperCospeaker.applicant_id == current.applicant_id,
+                CFPPaperCospeaker.invitation_status == CospeakerInvitationStatus.ACCEPTED.value,
+            ),
+        )
         .where(
             CFPPaper.tenant_id == current.tenant_id,
-            CFPPaper.main_speaker_id == current.applicant_id,
+            or_(
+                CFPPaper.main_speaker_id == current.applicant_id,
+                CFPPaperCospeaker.applicant_id.isnot(None),
+            ),
+        )
+        .options(
+            selectinload(CFPPaper.cfp),
+            selectinload(CFPPaper.main_speaker),
+            selectinload(CFPPaper.form_variant),
+            selectinload(CFPPaper.cospeaker_associations).selectinload(CFPPaperCospeaker.applicant),
         )
         .order_by(CFPPaper.created_at.desc())
     )
-    main_papers = list(main_result.scalars().all())
+    result = await db.execute(stmt)
+    papers = list(result.scalars().unique().all())
 
-    # Papers as accepted co-speaker
-    cospeaker_result = await db.execute(
-        select(CFPPaper)
-        .join(CFPPaperCospeaker, CFPPaperCospeaker.paper_id == CFPPaper.id)
-        .where(
-            CFPPaper.tenant_id == current.tenant_id,
-            CFPPaperCospeaker.applicant_id == current.applicant_id,
-            CFPPaperCospeaker.invitation_status == CospeakerInvitationStatus.ACCEPTED.value,
+    if not papers:
+        return PortalPaperListResponse(items=[], total=0)
+
+    conf_by_cfp, st_by_id, video_by_paper = await _load_paper_list_context(db, papers, current.tenant_id)
+    items = [
+        _render_portal_paper(
+            paper,
+            current.applicant_id,
+            conference=conf_by_cfp.get(paper.cfp_id),
+            session_type_name=(st_by_id.get(paper.session_type_id) if paper.session_type_id else None),
+            video_url=video_by_paper.get(paper.id),
         )
-        .order_by(CFPPaper.created_at.desc())
-    )
-    cospeaker_papers = list(cospeaker_result.scalars().all())
-
-    # Merge, deduplicate, maintain order
-    seen_ids = set()
-    all_papers = []
-    for p in main_papers + cospeaker_papers:
-        if p.id not in seen_ids:
-            seen_ids.add(p.id)
-            all_papers.append(p)
-
-    items = [await _build_portal_paper_response(db, paper, current.applicant_id) for paper in all_papers]
+        for paper in papers
+    ]
     return PortalPaperListResponse(items=items, total=len(items))
 
 
@@ -145,7 +156,7 @@ async def create_paper(
         await _sync_cospeakers(db, paper, data.cospeaker_emails, current)
 
     await db.commit()
-    await db.refresh(paper)
+    paper = await _get_applicant_or_cospeaker_paper(db, str(paper.id), current.applicant_id, current.tenant_id)
     return await _build_portal_paper_response(db, paper, current.applicant_id)
 
 
@@ -175,7 +186,7 @@ async def update_paper(
         await _sync_cospeakers(db, paper, data.cospeaker_emails, current)
 
     await db.commit()
-    await db.refresh(paper)
+    paper = await _get_applicant_or_cospeaker_paper(db, str(paper.id), current.applicant_id, current.tenant_id)
     return await _build_portal_paper_response(db, paper, current.applicant_id)
 
 
@@ -296,7 +307,7 @@ async def submit_paper(
     paper.status = PaperStatus.SUBMITTED.value
     paper.submitted_at = utcnow()
     await db.commit()
-    await db.refresh(paper)
+    paper = await _get_applicant_or_cospeaker_paper(db, str(paper.id), current.applicant_id, current.tenant_id)
     return await _build_portal_paper_response(db, paper, current.applicant_id)
 
 
@@ -315,7 +326,7 @@ async def unsubmit_paper(
     paper.status = PaperStatus.DRAFT.value
     paper.submitted_at = None
     await db.commit()
-    await db.refresh(paper)
+    paper = await _get_applicant_or_cospeaker_paper(db, str(paper.id), current.applicant_id, current.tenant_id)
     return await _build_portal_paper_response(db, paper, current.applicant_id)
 
 
@@ -458,14 +469,28 @@ async def get_assigned_paper(
 # ──────────────────────────────────────────────
 
 
+_PAPER_RESPONSE_LOAD_OPTIONS = (
+    selectinload(CFPPaper.cfp),
+    selectinload(CFPPaper.main_speaker),
+    selectinload(CFPPaper.form_variant),
+    selectinload(CFPPaper.cospeaker_associations).selectinload(CFPPaperCospeaker.applicant),
+)
+
+
 async def _get_applicant_paper(db: AsyncSession, paper_id: str, applicant_id, tenant_id) -> CFPPaper:
     """Load a paper owned by the current applicant (main speaker only)."""
+    # ``populate_existing`` forces re-load of relationships for any copy already in
+    # the session identity map — important after post-mutation re-fetch so the
+    # response reflects the committed DB state, not cached ORM state.
     result = await db.execute(
-        select(CFPPaper).where(
+        select(CFPPaper)
+        .where(
             CFPPaper.id == paper_id,
             CFPPaper.main_speaker_id == applicant_id,
             CFPPaper.tenant_id == tenant_id,
         )
+        .options(*_PAPER_RESPONSE_LOAD_OPTIONS)
+        .execution_options(populate_existing=True)
     )
     paper = result.scalar_one_or_none()
     if not paper:
@@ -475,122 +500,99 @@ async def _get_applicant_paper(db: AsyncSession, paper_id: str, applicant_id, te
 
 async def _get_applicant_or_cospeaker_paper(db: AsyncSession, paper_id: str, applicant_id, tenant_id) -> CFPPaper:
     """Load a paper where the applicant is main speaker or accepted co-speaker."""
-    # Try as main speaker first
-    result = await db.execute(
-        select(CFPPaper).where(
-            CFPPaper.id == paper_id,
-            CFPPaper.main_speaker_id == applicant_id,
-            CFPPaper.tenant_id == tenant_id,
-        )
-    )
-    paper = result.scalar_one_or_none()
-    if paper:
-        return paper
-
-    # Try as accepted co-speaker
     result = await db.execute(
         select(CFPPaper)
-        .join(CFPPaperCospeaker, CFPPaperCospeaker.paper_id == CFPPaper.id)
+        .outerjoin(
+            CFPPaperCospeaker,
+            and_(
+                CFPPaperCospeaker.paper_id == CFPPaper.id,
+                CFPPaperCospeaker.applicant_id == applicant_id,
+                CFPPaperCospeaker.invitation_status == CospeakerInvitationStatus.ACCEPTED.value,
+            ),
+        )
         .where(
             CFPPaper.id == paper_id,
             CFPPaper.tenant_id == tenant_id,
-            CFPPaperCospeaker.applicant_id == applicant_id,
-            CFPPaperCospeaker.invitation_status == CospeakerInvitationStatus.ACCEPTED.value,
+            or_(
+                CFPPaper.main_speaker_id == applicant_id,
+                CFPPaperCospeaker.applicant_id.isnot(None),
+            ),
         )
+        .options(*_PAPER_RESPONSE_LOAD_OPTIONS)
+        .execution_options(populate_existing=True)
     )
-    paper = result.scalar_one_or_none()
+    paper = result.scalars().unique().one_or_none()
     if not paper:
         raise NotFoundError("Paper not found")
     return paper
 
 
-async def _build_portal_paper_response(
-    db: AsyncSession, paper: CFPPaper, current_applicant_id=None
-) -> PortalPaperResponse:
-    """Build a PortalPaperResponse from a CFPPaper model."""
-    # Load CFP
-    cfp_title = None
-    cfp_result = await db.execute(select(CallForPapers).where(CallForPapers.id == paper.cfp_id))
-    cfp = cfp_result.scalar_one_or_none()
-    if cfp:
-        cfp_title = cfp.title
+async def _load_paper_list_context(db: AsyncSession, papers: list[CFPPaper], tenant_id) -> tuple[dict, dict, dict]:
+    """Batch-load the cross-table context needed to render a list of portal papers.
 
-    # Load conference
-    conference_id = None
-    conference_name = None
-    conf_result = await db.execute(
-        select(Conference)
-        .join(ConferenceCFP, ConferenceCFP.conference_id == Conference.id)
-        .where(ConferenceCFP.cfp_id == paper.cfp_id)
-        .limit(1)
+    Returns ``(conference_by_cfp_id, session_type_name_by_id, video_url_by_paper_id)``.
+    Avoids per-paper conference/session-type/attachment queries in ``list_papers``.
+    """
+    cfp_ids = {p.cfp_id for p in papers}
+    conf_by_cfp: dict = {}
+    if cfp_ids:
+        conf_rows = await db.execute(
+            select(ConferenceCFP.cfp_id, Conference)
+            .join(Conference, Conference.id == ConferenceCFP.conference_id)
+            .where(ConferenceCFP.cfp_id.in_(cfp_ids))
+        )
+        for cfp_id, conf in conf_rows.all():
+            conf_by_cfp.setdefault(cfp_id, conf)  # first conference wins, matches old .limit(1)
+
+    session_type_ids = {p.session_type_id for p in papers if p.session_type_id}
+    st_by_id: dict = {}
+    if session_type_ids:
+        st_rows = await db.execute(select(SessionType).where(SessionType.id.in_(session_type_ids)))
+        st_by_id = {st.id: st.name for st in st_rows.scalars().all()}
+
+    video_by_paper = await batch_get_attachment_urls(
+        db, [p.id for p in papers], "paper_video", tenant_id, PORTAL_PREFIX
     )
-    conf = conf_result.scalar_one_or_none()
-    if conf:
-        conference_id = conf.id
-        conference_name = conf.name
+    return conf_by_cfp, st_by_id, video_by_paper
 
-    # Session type
-    session_type_name = None
-    if paper.session_type_id:
-        st_result = await db.execute(select(SessionType).where(SessionType.id == paper.session_type_id))
-        st = st_result.scalar_one_or_none()
-        if st:
-            session_type_name = st.name
 
-    # Form variant
-    form_variant_name = None
-    if paper.form_variant_id:
-        from app.models.paper_form_variant import PaperFormVariant
+def _render_portal_paper(
+    paper: CFPPaper,
+    current_applicant_id,
+    *,
+    conference: Conference | None,
+    session_type_name: str | None,
+    video_url: str | None,
+) -> PortalPaperResponse:
+    """Build PortalPaperResponse from eager-loaded relationships + pre-fetched context."""
+    cfp = paper.cfp
+    cfp_title = cfp.title if cfp else None
 
-        fv_result = await db.execute(select(PaperFormVariant).where(PaperFormVariant.id == paper.form_variant_id))
-        fv = fv_result.scalar_one_or_none()
-        if fv:
-            form_variant_name = fv.name
+    conference_id = conference.id if conference else None
+    conference_name = conference.name if conference else None
 
-    # Main speaker info
-    is_main_speaker = True
-    main_speaker_first_name = None
-    main_speaker_last_name = None
-    if current_applicant_id and str(paper.main_speaker_id) != str(current_applicant_id):
-        is_main_speaker = False
-    main_speaker_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == paper.main_speaker_id))
-    main_speaker = main_speaker_result.scalar_one_or_none()
-    if main_speaker:
-        main_speaker_first_name = main_speaker.first_name
-        main_speaker_last_name = main_speaker.last_name
+    form_variant_name = paper.form_variant.name if paper.form_variant else None
 
-    # Co-speakers
-    cospeaker_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id))
-    cospeaker_rows = cospeaker_result.scalars().all()
+    is_main_speaker = not (current_applicant_id and str(paper.main_speaker_id) != str(current_applicant_id))
+    main_speaker = paper.main_speaker
+    main_speaker_first_name = main_speaker.first_name if main_speaker else None
+    main_speaker_last_name = main_speaker.last_name if main_speaker else None
 
-    # Batch-load all cospeaker applicants in one query
-    cospeaker_applicant_ids = [row.applicant_id for row in cospeaker_rows if row.applicant_id]
-    applicants_map: dict = {}
-    if cospeaker_applicant_ids:
-        app_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(cospeaker_applicant_ids)))
-        applicants_map = {a.id: a for a in app_result.scalars().all()}
-
-    cospeakers = []
-    for row in cospeaker_rows:
-        applicant = applicants_map.get(row.applicant_id)
-        if applicant:
-            cospeakers.append(
-                PortalCospeakerResponse(
-                    applicant_id=applicant.id,
-                    first_name=applicant.first_name,
-                    last_name=applicant.last_name,
-                    email=applicant.email,
-                    invitation_status=row.invitation_status,
-                    invited_at=row.invited_at,
-                    responded_at=row.responded_at,
-                )
-            )
-
-    # Video
-    video_url = await _get_paper_video_url(db, paper.id, paper.tenant_id)
+    cospeakers = [
+        PortalCospeakerResponse(
+            applicant_id=row.applicant.id,
+            first_name=row.applicant.first_name,
+            last_name=row.applicant.last_name,
+            email=row.applicant.email,
+            invitation_status=row.invitation_status,
+            invited_at=row.invited_at,
+            responded_at=row.responded_at,
+        )
+        for row in paper.cospeaker_associations
+        if row.applicant is not None
+    ]
 
     # Hide accepted/rejected status from portal users until CFP is completed.
-    # They see "final_consideration" until the admin completes the CFP.
     portal_status = paper.status
     if paper.status in (PaperStatus.ACCEPTED.value, PaperStatus.REJECTED.value):
         cfp_status = cfp.status if cfp else None
@@ -621,6 +623,37 @@ async def _build_portal_paper_response(
         submitted_at=paper.submitted_at,
         created_at=paper.created_at,
         updated_at=paper.updated_at,
+    )
+
+
+async def _build_portal_paper_response(
+    db: AsyncSession, paper: CFPPaper, current_applicant_id=None
+) -> PortalPaperResponse:
+    """Single-paper response builder. Expects ``paper`` loaded via ``_PAPER_RESPONSE_LOAD_OPTIONS``
+    (or freshly created + refreshed — relationships auto-load on access in that case)."""
+    # Conference via ConferenceCFP junction — one query.
+    conf_result = await db.execute(
+        select(Conference)
+        .join(ConferenceCFP, ConferenceCFP.conference_id == Conference.id)
+        .where(ConferenceCFP.cfp_id == paper.cfp_id)
+        .limit(1)
+    )
+    conference = conf_result.scalar_one_or_none()
+
+    # Session type name — one query only if set.
+    session_type_name: str | None = None
+    if paper.session_type_id:
+        st_result = await db.execute(select(SessionType.name).where(SessionType.id == paper.session_type_id))
+        session_type_name = st_result.scalar_one_or_none()
+
+    video_url = await _get_paper_video_url(db, paper.id, paper.tenant_id)
+
+    return _render_portal_paper(
+        paper,
+        current_applicant_id,
+        conference=conference,
+        session_type_name=session_type_name,
+        video_url=video_url,
     )
 
 
@@ -776,6 +809,7 @@ async def _build_assigned_paper_response(
 
     # Handle anonymity — respect both the per-assignment flag and the CFP's current setting
     is_anonymous = assignment.is_anonymous or (cfp is not None and cfp.is_anonymous_review)
+    cospeakers: list[PortalCospeakerResponse]
     if is_anonymous:
         main_speaker_first_name = None
         main_speaker_last_name = None

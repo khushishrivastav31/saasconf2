@@ -303,8 +303,8 @@ async def export_registration_question_answers(
             completed_at.isoformat() if completed_at else "",
         ]
         for q in questions:
-            a = answer_map.get(q["id"])
-            row.append(a.answer_value if a else "")
+            ans = answer_map.get(q["id"])
+            row.append(ans.answer_value if ans else "")
         writer.writerow(row)
 
     output.seek(0)

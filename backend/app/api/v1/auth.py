@@ -86,8 +86,8 @@ async def login(
         raise AuthenticationError("Account temporarily locked due to too many failed login attempts. Try again later.")
 
     # Find user by email (hash lookup — plaintext column retained during phase e; dropped in phase f)
-    result = await db.execute(select(User).where(User.email_hash == hash_email(login_data.email)))
-    user = result.scalar_one_or_none()
+    user_result = await db.execute(select(User).where(User.email_hash == hash_email(login_data.email)))
+    user = user_result.scalar_one_or_none()
 
     if not user or not verify_password(login_data.password, user.password_hash):
         # Track failed attempt for lockout
@@ -126,13 +126,13 @@ async def login(
     # Get user's modules if they belong to a tenant
     modules: list[str] = []
     if user.tenant_id:
-        result = await db.execute(
+        tm_result = await db.execute(
             select(TenantModule)
             .where(TenantModule.tenant_id == user.tenant_id)
             .where(TenantModule.is_enabled == True)
             .options(selectinload(TenantModule.module))
         )
-        tenant_modules = result.scalars().all()
+        tenant_modules = tm_result.scalars().all()
         for tm in tenant_modules:
             if tm.module:
                 modules.append(tm.module.code)
@@ -296,17 +296,17 @@ async def refresh_token(
 
     # Verify refresh token exists and is valid
     token_hash = hash_token(refresh_data.refresh_token)
-    result = await db.execute(
+    token_result = await db.execute(
         select(RefreshToken).where(RefreshToken.token_hash == token_hash).where(RefreshToken.revoked_at.is_(None))
     )
-    db_token = result.scalar_one_or_none()
+    db_token = token_result.scalar_one_or_none()
 
     if not db_token or not db_token.is_valid:
         raise AuthenticationError("Invalid or expired refresh token")
 
     # Get user
-    result = await db.execute(select(User).where(User.id == db_token.user_id))
-    user = result.scalar_one_or_none()
+    user_result = await db.execute(select(User).where(User.id == db_token.user_id))
+    user = user_result.scalar_one_or_none()
 
     if not user or not user.is_active:
         raise AuthenticationError("User not found or deactivated")
@@ -324,13 +324,13 @@ async def refresh_token(
     # Get user's modules
     modules: list[str] = []
     if user.tenant_id:
-        result = await db.execute(
+        tm_result = await db.execute(
             select(TenantModule)
             .where(TenantModule.tenant_id == user.tenant_id)
             .where(TenantModule.is_enabled == True)
             .options(selectinload(TenantModule.module))
         )
-        tenant_modules = result.scalars().all()
+        tenant_modules = tm_result.scalars().all()
         for tm in tenant_modules:
             if tm.module:
                 modules.append(tm.module.code)
@@ -429,8 +429,8 @@ async def get_current_user_info(
     """
     Get current user information.
     """
-    result = await db.execute(select(User).where(User.id == current_user.user_id))
-    user = result.scalar_one_or_none()
+    user_result = await db.execute(select(User).where(User.id == current_user.user_id))
+    user = user_result.scalar_one_or_none()
 
     if not user:
         raise AuthenticationError("User not found")
@@ -451,13 +451,13 @@ async def get_current_user_info(
             is_tenant_super_user = user.tenant.super_user_id == user.id
 
         # Load modules from DB so assignments are reflected immediately
-        result = await db.execute(
+        tm_result = await db.execute(
             select(TenantModule)
             .where(TenantModule.tenant_id == user.tenant_id)
             .where(TenantModule.is_enabled == True)
             .options(selectinload(TenantModule.module))
         )
-        tenant_modules = result.scalars().all()
+        tenant_modules = tm_result.scalars().all()
         for tm in tenant_modules:
             if tm.module:
                 modules.append(tm.module.code)

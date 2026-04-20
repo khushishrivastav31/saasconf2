@@ -141,7 +141,7 @@ async def update_certification_body(
         raise NotFoundError(f"Certification body with ID '{body_id}' not found")
 
     update_data = body_data.model_dump(exclude_unset=True)
-    if "contact_persons" in update_data and update_data["contact_persons"] is not None:
+    if "contact_persons" in update_data and body_data.contact_persons is not None:
         update_data["contact_persons"] = [cp.model_dump() for cp in body_data.contact_persons]
 
     for field, value in update_data.items():

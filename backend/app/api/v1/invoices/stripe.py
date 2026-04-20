@@ -187,8 +187,13 @@ async def sync_all_stripe_payments(
 
                 # Capture charge_id if available
                 if payment_intent.latest_charge and not invoice.stripe_charge_id:
-                    invoice.stripe_charge_id = payment_intent.latest_charge
-                    logger.info(f"[SYNC] Captured charge_id: {payment_intent.latest_charge}")
+                    charge_id = (
+                        payment_intent.latest_charge
+                        if isinstance(payment_intent.latest_charge, str)
+                        else payment_intent.latest_charge.id
+                    )
+                    invoice.stripe_charge_id = charge_id
+                    logger.info(f"[SYNC] Captured charge_id: {charge_id}")
 
                 # Log payment succeeded event
                 await log_invoice_event(
@@ -252,7 +257,7 @@ async def sync_all_stripe_payments(
                         stripe_object_type="payment_intent",
                         amount=float(payment_intent.amount) / 100,
                         currency=payment_intent.currency.upper(),
-                        error_message=payment_intent.last_payment_error.get("message")
+                        error_message=payment_intent.last_payment_error.message
                         if payment_intent.last_payment_error
                         else f"Payment {payment_intent.status}",
                         metadata={

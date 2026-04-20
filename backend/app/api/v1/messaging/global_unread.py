@@ -1,5 +1,7 @@
 """Global (cross-conference) unread count endpoint."""
 
+from uuid import UUID
+
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
@@ -65,7 +67,7 @@ async def get_global_unread_count(
     # Resolve conference names
     conf_ids = [row.conference_id for row in rows]
     conf_result = await db.execute(select(Conference.id, Conference.name).where(Conference.id.in_(conf_ids)))
-    conf_names = dict(conf_result.all())
+    conf_names: dict[UUID, str] = dict(conf_result.all())
 
     conferences = []
     total = 0

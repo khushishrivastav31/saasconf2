@@ -21,8 +21,10 @@ from app.core.mfa import (
     hash_recovery_codes,
     verify_totp_code,
 )
+from app.core.security.pii_crypto import read_pii
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
+from app.models.user import User
 from app.models.user_totp import UserTOTP
 from app.schemas.auth import (
     MFARecoveryCodesResponse,
@@ -64,9 +66,13 @@ async def mfa_setup(
     if existing and existing.is_verified:
         raise ValidationError("MFA is already enabled. Disable it first before re-enrolling.")
 
-    # Generate new secret
+    # Generate new secret — look up the user's email (PII: read via accessor)
+    user_row = (await db.execute(select(User).where(User.id == current_user.user_id))).scalar_one_or_none()
+    if not user_row:
+        raise AuthenticationError("User not found")
+    user_email = read_pii(user_row, "email") or ""
     raw_secret = generate_totp_secret()
-    uri = get_provisioning_uri(raw_secret, current_user.email)
+    uri = get_provisioning_uri(raw_secret, user_email)
 
     # Generate QR code as SVG
     img = qrcode.make(uri, image_factory=qrcode.image.svg.SvgPathImage)

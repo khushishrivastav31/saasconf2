@@ -75,19 +75,19 @@ async def resolve_tenant_and_conference(
         HTTPException: If tenant or conference not found
     """
     # Find tenant (case-insensitive slug lookup)
-    result = await db.execute(select(Tenant).where(func.lower(Tenant.slug) == tenant_slug.lower()))
-    tenant = result.scalar_one_or_none()
+    tenant_result = await db.execute(select(Tenant).where(func.lower(Tenant.slug) == tenant_slug.lower()))
+    tenant = tenant_result.scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=404, detail=f"Tenant '{tenant_slug}' not found")
 
     # Find conference (case-insensitive abbreviation lookup)
-    result = await db.execute(
+    conference_result = await db.execute(
         select(Conference).where(
             Conference.tenant_id == tenant.id,
             func.lower(Conference.abbreviation) == conference_slug.lower(),
         )
     )
-    conference = result.scalar_one_or_none()
+    conference = conference_result.scalar_one_or_none()
     if not conference:
         raise HTTPException(
             status_code=404,

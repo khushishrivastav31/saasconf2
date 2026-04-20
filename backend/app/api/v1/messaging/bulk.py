@@ -534,13 +534,13 @@ async def recipient_count(
     # Convert applicants to preview items
     preview_items: list[RecipientPreviewItem] = []
     if applicant_ids:
-        result = await db.execute(
+        applicant_result = await db.execute(
             select(CFPApplicant).where(
                 CFPApplicant.id.in_(list(applicant_ids)),
                 CFPApplicant.tenant_id == tenant_id,
             )
         )
-        for a in result.scalars().all():
+        for a in applicant_result.scalars().all():
             preview_items.append(
                 RecipientPreviewItem(
                     email=a.email,

@@ -303,8 +303,8 @@ async def update_day(
     if day_data.name is not None:
         opt_result = await db.execute(select(BookingOption).where(BookingOption.conference_day_id == day.id))
         linked_opt = opt_result.scalar_one_or_none()
-        if linked_opt and linked_opt.name != day.name:
-            linked_opt.name = day.name
+        if linked_opt and linked_opt.name != day_data.name:
+            linked_opt.name = day_data.name
 
     db.add(
         AuditLog(

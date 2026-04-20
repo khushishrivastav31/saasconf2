@@ -1060,6 +1060,53 @@ async def test_correlation_id_auto_generated(client: AsyncClient) -> None:
     assert len(cid) > 0
 
 
+async def test_request_id_header_honoured(client: AsyncClient) -> None:
+    """The middleware must accept X-Request-ID and echo it on both headers."""
+    custom_id = "req-id-abcdef-42"
+    response = await client.get("/health", headers={"X-Request-ID": custom_id})
+    assert response.status_code == 200
+    assert response.headers.get("X-Request-ID") == custom_id
+    assert response.headers.get("X-Correlation-ID") == custom_id
+
+
+async def test_request_id_prefers_x_request_id_over_correlation(client: AsyncClient) -> None:
+    """If both headers are sent, X-Request-ID wins."""
+    response = await client.get(
+        "/health",
+        headers={"X-Request-ID": "wins", "X-Correlation-ID": "loses"},
+    )
+    assert response.headers.get("X-Request-ID") == "wins"
+    assert response.headers.get("X-Correlation-ID") == "wins"
+
+
+def test_log_security_event_picks_up_context_request_id() -> None:
+    """log_security_event must auto-populate correlation_id from request_id_ctx."""
+    import logging
+
+    from app.core.logging import log_security_event, request_id_ctx
+
+    records: list[logging.LogRecord] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _Capture()
+    sec_logger = logging.getLogger("saasconf.security")
+    sec_logger.addHandler(handler)
+    try:
+        token = request_id_ctx.set("ctx-req-xyz")
+        try:
+            log_security_event("test_event", user_id="u", tenant_id="t")
+        finally:
+            request_id_ctx.reset(token)
+    finally:
+        sec_logger.removeHandler(handler)
+
+    assert records, "security logger produced no records"
+    assert records[-1].__dict__["security"]["correlation_id"] == "ctx-req-xyz"
+
+
 async def test_request_size_limit_enforced(client: AsyncClient) -> None:
     """Requests declaring a body larger than 10 MB must be rejected (413)."""
     response = await client.post(

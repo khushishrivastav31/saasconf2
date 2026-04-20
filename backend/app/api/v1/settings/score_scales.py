@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Request
+from fastapi.routing import APIRoute
 from sqlalchemy import select
 
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip
@@ -87,7 +88,7 @@ _factory_router.routes = [
     route
     for route in _factory_router.routes
     if not (
-        hasattr(route, "methods")
+        isinstance(route, APIRoute)
         and (
             ("POST" in route.methods and route.path == "/score-scales")
             or ("PUT" in route.methods and route.path == "/score-scales/{entity_id}")

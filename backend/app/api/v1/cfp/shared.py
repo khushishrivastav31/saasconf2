@@ -360,7 +360,7 @@ async def _build_paper_responses_batch(
         )
         .group_by(PaperReview.paper_id)
     )
-    must_have_counts = dict(must_have_result.all())
+    must_have_counts: dict[UUID, int] = dict(must_have_result.all())
 
     # --- Build responses ---
     def _build_applicant(applicant: CFPApplicant) -> ApplicantResponse:

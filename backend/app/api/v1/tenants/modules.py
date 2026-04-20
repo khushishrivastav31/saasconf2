@@ -47,15 +47,15 @@ async def get_tenant_modules(
 ) -> list[TenantModuleResponse]:
     """Get modules assigned to a tenant."""
     # Verify tenant exists
-    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
-    tenant = result.scalar_one_or_none()
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
 
     if not tenant:
         raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
 
     # Get assigned modules
-    result = await db.execute(select(TenantModule).where(TenantModule.tenant_id == tenant_id))
-    tenant_modules = result.scalars().all()
+    tm_result = await db.execute(select(TenantModule).where(TenantModule.tenant_id == tenant_id))
+    tenant_modules = tm_result.scalars().all()
 
     items = []
     for tm in tenant_modules:
@@ -98,26 +98,26 @@ async def assign_module_to_tenant(
     from app.models.module import Module
 
     # Verify tenant exists
-    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
-    tenant = result.scalar_one_or_none()
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
 
     if not tenant:
         raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
 
     # Verify module exists
-    result = await db.execute(select(Module).where(Module.id == module_data.module_id))
-    module = result.scalar_one_or_none()
+    module_result = await db.execute(select(Module).where(Module.id == module_data.module_id))
+    module = module_result.scalar_one_or_none()
 
     if not module:
         raise NotFoundError(f"Module with ID '{module_data.module_id}' not found")
 
     # Check if already assigned
-    result = await db.execute(
+    existing_result = await db.execute(
         select(TenantModule)
         .where(TenantModule.tenant_id == tenant_id)
         .where(TenantModule.module_id == module_data.module_id)
     )
-    existing = result.scalar_one_or_none()
+    existing = existing_result.scalar_one_or_none()
 
     if existing:
         raise ValidationError(f"Module '{module.code}' is already assigned to this tenant")
@@ -194,10 +194,10 @@ async def update_tenant_module(
 ) -> TenantModuleResponse:
     """Update a tenant's module assignment (dates, limits, pricing)."""
     # Find the assignment
-    result = await db.execute(
+    tm_result = await db.execute(
         select(TenantModule).where(TenantModule.tenant_id == tenant_id).where(TenantModule.module_id == module_id)
     )
-    tenant_module = result.scalar_one_or_none()
+    tenant_module = tm_result.scalar_one_or_none()
 
     if not tenant_module:
         raise NotFoundError("Module assignment not found")
@@ -260,10 +260,10 @@ async def revoke_module_from_tenant(
 ) -> dict:
     """Revoke a module from a tenant."""
     # Find the assignment
-    result = await db.execute(
+    tm_result = await db.execute(
         select(TenantModule).where(TenantModule.tenant_id == tenant_id).where(TenantModule.module_id == module_id)
     )
-    tenant_module = result.scalar_one_or_none()
+    tenant_module = tm_result.scalar_one_or_none()
 
     if not tenant_module:
         raise NotFoundError("Module assignment not found")
@@ -314,8 +314,8 @@ async def get_module_groups(
     db: DbSessionDep,
 ) -> ModuleGroupStatus:
     """Get the enabled/disabled state of the Conferences and Trainings product groups."""
-    result = await db.execute(select(TenantModule).where(TenantModule.tenant_id == tenant_id))
-    tenant_modules = result.scalars().all()
+    tm_result = await db.execute(select(TenantModule).where(TenantModule.tenant_id == tenant_id))
+    tenant_modules = tm_result.scalars().all()
 
     # Load module codes
     module_ids = [tm.module_id for tm in tenant_modules]
@@ -348,8 +348,8 @@ async def toggle_module_groups(
 ) -> ModuleGroupStatus:
     """Batch enable/disable Conferences and/or Trainings module groups."""
     # Verify tenant
-    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
-    tenant = result.scalar_one_or_none()
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
     if not tenant:
         raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
 
@@ -370,8 +370,8 @@ async def toggle_module_groups(
     # Get module IDs for the codes
     all_codes = codes_to_enable | codes_to_disable
     if all_codes:
-        result = await db.execute(select(Module).where(Module.code.in_(all_codes)))
-        modules_map = {m.code: m.id for m in result.scalars().all()}
+        mod_result = await db.execute(select(Module).where(Module.code.in_(all_codes)))
+        modules_map = {m.code: m.id for m in mod_result.scalars().all()}
 
         enable_ids = [modules_map[c] for c in codes_to_enable if c in modules_map]
         disable_ids = [modules_map[c] for c in codes_to_disable if c in modules_map]

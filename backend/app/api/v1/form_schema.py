@@ -767,23 +767,23 @@ async def reorder_variant_fields(
 
     await get_conference_or_404(db, conference_id, tenant_id)
 
-    result = await db.execute(
+    variant_result = await db.execute(
         select(PaperFormVariant).where(
             PaperFormVariant.id == variant_id,
             PaperFormVariant.tenant_id == tenant_id,
         )
     )
-    if not result.scalar_one_or_none():
+    if not variant_result.scalar_one_or_none():
         raise NotFoundError("Variant not found")
 
     for item in data.fields:
-        result = await db.execute(
+        field_result = await db.execute(
             select(PaperFormVariantField).where(
                 PaperFormVariantField.id == item.id,
                 PaperFormVariantField.variant_id == variant_id,
             )
         )
-        field = result.scalar_one_or_none()
+        field = field_result.scalar_one_or_none()
         if field:
             field.display_order = item.display_order
 

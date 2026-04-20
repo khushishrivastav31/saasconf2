@@ -257,12 +257,12 @@ async def _get_revenue_data(db: AsyncSession, conference_id: UUID, tenant_id: UU
         )
 
     all_counts: dict[tuple[UUID, UUID | None], int] = {}
-    for row in attendee_count_result.all():
-        key = (row.booking_option_id, row.booking_period_id)
-        all_counts[key] = all_counts.get(key, 0) + int(row.attendee_count)
-    for row in items_count_result.all():
-        key = (row.booking_option_id, row.booking_period_id)
-        all_counts[key] = all_counts.get(key, 0) + int(row.attendee_count)
+    for att_row in attendee_count_result.all():
+        key = (att_row.booking_option_id, att_row.booking_period_id)
+        all_counts[key] = all_counts.get(key, 0) + int(att_row.attendee_count)
+    for items_row in items_count_result.all():
+        key = (items_row.booking_option_id, items_row.booking_period_id)
+        all_counts[key] = all_counts.get(key, 0) + int(items_row.attendee_count)
 
     option_totals: dict[UUID, int] = {}
     for (opt_id, _), count in all_counts.items():

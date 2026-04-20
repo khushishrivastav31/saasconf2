@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import selectinload
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
@@ -43,9 +43,7 @@ async def _recalculate_budget_totals(db: DbSessionDep, budget_id: UUID) -> None:
     )
     total_planned, total_actual = result.one()
     await db.execute(
-        Budget.__table__.update()
-        .where(Budget.id == budget_id)
-        .values(total_planned=total_planned, total_actual=total_actual)
+        update(Budget).where(Budget.id == budget_id).values(total_planned=total_planned, total_actual=total_actual)
     )
 
 

@@ -188,10 +188,13 @@ async def create_committee_member(
             raise HTTPException(status_code=409, detail="This user is already a committee member for this conference")
     else:
         # Mode 2: Create new applicant, then link
+        if not member_data.email or not member_data.password:
+            raise HTTPException(status_code=400, detail="email and password are required when applicant_id is not set")
+        normalized_email = member_data.email.strip().lower()
         existing_applicant = await db.execute(
             select(CFPApplicant).where(
                 CFPApplicant.tenant_id == current_user.tenant_id,
-                func.lower(CFPApplicant.email) == member_data.email.strip().lower(),
+                func.lower(CFPApplicant.email) == normalized_email,
             )
         )
         if existing_applicant.scalar_one_or_none():
@@ -204,7 +207,7 @@ async def create_committee_member(
             tenant_id=current_user.tenant_id,
             first_name=member_data.first_name,
             last_name=member_data.last_name,
-            email=member_data.email.strip().lower(),
+            email=normalized_email,
             phone=member_data.phone,
             password_hash=hash_password(member_data.password),
         )

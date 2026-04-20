@@ -4,6 +4,7 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -703,10 +704,8 @@ async def get_tenant_info(
 async def get_tenant_logo_public(
     tenant_id: UUID,
     db: DbSessionDep,
-) -> bytes:
+) -> Response:
     """Serve the tenant logo without authentication (public endpoint)."""
-    from fastapi.responses import Response
-
     from app.core.file_validation import safe_content_disposition
     from app.models.attachment import Attachment
 

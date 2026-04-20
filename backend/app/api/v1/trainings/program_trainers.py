@@ -102,9 +102,9 @@ async def _check_trainer_conflicts(
 async def check_trainer_availability(
     year_id: UUID,
     placement_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
     trainer_id: UUID = Query(...),
-    current_user: TenantAdminDep = ...,
-    db: DbSessionDep = ...,
 ) -> AvailabilityCheckResponse:
     """Check if a trainer is available for a given placement."""
     result = await db.execute(

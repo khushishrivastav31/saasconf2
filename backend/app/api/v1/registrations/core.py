@@ -595,10 +595,10 @@ async def replace_attendee_endpoint(
     await db.refresh(replacement_record)
     if additional_invoice:
         # Re-query invoice with events loaded for build_invoice_response
-        result = await db.execute(
+        invoice_result = await db.execute(
             select(Invoice).where(Invoice.id == additional_invoice.id).options(selectinload(Invoice.events))
         )
-        additional_invoice = result.scalar_one()
+        additional_invoice = invoice_result.scalar_one()
 
     # Build responses
     from app.api.v1.invoices.crud import build_invoice_response
