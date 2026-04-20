@@ -197,7 +197,7 @@ async def get_paper_form_schema(
     db: DbSessionDep,
 ) -> PaperFormSchemaResponse:
     """Get the paper form schema for a conference."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -214,7 +214,7 @@ async def update_paper_form_schema(
     db: DbSessionDep,
 ) -> PaperFormSchemaResponse:
     """Update the paper form schema (builtin fields config)."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -254,7 +254,7 @@ async def create_paper_form_field(
     db: DbSessionDep,
 ) -> PaperFormFieldResponse:
     """Add a custom field to the paper form schema."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -306,7 +306,7 @@ async def reorder_paper_form_fields(
     db: DbSessionDep,
 ) -> dict:
     """Reorder custom fields in the paper form schema."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -338,7 +338,7 @@ async def update_paper_form_field(
     db: DbSessionDep,
 ) -> PaperFormFieldResponse:
     """Update a custom field in the paper form schema."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -402,7 +402,7 @@ async def delete_paper_form_field(
     db: DbSessionDep,
 ) -> dict:
     """Delete a custom field from the paper form schema."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -433,7 +433,7 @@ async def check_has_submissions(
     db: DbSessionDep,
 ) -> HasSubmissionsResponse:
     """Check if any papers have been submitted for CFPs linked to this conference."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -467,7 +467,7 @@ async def list_variants(
     db: DbSessionDep,
 ) -> PaperFormVariantListResponse:
     """List all form variants for a conference."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -500,7 +500,7 @@ async def create_variant(
     db: DbSessionDep,
 ) -> PaperFormVariantResponse:
     """Create a new form variant for a role. Copies the base schema's builtin config and custom fields."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -585,7 +585,7 @@ async def get_variant(
     db: DbSessionDep,
 ) -> PaperFormVariantResponse:
     """Get a single form variant."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -618,7 +618,7 @@ async def update_variant(
     db: DbSessionDep,
 ) -> PaperFormVariantResponse:
     """Update a form variant's metadata and builtin field config."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -668,7 +668,7 @@ async def delete_variant(
     db: DbSessionDep,
 ) -> dict:
     """Delete a form variant and all its fields."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -705,7 +705,7 @@ async def create_variant_field(
     db: DbSessionDep,
 ) -> VariantFieldResponse:
     """Add a custom field to a variant."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -766,7 +766,7 @@ async def reorder_variant_fields(
     db: DbSessionDep,
 ) -> dict:
     """Reorder custom fields in a variant."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -806,7 +806,7 @@ async def update_variant_field(
     db: DbSessionDep,
 ) -> VariantFieldResponse:
     """Update a custom field in a variant."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 
@@ -869,7 +869,7 @@ async def delete_variant_field(
     db: DbSessionDep,
 ) -> dict:
     """Delete a custom field from a variant."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     if current_user.is_super_admin and tenant_id is None:
         raise ValidationError("Super admin must have tenant context")
 

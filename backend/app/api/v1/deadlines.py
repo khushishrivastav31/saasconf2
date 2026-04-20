@@ -40,13 +40,13 @@ async def list_deadlines(
     db: DbSessionDep,
 ) -> DeadlineListResponse:
     """List all deadlines for a conference, ordered by due date."""
-    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     result = await db.execute(
         select(Deadline)
         .where(
             Deadline.conference_id == conference_id,
-            Deadline.tenant_id == current_user.tenant_id,
+            Deadline.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(Deadline.due_date.asc())
     )
@@ -73,10 +73,10 @@ async def create_deadline(
 ) -> DeadlineResponse:
     """Create a new deadline."""
     await check_conference_admin(conference_id, current_user, db)
-    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     deadline = Deadline(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         title=data.title,
         description=data.description,
@@ -85,7 +85,7 @@ async def create_deadline(
     )
 
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.DEADLINE_CREATE,
         resource_type=ResourceType.DEADLINE,
@@ -121,7 +121,7 @@ async def update_deadline(
         Deadline,
         deadline_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Deadline",
     )
 
@@ -143,7 +143,7 @@ async def update_deadline(
             update_data["reminder_due_sent"] = False
 
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.DEADLINE_UPDATE,
         resource_type=ResourceType.DEADLINE,
@@ -178,13 +178,13 @@ async def toggle_deadline(
         Deadline,
         deadline_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Deadline",
     )
 
     new_active = not deadline.is_active
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.DEADLINE_UPDATE,
         resource_type=ResourceType.DEADLINE,
@@ -222,13 +222,13 @@ async def delete_deadline(
         Deadline,
         deadline_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Deadline",
     )
 
     title = deadline.title
     audit = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=AuditAction.DEADLINE_DELETE,
         resource_type=ResourceType.DEADLINE,

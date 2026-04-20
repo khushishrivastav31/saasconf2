@@ -423,7 +423,7 @@ async def get_revenue_tracking(
 ) -> RevenueTrackingResponse:
     """Revenue tracking data aggregated from invoices."""
     await check_conference_admin(conference_id, current_user, db)
-    return await _get_revenue_data(db, conference_id, current_user.tenant_id)
+    return await _get_revenue_data(db, conference_id, current_user.require_tenant_id())
 
 
 # ---------------------------------------------------------------------------
@@ -443,11 +443,11 @@ async def get_financial_report(
 ) -> FinancialReportResponse:
     """P&L summary, variance by budget category, cost per attendee."""
     await check_conference_admin(conference_id, current_user, db)
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
-    revenue_task = _get_revenue_data(db, conference_id, current_user.tenant_id)
-    budget_task = _get_budget_data(db, conference_id, current_user.tenant_id)
-    speaker_expense_task = _get_speaker_expenses_total(db, conference_id, current_user.tenant_id)
+    revenue_task = _get_revenue_data(db, conference_id, current_user.require_tenant_id())
+    budget_task = _get_budget_data(db, conference_id, current_user.require_tenant_id())
+    speaker_expense_task = _get_speaker_expenses_total(db, conference_id, current_user.require_tenant_id())
 
     revenue, (budget_id, budget_name, variance_lines), speaker_expenses = await asyncio.gather(
         revenue_task, budget_task, speaker_expense_task

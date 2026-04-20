@@ -75,7 +75,7 @@ async def list_articles(
     db: DbSessionDep,
 ) -> NewsArticleListResponse:
     """List all news articles for a conference. Admin sees drafts and published."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await svc.resolve_conference(db, conference_id, tenant_id)
 
     # Single query with LEFT JOIN to resolve author names
@@ -114,7 +114,7 @@ async def create_article(
     db: DbSessionDep,
 ) -> NewsArticleResponse:
     """Create a new news article (draft by default)."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await svc.resolve_conference(db, conference_id, tenant_id)
     await svc.require_admin(db, current_user, conference_id)
 
@@ -141,7 +141,7 @@ async def get_article(
     db: DbSessionDep,
 ) -> NewsArticleResponse:
     """Get a single news article."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
 
     article = await svc.get_resource(
         db,
@@ -165,7 +165,7 @@ async def update_article(
     db: DbSessionDep,
 ) -> NewsArticleResponse:
     """Update a news article."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await svc.require_admin(db, current_user, conference_id)
 
     article = await svc.get_resource(
@@ -200,7 +200,7 @@ async def delete_article(
     db: DbSessionDep,
 ) -> dict:
     """Delete a news article."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await svc.require_admin(db, current_user, conference_id)
 
     article = await svc.get_resource(
@@ -227,7 +227,7 @@ async def send_article(
     db: DbSessionDep,
 ) -> NewsArticleSendResponse:
     """Send a published news article as email to selected recipients."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await svc.require_admin(db, current_user, conference_id)
 
     conference = await svc.resolve_conference(db, conference_id, tenant_id)
@@ -322,7 +322,7 @@ async def send_article(
             body_html=article.body_html,
             conference_name=conference_name,
             conference_id=conference_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             sender_name=sender_name,
         )
         if sent:

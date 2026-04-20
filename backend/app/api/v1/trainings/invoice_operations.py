@@ -93,7 +93,7 @@ async def update_draft_invoice(
     result = await db.execute(
         select(TrainingInvoice).where(
             TrainingInvoice.id == invoice_id,
-            TrainingInvoice.tenant_id == current_user.tenant_id,
+            TrainingInvoice.tenant_id == current_user.require_tenant_id(),
         )
     )
     inv = result.scalar_one_or_none()
@@ -131,7 +131,7 @@ async def send_draft_invoice(
     result = await db.execute(
         select(TrainingInvoice).where(
             TrainingInvoice.id == invoice_id,
-            TrainingInvoice.tenant_id == current_user.tenant_id,
+            TrainingInvoice.tenant_id == current_user.require_tenant_id(),
         )
     )
     inv = result.scalar_one_or_none()
@@ -153,7 +153,7 @@ async def send_draft_invoice(
     for field, value in update_fields.items():
         setattr(inv, field, value)
 
-    inv.invoice_number = await generate_training_invoice_number(db, current_user.tenant_id)
+    inv.invoice_number = await generate_training_invoice_number(db, current_user.require_tenant_id())
     inv.status = "sent"
     if not inv.issue_date:
         inv.issue_date = date.today()
@@ -162,7 +162,7 @@ async def send_draft_invoice(
 
     # Create Stripe payment link BEFORE committing — if it fails for CC invoices,
     # the invoice stays draft so the user isn't left with an unpayable sent invoice.
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     payment_link_url: str | None = None
     if inv.template_type == "credit_card" and tenant:
         try:
@@ -201,13 +201,13 @@ async def resend_training_invoice_email_endpoint(
     result = await db.execute(
         select(TrainingInvoice)
         .options(joinedload(TrainingInvoice.registration))
-        .where(TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.tenant_id)
+        .where(TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.require_tenant_id())
     )
     inv = result.scalars().unique().first()
     if not inv:
         raise NotFoundError("Invoice not found")
 
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     if not tenant:
         raise NotFoundError("Tenant not found")
 
@@ -242,7 +242,7 @@ async def cancel_training_invoice(
     """Cancel a training invoice and create a credit note."""
     result = await db.execute(
         select(TrainingInvoice).where(
-            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.tenant_id
+            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.require_tenant_id()
         )
     )
     inv = result.scalar_one_or_none()
@@ -255,7 +255,7 @@ async def cancel_training_invoice(
     if inv.template_type == "credit_note":
         raise HTTPException(status_code=422, detail="Cannot cancel a credit note.")
 
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     if not tenant:
         raise NotFoundError("Tenant not found")
 
@@ -268,8 +268,8 @@ async def cancel_training_invoice(
             logger.warning("Failed to refund Stripe payment for training invoice %s: %s", inv.id, exc)
 
     inv.status = "cancelled"
-    cn_number = await generate_training_invoice_number(db, current_user.tenant_id)
-    credit_note = build_credit_note(inv, current_user.tenant_id, cn_number)
+    cn_number = await generate_training_invoice_number(db, current_user.require_tenant_id())
+    credit_note = build_credit_note(inv, current_user.require_tenant_id(), cn_number)
     db.add(credit_note)
     await db.commit()
     await db.refresh(inv)
@@ -287,7 +287,7 @@ async def mark_training_invoice_paid(
     """Manually mark a bank transfer training invoice as paid."""
     result = await db.execute(
         select(TrainingInvoice).where(
-            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.tenant_id
+            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.require_tenant_id()
         )
     )
     inv = result.scalar_one_or_none()
@@ -313,7 +313,7 @@ async def delete_training_invoice(
     """Delete a draft training invoice."""
     result = await db.execute(
         select(TrainingInvoice).where(
-            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.tenant_id
+            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.require_tenant_id()
         )
     )
     inv = result.scalar_one_or_none()
@@ -339,7 +339,7 @@ async def create_training_invoice(
 
     invoice_number = data.invoice_number
     if data.status == "sent" and not invoice_number:
-        invoice_number = await generate_training_invoice_number(db, current_user.tenant_id)
+        invoice_number = await generate_training_invoice_number(db, current_user.require_tenant_id())
 
     issue_date = date.fromisoformat(data.issue_date) if data.issue_date else None
     due_date = date.fromisoformat(data.due_date) if data.due_date else None
@@ -354,7 +354,7 @@ async def create_training_invoice(
         reg_id = UUID(data.training_registration_id)
 
     inv = TrainingInvoice(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         training_registration_id=reg_id,
         invoice_number=invoice_number,
         template_type=data.template_type,
@@ -386,7 +386,7 @@ async def create_training_invoice(
         tenant: Tenant | None = None
         payment_link_url: str | None = None
         if inv.template_type == "credit_card":
-            tenant = await db.get(Tenant, current_user.tenant_id)
+            tenant = await db.get(Tenant, current_user.require_tenant_id())
             if tenant:
                 try:
                     link_id, payment_link_url = await create_training_payment_link(db, tenant, inv)
@@ -398,7 +398,7 @@ async def create_training_invoice(
                     logger.warning("Failed to create Stripe payment link for training invoice %s: %s", inv.id, exc)
         if inv.recipient_email:
             if tenant is None:
-                tenant = await db.get(Tenant, current_user.tenant_id)
+                tenant = await db.get(Tenant, current_user.require_tenant_id())
             if tenant:
                 await send_training_invoice_email(db, inv, None, tenant, payment_link_url=payment_link_url)
 

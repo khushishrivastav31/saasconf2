@@ -52,7 +52,7 @@ async def replace_training_invoice(
     """
     result = await db.execute(
         select(TrainingInvoice).where(
-            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.tenant_id
+            TrainingInvoice.id == invoice_id, TrainingInvoice.tenant_id == current_user.require_tenant_id()
         )
     )
     inv = result.scalar_one_or_none()
@@ -72,12 +72,12 @@ async def replace_training_invoice(
     inv.status = "cancelled"
 
     # 2. Credit note
-    cn_number = await generate_training_invoice_number(db, current_user.tenant_id)
-    credit_note = build_credit_note(inv, current_user.tenant_id, cn_number, data.reason)
+    cn_number = await generate_training_invoice_number(db, current_user.require_tenant_id())
+    credit_note = build_credit_note(inv, current_user.require_tenant_id(), cn_number, data.reason)
     db.add(credit_note)
 
     # 3. Replacement invoice (same amounts, corrected billing)
-    new_number = await generate_training_invoice_number(db, current_user.tenant_id)
+    new_number = await generate_training_invoice_number(db, current_user.require_tenant_id())
     new_status = "paid" if old_was_paid else "sent"
     new_issue_date = inv.issue_date if old_was_paid else date.today()
     new_due_date = (
@@ -85,7 +85,7 @@ async def replace_training_invoice(
     )
 
     new_inv = TrainingInvoice(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         training_registration_id=inv.training_registration_id,
         offer_id=inv.offer_id,
         invoice_number=new_number,
@@ -123,7 +123,7 @@ async def replace_training_invoice(
     # 4. Deactivate old Stripe payment link (always, even if paid — prevents double charges)
     if inv.template_type == "credit_card" and inv.stripe_payment_link_id:
         try:
-            tenant = await db.get(Tenant, current_user.tenant_id)
+            tenant = await db.get(Tenant, current_user.require_tenant_id())
             if tenant:
                 await deactivate_training_payment_link(inv, tenant)
         except Exception as exc:
@@ -137,7 +137,7 @@ async def replace_training_invoice(
     # 5. New Stripe payment link if needed
     if new_status == "sent" and new_inv.template_type == "credit_card":
         try:
-            tenant_obj = await db.get(Tenant, current_user.tenant_id)
+            tenant_obj = await db.get(Tenant, current_user.require_tenant_id())
             if tenant_obj:
                 link_id, link_url = await create_training_payment_link(db, tenant_obj, new_inv)
                 new_inv.stripe_payment_link_id = link_id
@@ -149,7 +149,7 @@ async def replace_training_invoice(
 
     # 6. Send emails
     try:
-        tenant_obj = await db.get(Tenant, current_user.tenant_id)
+        tenant_obj = await db.get(Tenant, current_user.require_tenant_id())
         if tenant_obj and new_inv.recipient_email:
             await send_training_invoice_email(
                 db, new_inv, None, tenant_obj, payment_link_url=new_inv.stripe_payment_link_url

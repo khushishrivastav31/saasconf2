@@ -33,7 +33,7 @@ router = APIRouter(prefix="/offers", tags=["training-offers"])
 def _tenant_filter(current_user: TenantAdminDep):
     if current_user.is_super_admin:
         return literal(True)
-    return CustomerOffer.tenant_id == current_user.tenant_id
+    return CustomerOffer.tenant_id == current_user.require_tenant_id()
 
 
 def _offer_to_response(
@@ -165,7 +165,7 @@ async def list_available_placements(
             joinedload(ProgramYearTraining.program_year),
         )
         .where(
-            ProgramYearTraining.tenant_id == current_user.tenant_id,
+            ProgramYearTraining.tenant_id == current_user.require_tenant_id(),
             ProgramYearTraining.is_active.is_(True),
         )
     )
@@ -295,7 +295,7 @@ async def create_offer(
     request: Request,
 ) -> CustomerOfferResponse:
     """Create a new customer offer and link placements."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
 
     # Verify customer exists
     cust_result = await db.execute(
@@ -399,7 +399,7 @@ async def update_offer(
         setattr(offer, field, value)
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="customer_offer.update",
         resource_type="customer_offer",
@@ -452,7 +452,7 @@ async def add_placements(
             p.customer_id = offer.customer_id
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="customer_offer.add_placements",
         resource_type="customer_offer",
@@ -491,7 +491,7 @@ async def remove_placement(
         select(OfferPlacement).where(
             OfferPlacement.offer_id == offer_id,
             OfferPlacement.placement_id == placement_id,
-            OfferPlacement.tenant_id == current_user.tenant_id,
+            OfferPlacement.tenant_id == current_user.require_tenant_id(),
         )
     )
     offer_placement = op_result.scalar_one_or_none()
@@ -505,7 +505,7 @@ async def remove_placement(
     placement_result = await db.execute(
         select(ProgramYearTraining).where(
             ProgramYearTraining.id == placement_id,
-            ProgramYearTraining.tenant_id == current_user.tenant_id,
+            ProgramYearTraining.tenant_id == current_user.require_tenant_id(),
         )
     )
     placement = placement_result.scalar_one_or_none()
@@ -521,7 +521,7 @@ async def remove_placement(
         action = "customer_offer.remove_placement"
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action=action,
         resource_type="customer_offer",
@@ -560,7 +560,7 @@ async def delete_offer(
     placements_result = await db.execute(
         select(ProgramYearTraining).where(
             ProgramYearTraining.offer_id == offer_id,
-            ProgramYearTraining.tenant_id == current_user.tenant_id,
+            ProgramYearTraining.tenant_id == current_user.require_tenant_id(),
         )
     )
     for p in placements_result.scalars().all():
@@ -571,7 +571,7 @@ async def delete_offer(
     await db.delete(offer)
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="customer_offer.delete",
         resource_type="customer_offer",

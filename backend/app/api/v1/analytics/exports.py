@@ -52,7 +52,7 @@ async def export_revenue_csv(
 ) -> StreamingResponse:
     """Export revenue by booking option x period as CSV."""
     await check_conference_admin(conference_id, current_user, db)
-    revenue = await _get_revenue_data(db, conference_id, current_user.tenant_id)
+    revenue = await _get_revenue_data(db, conference_id, current_user.require_tenant_id())
 
     headers = [
         "Booking Option",
@@ -111,7 +111,7 @@ async def export_revenue_xlsx(
 ) -> StreamingResponse:
     """Export revenue data as Excel (.xlsx)."""
     await check_conference_admin(conference_id, current_user, db)
-    revenue = await _get_revenue_data(db, conference_id, current_user.tenant_id)
+    revenue = await _get_revenue_data(db, conference_id, current_user.require_tenant_id())
 
     from app.core.analytics_excel import build_revenue_workbook
 
@@ -142,11 +142,11 @@ async def export_financial_report_pdf(
 ) -> StreamingResponse:
     """Export financial report as PDF."""
     await check_conference_admin(conference_id, current_user, db)
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
-    revenue_task = _get_revenue_data(db, conference_id, current_user.tenant_id)
-    budget_task = _get_budget_data(db, conference_id, current_user.tenant_id)
-    speaker_task = _get_speaker_expenses_total(db, conference_id, current_user.tenant_id)
+    revenue_task = _get_revenue_data(db, conference_id, current_user.require_tenant_id())
+    budget_task = _get_budget_data(db, conference_id, current_user.require_tenant_id())
+    speaker_task = _get_speaker_expenses_total(db, conference_id, current_user.require_tenant_id())
 
     revenue, (budget_id, budget_name, variance_lines), speaker_expenses = await asyncio.gather(
         revenue_task, budget_task, speaker_task

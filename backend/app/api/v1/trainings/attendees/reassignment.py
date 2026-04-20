@@ -87,7 +87,7 @@ async def reassign_attendee(
 ) -> dict:
     """Reassign a parked attendee to a new training with invoice transfer."""
 
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
 
     result = await db.execute(
         select(TrainingAttendee)

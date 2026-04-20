@@ -32,7 +32,7 @@ async def backfill_central_attendees(
     db: DbSessionDep,
 ) -> dict:
     """Backfill central TrainingAttendee records from existing registration + offer attendees."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     created = 0
     linked = 0
 
@@ -130,7 +130,7 @@ async def list_attendees(
     the parking lot and the status filter in sync with the portal-account state
     without requiring a data migration for historical rows.
     """
-    query = select(TrainingAttendee).where(TrainingAttendee.tenant_id == current_user.tenant_id)
+    query = select(TrainingAttendee).where(TrainingAttendee.tenant_id == current_user.require_tenant_id())
 
     if status and status != "all":
         if status == "parked":
@@ -252,7 +252,7 @@ async def get_attendee(
         .options(selectinload(TrainingAttendee.history))
         .where(
             TrainingAttendee.id == attendee_id,
-            TrainingAttendee.tenant_id == current_user.tenant_id,
+            TrainingAttendee.tenant_id == current_user.require_tenant_id(),
         )
     )
     att = result.scalars().unique().first()
@@ -261,7 +261,7 @@ async def get_attendee(
 
     db.add(
         BaseService.create_audit_log(
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_user.require_tenant_id(),
             user_id=current_user.user_id,
             action=AuditAction.TRAINING_ATTENDEE_VIEW,
             resource_type="training_attendee",
