@@ -70,7 +70,7 @@ async def get_bookable_sessions(
     db: DbSessionDep,
 ) -> dict:
     """Return separately-bookable sessions grouped by session type for a booking option's day."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await get_conference_for_tenant(db, conference_id, tenant_id)
     return await get_bookable_sessions_for_option(db, conference_id, tenant_id, booking_option_id)
 
@@ -91,7 +91,7 @@ async def list_registrations(
     status: Literal["registered_pending_invoice", "invoiced", "paid", "cancelled"] | None = None,
 ) -> RegistrationListResponse:
     """List registrations for a conference with pagination and filtering."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Count query
@@ -161,7 +161,7 @@ async def get_registration(
     db: DbSessionDep,
 ) -> RegistrationResponse:
     """Get a single registration by ID."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     result = await db.execute(
         select(Registration)
         .where(
@@ -211,7 +211,7 @@ async def create_registration(
     background_tasks: BackgroundTasks,
 ) -> UnifiedRegistrationResponse:
     """Register one or more attendees with shared billing."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await check_conference_admin(conference_id, current_user, db)
 
@@ -354,7 +354,7 @@ async def validate_discount_code_admin(
         validate_and_get_discount_code,
     )
 
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Get active booking period
@@ -413,7 +413,7 @@ async def update_registration(
     db: DbSessionDep,
 ) -> RegistrationResponse:
     """Update a registration (person data, booking option, status)."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
@@ -494,7 +494,7 @@ async def delete_registration(
     db: DbSessionDep,
 ) -> dict:
     """Delete a registration."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
@@ -537,7 +537,7 @@ async def replace_attendee_endpoint(
     from app.core.exceptions import ValidationError
     from app.core.registration_replacement import replace_attendee
 
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await check_conference_admin(conference_id, current_user, db)
 
     # Load conference
@@ -643,7 +643,7 @@ async def validate_vat(
     country: str = Query(..., min_length=2, max_length=2),
 ) -> dict:  # type: ignore[type-arg]
     """Validate a VAT number using stdnum, regex fallback, and VIES API."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await get_conference_for_tenant(db, conference_id, tenant_id)
     return await validate_vat_number(vat_number, country)
 
@@ -664,7 +664,7 @@ async def calculate_vat_admin(
     from app.core.vat_rules import get_vat_rule
     from app.models.vat_rate_by_country import VatRateByCountry
 
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Step 1: Classify customer type (B2B vs B2C)
@@ -791,7 +791,7 @@ async def get_booking_history_by_email(
     """
     from app.models.conference import Conference
 
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await check_conference_admin(conference_id, current_user, db)
 
     # Join invoice by recipient_email_hash rather than plaintext so the query

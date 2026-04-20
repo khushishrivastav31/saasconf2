@@ -150,10 +150,10 @@ async def get_offer_invoice_preview(
     db: DbSessionDep,
 ) -> dict:
     """Get pre-populated data for creating an invoice from an offer."""
-    offer = await _load_offer(db, offer_id, current_user.tenant_id)
+    offer = await _load_offer(db, offer_id, current_user.require_tenant_id())
     customer: Customer = offer.customer
 
-    placements = await _load_placement_details(db, offer_id, current_user.tenant_id)
+    placements = await _load_placement_details(db, offer_id, current_user.require_tenant_id())
 
     # Get primary contact email from customer.contact_persons or customer.email
     contact_email = read_pii(customer, "email")
@@ -164,7 +164,7 @@ async def get_offer_invoice_preview(
                 break
 
     # Default VAT rate from tenant settings (customer's country or tenant's country)
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     finance = ((tenant.settings or {}) if tenant else {}).get("training_finance", {})
     vat_rates: dict = finance.get("vat_rates", {})
     company_info = finance.get("company_info", {})
@@ -188,7 +188,7 @@ async def get_offer_invoice_preview(
     inv_result = await db.execute(
         select(func.coalesce(func.sum(TrainingInvoice.subtotal), 0)).where(
             TrainingInvoice.offer_id == offer_id,
-            TrainingInvoice.tenant_id == current_user.tenant_id,
+            TrainingInvoice.tenant_id == current_user.require_tenant_id(),
             TrainingInvoice.status != "cancelled",
             TrainingInvoice.template_type != "credit_note",
         )
@@ -226,7 +226,7 @@ async def create_offer_invoice(
     db: DbSessionDep,
 ) -> dict:
     """Create a training invoice from an accepted offer."""
-    offer = await _load_offer(db, offer_id, current_user.tenant_id)
+    offer = await _load_offer(db, offer_id, current_user.require_tenant_id())
 
     if offer.status != "accepted":
         raise HTTPException(status_code=422, detail="Only accepted offers can be invoiced.")
@@ -235,7 +235,7 @@ async def create_offer_invoice(
         raise HTTPException(status_code=422, detail="Status must be draft or sent.")
 
     customer: Customer = offer.customer
-    placements = await _load_placement_details(db, offer_id, current_user.tenant_id)
+    placements = await _load_placement_details(db, offer_id, current_user.require_tenant_id())
     placement_map = {p["id"]: p for p in placements}
 
     # Build line items + notes from selected placements
@@ -311,7 +311,7 @@ async def create_offer_invoice(
     # Invoice number
     invoice_number = None
     if data.status == "sent":
-        invoice_number = await generate_training_invoice_number(db, current_user.tenant_id)
+        invoice_number = await generate_training_invoice_number(db, current_user.require_tenant_id())
 
     issue_date = (
         date.fromisoformat(data.issue_date) if data.issue_date else (date.today() if data.status == "sent" else None)
@@ -327,7 +327,7 @@ async def create_offer_invoice(
                 break
 
     inv = TrainingInvoice(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         offer_id=offer.id,
         training_registration_id=None,
         invoice_number=invoice_number,
@@ -359,7 +359,7 @@ async def create_offer_invoice(
 
     # Send email + create Stripe link if sent and credit_card
     if inv.status == "sent":
-        tenant = await db.get(Tenant, current_user.tenant_id)
+        tenant = await db.get(Tenant, current_user.require_tenant_id())
         payment_link_url: str | None = None
 
         if inv.template_type == "credit_card" and tenant:

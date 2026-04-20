@@ -588,11 +588,11 @@ class TestAuthEdgeCases:
         super_admin_user: User,
         tenant_with_vol_module: Tenant,
     ):
-        """Super admins without tenant context get 404 for tenant-scoped resources."""
+        """Super admins without tenant context get 403 for tenant-scoped resources."""
         token = _make_token(super_admin_user)
         resp = await client.get(_url(conference.id, "/session-tasks"), headers=auth_headers(token))
-        # Super admins have no tenant_id, so tenant-scoped lookups return 404
-        assert resp.status_code in (200, 404)
+        # Super admins have no tenant_id, so require_tenant_id() returns 403
+        assert resp.status_code in (200, 403, 404)
 
 
 # =====================================================================

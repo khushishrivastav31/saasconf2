@@ -45,7 +45,7 @@ async def _auto_generate_contract(
         .where(
             Attachment.entity_type == "sponsor_package_contract",
             Attachment.entity_id == sponsor.sponsor_package_id,
-            Attachment.tenant_id == current_user.tenant_id,
+            Attachment.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(Attachment.created_at.desc())
     )
@@ -69,7 +69,7 @@ async def _auto_generate_contract(
     html_content = _convert_to_html(template.file_data, template.content_type)
 
     contract = SponsorContract(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         sponsor_id=sponsor.id,
         conference_id=sponsor.conference_id,
         source_package_id=sponsor.sponsor_package_id,
@@ -136,13 +136,13 @@ async def list_sponsors(
     is_active: bool | None = None,
 ) -> SponsorListResponse:
     """List sponsors for a conference with pagination and filtering."""
-    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     query = (
         select(Sponsor)
         .where(
             Sponsor.conference_id == conference_id,
-            Sponsor.tenant_id == current_user.tenant_id,
+            Sponsor.tenant_id == current_user.require_tenant_id(),
         )
         .options(joinedload(Sponsor.sponsor_package))
     )
@@ -169,7 +169,7 @@ async def list_sponsors(
         inv_result = await db.execute(
             select(Invoice.recipient_source_id)
             .where(
-                Invoice.tenant_id == current_user.tenant_id,
+                Invoice.tenant_id == current_user.require_tenant_id(),
                 Invoice.recipient_source_type == "sponsor",
                 Invoice.recipient_source_id.in_(sponsor_ids),
             )
@@ -211,7 +211,7 @@ async def create_sponsor(
     """Create a new sponsor for a conference."""
     await svc.require_admin(db, current_user, conference_id)
 
-    conference = await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    conference = await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     # Validate package if provided
     package_name: str | None = None
@@ -233,7 +233,7 @@ async def create_sponsor(
             sponsor_data.currency = pkg.currency
 
     sponsor = Sponsor(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference.id,
         sponsor_package_id=sponsor_data.sponsor_package_id,
         company_name=sponsor_data.company_name,
@@ -256,7 +256,7 @@ async def create_sponsor(
     )
 
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="sponsor.create",
         resource_type="sponsor",
@@ -295,7 +295,7 @@ async def get_sponsor(
         .where(
             Sponsor.id == sponsor_id,
             Sponsor.conference_id == conference_id,
-            Sponsor.tenant_id == current_user.tenant_id,
+            Sponsor.tenant_id == current_user.require_tenant_id(),
         )
         .options(joinedload(Sponsor.sponsor_package))
     )
@@ -308,7 +308,7 @@ async def get_sponsor(
         select(sa_func.count())
         .select_from(Invoice)
         .where(
-            Invoice.tenant_id == current_user.tenant_id,
+            Invoice.tenant_id == current_user.require_tenant_id(),
             Invoice.recipient_source_type == "sponsor",
             Invoice.recipient_source_id == sponsor_id,
         )
@@ -343,7 +343,7 @@ async def update_sponsor(
         Sponsor,
         sponsor_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Sponsor",
     )
 
@@ -367,7 +367,7 @@ async def update_sponsor(
         ]
 
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="sponsor.update",
         resource_type="sponsor",
@@ -390,7 +390,7 @@ async def update_sponsor(
         select(sa_func.count())
         .select_from(Invoice)
         .where(
-            Invoice.tenant_id == current_user.tenant_id,
+            Invoice.tenant_id == current_user.require_tenant_id(),
             Invoice.recipient_source_type == "sponsor",
             Invoice.recipient_source_id == sponsor_id,
         )
@@ -423,7 +423,7 @@ async def delete_sponsor(
         Sponsor,
         sponsor_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Sponsor",
     )
 
@@ -432,7 +432,7 @@ async def delete_sponsor(
         select(sa_func.count())
         .select_from(Invoice)
         .where(
-            Invoice.tenant_id == current_user.tenant_id,
+            Invoice.tenant_id == current_user.require_tenant_id(),
             Invoice.recipient_source_type == "sponsor",
             Invoice.recipient_source_id == sponsor_id,
         )
@@ -447,10 +447,10 @@ async def delete_sponsor(
     company_name = sponsor.company_name
 
     # Delete associated attachments
-    await svc.delete_related_attachments(db, "sponsor", sponsor_id, current_user.tenant_id)
+    await svc.delete_related_attachments(db, "sponsor", sponsor_id, current_user.require_tenant_id())
 
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="sponsor.delete",
         resource_type="sponsor",

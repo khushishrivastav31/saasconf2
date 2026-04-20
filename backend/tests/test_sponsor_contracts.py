@@ -1160,11 +1160,11 @@ class TestContractAuth:
         super_admin_user: User,
         sa_token: str,
     ) -> None:
-        """Super admin without tenant context gets 404 for tenant-scoped resources."""
+        """Super admin without tenant context gets 403 for tenant-scoped resources."""
         url = _contract_url(conference.id, sample_sponsor.id)
         response = await client.get(url, headers=auth_headers(sa_token))
-        # Super admins have no tenant_id, so tenant-scoped lookups return 404
-        assert response.status_code in (200, 404)
+        # Super admins have no tenant_id, so require_tenant_id() returns 403
+        assert response.status_code in (200, 403, 404)
 
     @pytest.mark.asyncio
     async def test_all_endpoints_require_auth(

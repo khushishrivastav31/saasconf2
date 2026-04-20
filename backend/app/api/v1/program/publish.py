@@ -323,11 +323,11 @@ async def publish_preview(
     db: DbSessionDep,
 ) -> ProgramPublishPreview:
     """Preview what publishing the program will do (dry run)."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     await check_conference_admin(conference_id, current_user, db)
 
-    session_paper_ids = await _get_session_paper_ids(db, conference_id, current_user.tenant_id)
-    papers = await _get_conference_papers(db, conference_id, current_user.tenant_id)
+    session_paper_ids = await _get_session_paper_ids(db, conference_id, current_user.require_tenant_id())
+    papers = await _get_conference_papers(db, conference_id, current_user.require_tenant_id())
     is_update = conference.program_published_at is not None
 
     # Collect speaker names
@@ -335,7 +335,7 @@ async def publish_preview(
     for paper in papers:
         all_speakers = [paper.main_speaker_id] + [cs.applicant_id for cs in paper.cospeaker_associations]
         speaker_ids.update(all_speakers)
-    speaker_names = await _get_speaker_names(db, speaker_ids, current_user.tenant_id)
+    speaker_names = await _get_speaker_names(db, speaker_ids, current_user.require_tenant_id())
 
     if is_update:
         # Differential preview: only show papers whose status will actually change
@@ -402,7 +402,7 @@ async def publish_program(
     request: Request,
 ) -> ProgramPublishResponse:
     """Publish the program: update paper statuses and send notifications."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await check_conference_admin(conference_id, current_user, db)
 
@@ -492,7 +492,7 @@ async def update_program(
     request: Request,
 ) -> ProgramPublishResponse:
     """Update a previously published program with differential notifications."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await check_conference_admin(conference_id, current_user, db)
 
@@ -587,7 +587,7 @@ async def export_sessions(
     db: DbSessionDep,
 ) -> StreamingResponse:
     """Export all sessions as CSV for program designers."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await check_conference_admin(conference_id, current_user, db)
 

@@ -43,13 +43,13 @@ async def list_screen_overlays(
     page_size: int = Query(50, ge=1, le=100),
 ) -> ScreenOverlayListResponse:
     """List screen overlays for a conference."""
-    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     query = (
         select(ScreenOverlay)
         .where(
             ScreenOverlay.conference_id == conference_id,
-            ScreenOverlay.tenant_id == current_user.tenant_id,
+            ScreenOverlay.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(ScreenOverlay.display_order, ScreenOverlay.created_at.desc())
     )
@@ -76,7 +76,7 @@ async def create_screen_overlay(
 ) -> ScreenOverlayResponse:
     """Create a new screen overlay for a conference."""
     await svc.require_admin(db, current_user, conference_id)
-    conference = await svc.resolve_conference(db, conference_id, current_user.tenant_id)
+    conference = await svc.resolve_conference(db, conference_id, current_user.require_tenant_id())
 
     # Validate: scheduled type requires schedule_date
     if overlay_data.trigger_type == "scheduled" and overlay_data.schedule_date is None:
@@ -88,7 +88,7 @@ async def create_screen_overlay(
         )
 
     overlay = ScreenOverlay(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference.id,
         trigger_type=overlay_data.trigger_type,
         title=overlay_data.title,
@@ -101,7 +101,7 @@ async def create_screen_overlay(
     )
 
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="screen_overlay.create",
         resource_type="screen_overlay",
@@ -135,7 +135,7 @@ async def get_screen_overlay(
         select(ScreenOverlay).where(
             ScreenOverlay.id == overlay_id,
             ScreenOverlay.conference_id == conference_id,
-            ScreenOverlay.tenant_id == current_user.tenant_id,
+            ScreenOverlay.tenant_id == current_user.require_tenant_id(),
         )
     )
     overlay = result.scalar_one_or_none()
@@ -166,7 +166,7 @@ async def update_screen_overlay(
         ScreenOverlay,
         overlay_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Screen overlay",
     )
 
@@ -184,7 +184,7 @@ async def update_screen_overlay(
         )
 
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="screen_overlay.update",
         resource_type="screen_overlay",
@@ -218,7 +218,7 @@ async def delete_screen_overlay(
         ScreenOverlay,
         overlay_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Screen overlay",
     )
 
@@ -227,7 +227,7 @@ async def delete_screen_overlay(
     # Clean up image attachment if any
     img_result = await db.execute(
         select(Attachment).where(
-            Attachment.tenant_id == current_user.tenant_id,
+            Attachment.tenant_id == current_user.require_tenant_id(),
             Attachment.entity_type == "screen_overlay_image",
             Attachment.entity_id == overlay_id,
         )
@@ -237,7 +237,7 @@ async def delete_screen_overlay(
         await db.delete(old_img)
 
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="screen_overlay.delete",
         resource_type="screen_overlay",
@@ -278,7 +278,7 @@ async def upload_overlay_image(
         ScreenOverlay,
         overlay_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Screen overlay",
     )
 
@@ -302,7 +302,7 @@ async def upload_overlay_image(
     # Delete existing image attachment if any
     existing = await db.execute(
         select(Attachment).where(
-            Attachment.tenant_id == current_user.tenant_id,
+            Attachment.tenant_id == current_user.require_tenant_id(),
             Attachment.entity_type == "screen_overlay_image",
             Attachment.entity_id == overlay_id,
         )
@@ -313,7 +313,7 @@ async def upload_overlay_image(
 
     # Create new attachment
     attachment = Attachment(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         entity_type="screen_overlay_image",
         entity_id=overlay_id,
         filename=safe_filename,
@@ -331,7 +331,7 @@ async def upload_overlay_image(
 
     # Audit log
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="screen_overlay.image_upload",
         resource_type="screen_overlay",
@@ -407,14 +407,14 @@ async def delete_overlay_image(
         ScreenOverlay,
         overlay_id,
         conference_id=conference_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         label="Screen overlay",
     )
 
     # Find and delete attachment
     result = await db.execute(
         select(Attachment).where(
-            Attachment.tenant_id == current_user.tenant_id,
+            Attachment.tenant_id == current_user.require_tenant_id(),
             Attachment.entity_type == "screen_overlay_image",
             Attachment.entity_id == overlay_id,
         )
@@ -429,7 +429,7 @@ async def delete_overlay_image(
 
     # Audit log
     audit_log = svc.create_audit_log(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="screen_overlay.image_delete",
         resource_type="screen_overlay",

@@ -257,13 +257,13 @@ async def publish_program_year(
         raise ValidationError("Program already published. Use preview-changes and confirm-update instead.")
 
     # Load placements and build snapshot
-    placements = await _load_placements_with_relations(db, year_id, current_user.tenant_id)
+    placements = await _load_placements_with_relations(db, year_id, current_user.require_tenant_id())
     snapshot_data = build_snapshot(placements)
 
     # Create snapshot v1
     new_version = 1
     snapshot = ProgramSnapshot(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         program_year_id=year_id,
         version=new_version,
         snapshot_data=snapshot_data,
@@ -277,7 +277,7 @@ async def publish_program_year(
     program_year.published_at = datetime.datetime.now(tz=datetime.UTC)
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="training_program_year.publish",
         resource_type="training_program_year",
@@ -296,10 +296,10 @@ async def publish_program_year(
         all_trainer_ids.update(entry.get("trainer_ids", []))
 
     if all_trainer_ids:
-        holiday_dates = await _collect_holiday_date_strings(db, program_year.year, current_user.tenant_id)
+        holiday_dates = await _collect_holiday_date_strings(db, program_year.year, current_user.require_tenant_id())
         task = asyncio.create_task(
             _send_trainer_emails(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 year=program_year.year,
                 snapshot_data=snapshot_data,
                 trainer_ids=all_trainer_ids,
@@ -333,7 +333,7 @@ async def unpublish_program_year(
     program_year.status = "draft"
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="training_program_year.unpublish",
         resource_type="training_program_year",
@@ -373,7 +373,7 @@ async def preview_program_changes(
     snap_result = await db.execute(
         select(ProgramSnapshot).where(
             ProgramSnapshot.program_year_id == year_id,
-            ProgramSnapshot.tenant_id == current_user.tenant_id,
+            ProgramSnapshot.tenant_id == current_user.require_tenant_id(),
             ProgramSnapshot.version == program_year.published_version,
         )
     )
@@ -382,7 +382,7 @@ async def preview_program_changes(
         raise NotFoundError("Last published snapshot not found")
 
     # Build current snapshot
-    placements = await _load_placements_with_relations(db, year_id, current_user.tenant_id)
+    placements = await _load_placements_with_relations(db, year_id, current_user.require_tenant_id())
     current_data = build_snapshot(placements)
 
     diff = compute_diff(last_snapshot.snapshot_data, current_data)
@@ -414,14 +414,14 @@ async def confirm_program_update(
     snap_result = await db.execute(
         select(ProgramSnapshot).where(
             ProgramSnapshot.program_year_id == year_id,
-            ProgramSnapshot.tenant_id == current_user.tenant_id,
+            ProgramSnapshot.tenant_id == current_user.require_tenant_id(),
             ProgramSnapshot.version == program_year.published_version,
         )
     )
     last_snapshot = snap_result.scalar_one_or_none()
 
     # Build current snapshot
-    placements = await _load_placements_with_relations(db, year_id, current_user.tenant_id)
+    placements = await _load_placements_with_relations(db, year_id, current_user.require_tenant_id())
     current_data = build_snapshot(placements)
 
     # Compute diff
@@ -431,7 +431,7 @@ async def confirm_program_update(
     # Create new snapshot
     new_version = program_year.published_version + 1
     snapshot = ProgramSnapshot(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         program_year_id=year_id,
         version=new_version,
         snapshot_data=current_data,
@@ -445,7 +445,7 @@ async def confirm_program_update(
     program_year.published_at = datetime.datetime.now(tz=datetime.UTC)
 
     audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         action="training_program_year.update_publish",
         resource_type="training_program_year",
@@ -464,10 +464,10 @@ async def confirm_program_update(
 
     # Send emails only to affected trainers
     if diff.affected_trainer_ids:
-        holiday_dates = await _collect_holiday_date_strings(db, program_year.year, current_user.tenant_id)
+        holiday_dates = await _collect_holiday_date_strings(db, program_year.year, current_user.require_tenant_id())
         task = asyncio.create_task(
             _send_trainer_emails(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 year=program_year.year,
                 snapshot_data=current_data,
                 trainer_ids=diff.affected_trainer_ids,
@@ -493,7 +493,7 @@ async def list_snapshots(
         select(ProgramSnapshot)
         .where(
             ProgramSnapshot.program_year_id == year_id,
-            ProgramSnapshot.tenant_id == current_user.tenant_id,
+            ProgramSnapshot.tenant_id == current_user.require_tenant_id(),
         )
         .order_by(ProgramSnapshot.version.desc())
     )
@@ -513,7 +513,7 @@ async def get_snapshot(
         select(ProgramSnapshot).where(
             ProgramSnapshot.program_year_id == year_id,
             ProgramSnapshot.version == version,
-            ProgramSnapshot.tenant_id == current_user.tenant_id,
+            ProgramSnapshot.tenant_id == current_user.require_tenant_id(),
         )
     )
     snapshot = result.scalar_one_or_none()

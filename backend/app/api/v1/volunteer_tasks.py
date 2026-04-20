@@ -62,7 +62,7 @@ async def list_session_tasks(
     db: DbSessionDep,
 ) -> SessionTasksListResponse:
     """List all session-task assignments for a conference, grouped by session."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await volunteer_service.list_session_tasks(db, conference_id)
 
 
@@ -79,11 +79,11 @@ async def create_session_task(
     request: Request,
 ) -> SessionVolunteerTaskResponse:
     """Assign a volunteer task to a program session."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     await check_conference_admin(conference_id, current_user, db)
     return await volunteer_service.create_session_task(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         conference_id=conference_id,
         data=data,
@@ -106,11 +106,11 @@ async def update_session_task(
     request: Request,
 ) -> SessionVolunteerTaskResponse:
     """Update the required volunteer count for a session-task."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     await check_conference_admin(conference_id, current_user, db)
     return await volunteer_service.update_session_task(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         conference_id=conference_id,
         svt_id=svt_id,
@@ -132,11 +132,11 @@ async def delete_session_task(
     request: Request,
 ) -> dict:
     """Remove a task from a session (cascades volunteer assignments)."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     await check_conference_admin(conference_id, current_user, db)
     return await volunteer_service.delete_session_task(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         conference_id=conference_id,
         svt_id=svt_id,
@@ -161,7 +161,7 @@ async def list_volunteer_assignments(
     db: DbSessionDep,
 ) -> TaskAssignmentOverviewList:
     """Get task overview with sessions and assigned volunteers."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await volunteer_schedule_service.list_volunteer_assignments(db, conference_id)
 
 
@@ -178,11 +178,11 @@ async def create_volunteer_assignment(
     request: Request,
 ) -> VolunteerAssignmentResponse:
     """Assign a volunteer to a session-task."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     await check_conference_admin(conference_id, current_user, db)
     return await volunteer_service.create_volunteer_assignment(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         conference_id=conference_id,
         data=data,
@@ -203,11 +203,11 @@ async def delete_volunteer_assignment(
     request: Request,
 ) -> dict:
     """Remove a volunteer from a session-task."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     await check_conference_admin(conference_id, current_user, db)
     return await volunteer_service.delete_volunteer_assignment(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         user_id=current_user.user_id,
         conference_id=conference_id,
         assignment_id=assignment_id,
@@ -233,10 +233,10 @@ async def update_volunteer_color(
     db: DbSessionDep,
 ) -> dict:
     """Set a volunteer's color for this conference."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await volunteer_service.update_volunteer_color(
         db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         applicant_id=applicant_id,
         data=data,
@@ -259,7 +259,7 @@ async def list_volunteer_schedules(
     db: DbSessionDep,
 ) -> VolunteerScheduleListResponse:
     """Get schedules for all volunteers in a conference."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await volunteer_schedule_service.list_all_schedules(db, conference_id)
 
 
@@ -274,7 +274,7 @@ async def list_unassigned_sessions(
     db: DbSessionDep,
 ) -> UnassignedSessionsListResponse:
     """List session-tasks that still need more volunteers."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await volunteer_schedule_service.list_unassigned_sessions(db, conference_id)
 
 
@@ -290,9 +290,9 @@ async def get_volunteer_schedule(
     db: DbSessionDep,
 ) -> VolunteerScheduleResponse:
     """Get a single volunteer's schedule."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
     return await volunteer_schedule_service.get_schedule_or_empty(
-        db, conference_id, applicant_id, current_user.tenant_id
+        db, conference_id, applicant_id, current_user.require_tenant_id()
     )
 
 
@@ -312,7 +312,7 @@ async def download_volunteer_schedule_pdf(
     db: DbSessionDep,
 ) -> StreamingResponse:
     """Download a single volunteer's schedule as PDF."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     schedules = await volunteer_schedule_service.build_schedules(db, conference_id, applicant_id)
     if schedules:
@@ -325,7 +325,7 @@ async def download_volunteer_schedule_pdf(
         )
         filename = f"schedule_{schedule.volunteer_name.replace(' ', '_')}.pdf"
     else:
-        vol_name = await volunteer_service.resolve_applicant_name(db, applicant_id, current_user.tenant_id)
+        vol_name = await volunteer_service.resolve_applicant_name(db, applicant_id, current_user.require_tenant_id())
         pdf_bytes = generate_schedule_pdf(vol_name, None, [], conference.name)
         filename = f"schedule_{vol_name.replace(' ', '_')}.pdf"
 
@@ -346,7 +346,7 @@ async def download_all_schedules_pdf(
     db: DbSessionDep,
 ) -> StreamingResponse:
     """Download all volunteer schedules as a ZIP of PDFs."""
-    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.require_tenant_id())
 
     schedules = await volunteer_schedule_service.build_schedules(db, conference_id)
 
