@@ -2,6 +2,7 @@
 
 import logging
 from decimal import Decimal
+from typing import Any, cast
 from uuid import UUID
 
 import stripe
@@ -60,7 +61,7 @@ async def stripe_webhook(
         # For charge events, get metadata from payment_intent
         try:
             pi = stripe.PaymentIntent.retrieve(event_dict.data.object.payment_intent)
-            metadata = dict(pi.metadata)
+            metadata = dict(cast(dict[str, Any], pi.metadata))
         except stripe.error.StripeError as exc:
             logger.warning(
                 "Webhook event %s: failed to retrieve PaymentIntent for charge: %s",
