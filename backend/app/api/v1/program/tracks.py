@@ -62,7 +62,7 @@ async def list_tracks(
         location_map = {row.id: row.name for row in loc_result.all()}
 
     return ProgramTrackListResponse(
-        items=[_build_track_response(t, location_map.get(t.location_id)) for t in tracks],
+        items=[_build_track_response(t, location_map.get(t.location_id) if t.location_id else None) for t in tracks],
         total=len(tracks),
     )
 

@@ -94,9 +94,9 @@ async def toggle_portal_access(
     Writes a ``portal_activated`` or ``portal_deactivated`` history event on
     every linked attendee for audit purposes.
     """
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
 
-    if user.is_active and await _has_active_training_assignment(db, user.id, current_user.tenant_id):
+    if user.is_active and await _has_active_training_assignment(db, user.id, current_user.require_tenant_id()):
         raise ConflictError("Cannot deactivate: user is assigned to an active training")
 
     deactivating = user.is_active
@@ -105,7 +105,7 @@ async def toggle_portal_access(
     att_result = await db.execute(
         select(TrainingAttendee).where(
             TrainingAttendee.portal_user_id == user.id,
-            TrainingAttendee.tenant_id == current_user.tenant_id,
+            TrainingAttendee.tenant_id == current_user.require_tenant_id(),
         )
     )
     event_type = "portal_deactivated" if deactivating else "portal_activated"
@@ -116,7 +116,7 @@ async def toggle_portal_access(
     for att in att_result.scalars().all():
         db.add(
             TrainingAttendeeHistory(
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.require_tenant_id(),
                 attendee_id=att.id,
                 event_type=event_type,
                 notes=notes,
@@ -149,8 +149,8 @@ async def resend_portal_invite(
     from app.core.email import send_email
     from app.models.tenant import Tenant
 
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     if not tenant:
         raise NotFoundError("Tenant not found")
 
@@ -200,8 +200,8 @@ async def admin_reset_portal_password(
     from app.core.email import send_email
     from app.models.tenant import Tenant
 
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
-    tenant = await db.get(Tenant, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
+    tenant = await db.get(Tenant, current_user.require_tenant_id())
     if not tenant:
         raise NotFoundError("Tenant not found")
 
@@ -254,7 +254,7 @@ async def impersonate_portal_user(
     """
     from app.core.portal_security import create_portal_access_token
 
-    user = await get_portal_user(db, user_id, current_user.tenant_id)
+    user = await get_portal_user(db, user_id, current_user.require_tenant_id())
 
     if not user.is_active:
         raise HTTPException(status_code=422, detail="Cannot impersonate a deactivated user")
@@ -290,7 +290,7 @@ async def merge_portal_users(
     """
     from app.models.cfp_applicants import CFPApplicant
 
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     source_user_id = UUID(data.source_user_id)
 
     if target_user_id == source_user_id:

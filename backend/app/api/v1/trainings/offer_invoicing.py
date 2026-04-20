@@ -100,7 +100,8 @@ async def _load_placement_details(db: DbSessionDep, offer_id: UUID, tenant_id: U
     )
     attendees_by_placement: dict[UUID, list[OfferAttendee]] = {}
     for att in att_result.scalars().all():
-        attendees_by_placement.setdefault(att.placement_id, []).append(att)
+        if att.placement_id is not None:
+            attendees_by_placement.setdefault(att.placement_id, []).append(att)
 
     result = []
     for p in placements:

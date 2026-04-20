@@ -122,7 +122,10 @@ async def get_full_grid(
             ProgramGridResponse(
                 day=_build_day_response(day),
                 slots=[_build_slot_response(s) for s in day.time_slots],
-                tracks=[_build_track_response(t, location_map.get(t.location_id)) for t in day_tracks],
+                tracks=[
+                    _build_track_response(t, location_map.get(t.location_id) if t.location_id else None)
+                    for t in day_tracks
+                ],
                 sessions=[
                     _build_session_response(
                         s,
@@ -217,7 +220,7 @@ async def get_day_grid(
     return ProgramGridResponse(
         day=_build_day_response(day),
         slots=[_build_slot_response(s) for s in day.time_slots],
-        tracks=[_build_track_response(t, location_map.get(t.location_id)) for t in tracks],
+        tracks=[_build_track_response(t, location_map.get(t.location_id) if t.location_id else None) for t in tracks],
         sessions=[
             _build_session_response(
                 s,

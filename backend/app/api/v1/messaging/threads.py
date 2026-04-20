@@ -78,7 +78,7 @@ async def list_threads(
     participant_name: str | None = None,
 ) -> ThreadListResponse:
     """List message threads for this conference."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Correlated scalar subqueries — attach per-thread aggregates to the base select
@@ -285,7 +285,7 @@ async def get_thread(
     db: DbSessionDep,
 ) -> ThreadDetailResponse:
     """Get thread with all messages."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await get_conference_for_tenant(db, conference_id, tenant_id)
 
     result = await db.execute(
@@ -374,7 +374,7 @@ async def create_thread(
     request: Request,
 ) -> CreateThreadResponse:
     """Create new message thread(s) to one or more applicants."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await _check_messaging_access(db, current_user, conference_id)
 
@@ -568,7 +568,7 @@ async def reply_to_thread(
     db: DbSessionDep,
 ) -> MessageResponse:
     """Reply to an existing thread."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Verify thread
@@ -706,7 +706,7 @@ async def archive_thread(
     db: DbSessionDep,
 ) -> dict:
     """Archive a thread."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
 
     result = await db.execute(
         select(MessageThread).where(
@@ -735,7 +735,7 @@ async def unarchive_thread(
     db: DbSessionDep,
 ) -> dict:
     """Unarchive a thread."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
 
     result = await db.execute(
         select(MessageThread).where(
@@ -764,7 +764,7 @@ async def toggle_thread_flag(
     db: DbSessionDep,
 ) -> dict:
     """Toggle flag/star on a thread for the current user."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
 
     # Verify thread exists
     result = await db.execute(
@@ -815,7 +815,7 @@ async def create_internal_note(
     db: DbSessionDep,
 ) -> MessageResponse:
     """Create an internal note on a thread (visible only to admins)."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Verify thread
@@ -880,7 +880,7 @@ async def export_thread(
     format: str = Query("text", pattern="^(html|text)$"),
 ) -> Response:
     """Export a thread as HTML or plain text file."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await get_conference_for_tenant(db, conference_id, tenant_id)
 
     result = await db.execute(

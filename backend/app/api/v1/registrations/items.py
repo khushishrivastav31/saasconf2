@@ -40,7 +40,7 @@ async def add_registration_item(
     db: DbSessionDep,
 ) -> RegistrationItemResponse:
     """Add a tutorial or booking option to an existing registration."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await check_conference_admin(conference_id, current_user, db)
 
@@ -96,7 +96,7 @@ async def update_registration_item(
     db: DbSessionDep,
 ) -> RegistrationItemResponse:
     """Update a registration item (typically to select a session)."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await check_conference_admin(conference_id, current_user, db)
 
@@ -173,7 +173,7 @@ async def remove_registration_item(
     db: DbSessionDep,
 ) -> dict:
     """Remove an add-on item from a registration."""
-    tenant_id = current_user.tenant_id
+    tenant_id = current_user.require_tenant_id()
     await check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
