@@ -166,13 +166,13 @@ async def bulk_send(
     applicants: dict[UUID, CFPApplicant] = {}
     valid_ids: set[UUID] = set()
     if applicant_ids:
-        result = await db.execute(
+        applicant_result = await db.execute(
             select(CFPApplicant).where(
                 CFPApplicant.id.in_(list(applicant_ids)),
                 CFPApplicant.tenant_id == tenant_id,
             )
         )
-        fetched: list[CFPApplicant] = list(result.scalars().all())
+        fetched: list[CFPApplicant] = list(applicant_result.scalars().all())
         applicants = {a.id: a for a in fetched}
         valid_ids = set(applicants.keys())
 

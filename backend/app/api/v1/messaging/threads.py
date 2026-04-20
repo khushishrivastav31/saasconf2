@@ -246,10 +246,11 @@ async def list_threads(
         if last_msg and (my_last_read is None or my_last_read < last_msg.created_at):
             unread = True
 
+        placeholder_sender = SenderInfo(id=uuid.UUID(int=0), type="user", first_name="", last_name="", email="")
         last_sender = (
-            sender_map.get((last_msg.sender_type, last_msg.sender_id))
+            sender_map.get((last_msg.sender_type, last_msg.sender_id)) or placeholder_sender
             if last_msg
-            else SenderInfo(id=uuid.UUID(int=0), type="user", first_name="", last_name="", email="")
+            else placeholder_sender
         )
 
         items.append(
