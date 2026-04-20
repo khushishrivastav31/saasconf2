@@ -93,7 +93,7 @@ async def list_tenant_users(
         UserInDB(
             id=u.id,
             tenant_id=u.tenant_id,
-            email=read_pii(u, "email"),
+            email=read_pii(u, "email") or "",
             first_name=u.first_name,
             last_name=u.last_name,
             pronouns=u.pronouns,
@@ -250,7 +250,7 @@ async def create_tenant_user(
         send_email_background(
             send_tenant_user_welcome_email,
             db,
-            email=read_pii(user, "email"),
+            email=read_pii(user, "email") or "",
             token=raw_token,
             tenant_id=target_tenant_id,
             company_name=tenant_name,
@@ -264,7 +264,7 @@ async def create_tenant_user(
     tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
-        email=read_pii(user, "email"),
+        email=read_pii(user, "email") or "",
         first_name=user.first_name,
         last_name=user.last_name,
         pronouns=user.pronouns,
@@ -298,7 +298,7 @@ async def get_tenant_user(
     tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
-        email=read_pii(user, "email"),
+        email=read_pii(user, "email") or "",
         first_name=user.first_name,
         last_name=user.last_name,
         pronouns=user.pronouns,
@@ -377,7 +377,7 @@ async def update_tenant_user(
     tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
-        email=read_pii(user, "email"),
+        email=read_pii(user, "email") or "",
         first_name=user.first_name,
         last_name=user.last_name,
         pronouns=user.pronouns,
