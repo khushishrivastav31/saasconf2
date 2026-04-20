@@ -164,7 +164,7 @@ async def list_locations(
             .where(Location.parent_id.in_(loc_ids))
             .group_by(Location.parent_id)
         )
-        children_counts = dict(children_result.all())
+        children_counts = {pid: count for pid, count in children_result.tuples().all() if pid is not None}
 
     items = []
     for loc in locations:

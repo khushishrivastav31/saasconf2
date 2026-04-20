@@ -356,7 +356,7 @@ async def list_my_threads(
         )
         .group_by(Message.thread_id)
     )
-    msg_counts: dict[UUID, int] = dict(count_result.all())
+    msg_counts: dict[UUID, int] = dict(count_result.tuples().all())
 
     # My read status
     participant_result = await db.execute(

@@ -224,11 +224,11 @@ async def list_budgets(
     if budgets:
         budget_ids = [b.id for b in budgets]
         count_result = await db.execute(
-            select(BudgetLineItem.budget_id, func.count())
+            select(BudgetLineItem.budget_id, func.count(BudgetLineItem.id))
             .where(BudgetLineItem.budget_id.in_(budget_ids))
             .group_by(BudgetLineItem.budget_id)
         )
-        item_counts = dict(count_result.all())
+        item_counts = {row[0]: row[1] for row in count_result.all()}
 
     items = [_budget_to_response(b, item_counts.get(b.id, 0)) for b in budgets]
     return BudgetListResponse(items=items, total=total)

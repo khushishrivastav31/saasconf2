@@ -175,7 +175,7 @@ async def list_sponsors(
             )
             .distinct()
         )
-        sponsors_with_invoices = set(inv_result.scalars().all())
+        sponsors_with_invoices = {sid for sid in inv_result.scalars().all() if sid is not None}
 
     items = [
         build_sponsor_response(
