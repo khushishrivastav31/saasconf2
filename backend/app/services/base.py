@@ -171,7 +171,7 @@ class BaseService:
     def create_audit_log(
         *,
         tenant_id: UUID,
-        user_id: UUID,
+        user_id: UUID | None,
         action: str,
         resource_type: str,
         resource_id: UUID,
