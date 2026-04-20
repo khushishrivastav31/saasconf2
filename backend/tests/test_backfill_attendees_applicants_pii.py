@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security.pii_crypto import decrypt_pii, hash_email, hash_phone
 from app.models.tenant import Tenant
-from app.models.training_attendee import TrainingAttendee
 from scripts.backfill_attendees_applicants_pii import backfill_column
 
 
@@ -116,33 +115,36 @@ async def test_backfill_populates_applicant_email_and_phone(db_session: AsyncSes
 
 @pytest.mark.asyncio
 async def test_backfill_preserves_existing_email_hash(db_session: AsyncSession) -> None:
-    """@validates already sets email_hash on insert — backfill must not overwrite it."""
+    """Pre-dual-write rows may have email_hash set but email_encrypted NULL —
+    backfill fills encrypted without overwriting hash (COALESCE guard)."""
     tenant = await _make_tenant(db_session)
-    # ORM insert: @validates("email") populates email_hash, email_encrypted stays NULL
-    # (only the future property setter would populate it).
-    attendee = TrainingAttendee(
-        id=uuid.uuid4(),
-        tenant_id=tenant.id,
-        first_name="F",
-        last_name="L",
-        email="orm@example.com",
+    # Raw SQL insert simulates a pre-migration row: email_encrypted NULL,
+    # email_hash NULL (the old @validates would set it, but we bypass ORM here).
+    attendee_id = await _insert_raw_attendee(db_session, tenant.id, "orm@example.com")
+    # Populate email_hash up front so we can assert the backfill does not
+    # overwrite it.
+    await db_session.execute(
+        text("UPDATE training_attendees SET email_hash = :h WHERE id = :i"),
+        {"h": hash_email("orm@example.com"), "i": attendee_id},
     )
-    db_session.add(attendee)
     await db_session.commit()
-    await db_session.refresh(attendee)
-    assert attendee.email_hash == hash_email("orm@example.com")
-    assert attendee.email_encrypted is None
 
     written = await backfill_column(
         db_session, "training_attendees", "email", "email", batch_size=100, sleep_secs=0.0, dry_run=False
     )
     assert written == 1
 
-    await db_session.refresh(attendee)
-    assert attendee.email_encrypted is not None
-    assert decrypt_pii(attendee.email_encrypted) == "orm@example.com"
+    row = (
+        await db_session.execute(
+            text("SELECT email_encrypted, email_hash FROM training_attendees WHERE id = :i"),
+            {"i": attendee_id},
+        )
+    ).one()
+    email_enc, email_hash_val = row
+    assert email_enc is not None
+    assert decrypt_pii(email_enc) == "orm@example.com"
     # hash unchanged (COALESCE guard).
-    assert attendee.email_hash == hash_email("orm@example.com")
+    assert email_hash_val == hash_email("orm@example.com")
 
 
 @pytest.mark.asyncio

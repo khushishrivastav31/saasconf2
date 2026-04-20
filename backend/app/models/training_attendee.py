@@ -8,7 +8,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstrai
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
-from app.core.security.pii_crypto import hash_email
+from app.core.security.pii_crypto import encrypt_pii, hash_email
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -63,8 +63,17 @@ class TrainingAttendee(Base):
     )
 
     @validates("email")
-    def _sync_email_hash(self, _key: str, value: str) -> str:
-        self.email_hash = hash_email(value) if value else None
+    def _sync_email_companions(self, _key: str, value: str) -> str:
+        # Dual-write during PII transition: every write populates the
+        # encrypted + hash companions so new rows don't need a backfill pass.
+        # Plaintext column is dropped in migration 208; at that point this
+        # validator is replaced by a @property setter (see portal_user.py).
+        if value:
+            self.email_hash = hash_email(value)
+            self.email_encrypted = encrypt_pii(value)
+        else:
+            self.email_hash = None
+            self.email_encrypted = None
         return value
 
     def __repr__(self) -> str:

@@ -19,6 +19,19 @@ SaaSConf is a **multi-tenant SaaS platform** for conference and training managem
 9. **Ask Before Commit** — Do NOT automatically commit. User approval required.
 10. **Commit + Push** — Conventional commits (`feat:`, `fix:`, `refactor:`). Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>. Push to main triggers staging deploy.
 
+## GitHub Workflow (branch → commit → push → PR)
+
+**Never commit or push to `main` directly.** All changes go through a topic branch + PR.
+
+1. **Detect change intent** — on the FIRST `Edit`/`Write` of a session when the current branch is `main`, pause before touching files and propose a topic branch. Suggested name: `<type>/<short-kebab-topic>` where `<type>` matches the coming commit prefix (`feat/`, `fix/`, `refactor/`, `chore/`, `docs/`). Example: `feat/pii-dual-write`. Create with `git checkout -b <name>` after user approves the name.
+2. **Develop + verify on branch** — run the full mypy + ruff + pytest + tsc + eslint + vitest sweep as usual.
+3. **Ask before commit** — user approval required every time. Use conventional commits + `Co-Authored-By`.
+4. **Ask before push** — `git push -u origin <branch>` (never `origin main`). User approval required every time. **Push approval auto-authorises the PR step** — after the push succeeds, immediately run `gh pr create` without a separate ask.
+5. **Auto-create PR after push** — title ≤70 chars (conventional-commit style); body = `## Summary` bullets + `## Test plan` checklist + Claude-Code footer. Return the PR URL.
+6. **Merge is the user's call** — never merge the PR yourself; user merges via GitHub UI so branch protection + review stay enforced.
+
+Exceptions (still ask first): truly trivial single-line doc fixes can go straight to `main` if the user explicitly says "push to main — trivial".
+
 ## Architecture
 - **Backend**: FastAPI + SQLAlchemy async + PostgreSQL (port 8000)
 - **Frontend**: React + TypeScript + TanStack Query + Tailwind CSS (port 3000)
@@ -82,7 +95,22 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Ready to commit — sprint items 4–7 + attr-defined cleanup (large batch)**.
+- **Ready to commit — PII Phase 2.5: dual-write validators on training_attendees + cfp_applicants (audit item 2 follow-up)**.
+  - **Scope**: incremental step between Phase 1 (additive migration 207 + backfill, committed on main) and Phase 3 (full property-accessor swap, deferred until staging backfill run). Extends the existing `@validates("email")` on both models to populate `email_encrypted` (via `encrypt_pii`) alongside the pre-existing `email_hash`, and adds a new `@validates("phone")` on `cfp_applicants` that dual-writes `phone_encrypted` + `phone_hash`. Net effect: new ORM-written rows no longer need the backfill pass — they already have encrypted + hash companions on insert.
+  - **Model changes**:
+    - [backend/app/models/training_attendee.py](backend/app/models/training_attendee.py) — added `encrypt_pii` import; extended `_sync_email_companions` to set `self.email_encrypted = encrypt_pii(value)` when value is truthy (and `None` when cleared).
+    - [backend/app/models/cfp_applicants.py](backend/app/models/cfp_applicants.py) — added `encrypt_pii` + `hash_phone` imports; same email-validator extension; new `@validates("phone")` that sets `phone_hash` + `phone_encrypted` or nulls both on clear.
+  - **Tests**:
+    - New: [backend/tests/test_pii_dual_write_attendees_applicants.py](backend/tests/test_pii_dual_write_attendees_applicants.py) — 6 tests: training attendee create populates both companions, email update rewrites companions, applicant email companions, applicant phone companions, clearing phone nulls both, query by `email_hash` finds the row.
+    - Modified: [backend/tests/test_backfill_attendees_applicants_pii.py](backend/tests/test_backfill_attendees_applicants_pii.py) — `test_backfill_preserves_existing_email_hash` switched from ORM insert (which now populates encrypted via the new validator) to raw-SQL `_insert_raw_attendee()` + explicit `UPDATE ... SET email_hash` so the test still simulates a pre-migration row. Unused `TrainingAttendee` import removed.
+  - **Verification (all green)**:
+    - `mypy app/` = clean (677 source files).
+    - `ruff check app/ tests/ && ruff format --check app/ tests/` = clean.
+    - `cd frontend && npx tsc --noEmit` = clean; `npx eslint src/` = 0 errors, 103 warnings (pre-existing `max-lines` only).
+    - Backend sweep on `test_backfill_attendees_applicants_pii.py + test_pii_dual_write_attendees_applicants.py + test_cfp.py + test_cfp_admin_deep.py + test_cfp_papers_admin.py + test_cfp_portal_auth_messaging.py + test_training_portal.py + test_training_attendee_reassign.py + test_customer_events.py + test_customer_event_service.py + test_portal_users_admin.py + test_rls_coverage.py` = **327/327 pass**.
+  - **Status**: uncommitted — `git status` shows modified `backend/app/models/cfp_applicants.py`, `backend/app/models/training_attendee.py`, `backend/tests/test_backfill_attendees_applicants_pii.py` plus new `backend/tests/test_pii_dual_write_attendees_applicants.py`. **Ask user before committing**.
+
+- **Committed (28ba86a) and on main — sprint items 4–7 + attr-defined cleanup (large batch)**.
   - **Scope**: items 4 (N+1 fixes across api/v1), 5 (request-ID middleware + logging), 6 (regen of OpenAPI types), 7 (mypy re-enable on `app.api.v1.*` — narrowed suppression from `["arg-type", "attr-defined"]` → `["arg-type"]`) plus full attr-defined cleanup across 28 files in `backend/app/api/v1/`.
   - **Key attr-defined fixes** (all 72 errors cleared):
     - **Real bugs caught**: [mfa.py:69](backend/app/api/v1/mfa.py) used `current_user.email` (CurrentUser has no `email` attr) — fetch `User` row and read encrypted via `read_pii(user_row, "email")`. [stripe_webhooks.py:128](backend/app/api/v1/stripe_webhooks.py) used `e.metadata` (resolves to SQLAlchemy's base `MetaData` class, not the JSONB column) — changed to `e.event_metadata`.
