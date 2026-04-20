@@ -41,29 +41,25 @@ import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore[import-untyped]
 
 # Tables that have `tenant_id` but do NOT yet have `ENABLE ROW LEVEL SECURITY`.
-# Snapshotted 2026-04-17. Adding to this set is forbidden; removing is a win.
+# Snapshotted 2026-04-17, shrunk 2026-04-20 after migration 206 closed 7 gaps.
+# Adding to this set is forbidden; removing is a win.
 KNOWN_RLS_GAPS_ENABLE: frozenset[str] = frozenset(
     {
         "applicant_activity_logs",
-        "billing_profiles",
         "booking_package_options",
         "booking_packages",
-        "cfp_applicants",
         "cfp_committee_members",
         "cfp_committee_roles",
         "cfp_paper_comments",
-        "cfp_papers",
         "cfp_topics",
         "conference_currencies",
         "conference_paper_form_schemas",
-        "conferences",
         "dynamic_recipient_lists",
         "email_logs",
         "email_templates",
         "invoice_events",
         "news_articles",
         "paper_form_fields",
-        "portal_users",
         "program_days",
         "program_sessions",
         "program_time_slots",
@@ -71,12 +67,10 @@ KNOWN_RLS_GAPS_ENABLE: frozenset[str] = frozenset(
         "pronoun_options",
         "registration_items",
         "registration_replacements",
-        "registrations",
         "screen_overlays",
         "session_types",
         "sponsor_packages",
         "training_attendee_history",
-        "training_attendees",
         "user_role_assignments",
         "user_roles",
         "vat_rates_by_country",
