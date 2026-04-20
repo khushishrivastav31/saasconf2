@@ -47,6 +47,10 @@ echo "Step 3: Running database migrations..."
 docker compose run --rm backend alembic upgrade head
 
 echo ""
+echo "Step 3b: Running PII backfill (idempotent; no-op after migration 208)..."
+docker compose run --rm backend python -m scripts.backfill_attendees_applicants_pii
+
+echo ""
 echo "Step 4: Deploying services..."
 docker compose up -d
 

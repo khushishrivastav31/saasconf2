@@ -53,6 +53,20 @@ def _hash_for_kind(kind: PiiKind, value: str) -> str:
     return hash_phone(value)
 
 
+async def _plaintext_column_exists(session: AsyncSession, table: str, col: str) -> bool:
+    """Return False once migration 208 drops the plaintext column.
+
+    Lets the script auto-run on every deploy without tripping after the
+    plaintext columns are gone — it becomes a graceful no-op instead.
+    """
+    sql = text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND table_name = :t AND column_name = :c"
+    )
+    result = await session.execute(sql, {"t": table, "c": col})
+    return result.scalar_one_or_none() is not None
+
+
 async def _count_eligible(session: AsyncSession, table: str, col: str) -> int:
     sql = text(f'SELECT COUNT(*) FROM "{table}" WHERE "{col}" IS NOT NULL AND "{col}_encrypted" IS NULL')
     return int((await session.execute(sql)).scalar_one())
@@ -92,6 +106,10 @@ async def backfill_column(
     sleep_secs: float,
     dry_run: bool,
 ) -> int:
+    if not await _plaintext_column_exists(session, table, col):
+        print(f"  {table}.{col}: plaintext column absent — skipping (post-migration-208).", flush=True)
+        return 0
+
     total = await _count_eligible(session, table, col)
     print(f"  {table}.{col}: {total} row(s) to backfill", flush=True)
     if dry_run or total == 0:

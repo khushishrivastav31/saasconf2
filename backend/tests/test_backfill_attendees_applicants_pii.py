@@ -281,3 +281,19 @@ async def test_backfill_applicant_does_not_touch_training_attendees(db_session: 
     ).scalar_one()
     assert att_enc is None
     assert app_enc is not None
+
+
+@pytest.mark.asyncio
+async def test_backfill_gracefully_skips_missing_plaintext_column(db_session: AsyncSession) -> None:
+    """After migration 208 drops ``email``, the script must become a no-op
+    instead of raising — deploy.sh calls it on every release."""
+    written = await backfill_column(
+        db_session,
+        "training_attendees",
+        "nonexistent_col",
+        "email",
+        batch_size=100,
+        sleep_secs=0.0,
+        dry_run=False,
+    )
+    assert written == 0
