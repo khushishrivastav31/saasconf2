@@ -212,8 +212,12 @@ async def _create_items(
     return created
 
 
-async def _get_option_name_map(db, conference_id: UUID, tenant_id: UUID) -> dict[UUID, str]:
-    """Batch-fetch booking option names for a conference."""
+async def _get_option_name_map(db, conference_id: UUID, tenant_id: UUID | None) -> dict[UUID, str]:
+    """Batch-fetch booking option names for a conference.
+
+    ``tenant_id`` accepts ``None`` so ``CurrentUser.tenant_id`` passes through
+    directly; a ``None`` matches no row and returns an empty dict.
+    """
     result = await db.execute(
         select(BookingOption.id, BookingOption.name).where(
             BookingOption.conference_id == conference_id,

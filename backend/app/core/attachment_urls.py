@@ -22,10 +22,14 @@ async def get_latest_attachment_url(
     db: AsyncSession,
     entity_id: UUID,
     entity_type: str,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
     url_prefix: str = ADMIN_PREFIX,
 ) -> str | None:
     """Return the download URL for the most recent attachment of a given type.
+
+    ``tenant_id`` accepts ``None`` so ``CurrentUser.tenant_id`` passes through
+    directly; a ``None`` matches no row and returns ``None`` — same as no
+    attachment existing.
 
     Returns ``None`` when no matching attachment exists.
     """
@@ -49,13 +53,16 @@ async def batch_get_attachment_urls(
     db: AsyncSession,
     entity_ids: list[UUID],
     entity_type: str,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
     url_prefix: str = ADMIN_PREFIX,
 ) -> dict[UUID, str]:
     """Batch-fetch the most recent attachment URL per entity in a single query.
 
     Uses ``ROW_NUMBER() OVER (PARTITION BY entity_id)`` to get the latest
     attachment per entity, avoiding N+1 queries on list endpoints.
+
+    ``tenant_id`` accepts ``None``; a ``None`` matches no row and returns an
+    empty dict.
 
     Returns a mapping of ``entity_id -> download URL``.
     """

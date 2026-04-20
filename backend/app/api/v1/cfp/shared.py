@@ -36,12 +36,12 @@ from app.services.customer_event_service import CustomerEventService
 MODULE_CODE = "cfp"
 
 
-async def _get_applicant_picture_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID) -> str | None:
+async def _get_applicant_picture_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID | None) -> str | None:
     """Get the picture download URL for an applicant, if one exists."""
     return await get_latest_attachment_url(db, applicant_id, "applicant_picture", tenant_id)
 
 
-async def _get_applicant_video_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID) -> str | None:
+async def _get_applicant_video_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID | None) -> str | None:
     """Get the video download URL for an applicant, if one exists."""
     return await get_latest_attachment_url(db, applicant_id, "applicant_video", tenant_id)
 
@@ -50,7 +50,7 @@ async def _batch_get_attachment_urls(
     db: DbSessionDep,
     entity_ids: list[UUID],
     entity_type: str,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
 ) -> dict[UUID, str]:
     """Batch-fetch the most recent attachment URL per entity in a single query.
 
@@ -59,7 +59,7 @@ async def _batch_get_attachment_urls(
     return await batch_get_attachment_urls(db, entity_ids, entity_type, tenant_id)
 
 
-async def _get_paper_video_url(db: DbSessionDep, paper_id: UUID, tenant_id: UUID) -> str | None:
+async def _get_paper_video_url(db: DbSessionDep, paper_id: UUID, tenant_id: UUID | None) -> str | None:
     """Get the video download URL for a paper."""
     return await get_latest_attachment_url(db, paper_id, "paper_video", tenant_id)
 
@@ -81,7 +81,7 @@ def _compute_display_status(paper_status: str, cfp_status: str) -> str:
 async def _build_applicant_response(
     db: DbSessionDep,
     applicant: CFPApplicant,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
 ) -> ApplicantResponse:
     """Build an ApplicantResponse from a CFPApplicant model."""
     picture_url = await _get_applicant_picture_url(db, applicant.id, tenant_id)
@@ -122,8 +122,13 @@ def _paper_eager_options():
     ]
 
 
-async def _reload_paper(db, paper_id: UUID, tenant_id: UUID) -> CFPPaper:
-    """Re-query a paper with all eager loads after commit."""
+async def _reload_paper(db, paper_id: UUID, tenant_id: UUID | None) -> CFPPaper:
+    """Re-query a paper with all eager loads after commit.
+
+    ``tenant_id`` accepts ``None`` so ``CurrentUser.tenant_id`` passes through
+    directly; a ``None`` matches no row and raises ``NoResultFound`` — semantically
+    equivalent to passing an invalid tenant.
+    """
     result = await db.execute(
         select(CFPPaper)
         .options(*_paper_eager_options())
@@ -239,7 +244,7 @@ async def _sync_speaker_role(
 async def _build_paper_responses_batch(
     db: DbSessionDep,
     papers: list[CFPPaper],
-    tenant_id: UUID,
+    tenant_id: UUID | None,
 ) -> list[PaperResponse]:
     """Build PaperResponse objects for a batch of papers in ~10 queries instead of 10*N.
 
@@ -500,7 +505,7 @@ async def _build_paper_responses_batch(
 async def _build_paper_response(
     db: DbSessionDep,
     paper: CFPPaper,
-    tenant_id: UUID,
+    tenant_id: UUID | None,
 ) -> PaperResponse:
     """Build a PaperResponse from a CFPPaper model."""
     # Get video URL
