@@ -14,6 +14,7 @@ from app.models.form_schema import ConferencePaperFormSchema
 from app.models.paper_form_variant import PaperFormVariant
 from app.models.settings import UserRole, UserRoleAssignment
 from app.schemas.form_schema import (
+    BuiltinFieldConfig,
     PaperFormFieldResponse,
     PaperFormSchemaResponse,
     PaperFormVariantResponse,
@@ -74,14 +75,17 @@ async def get_cfp_paper_form_schema(
 
     if not schema:
         # Return default schema if none exists
-        default_config = {
-            "title": {"visible": True, "required": True},
-            "abstract_short": {"visible": True, "required": False},
-            "abstract_long": {"visible": True, "required": False},
-            "level": {"visible": True, "required": False},
-            "learning_objectives": {"visible": True, "required": False},
-            "session_type": {"visible": True, "required": False},
-            "topics": {"visible": True, "required": False},
+        default_config: dict[str, BuiltinFieldConfig] = {
+            key: BuiltinFieldConfig.model_validate({"visible": True, "required": required})
+            for key, required in (
+                ("title", True),
+                ("abstract_short", False),
+                ("abstract_long", False),
+                ("level", False),
+                ("learning_objectives", False),
+                ("session_type", False),
+                ("topics", False),
+            )
         }
         from app.core.utils import utcnow
 
