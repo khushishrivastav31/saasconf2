@@ -105,10 +105,7 @@ class TestCreateBulkInvoiceAuditLogs:
     def test_create_bulk_logs_each_has_correct_action(self):
         """Each AuditLog in the list has the action from the corresponding input dict."""
         actions = ["invoice.cancelled", "invoice.replacement_created"]
-        logs_input = [
-            {"action": a, "resource_id": uuid4(), "details": {}}
-            for a in actions
-        ]
+        logs_input = [{"action": a, "resource_id": uuid4(), "details": {}} for a in actions]
         result = create_bulk_invoice_audit_logs(
             tenant_id=uuid4(),
             user_id=uuid4(),

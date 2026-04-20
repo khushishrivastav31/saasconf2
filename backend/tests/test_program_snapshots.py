@@ -18,20 +18,18 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.program_snapshot import build_snapshot, compute_diff
+from app.core.program_snapshot import compute_diff
 from app.core.security import create_access_token, hash_password
 from app.models.tenant import Tenant
 from app.models.trainer import Trainer
 from app.models.training import Training
 from app.models.training_program import (
     PlacementTrainer,
-    ProgramSnapshot,
     ProgramYearTraining,
     TrainingProgramYear,
 )
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 

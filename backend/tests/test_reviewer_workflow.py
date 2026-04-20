@@ -389,9 +389,7 @@ class TestAssignedPapersAccess:
         assignment: CFPPaperAssignment,
     ) -> None:
         """No token → 401 on the review-config endpoint."""
-        resp = await client.get(
-            f"{PORTAL_BASE}/assignments/{assignment.id}/review-config"
-        )
+        resp = await client.get(f"{PORTAL_BASE}/assignments/{assignment.id}/review-config")
         assert resp.status_code == 401
 
 

@@ -25,9 +25,7 @@ from app.models.cfp_papers import CFPPaper
 from app.models.conference import Conference
 from app.models.invoice import Invoice
 from app.models.module import Module, TenantModule
-from app.models.program import ProgramDay
-from app.models.registration import BillingProfile, Registration, RegistrationItem, RegistrationStatus
-from app.models.speaker_expense import SpeakerExpense
+from app.models.registration import BillingProfile, Registration, RegistrationStatus
 from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import _make_token, auth_headers
@@ -61,9 +59,7 @@ async def analytics_module(db_session: AsyncSession) -> Module:
 
 
 @pytest_asyncio.fixture()
-async def tenant_with_analytics(
-    db_session: AsyncSession, tenant: Tenant, analytics_module: Module
-) -> Tenant:
+async def tenant_with_analytics(db_session: AsyncSession, tenant: Tenant, analytics_module: Module) -> Tenant:
     tm = TenantModule(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -238,7 +234,15 @@ class TestRevenueEndpoint:
             subtotal=168.07,
             tax_amount=31.93,
             status="paid",
-            line_items=[{"description": booking_option.name, "quantity": 1, "unit_price": 168.07, "discount": 0.0, "total": 168.07}],
+            line_items=[
+                {
+                    "description": booking_option.name,
+                    "quantity": 1,
+                    "unit_price": 168.07,
+                    "discount": 0.0,
+                    "total": 168.07,
+                }
+            ],
         )
         token = _analytics_token(tenant_admin_user)
         resp = await client.get(
@@ -368,7 +372,15 @@ class TestRevenueEndpoint:
             subtotal=168.07,
             tax_amount=31.93,
             status="paid",
-            line_items=[{"description": booking_option.name, "quantity": 2, "unit_price": 84.035, "discount": 0.0, "total": 168.07}],
+            line_items=[
+                {
+                    "description": booking_option.name,
+                    "quantity": 2,
+                    "unit_price": 84.035,
+                    "discount": 0.0,
+                    "total": 168.07,
+                }
+            ],
         )
 
         token = _analytics_token(tenant_admin_user)
@@ -591,8 +603,11 @@ class TestPeriodBreakdown:
         """When a booking period covers the registration date, period shows in breakdown."""
         today = date.today()
         await _make_booking_period(
-            db_session, conference, "Early Bird",
-            today - timedelta(days=30), today + timedelta(days=30),
+            db_session,
+            conference,
+            "Early Bird",
+            today - timedelta(days=30),
+            today + timedelta(days=30),
         )
 
         reg = await _make_registration(db_session, conference, billing_profile, booking_option)
@@ -600,10 +615,13 @@ class TestPeriodBreakdown:
         _ = reg
 
         await _make_invoice(
-            db_session, conference,
+            db_session,
+            conference,
             source_type="registration",
             source_id=billing_profile.id,
-            total=100.0, subtotal=84.03, tax_amount=15.97,
+            total=100.0,
+            subtotal=84.03,
+            tax_amount=15.97,
         )
 
         token = _analytics_token(tenant_admin_user)
@@ -633,16 +651,22 @@ class TestPeriodBreakdown:
         # Create a period that does NOT cover today
         today = date.today()
         await _make_booking_period(
-            db_session, conference, "Past Period",
-            today - timedelta(days=60), today - timedelta(days=31),
+            db_session,
+            conference,
+            "Past Period",
+            today - timedelta(days=60),
+            today - timedelta(days=31),
         )
 
         await _make_registration(db_session, conference, billing_profile, booking_option)
         await _make_invoice(
-            db_session, conference,
+            db_session,
+            conference,
             source_type="registration",
             source_id=billing_profile.id,
-            total=100.0, subtotal=84.03, tax_amount=15.97,
+            total=100.0,
+            subtotal=84.03,
+            tax_amount=15.97,
         )
 
         token = _analytics_token(tenant_admin_user)
@@ -672,32 +696,49 @@ class TestPeriodBreakdown:
 
         # Period A: covers 60-31 days ago
         period_a = await _make_booking_period(
-            db_session, conference, "Early Bird",
-            today - timedelta(days=60), today - timedelta(days=31),
+            db_session,
+            conference,
+            "Early Bird",
+            today - timedelta(days=60),
+            today - timedelta(days=31),
         )
         _ = period_a
 
         # Period B: covers last 30 days (including today)
         period_b = await _make_booking_period(
-            db_session, conference, "Regular",
-            today - timedelta(days=30), today + timedelta(days=30),
+            db_session,
+            conference,
+            "Regular",
+            today - timedelta(days=30),
+            today + timedelta(days=30),
         )
         _ = period_b
 
         # Billing profile A → registration created today (Regular period)
         bp_a = BillingProfile(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
-            street="A St", postal_code="10115", city="Berlin", country="DE",
-            contact_first_name="A", contact_last_name="A",
-            contact_phone="+49111", contact_email="a@example.com",
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            street="A St",
+            postal_code="10115",
+            city="Berlin",
+            country="DE",
+            contact_first_name="A",
+            contact_last_name="A",
+            contact_phone="+49111",
+            contact_email="a@example.com",
         )
         db_session.add(bp_a)
         await db_session.commit()
 
         reg_a = Registration(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
-            billing_profile_id=bp_a.id, booking_option_id=booking_option.id,
-            first_name="Reg", last_name="A",
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            billing_profile_id=bp_a.id,
+            booking_option_id=booking_option.id,
+            first_name="Reg",
+            last_name="A",
             email=f"rega-{uuid.uuid4().hex[:6]}@example.com",
             status=RegistrationStatus.PAID,
         )
@@ -706,18 +747,29 @@ class TestPeriodBreakdown:
 
         # Billing profile B → registration created 45 days ago (Early Bird period)
         bp_b = BillingProfile(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
-            street="B St", postal_code="10115", city="Berlin", country="DE",
-            contact_first_name="B", contact_last_name="B",
-            contact_phone="+49222", contact_email="b@example.com",
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            street="B St",
+            postal_code="10115",
+            city="Berlin",
+            country="DE",
+            contact_first_name="B",
+            contact_last_name="B",
+            contact_phone="+49222",
+            contact_email="b@example.com",
         )
         db_session.add(bp_b)
         await db_session.commit()
 
         reg_b = Registration(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
-            billing_profile_id=bp_b.id, booking_option_id=booking_option.id,
-            first_name="Reg", last_name="B",
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            billing_profile_id=bp_b.id,
+            booking_option_id=booking_option.id,
+            first_name="Reg",
+            last_name="B",
             email=f"regb-{uuid.uuid4().hex[:6]}@example.com",
             status=RegistrationStatus.PAID,
         )
@@ -729,11 +781,22 @@ class TestPeriodBreakdown:
         # One paid invoice per billing profile
         for bp in [bp_a, bp_b]:
             await _make_invoice(
-                db_session, conference,
+                db_session,
+                conference,
                 source_type="registration",
                 source_id=bp.id,
-                total=100.0, subtotal=84.03, tax_amount=15.97,
-                line_items=[{"description": booking_option.name, "quantity": 1, "unit_price": 84.03, "discount": 0.0, "total": 84.03}],
+                total=100.0,
+                subtotal=84.03,
+                tax_amount=15.97,
+                line_items=[
+                    {
+                        "description": booking_option.name,
+                        "quantity": 1,
+                        "unit_price": 84.03,
+                        "discount": 0.0,
+                        "total": 84.03,
+                    }
+                ],
             )
 
         token = _analytics_token(tenant_admin_user)
@@ -772,11 +835,22 @@ class TestPeriodBreakdown:
 
         # Invoice with a description that does NOT match any booking option name
         await _make_invoice(
-            db_session, conference,
+            db_session,
+            conference,
             source_type="registration",
             source_id=billing_profile.id,
-            total=50.0, subtotal=42.0, tax_amount=8.0,
-            line_items=[{"description": "Unrecognized Service", "quantity": 1, "unit_price": 42.0, "discount": 0.0, "total": 42.0}],
+            total=50.0,
+            subtotal=42.0,
+            tax_amount=8.0,
+            line_items=[
+                {
+                    "description": "Unrecognized Service",
+                    "quantity": 1,
+                    "unit_price": 42.0,
+                    "discount": 0.0,
+                    "total": 42.0,
+                }
+            ],
         )
 
         token = _analytics_token(tenant_admin_user)
@@ -808,17 +882,28 @@ class TestPeriodBreakdown:
 
         # Second billing profile with a cancelled registration
         bp2 = BillingProfile(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
-            street="B St", postal_code="10115", city="Berlin", country="DE",
-            contact_first_name="X", contact_last_name="Y",
-            contact_phone="+49000", contact_email="xy@example.com",
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            street="B St",
+            postal_code="10115",
+            city="Berlin",
+            country="DE",
+            contact_first_name="X",
+            contact_last_name="Y",
+            contact_phone="+49000",
+            contact_email="xy@example.com",
         )
         db_session.add(bp2)
         await db_session.commit()
         cancelled_reg = Registration(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
-            billing_profile_id=bp2.id, booking_option_id=booking_option.id,
-            first_name="Cancelled", last_name="Person",
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            billing_profile_id=bp2.id,
+            booking_option_id=booking_option.id,
+            first_name="Cancelled",
+            last_name="Person",
             email=f"cancelled-{uuid.uuid4().hex[:6]}@example.com",
             status=RegistrationStatus.CANCELLED,
         )
@@ -886,8 +971,12 @@ class TestConferenceStatistics:
         billing_profile: BillingProfile,
     ):
         """Cancelled registrations are not counted."""
-        await _make_registration(db_session, conference, billing_profile, booking_option, status=RegistrationStatus.PAID)
-        await _make_registration(db_session, conference, billing_profile, booking_option, status=RegistrationStatus.CANCELLED)
+        await _make_registration(
+            db_session, conference, billing_profile, booking_option, status=RegistrationStatus.PAID
+        )
+        await _make_registration(
+            db_session, conference, billing_profile, booking_option, status=RegistrationStatus.CANCELLED
+        )
 
         token = _analytics_token(tenant_admin_user)
         resp = await client.get(
@@ -914,10 +1003,17 @@ class TestConferenceStatistics:
 
         # Second attendee from NL
         bp_nl = BillingProfile(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
-            street="Dam 1", postal_code="1012", city="Amsterdam", country="NL",
-            contact_first_name="Hans", contact_last_name="M",
-            contact_phone="+311234", contact_email="hans@example.com",
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            street="Dam 1",
+            postal_code="1012",
+            city="Amsterdam",
+            country="NL",
+            contact_first_name="Hans",
+            contact_last_name="M",
+            contact_phone="+311234",
+            contact_email="hans@example.com",
         )
         db_session.add(bp_nl)
         await db_session.commit()
@@ -949,11 +1045,18 @@ class TestConferenceStatistics:
         # Company A: 2 attendees
         for i in range(2):
             bp = BillingProfile(
-                id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
+                id=uuid.uuid4(),
+                tenant_id=conference.tenant_id,
+                conference_id=conference.id,
                 company_name="Company A",
-                street=f"{i} St", postal_code="10115", city="Berlin", country="DE",
-                contact_first_name=f"A{i}", contact_last_name="X",
-                contact_phone="+49111", contact_email=f"a{i}@company-a.com",
+                street=f"{i} St",
+                postal_code="10115",
+                city="Berlin",
+                country="DE",
+                contact_first_name=f"A{i}",
+                contact_last_name="X",
+                contact_phone="+49111",
+                contact_email=f"a{i}@company-a.com",
             )
             db_session.add(bp)
             await db_session.commit()
@@ -961,11 +1064,18 @@ class TestConferenceStatistics:
 
         # Company B: 1 attendee
         bp_b = BillingProfile(
-            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
             company_name="Company B",
-            street="2 St", postal_code="10115", city="Berlin", country="DE",
-            contact_first_name="B", contact_last_name="X",
-            contact_phone="+49222", contact_email="b@company-b.com",
+            street="2 St",
+            postal_code="10115",
+            city="Berlin",
+            country="DE",
+            contact_first_name="B",
+            contact_last_name="X",
+            contact_phone="+49222",
+            contact_email="b@company-b.com",
         )
         db_session.add(bp_b)
         await db_session.commit()

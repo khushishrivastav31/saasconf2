@@ -25,7 +25,6 @@ from app.models.training_program import PlacementTrainer, ProgramYearTraining, T
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 

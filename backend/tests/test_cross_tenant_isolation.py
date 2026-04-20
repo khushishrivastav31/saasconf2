@@ -249,17 +249,13 @@ class TestCrossTenantIsolation:
         resp = await client.get("/api/v1/conferences", headers=_admin_headers(admin_a))
         assert resp.status_code == 200
         ids = [item["id"] for item in resp.json().get("items", [])]
-        assert str(conf_b.id) not in ids, (
-            "Tenant B's conference appeared in Tenant A's conference list"
-        )
+        assert str(conf_b.id) not in ids, "Tenant B's conference appeared in Tenant A's conference list"
 
     # -----------------------------------------------------------------------
     # 2. Invoice isolation — admin of Tenant A cannot access Tenant B invoices
     # -----------------------------------------------------------------------
 
-    async def test_admin_cannot_read_other_tenant_invoice(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_admin_cannot_read_other_tenant_invoice(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """A tenant admin JWT for Tenant A must not expose Tenant B's invoice.
 
         The invoice endpoint is scoped under /conferences/{conference_id}/invoices
@@ -281,9 +277,7 @@ class TestCrossTenantIsolation:
             f"Expected 403/404, got {resp.status_code}: Tenant A admin can read Tenant B invoice"
         )
 
-    async def test_admin_cannot_list_other_tenant_invoices(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_admin_cannot_list_other_tenant_invoices(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """The invoice list for a foreign conference must be empty or forbidden."""
         tenant_a = await _make_tenant(db_session, "InvList_A")
         tenant_b = await _make_tenant(db_session, "InvList_B")
@@ -470,13 +464,9 @@ class TestCrossTenantIsolation:
             f"/api/v1/conferences/{conf_b.id}",
             headers={"Authorization": f"Bearer {forged_token}"},
         )
-        assert resp.status_code in (401, 403), (
-            f"Expected 401/403, got {resp.status_code}: Forged JWT was accepted"
-        )
+        assert resp.status_code in (401, 403), f"Expected 401/403, got {resp.status_code}: Forged JWT was accepted"
 
-    async def test_expired_admin_jwt_rejected(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_expired_admin_jwt_rejected(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """An expired admin JWT must be rejected with 401, regardless of which
         tenant's resources are being accessed.
         """
@@ -667,9 +657,7 @@ class TestCrossTenantIsolation:
     # 12. No token — all protected endpoints require authentication
     # -----------------------------------------------------------------------
 
-    async def test_conference_endpoint_requires_auth(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_conference_endpoint_requires_auth(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Any conference endpoint without an Authorization header must return
         401 or 403.  This confirms that there is no anonymous read path for
         tenant-scoped admin data.
@@ -678,13 +666,9 @@ class TestCrossTenantIsolation:
         conf = await _make_conference(db_session, tenant)
 
         resp = await client.get(f"/api/v1/conferences/{conf.id}")
-        assert resp.status_code in (401, 403), (
-            f"Expected 401/403 without auth, got {resp.status_code}"
-        )
+        assert resp.status_code in (401, 403), f"Expected 401/403 without auth, got {resp.status_code}"
 
-    async def test_invoice_endpoint_requires_auth(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_invoice_endpoint_requires_auth(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Invoice endpoints must require a valid JWT.  A request without any
         Authorization header must be rejected immediately.
         """
@@ -693,15 +677,11 @@ class TestCrossTenantIsolation:
         inv = await _make_invoice(db_session, tenant, conf)
 
         resp = await client.get(f"/api/v1/conferences/{conf.id}/invoices/{inv.id}")
-        assert resp.status_code in (401, 403), (
-            f"Expected 401/403 without auth, got {resp.status_code}"
-        )
+        assert resp.status_code in (401, 403), f"Expected 401/403 without auth, got {resp.status_code}"
 
     async def test_cfp_portal_me_requires_auth(self, client: AsyncClient) -> None:
         """The /portal/me profile endpoint must return 401 or 403 without a
         valid applicant JWT — there is no public version of this endpoint.
         """
         resp = await client.get("/api/v1/portal/me")
-        assert resp.status_code in (401, 403), (
-            f"Expected 401/403 without auth, got {resp.status_code}"
-        )
+        assert resp.status_code in (401, 403), f"Expected 401/403 without auth, got {resp.status_code}"

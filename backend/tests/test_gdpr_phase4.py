@@ -90,8 +90,7 @@ class TestPortalAllowlistIntegrity:
         assert not unclassified, (
             "Unclassified columns on portal-exportable models — add each to "
             "PORTAL_EXPORT_FIELDS or PORTAL_EXPORT_EXCLUDED_COLUMNS in "
-            "app/core/gdpr/lookups.py:\n"
-            + "\n".join(f"  {t}: {sorted(cols)}" for t, cols in unclassified.items())
+            "app/core/gdpr/lookups.py:\n" + "\n".join(f"  {t}: {sorted(cols)}" for t, cols in unclassified.items())
         )
 
     def test_applicant_activity_logs_never_reachable_from_portal(self) -> None:
@@ -119,7 +118,7 @@ class TestPortalAllowlistIntegrity:
 
 
 @pytest_asyncio.fixture()
-async def leak_subject_env(db_session: "AsyncSession"):
+async def leak_subject_env(db_session: AsyncSession):
     """Tenant + portal user + registration + invoice, with canaries in
     every staff-only comment field the portal export must never expose."""
     from app.models.customer import Customer
@@ -224,12 +223,10 @@ class TestPortalExportLeakProofing:
 
     @pytest.mark.asyncio
     async def test_no_canary_survives_portal_export(
-        self, db_session: "AsyncSession", leak_subject_env: dict[str, Any]
+        self, db_session: AsyncSession, leak_subject_env: dict[str, Any]
     ) -> None:
         tenant = leak_subject_env["tenant"]
-        blob, manifest = await build_export(
-            db_session, tenant.id, [SUBJECT_EMAIL], mode="portal"
-        )
+        blob, manifest = await build_export(db_session, tenant.id, [SUBJECT_EMAIL], mode="portal")
 
         # Manifest sanity.
         assert manifest["mode"] == "portal"
@@ -266,13 +263,11 @@ class TestPortalExportLeakProofing:
 
     @pytest.mark.asyncio
     async def test_admin_mode_still_dumps_everything(
-        self, db_session: "AsyncSession", leak_subject_env: dict[str, Any]
+        self, db_session: AsyncSession, leak_subject_env: dict[str, Any]
     ) -> None:
         """The admin-facing export intentionally shows staff annotations."""
         tenant = leak_subject_env["tenant"]
-        blob, manifest = await build_export(
-            db_session, tenant.id, [SUBJECT_EMAIL], mode="admin"
-        )
+        blob, manifest = await build_export(db_session, tenant.id, [SUBJECT_EMAIL], mode="admin")
         assert manifest["mode"] == "admin"
         # Admin sees everything — the canaries should still be there so ops
         # can review before sending. Decompress and search.
@@ -289,7 +284,7 @@ class TestPortalExportLeakProofing:
 
 
 @pytest_asyncio.fixture()
-async def portal_subject_env(db_session: "AsyncSession"):
+async def portal_subject_env(db_session: AsyncSession):
     """Tenant + portal user with the seeded registration, ready to sign in."""
     tenant = Tenant(
         id=uuid.uuid4(),
@@ -365,9 +360,9 @@ class TestPortalPrivacyEndpoints:
     @pytest.mark.asyncio
     async def test_export_runs_inline_and_returns_download_url(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         portal_subject_env: dict[str, Any],
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
         r = await client.post(
             "/api/v1/portal/me/privacy-requests",
@@ -391,7 +386,7 @@ class TestPortalPrivacyEndpoints:
     @pytest.mark.asyncio
     async def test_export_download_streams_the_zip_with_subject_email(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         portal_subject_env: dict[str, Any],
     ) -> None:
         create = await client.post(
@@ -401,9 +396,7 @@ class TestPortalPrivacyEndpoints:
         )
         body = create.json()
 
-        download = await client.get(
-            body["download_url"], headers=portal_subject_env["headers"]
-        )
+        download = await client.get(body["download_url"], headers=portal_subject_env["headers"])
         assert download.status_code == 200
         assert download.headers["content-type"] == "application/zip"
 
@@ -418,9 +411,9 @@ class TestPortalPrivacyEndpoints:
     @pytest.mark.asyncio
     async def test_erasure_is_queued_for_admin_review(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         portal_subject_env: dict[str, Any],
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
         r = await client.post(
             "/api/v1/portal/me/privacy-requests",
@@ -440,9 +433,9 @@ class TestPortalPrivacyEndpoints:
     @pytest.mark.asyncio
     async def test_client_cannot_forge_subject_emails(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         portal_subject_env: dict[str, Any],
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
         """Even if someone hand-rolls a POST with extra fields, the server
         uses ONLY the authenticated portal user's email."""
@@ -465,9 +458,9 @@ class TestPortalPrivacyEndpoints:
     @pytest.mark.asyncio
     async def test_list_and_detail_scoped_to_caller(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         portal_subject_env: dict[str, Any],
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
         # Create one request.
         create = await client.post(
@@ -529,18 +522,16 @@ class TestPortalPrivacyEndpoints:
         assert r.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_unauthenticated_request_is_401(
-        self, client: "AsyncClient"
-    ) -> None:
+    async def test_unauthenticated_request_is_401(self, client: AsyncClient) -> None:
         r = await client.get("/api/v1/portal/me/privacy-requests")
         assert r.status_code == 401
 
     @pytest.mark.asyncio
     async def test_portal_create_writes_audit_row(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         portal_subject_env: dict[str, Any],
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
         r = await client.post(
             "/api/v1/portal/me/privacy-requests",

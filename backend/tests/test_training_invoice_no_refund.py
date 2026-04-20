@@ -35,9 +35,7 @@ BASE = "/api/v1/trainings"
 
 
 @pytest_asyncio.fixture()
-async def training_data(
-    db_session: AsyncSession, tenant: Tenant, tenant_admin_user: User
-) -> dict:
+async def training_data(db_session: AsyncSession, tenant: Tenant, tenant_admin_user: User) -> dict:
     """Create training module + training + placement + registration + paid CC invoice.
 
     This fixture ensures all seed data is created atomically in the correct order,

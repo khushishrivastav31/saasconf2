@@ -17,11 +17,10 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password
+from app.models.booking import BookingOption
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
-from app.models.messaging import DynamicRecipientList
 from app.models.module import Module, TenantModule
-from app.models.booking import BookingOption
 from app.models.registration import BillingProfile, Registration
 from app.models.settings import SponsorPackage, UserRole, UserRoleAssignment
 from app.models.sponsor import Sponsor
@@ -195,9 +194,7 @@ async def sponsor_with_contact(
         company_name="Acme Corp",
         sponsor_package_id=pkg.id,
         is_active=True,
-        contact_persons=[
-            {"name": "Carol Contact", "email": f"carol-{uuid.uuid4().hex[:8]}@acme.com"}
-        ],
+        contact_persons=[{"name": "Carol Contact", "email": f"carol-{uuid.uuid4().hex[:8]}@acme.com"}],
     )
     db_session.add(sponsor)
     await db_session.commit()

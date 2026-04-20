@@ -12,6 +12,7 @@ Covers:
 import os
 import uuid
 from datetime import date, timedelta
+from unittest.mock import AsyncMock, patch
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -897,6 +898,87 @@ class TestActiveToggle:
         res = await client.patch(toggle_url, headers=auth_headers(token))
         assert res.status_code == 409
 
+    @pytest.mark.asyncio
+    async def test_cannot_deactivate_with_accepted_offer(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+        program_year: TrainingProgramYear,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Deactivation is blocked (409) when an accepted offer references the placement."""
+        customer = Customer(
+            id=uuid.uuid4(),
+            tenant_id=tenant_portal.id,
+            name=f"Cust {uuid.uuid4().hex[:6]}",
+        )
+        db_session.add(customer)
+        await db_session.flush()
+        offer = CustomerOffer(
+            id=uuid.uuid4(),
+            tenant_id=tenant_portal.id,
+            customer_id=customer.id,
+            offer_number=f"O-{uuid.uuid4().hex[:6]}",
+            status="accepted",
+        )
+        db_session.add(offer)
+        await db_session.flush()
+        att = TrainingAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tenant_portal.id,
+            first_name="Off",
+            last_name="Att",
+            email=f"off-{uuid.uuid4().hex[:6]}@test.de",
+            status="active",
+        )
+        db_session.add(att)
+        await db_session.flush()
+        oa = OfferAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tenant_portal.id,
+            offer_id=offer.id,
+            placement_id=placement_berlin.id,
+            attendee_id=att.id,
+            first_name=att.first_name,
+            last_name=att.last_name,
+            email=att.email,
+        )
+        db_session.add(oa)
+        await db_session.commit()
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        toggle_url = f"/api/v1/trainings/programs/years/{program_year.id}/trainings/{placement_berlin.id}/active"
+        res = await client.patch(toggle_url, headers=auth_headers(token))
+        assert res.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_toggle_active_404_when_placement_missing(
+        self,
+        client: AsyncClient,
+        admin_portal: User,
+        program_year: TrainingProgramYear,
+    ):
+        token = _make_token(admin_portal, modules=["trainings"])
+        toggle_url = f"/api/v1/trainings/programs/years/{program_year.id}/trainings/{uuid.uuid4()}/active"
+        res = await client.patch(toggle_url, headers=auth_headers(token))
+        assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_toggle_active_404_when_year_id_mismatch(
+        self,
+        client: AsyncClient,
+        admin_portal: User,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """A placement under a different year_id must not be togglable via this path."""
+        token = _make_token(admin_portal, modules=["trainings"])
+        wrong_year = uuid.uuid4()
+        toggle_url = f"/api/v1/trainings/programs/years/{wrong_year}/trainings/{placement_berlin.id}/active"
+        res = await client.patch(toggle_url, headers=auth_headers(token))
+        assert res.status_code == 404
+
 
 # ── Portal User Deactivation Tests ────────────────────────────────────
 
@@ -1299,3 +1381,172 @@ class TestPortalUserDeactivation:
         assert not any(e.event_type == "deactivated" for e in events)
         # audit trail is written
         assert any(e.event_type == "portal_deactivated" for e in events)
+
+
+# ── Training user_management: resend/reset/impersonate/merge ──────────
+
+
+class TestTrainingUserAccessActions:
+    async def _make_portal_user(
+        self, db_session: AsyncSession, tenant: Tenant, email_suffix: str = "", active: bool = True
+    ) -> PortalUser:
+        pu = PortalUser(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            email=f"tu-{email_suffix}-{uuid.uuid4().hex[:6]}@test.de",
+            first_name="Trainee",
+            last_name="User",
+            is_active=active,
+        )
+        db_session.add(pu)
+        await db_session.commit()
+        return pu
+
+    @pytest.mark.asyncio
+    async def test_resend_invite_sends_email(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        pu = await self._make_portal_user(db_session, tenant_portal, "inv")
+        token = _make_token(admin_portal, modules=["trainings"])
+
+        mock_send = AsyncMock()
+        with patch("app.core.email.send_email", mock_send):
+            res = await client.post(
+                f"/api/v1/trainings/users/{pu.id}/resend-invite",
+                headers=auth_headers(token),
+            )
+        assert res.status_code == 200
+        assert res.json()["message"] == "Invite email sent"
+        mock_send.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_resend_invite_404_when_user_missing(
+        self,
+        client: AsyncClient,
+        admin_portal: User,
+    ):
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.post(
+            f"/api/v1/trainings/users/{uuid.uuid4()}/resend-invite",
+            headers=auth_headers(token),
+        )
+        assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_reset_password_sends_email(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        pu = await self._make_portal_user(db_session, tenant_portal, "rst")
+        token = _make_token(admin_portal, modules=["trainings"])
+
+        mock_send = AsyncMock()
+        with patch("app.core.email.send_email", mock_send):
+            res = await client.post(
+                f"/api/v1/trainings/users/{pu.id}/reset-password",
+                headers=auth_headers(token),
+            )
+        assert res.status_code == 200
+        mock_send.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_impersonate_returns_access_token(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        pu = await self._make_portal_user(db_session, tenant_portal, "imp")
+        token = _make_token(admin_portal, modules=["trainings"])
+
+        res = await client.post(
+            f"/api/v1/trainings/users/{pu.id}/impersonate",
+            headers=auth_headers(token),
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["access_token"]
+        assert data["token_type"] == "bearer"
+        assert data["portal_user_email"] == pu.email
+        assert data["portal_user_name"].startswith("Trainee")
+
+    @pytest.mark.asyncio
+    async def test_impersonate_blocked_for_inactive_user(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        pu = await self._make_portal_user(db_session, tenant_portal, "impoff", active=False)
+        token = _make_token(admin_portal, modules=["trainings"])
+
+        res = await client.post(
+            f"/api/v1/trainings/users/{pu.id}/impersonate",
+            headers=auth_headers(token),
+        )
+        assert res.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_merge_rejects_self(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        pu = await self._make_portal_user(db_session, tenant_portal, "self")
+        token = _make_token(admin_portal, modules=["trainings"])
+
+        res = await client.post(
+            f"/api/v1/trainings/users/{pu.id}/merge",
+            headers=auth_headers(token),
+            json={"source_user_id": str(pu.id)},
+        )
+        assert res.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_merge_moves_attendees_and_deletes_source(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_portal: User,
+        tenant_portal: Tenant,
+    ):
+        target = await self._make_portal_user(db_session, tenant_portal, "tgt")
+        source = await self._make_portal_user(db_session, tenant_portal, "src")
+
+        src_att = TrainingAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tenant_portal.id,
+            first_name="Src",
+            last_name="Att",
+            email=f"src-att-{uuid.uuid4().hex[:6]}@test.de",
+            status="active",
+            portal_user_id=source.id,
+        )
+        db_session.add(src_att)
+        await db_session.commit()
+
+        token = _make_token(admin_portal, modules=["trainings"])
+        res = await client.post(
+            f"/api/v1/trainings/users/{target.id}/merge",
+            headers=auth_headers(token),
+            json={"source_user_id": str(source.id)},
+        )
+        assert res.status_code == 200
+        assert res.json()["merged_records"] >= 1
+
+        await db_session.refresh(src_att)
+        assert src_att.portal_user_id == target.id
+
+        src_exists = await db_session.execute(select(PortalUser).where(PortalUser.id == source.id))
+        assert src_exists.scalar_one_or_none() is None

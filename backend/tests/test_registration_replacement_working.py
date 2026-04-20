@@ -1,7 +1,8 @@
 """Working tests for registration replacement feature - these tests PASS."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from app.core.registration_replacement import (
     _create_user_and_access,
@@ -13,7 +14,6 @@ from app.models.registration import (
     RegistrationReplacement,
     RegistrationStatus,
 )
-from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.schemas.registration import ReplaceAttendeeNewAttendeeData
 
@@ -106,9 +106,7 @@ async def test_registration_replacement_model_with_additional_items() -> None:
         replacement_reason=None,
         has_additional_items=True,  # Scenario B
         replaced_by_user_id=uuid4(),
-        old_items_snapshot=[
-            {"item_type": "booking_option", "item_name": "Full Conference"}
-        ],
+        old_items_snapshot=[{"item_type": "booking_option", "item_name": "Full Conference"}],
     )
 
     assert replacement.has_additional_items is True
@@ -141,11 +139,7 @@ async def test_registration_item_model_structure() -> None:
 async def test_remove_conference_access_user_not_found(db_session) -> None:
     """Test _remove_conference_access when user doesn't exist."""
     # User with this email doesn't exist
-    count = await _remove_conference_access(
-        db_session,
-        "nonexistent@example.com",
-        uuid4()
-    )
+    count = await _remove_conference_access(db_session, "nonexistent@example.com", uuid4())
 
     assert count == 0
 
@@ -158,6 +152,7 @@ async def test_create_user_and_access_function_exists() -> None:
 
     # Verify function docstring or signature
     import inspect
+
     sig = inspect.signature(_create_user_and_access)
     params = list(sig.parameters.keys())
 
@@ -282,7 +277,7 @@ async def test_old_items_snapshot_structure() -> None:
 @pytest.mark.asyncio
 async def test_replacement_response_structure() -> None:
     """Test ReplaceAttendeeResponse structure."""
-    from app.schemas.registration import ReplaceAttendeeResponse, RegistrationResponse
+    from app.schemas.registration import RegistrationResponse, ReplaceAttendeeResponse
 
     # Mock registration responses
     old_reg = RegistrationResponse(
@@ -438,7 +433,7 @@ async def test_replace_attendee_request_minimal() -> None:
 @pytest.mark.asyncio
 async def test_replace_attendee_response_scenario_a() -> None:
     """Test ReplaceAttendeeResponse for Scenario A (no additional items)."""
-    from app.schemas.registration import ReplaceAttendeeResponse, RegistrationResponse
+    from app.schemas.registration import RegistrationResponse, ReplaceAttendeeResponse
 
     old_reg = RegistrationResponse(
         id=uuid4(),
@@ -515,7 +510,7 @@ async def test_replace_attendee_response_scenario_a() -> None:
 @pytest.mark.asyncio
 async def test_replace_attendee_response_scenario_b_flag() -> None:
     """Test ReplaceAttendeeResponse for Scenario B (has_additional_items flag)."""
-    from app.schemas.registration import ReplaceAttendeeResponse, RegistrationResponse
+    from app.schemas.registration import RegistrationResponse, ReplaceAttendeeResponse
 
     old_reg = RegistrationResponse(
         id=uuid4(),

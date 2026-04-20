@@ -20,7 +20,6 @@ from app.models.invoice import Invoice
 from app.models.tenant import Tenant
 from app.services.invoice_service import assign_invoice_number_and_mark_sent
 
-
 # ─── helpers ────────────────────────────────────────────────────────────
 
 
@@ -109,15 +108,27 @@ class TestGetCurrentRate:
     async def test_picks_most_recent(self, db_session: AsyncSession, tenant: Tenant) -> None:
         now = datetime.now(UTC)
         await _make_rate(
-            db_session, tenant.id, from_ccy="EUR", to_ccy="USD", rate="1.00",
+            db_session,
+            tenant.id,
+            from_ccy="EUR",
+            to_ccy="USD",
+            rate="1.00",
             effective_at=now - timedelta(days=10),
         )
         await _make_rate(
-            db_session, tenant.id, from_ccy="EUR", to_ccy="USD", rate="1.15",
+            db_session,
+            tenant.id,
+            from_ccy="EUR",
+            to_ccy="USD",
+            rate="1.15",
             effective_at=now - timedelta(days=1),
         )
         await _make_rate(
-            db_session, tenant.id, from_ccy="EUR", to_ccy="USD", rate="1.10",
+            db_session,
+            tenant.id,
+            from_ccy="EUR",
+            to_ccy="USD",
+            rate="1.10",
             effective_at=now - timedelta(days=5),
         )
         result = await get_current_rate(db_session, tenant.id, "EUR", "USD")
@@ -140,9 +151,7 @@ class TestGetCurrentRate:
 
 class TestResolveRateForFreeze:
     @pytest.mark.asyncio
-    async def test_prefers_exchange_rate_over_settings(
-        self, db_session: AsyncSession, tenant: Tenant
-    ) -> None:
+    async def test_prefers_exchange_rate_over_settings(self, db_session: AsyncSession, tenant: Tenant) -> None:
         await _make_rate(db_session, tenant.id, from_ccy="EUR", to_ccy="USD", rate="1.20")
         result = await resolve_rate_for_freeze(
             db_session,
@@ -165,9 +174,7 @@ class TestResolveRateForFreeze:
         assert result == Decimal("1.08")
 
     @pytest.mark.asyncio
-    async def test_no_rate_and_no_fallback_returns_none(
-        self, db_session: AsyncSession, tenant: Tenant
-    ) -> None:
+    async def test_no_rate_and_no_fallback_returns_none(self, db_session: AsyncSession, tenant: Tenant) -> None:
         result = await resolve_rate_for_freeze(
             db_session,
             tenant_id=tenant.id,
@@ -178,16 +185,14 @@ class TestResolveRateForFreeze:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_missing_currency_uses_fallback(
-        self, db_session: AsyncSession, tenant: Tenant
-    ) -> None:
-        assert (
-            await resolve_rate_for_freeze(
-                db_session, tenant_id=tenant.id, from_ccy=None, to_ccy="USD",
-                settings_fallback="1.07",
-            )
-            == Decimal("1.07")
-        )
+    async def test_missing_currency_uses_fallback(self, db_session: AsyncSession, tenant: Tenant) -> None:
+        assert await resolve_rate_for_freeze(
+            db_session,
+            tenant_id=tenant.id,
+            from_ccy=None,
+            to_ccy="USD",
+            settings_fallback="1.07",
+        ) == Decimal("1.07")
 
 
 # ─── assign_invoice_number_and_mark_sent — freeze behaviour ──────────────
@@ -210,9 +215,7 @@ class TestAssignInvoiceNumberFreezesRate:
         invoice = await _make_invoice(db_session, tenant=tenant, conference=conference)
         user_id = uuid4()
 
-        await assign_invoice_number_and_mark_sent(
-            db_session, invoice, conference, tenant.id, user_id
-        )
+        await assign_invoice_number_and_mark_sent(db_session, invoice, conference, tenant.id, user_id)
 
         assert invoice.status == "sent"
         assert invoice.exchange_rate_used == Decimal("1.120000")
@@ -225,17 +228,13 @@ class TestAssignInvoiceNumberFreezesRate:
         conference: Conference,
     ) -> None:
         conference.currency = "EUR"
-        conference.settings = {
-            "invoice_company_info": {"second_currency": "USD", "exchange_rate": "1.05"}
-        }
+        conference.settings = {"invoice_company_info": {"second_currency": "USD", "exchange_rate": "1.05"}}
         db_session.add(conference)
         await db_session.commit()
 
         invoice = await _make_invoice(db_session, tenant=tenant, conference=conference)
 
-        await assign_invoice_number_and_mark_sent(
-            db_session, invoice, conference, tenant.id, uuid4()
-        )
+        await assign_invoice_number_and_mark_sent(db_session, invoice, conference, tenant.id, uuid4())
         assert invoice.exchange_rate_used == Decimal("1.050000")
 
     @pytest.mark.asyncio
@@ -252,9 +251,7 @@ class TestAssignInvoiceNumberFreezesRate:
 
         invoice = await _make_invoice(db_session, tenant=tenant, conference=conference)
 
-        await assign_invoice_number_and_mark_sent(
-            db_session, invoice, conference, tenant.id, uuid4()
-        )
+        await assign_invoice_number_and_mark_sent(db_session, invoice, conference, tenant.id, uuid4())
         assert invoice.exchange_rate_used is None
 
     @pytest.mark.asyncio
@@ -276,7 +273,5 @@ class TestAssignInvoiceNumberFreezesRate:
         db_session.add(invoice)
         await db_session.commit()
 
-        await assign_invoice_number_and_mark_sent(
-            db_session, invoice, conference, tenant.id, uuid4()
-        )
+        await assign_invoice_number_and_mark_sent(db_session, invoice, conference, tenant.id, uuid4())
         assert invoice.exchange_rate_used == Decimal("0.99")

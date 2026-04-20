@@ -9,6 +9,7 @@ import pytest
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_invoice(
     *,
     invoice_number: str = "INV-2026-001",
@@ -37,6 +38,7 @@ def _make_invoice(
 # ---------------------------------------------------------------------------
 # build_pdf_attachment
 # ---------------------------------------------------------------------------
+
 
 class TestBuildPdfAttachment:
     """Tests for build_pdf_attachment()."""
@@ -98,6 +100,7 @@ class TestBuildPdfAttachment:
 # ---------------------------------------------------------------------------
 # build_invoice_email_html
 # ---------------------------------------------------------------------------
+
 
 class TestBuildInvoiceEmailHtml:
     """Tests for build_invoice_email_html()."""
@@ -166,6 +169,7 @@ class TestBuildInvoiceEmailHtml:
 # ---------------------------------------------------------------------------
 # send_invoice_email — guard clause only
 # ---------------------------------------------------------------------------
+
 
 class TestSendInvoiceEmail:
     """Test the guard clause in send_invoice_email (no recipient)."""

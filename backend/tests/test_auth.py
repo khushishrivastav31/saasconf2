@@ -318,9 +318,7 @@ async def test_change_password_success(
     assert verify_password("NewPassword456!", tenant_admin_user.password_hash)
 
 
-async def test_change_password_wrong_current(
-    client: AsyncClient, tenant_admin_token: str
-) -> None:
+async def test_change_password_wrong_current(client: AsyncClient, tenant_admin_token: str) -> None:
     """Reject change when current password is wrong."""
     response = await client.patch(
         "/api/v1/auth/me/password",
@@ -330,9 +328,7 @@ async def test_change_password_wrong_current(
     assert response.status_code == 401
 
 
-async def test_change_password_same_as_current(
-    client: AsyncClient, tenant_admin_token: str
-) -> None:
+async def test_change_password_same_as_current(client: AsyncClient, tenant_admin_token: str) -> None:
     """Reject change when new password is the same as current."""
     response = await client.patch(
         "/api/v1/auth/me/password",
@@ -342,9 +338,7 @@ async def test_change_password_same_as_current(
     assert response.status_code == 401
 
 
-async def test_change_password_weak_new_password(
-    client: AsyncClient, tenant_admin_token: str
-) -> None:
+async def test_change_password_weak_new_password(client: AsyncClient, tenant_admin_token: str) -> None:
     """Reject change when new password is too weak (no uppercase)."""
     response = await client.patch(
         "/api/v1/auth/me/password",

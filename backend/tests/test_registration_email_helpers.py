@@ -8,6 +8,7 @@ import pytest
 # send_registration_invoice_email — guard clause
 # ---------------------------------------------------------------------------
 
+
 class TestSendRegistrationInvoiceEmail:
     """Test that send_registration_invoice_email returns False when no recipient."""
 
@@ -39,6 +40,7 @@ class TestSendRegistrationInvoiceEmail:
 # send_attendee_welcome_email — guard clause
 # ---------------------------------------------------------------------------
 
+
 class TestSendAttendeeWelcomeEmail:
     """Test that send_attendee_welcome_email returns False when no email."""
 
@@ -57,9 +59,7 @@ class TestSendAttendeeWelcomeEmail:
             patch("app.core.email.registrations.send_email") as mock_send,
             patch("app.core.email.registrations.render_email") as mock_render,
         ):
-            result = await send_attendee_welcome_email(
-                db, registration, conference, password_setup_token="tok123"
-            )
+            result = await send_attendee_welcome_email(db, registration, conference, password_setup_token="tok123")
 
         assert result is False
         mock_send.assert_not_called()

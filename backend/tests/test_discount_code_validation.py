@@ -95,7 +95,9 @@ async def test_validate_discount_code_expired(db_session: AsyncSession, tenant, 
     await db_session.commit()
 
     with pytest.raises(ValidationError, match="expired"):
-        await validate_and_get_discount_code(db_session, "EXPIRED", conference.id, tenant.id, registration_date=date.today())
+        await validate_and_get_discount_code(
+            db_session, "EXPIRED", conference.id, tenant.id, registration_date=date.today()
+        )
 
 
 @pytest.mark.asyncio
@@ -118,7 +120,9 @@ async def test_validate_discount_code_not_yet_active(db_session: AsyncSession, t
     await db_session.commit()
 
     with pytest.raises(ValidationError, match="not yet active"):
-        await validate_and_get_discount_code(db_session, "FUTURE", conference.id, tenant.id, registration_date=date.today())
+        await validate_and_get_discount_code(
+            db_session, "FUTURE", conference.id, tenant.id, registration_date=date.today()
+        )
 
 
 @pytest.mark.asyncio
@@ -212,9 +216,7 @@ async def test_check_discount_applies_to_option_with_restrictions(db_session: As
     await db_session.commit()
 
     # Add restriction: discount only applies to tutorial
-    restriction = DiscountCodeOption(
-        discount_code_id=discount.id, booking_option_id=tutorial.id, tenant_id=tenant.id
-    )
+    restriction = DiscountCodeOption(discount_code_id=discount.id, booking_option_id=tutorial.id, tenant_id=tenant.id)
     db_session.add(restriction)
     await db_session.commit()
 
@@ -300,9 +302,7 @@ async def test_check_discount_applies_to_period_with_restrictions(db_session: As
     await db_session.commit()
 
     # Add restriction: discount only applies to early bird
-    restriction = DiscountCodePeriod(
-        discount_code_id=discount.id, booking_period_id=early_bird.id, tenant_id=tenant.id
-    )
+    restriction = DiscountCodePeriod(discount_code_id=discount.id, booking_period_id=early_bird.id, tenant_id=tenant.id)
     db_session.add(restriction)
     await db_session.commit()
 

@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
-from app.models.training import Training
 from app.models.user import User
 from tests.conftest import _make_token, auth_headers
 
@@ -152,9 +151,7 @@ async def test_list_trainings_pagination(
             client, token, {**TRAINING_PAYLOAD, "name": f"Training {i}", "abbreviation": f"T{i}"}
         )
 
-    response = await client.get(
-        BASE_URL, params={"page": 1, "page_size": 2}, headers=auth_headers(token)
-    )
+    response = await client.get(BASE_URL, params={"page": 1, "page_size": 2}, headers=auth_headers(token))
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 3
@@ -182,15 +179,11 @@ async def test_list_trainings_is_active_filter(
         headers=auth_headers(token),
     )
 
-    response = await client.get(
-        BASE_URL, params={"is_active": "true"}, headers=auth_headers(token)
-    )
+    response = await client.get(BASE_URL, params={"is_active": "true"}, headers=auth_headers(token))
     assert response.status_code == 200
     assert response.json()["total"] == 0
 
-    response = await client.get(
-        BASE_URL, params={"is_active": "false"}, headers=auth_headers(token)
-    )
+    response = await client.get(BASE_URL, params={"is_active": "false"}, headers=auth_headers(token))
     assert response.status_code == 200
     assert response.json()["total"] == 1
 

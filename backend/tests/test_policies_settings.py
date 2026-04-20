@@ -56,9 +56,7 @@ async def test_get_policies_default(client: AsyncClient, conference, tenant_admi
 
 
 @pytest.mark.asyncio
-async def test_get_policies_configured(
-    client: AsyncClient, policies_conference, tenant_admin_token
-):
+async def test_get_policies_configured(client: AsyncClient, policies_conference, tenant_admin_token):
     """GET policies returns configured values."""
     resp = await client.get(
         f"/api/v1/conferences/{policies_conference.id}/settings/policies",
@@ -140,9 +138,7 @@ async def test_update_invalid_url(client: AsyncClient, conference, tenant_admin_
 
 
 @pytest.mark.asyncio
-async def test_partial_update_preserves_existing(
-    client: AsyncClient, policies_conference, tenant_admin_token
-):
+async def test_partial_update_preserves_existing(client: AsyncClient, policies_conference, tenant_admin_token):
     """PUT policies only updates provided entries, preserving others."""
     resp = await client.put(
         f"/api/v1/conferences/{policies_conference.id}/settings/policies",

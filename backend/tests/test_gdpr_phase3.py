@@ -33,7 +33,6 @@ from app.models.invoice import Invoice
 from app.models.privacy_request import (
     PrivacyRequest,
     PrivacyRequestStatus,
-    PrivacyRequestType,
 )
 from app.models.registration import BillingProfile, Registration
 from app.models.tenant import Tenant
@@ -54,7 +53,7 @@ SUBJECT_EMAIL = "erase-me@example.com"
 
 
 @pytest_asyncio.fixture()
-async def erasure_env(db_session: "AsyncSession"):
+async def erasure_env(db_session: AsyncSession):
     """Tenant + admin + conference + registration + invoice for SUBJECT_EMAIL."""
     tenant = Tenant(
         id=uuid.uuid4(),
@@ -169,9 +168,7 @@ def admin_headers(erasure_env) -> dict[str, str]:
     return auth_headers(token)
 
 
-async def _create_and_approve_erasure(
-    client: "AsyncClient", headers: dict[str, str], email: str
-) -> str:
+async def _create_and_approve_erasure(client: AsyncClient, headers: dict[str, str], email: str) -> str:
     """Create an erasure request and move it to ``approved``. Returns id."""
     create = await client.post(
         "/api/v1/privacy-requests",
@@ -180,9 +177,7 @@ async def _create_and_approve_erasure(
     )
     assert create.status_code == 201, create.text
     pr_id = create.json()["id"]
-    approve = await client.post(
-        f"/api/v1/privacy-requests/{pr_id}/approve", headers=headers
-    )
+    approve = await client.post(f"/api/v1/privacy-requests/{pr_id}/approve", headers=headers)
     assert approve.status_code == 200, approve.text
     return pr_id
 
@@ -194,15 +189,9 @@ async def _create_and_approve_erasure(
 
 class TestPreview:
     @pytest.mark.asyncio
-    async def test_preview_returns_expected_shape(
-        self, client: "AsyncClient", admin_headers, erasure_env
-    ) -> None:
-        pr_id = await _create_and_approve_erasure(
-            client, admin_headers, erasure_env["email"]
-        )
-        r = await client.post(
-            f"/api/v1/privacy-requests/{pr_id}/preview-erasure", headers=admin_headers
-        )
+    async def test_preview_returns_expected_shape(self, client: AsyncClient, admin_headers, erasure_env) -> None:
+        pr_id = await _create_and_approve_erasure(client, admin_headers, erasure_env["email"])
+        r = await client.post(f"/api/v1/privacy-requests/{pr_id}/preview-erasure", headers=admin_headers)
         assert r.status_code == 200, r.text
         body = r.json()
 
@@ -232,14 +221,10 @@ class TestPreview:
 
     @pytest.mark.asyncio
     async def test_preview_locks_billing_profile_when_invoice_retained(
-        self, client: "AsyncClient", admin_headers, erasure_env
+        self, client: AsyncClient, admin_headers, erasure_env
     ) -> None:
-        pr_id = await _create_and_approve_erasure(
-            client, admin_headers, erasure_env["email"]
-        )
-        r = await client.post(
-            f"/api/v1/privacy-requests/{pr_id}/preview-erasure", headers=admin_headers
-        )
+        pr_id = await _create_and_approve_erasure(client, admin_headers, erasure_env["email"])
+        r = await client.post(f"/api/v1/privacy-requests/{pr_id}/preview-erasure", headers=admin_headers)
         body = r.json()
         tables = {e["table"]: e for e in body["entries"]}
         bp = tables["billing_profiles"]
@@ -248,18 +233,14 @@ class TestPreview:
         assert bp["locked_reason"] and "HGB" in bp["locked_reason"]
 
     @pytest.mark.asyncio
-    async def test_preview_rejects_non_erasure_request(
-        self, client: "AsyncClient", admin_headers
-    ) -> None:
+    async def test_preview_rejects_non_erasure_request(self, client: AsyncClient, admin_headers) -> None:
         create = await client.post(
             "/api/v1/privacy-requests",
             json={"request_type": "export", "subject_emails": ["x@example.com"]},
             headers=admin_headers,
         )
         pr_id = create.json()["id"]
-        r = await client.post(
-            f"/api/v1/privacy-requests/{pr_id}/preview-erasure", headers=admin_headers
-        )
+        r = await client.post(f"/api/v1/privacy-requests/{pr_id}/preview-erasure", headers=admin_headers)
         assert r.status_code in (400, 422)
 
 
@@ -272,14 +253,12 @@ class TestExecute:
     @pytest.mark.asyncio
     async def test_execute_happy_path_default_actions(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         admin_headers,
         erasure_env,
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
-        pr_id = await _create_and_approve_erasure(
-            client, admin_headers, erasure_env["email"]
-        )
+        pr_id = await _create_and_approve_erasure(client, admin_headers, erasure_env["email"])
         r = await client.post(
             f"/api/v1/privacy-requests/{pr_id}/execute-erasure",
             json={"table_actions": {}},
@@ -293,18 +272,12 @@ class TestExecute:
         assert body["manifest"]["users"]["action"] == "anonymize"
 
         # Registration row is gone.
-        result = await db_session.execute(
-            select(Registration).where(
-                Registration.id == erasure_env["registration"].id
-            )
-        )
+        result = await db_session.execute(select(Registration).where(Registration.id == erasure_env["registration"].id))
         assert result.scalar_one_or_none() is None
 
         # Invoice row is intact and still holds the recipient email hash.
         await db_session.refresh(erasure_env["invoice"])
-        assert erasure_env["invoice"].recipient_email_hash == hash_email(
-            erasure_env["email"]
-        )
+        assert erasure_env["invoice"].recipient_email_hash == hash_email(erasure_env["email"])
 
         # Subject user is anonymised in place.
         await db_session.refresh(erasure_env["subject_user"])
@@ -314,9 +287,7 @@ class TestExecute:
         assert erasure_env["subject_user"].last_name == "Subject"
 
         # Privacy request flipped to completed + carries the manifest.
-        result = await db_session.execute(
-            select(PrivacyRequest).where(PrivacyRequest.id == uuid.UUID(pr_id))
-        )
+        result = await db_session.execute(select(PrivacyRequest).where(PrivacyRequest.id == uuid.UUID(pr_id)))
         pr = result.scalar_one()
         assert pr.status == PrivacyRequestStatus.COMPLETED.value
         assert pr.executed_at is not None
@@ -336,12 +307,8 @@ class TestExecute:
         assert audit.details["actions"]["invoices"] == "skip"
 
     @pytest.mark.asyncio
-    async def test_execute_rejects_unknown_table(
-        self, client: "AsyncClient", admin_headers, erasure_env
-    ) -> None:
-        pr_id = await _create_and_approve_erasure(
-            client, admin_headers, erasure_env["email"]
-        )
+    async def test_execute_rejects_unknown_table(self, client: AsyncClient, admin_headers, erasure_env) -> None:
+        pr_id = await _create_and_approve_erasure(client, admin_headers, erasure_env["email"])
         r = await client.post(
             f"/api/v1/privacy-requests/{pr_id}/execute-erasure",
             json={"table_actions": {"not_a_table": "delete"}},
@@ -350,12 +317,8 @@ class TestExecute:
         assert r.status_code in (400, 422)
 
     @pytest.mark.asyncio
-    async def test_execute_rejects_disallowed_action(
-        self, client: "AsyncClient", admin_headers, erasure_env
-    ) -> None:
-        pr_id = await _create_and_approve_erasure(
-            client, admin_headers, erasure_env["email"]
-        )
+    async def test_execute_rejects_disallowed_action(self, client: AsyncClient, admin_headers, erasure_env) -> None:
+        pr_id = await _create_and_approve_erasure(client, admin_headers, erasure_env["email"])
         # invoices is locked to "skip" — attempting to delete must fail.
         r = await client.post(
             f"/api/v1/privacy-requests/{pr_id}/execute-erasure",
@@ -365,9 +328,7 @@ class TestExecute:
         assert r.status_code in (400, 422)
 
     @pytest.mark.asyncio
-    async def test_execute_requires_approved_status(
-        self, client: "AsyncClient", admin_headers, erasure_env
-    ) -> None:
+    async def test_execute_requires_approved_status(self, client: AsyncClient, admin_headers, erasure_env) -> None:
         create = await client.post(
             "/api/v1/privacy-requests",
             json={"request_type": "erasure", "subject_emails": [erasure_env["email"]]},
@@ -383,9 +344,7 @@ class TestExecute:
         assert r.status_code in (400, 422)
 
     @pytest.mark.asyncio
-    async def test_execute_rejects_non_erasure_request(
-        self, client: "AsyncClient", admin_headers
-    ) -> None:
+    async def test_execute_rejects_non_erasure_request(self, client: AsyncClient, admin_headers) -> None:
         create = await client.post(
             "/api/v1/privacy-requests",
             json={"request_type": "export", "subject_emails": ["x@example.com"]},
@@ -409,14 +368,12 @@ class TestCrossTenantIsolation:
     @pytest.mark.asyncio
     async def test_other_tenant_cannot_preview_or_execute(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         admin_headers,
         erasure_env,
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
-        pr_id = await _create_and_approve_erasure(
-            client, admin_headers, erasure_env["email"]
-        )
+        pr_id = await _create_and_approve_erasure(client, admin_headers, erasure_env["email"])
 
         other_tenant = Tenant(
             id=uuid.uuid4(),

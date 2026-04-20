@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 
 @pytest_asyncio.fixture()
-async def seeded_subject_env(db_session: "AsyncSession"):
+async def seeded_subject_env(db_session: AsyncSession):
     """Tenant + admin + conference + one registration for 'subject@example.com'.
 
     Returns a dataclass-ish dict used by all endpoint tests.
@@ -135,7 +135,7 @@ def admin_headers(seeded_subject_env) -> dict[str, str]:
 
 
 @pytest_asyncio.fixture()
-async def other_tenant_admin(db_session: "AsyncSession") -> User:
+async def other_tenant_admin(db_session: AsyncSession) -> User:
     """A tenant admin belonging to a *different* tenant (for RLS tests)."""
     other_tenant = Tenant(
         id=uuid.uuid4(),
@@ -168,7 +168,7 @@ async def other_tenant_admin(db_session: "AsyncSession") -> User:
 class TestCreateAndList:
     @pytest.mark.asyncio
     async def test_create_logs_request_and_returns_payload(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
+        self, client: AsyncClient, admin_headers, seeded_subject_env
     ) -> None:
         payload = {
             "request_type": "export",
@@ -186,7 +186,7 @@ class TestCreateAndList:
         assert body["created_by"] is not None
 
     @pytest.mark.asyncio
-    async def test_cap_is_25_emails(self, client: "AsyncClient", admin_headers) -> None:
+    async def test_cap_is_25_emails(self, client: AsyncClient, admin_headers) -> None:
         payload = {
             "request_type": "export",
             "subject_emails": [f"user{i}@example.com" for i in range(26)],
@@ -195,9 +195,7 @@ class TestCreateAndList:
         assert r.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_filters_by_status_and_q(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
-    ) -> None:
+    async def test_list_filters_by_status_and_q(self, client: AsyncClient, admin_headers, seeded_subject_env) -> None:
         # Two requests for two subjects.
         await client.post(
             "/api/v1/privacy-requests",
@@ -235,7 +233,7 @@ class TestCreateAndList:
 
     @pytest.mark.asyncio
     async def test_detail_emits_view_audit(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env, db_session: "AsyncSession"
+        self, client: AsyncClient, admin_headers, seeded_subject_env, db_session: AsyncSession
     ) -> None:
         email = seeded_subject_env["email"]
         create = await client.post(
@@ -269,9 +267,7 @@ class TestCreateAndList:
 
 class TestApproveReject:
     @pytest.mark.asyncio
-    async def test_approve_only_erasure(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
-    ) -> None:
+    async def test_approve_only_erasure(self, client: AsyncClient, admin_headers, seeded_subject_env) -> None:
         # Erasure → approved OK.
         create = await client.post(
             "/api/v1/privacy-requests",
@@ -289,9 +285,7 @@ class TestApproveReject:
         assert r2.status_code in (400, 422)
 
     @pytest.mark.asyncio
-    async def test_approve_export_rejected(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
-    ) -> None:
+    async def test_approve_export_rejected(self, client: AsyncClient, admin_headers, seeded_subject_env) -> None:
         create = await client.post(
             "/api/v1/privacy-requests",
             json={"request_type": "export", "subject_emails": ["x@example.com"]},
@@ -305,7 +299,7 @@ class TestApproveReject:
 
     @pytest.mark.asyncio
     async def test_reject_requires_reason_and_persists(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
+        self, client: AsyncClient, admin_headers, seeded_subject_env
     ) -> None:
         create = await client.post(
             "/api/v1/privacy-requests",
@@ -315,9 +309,7 @@ class TestApproveReject:
         pr_id = create.json()["id"]
 
         # Missing reason → 422.
-        r = await client.post(
-            f"/api/v1/privacy-requests/{pr_id}/reject", json={}, headers=admin_headers
-        )
+        r = await client.post(f"/api/v1/privacy-requests/{pr_id}/reject", json={}, headers=admin_headers)
         assert r.status_code == 422
 
         # Proper reject.
@@ -341,10 +333,10 @@ class TestGenerateAndDownload:
     @pytest.mark.asyncio
     async def test_generate_export_completes_request(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         admin_headers,
         seeded_subject_env,
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
         email = seeded_subject_env["email"]
         create = await client.post(
@@ -370,9 +362,7 @@ class TestGenerateAndDownload:
         assert d.json()["execution_manifest"]["record_counts"]["registrations"] == 1
 
     @pytest.mark.asyncio
-    async def test_generate_rejects_erasure(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
-    ) -> None:
+    async def test_generate_rejects_erasure(self, client: AsyncClient, admin_headers, seeded_subject_env) -> None:
         create = await client.post(
             "/api/v1/privacy-requests",
             json={"request_type": "erasure", "subject_emails": ["x@example.com"]},
@@ -386,7 +376,7 @@ class TestGenerateAndDownload:
 
     @pytest.mark.asyncio
     async def test_download_streams_zip_with_expected_layout(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
+        self, client: AsyncClient, admin_headers, seeded_subject_env
     ) -> None:
         email = seeded_subject_env["email"]
         create = await client.post(
@@ -400,9 +390,7 @@ class TestGenerateAndDownload:
             headers=admin_headers,
         )
 
-        r = await client.get(
-            f"/api/v1/privacy-requests/{pr_id}/download", headers=admin_headers
-        )
+        r = await client.get(f"/api/v1/privacy-requests/{pr_id}/download", headers=admin_headers)
         assert r.status_code == 200
         assert r.headers["content-type"] == "application/zip"
         with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
@@ -416,10 +404,10 @@ class TestGenerateAndDownload:
     @pytest.mark.asyncio
     async def test_download_returns_410_after_window(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         admin_headers,
         seeded_subject_env,
-        db_session: "AsyncSession",
+        db_session: AsyncSession,
     ) -> None:
         email = seeded_subject_env["email"]
         create = await client.post(
@@ -439,15 +427,11 @@ class TestGenerateAndDownload:
         pr.executed_at = datetime.now(UTC) - timedelta(days=8)
         await db_session.commit()
 
-        r = await client.get(
-            f"/api/v1/privacy-requests/{pr_id}/download", headers=admin_headers
-        )
+        r = await client.get(f"/api/v1/privacy-requests/{pr_id}/download", headers=admin_headers)
         assert r.status_code == 410
 
     @pytest.mark.asyncio
-    async def test_download_only_when_completed(
-        self, client: "AsyncClient", admin_headers, seeded_subject_env
-    ) -> None:
+    async def test_download_only_when_completed(self, client: AsyncClient, admin_headers, seeded_subject_env) -> None:
         create = await client.post(
             "/api/v1/privacy-requests",
             json={"request_type": "export", "subject_emails": ["x@example.com"]},
@@ -470,7 +454,7 @@ class TestCrossTenantIsolation:
     @pytest.mark.asyncio
     async def test_other_tenant_cannot_see_or_mutate_request(
         self,
-        client: "AsyncClient",
+        client: AsyncClient,
         admin_headers,
         seeded_subject_env,
         other_tenant_admin,

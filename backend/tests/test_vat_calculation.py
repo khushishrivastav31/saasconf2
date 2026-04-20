@@ -318,7 +318,7 @@ async def test_calculate_vat_in_person_domestic(db_session, conference, tenant):
     conference.settings = {"eu_countries": ["DE", "FR", "IT"], "vat_rules": None}
 
     # Seed conference VAT rate
-    conf_vat_rate = ConferenceVatRate(
+    conf_vat_rate = ConferenceVatRate(  # noqa: F821
         id=uuid.uuid4(),
         conference_id=conference.id,
         rate=Decimal("19.00"),
@@ -559,7 +559,7 @@ async def test_calculate_vat_rounding(db_session, conference, tenant):
     conference.settings = {"eu_countries": ["DE"], "vat_rules": None}
 
     # Seed conference VAT rate
-    conf_vat_rate = ConferenceVatRate(
+    conf_vat_rate = ConferenceVatRate(  # noqa: F821
         id=uuid.uuid4(),
         conference_id=conference.id,
         rate=Decimal("19.00"),
@@ -743,7 +743,7 @@ async def test_vat_with_no_discount(db_session, tenant, conference):
     await db_session.commit()
 
     # Calculate VAT
-    tax_rate, tax_amount, notes_text = await calculate_vat_for_invoice(invoice, conference, db_session)
+    tax_rate, tax_amount, _notes_text = await calculate_vat_for_invoice(invoice, conference, db_session)
 
     # VAT should be 19% of 1000 = 190
     assert tax_rate == Decimal("19.00")

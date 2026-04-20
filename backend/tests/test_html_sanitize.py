@@ -3,7 +3,6 @@
 Pure unit tests — no database or async required.
 """
 
-
 from app.core.html_sanitize import sanitize_html
 
 
@@ -36,9 +35,7 @@ class TestStripsDangerousTags:
         assert "javascript:" not in result
 
     def test_strips_data_uri_script(self) -> None:
-        result = sanitize_html(
-            '<a href="data:text/html,<script>alert(1)</script>">click</a>'
-        )
+        result = sanitize_html('<a href="data:text/html,<script>alert(1)</script>">click</a>')
         assert "data:" not in result
         assert "<script>" not in result
 
@@ -48,9 +45,7 @@ class TestStripsDangerousTags:
         assert "<p>Hi</p>" in result
 
     def test_strips_form_tag(self) -> None:
-        result = sanitize_html(
-            '<form action="https://evil.com"><input type="text"></form>'
-        )
+        result = sanitize_html('<form action="https://evil.com"><input type="text"></form>')
         assert "<form" not in result
         assert "<input" not in result
 
@@ -105,10 +100,7 @@ class TestPreservesSafeTags:
         assert 'target="_blank"' in result
 
     def test_preserves_table_tags(self) -> None:
-        html = (
-            "<table><thead><tr><th>Header</th></tr></thead>"
-            "<tbody><tr><td>Data</td></tr></tbody></table>"
-        )
+        html = "<table><thead><tr><th>Header</th></tr></thead><tbody><tr><td>Data</td></tr></tbody></table>"
         result = sanitize_html(html)
         assert "<table>" in result
         assert "<thead>" in result

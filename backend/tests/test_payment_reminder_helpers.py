@@ -9,6 +9,7 @@ from app.core.payment_reminder_service import _format_amount, _get_reminder_sett
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_conference(settings: dict | None = None) -> MagicMock:
     """Create a mock Conference with optional settings."""
     conference = MagicMock()
@@ -26,6 +27,7 @@ def _make_invoice(total: float | None = None) -> MagicMock:
 # ---------------------------------------------------------------------------
 # _get_reminder_settings
 # ---------------------------------------------------------------------------
+
 
 class TestGetReminderSettings:
     """Tests for _get_reminder_settings()."""
@@ -47,14 +49,16 @@ class TestGetReminderSettings:
         assert result == DEFAULT_PAYMENT_REMINDER_SETTINGS
 
     def test_custom_values(self) -> None:
-        conference = _make_conference(settings={
-            "payment_reminders": {
-                "payment_reminders_enabled": False,
-                "first_reminder_days": 5,
-                "second_reminder_days": 30,
-                "notify_admin_after_second": False,
-            },
-        })
+        conference = _make_conference(
+            settings={
+                "payment_reminders": {
+                    "payment_reminders_enabled": False,
+                    "first_reminder_days": 5,
+                    "second_reminder_days": 30,
+                    "notify_admin_after_second": False,
+                },
+            }
+        )
         result = _get_reminder_settings(conference)
 
         assert result["payment_reminders_enabled"] is False
@@ -63,11 +67,13 @@ class TestGetReminderSettings:
         assert result["notify_admin_after_second"] is False
 
     def test_partial_override(self) -> None:
-        conference = _make_conference(settings={
-            "payment_reminders": {
-                "first_reminder_days": 10,
-            },
-        })
+        conference = _make_conference(
+            settings={
+                "payment_reminders": {
+                    "first_reminder_days": 10,
+                },
+            }
+        )
         result = _get_reminder_settings(conference)
 
         # Overridden key
@@ -81,6 +87,7 @@ class TestGetReminderSettings:
 # ---------------------------------------------------------------------------
 # _format_amount
 # ---------------------------------------------------------------------------
+
 
 class TestFormatAmount:
     """Tests for _format_amount()."""

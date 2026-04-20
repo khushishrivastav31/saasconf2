@@ -1723,11 +1723,7 @@ async def test_create_invoice_with_procurement_code(
     }
 
     url = _invoices_url(conference.id)
-    response = await client.post(
-        url,
-        json=payload,
-        headers=auth_headers(admin_token_invoices)
-    )
+    response = await client.post(url, json=payload, headers=auth_headers(admin_token_invoices))
 
     assert response.status_code == 201
     data = response.json()
@@ -1747,11 +1743,7 @@ async def test_update_invoice_procurement_code(
     payload = {"procurement_code": "PO-UPDATED-12345"}
 
     url = _invoices_url(conference.id, str(sample_invoice.id))
-    response = await client.put(
-        url,
-        json=payload,
-        headers=auth_headers(admin_token_invoices)
-    )
+    response = await client.put(url, json=payload, headers=auth_headers(admin_token_invoices))
 
     assert response.status_code == 200
     data = response.json()

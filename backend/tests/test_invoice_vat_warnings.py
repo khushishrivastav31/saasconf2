@@ -13,7 +13,6 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import _make_token
 
-
 # ── Fixtures ───────────────────────────────────────────────────────────
 
 

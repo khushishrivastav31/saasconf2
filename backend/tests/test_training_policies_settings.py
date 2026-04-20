@@ -57,9 +57,7 @@ async def test_get_training_policies_default(client: AsyncClient, tenant_admin_t
 
 
 @pytest.mark.asyncio
-async def test_get_training_policies_configured(
-    client: AsyncClient, policies_tenant, tenant_admin_token
-):
+async def test_get_training_policies_configured(client: AsyncClient, policies_tenant, tenant_admin_token):
     """GET training policies returns configured values."""
     resp = await client.get(
         "/api/v1/trainings/policies",
@@ -140,9 +138,7 @@ async def test_update_training_invalid_url(client: AsyncClient, tenant_admin_tok
 
 
 @pytest.mark.asyncio
-async def test_partial_update_preserves_existing(
-    client: AsyncClient, policies_tenant, tenant_admin_token
-):
+async def test_partial_update_preserves_existing(client: AsyncClient, policies_tenant, tenant_admin_token):
     """PUT training policies only updates provided entries, preserving others."""
     resp = await client.put(
         "/api/v1/trainings/policies",

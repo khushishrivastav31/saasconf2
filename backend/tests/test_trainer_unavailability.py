@@ -23,7 +23,6 @@ from app.models.trainer import Trainer, TrainerUnavailability
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -68,9 +67,7 @@ async def trainer(db_session: AsyncSession, tenant: Tenant) -> Trainer:
 
 
 @pytest_asyncio.fixture()
-async def sample_entry(
-    db_session: AsyncSession, tenant: Tenant, trainer: Trainer
-) -> TrainerUnavailability:
+async def sample_entry(db_session: AsyncSession, tenant: Tenant, trainer: Trainer) -> TrainerUnavailability:
     entry = TrainerUnavailability(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -219,9 +216,7 @@ class TestCreateUnavailability:
             "end_date": "2026-08-10",
             "description": "Conference trip",
         }
-        response = await client.post(
-            _url(trainer.id), json=payload, headers=auth_headers(admin_token)
-        )
+        response = await client.post(_url(trainer.id), json=payload, headers=auth_headers(admin_token))
         assert response.status_code == 201
         data = response.json()
         assert data["start_date"] == "2026-08-01"
@@ -238,9 +233,7 @@ class TestCreateUnavailability:
         trainer: Trainer,
     ) -> None:
         payload = {"start_date": "2026-09-15", "end_date": "2026-09-15"}
-        response = await client.post(
-            _url(trainer.id), json=payload, headers=auth_headers(admin_token)
-        )
+        response = await client.post(_url(trainer.id), json=payload, headers=auth_headers(admin_token))
         assert response.status_code == 201
         data = response.json()
         assert data["start_date"] == data["end_date"] == "2026-09-15"
@@ -254,9 +247,7 @@ class TestCreateUnavailability:
         trainer: Trainer,
     ) -> None:
         payload = {"start_date": "2026-08-10", "end_date": "2026-08-01"}
-        response = await client.post(
-            _url(trainer.id), json=payload, headers=auth_headers(admin_token)
-        )
+        response = await client.post(_url(trainer.id), json=payload, headers=auth_headers(admin_token))
         assert response.status_code == 422
 
     async def test_create_trainer_not_found(
@@ -266,9 +257,7 @@ class TestCreateUnavailability:
         admin_token: str,
     ) -> None:
         payload = {"start_date": "2026-08-01", "end_date": "2026-08-10"}
-        response = await client.post(
-            _url(uuid.uuid4()), json=payload, headers=auth_headers(admin_token)
-        )
+        response = await client.post(_url(uuid.uuid4()), json=payload, headers=auth_headers(admin_token))
         assert response.status_code == 404
 
 
@@ -369,9 +358,7 @@ class TestDeleteUnavailability:
         trainer: Trainer,
         sample_entry: TrainerUnavailability,
     ) -> None:
-        response = await client.delete(
-            _url(trainer.id, sample_entry.id), headers=auth_headers(admin_token)
-        )
+        response = await client.delete(_url(trainer.id, sample_entry.id), headers=auth_headers(admin_token))
         assert response.status_code == 200
 
         # Verify gone
@@ -385,9 +372,7 @@ class TestDeleteUnavailability:
         admin_token: str,
         trainer: Trainer,
     ) -> None:
-        response = await client.delete(
-            _url(trainer.id, uuid.uuid4()), headers=auth_headers(admin_token)
-        )
+        response = await client.delete(_url(trainer.id, uuid.uuid4()), headers=auth_headers(admin_token))
         assert response.status_code == 404
 
 
@@ -503,9 +488,7 @@ class TestTenantIsolation:
     ) -> None:
         _, _, token2 = other_tenant_setup
         payload = {"start_date": "2026-08-01", "end_date": "2026-08-10"}
-        response = await client.post(
-            _url(trainer.id), json=payload, headers=auth_headers(token2)
-        )
+        response = await client.post(_url(trainer.id), json=payload, headers=auth_headers(token2))
         assert response.status_code == 404
 
     async def test_cannot_delete_other_tenant_entry(
@@ -517,7 +500,5 @@ class TestTenantIsolation:
         other_tenant_setup: tuple[Tenant, Trainer, str],
     ) -> None:
         _, _, token2 = other_tenant_setup
-        response = await client.delete(
-            _url(trainer.id, sample_entry.id), headers=auth_headers(token2)
-        )
+        response = await client.delete(_url(trainer.id, sample_entry.id), headers=auth_headers(token2))
         assert response.status_code == 404

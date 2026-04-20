@@ -5,7 +5,6 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
 
 from app.core.booking_helpers import get_active_booking_period
 from app.core.invoice_auto_generation import create_invoice_for_registrations
@@ -15,10 +14,7 @@ from app.core.invoice_line_items import (
 )
 from app.core.user_auto_creation import create_user_for_registration
 from app.models.booking import BookingOption, BookingPeriod
-from app.models.invoice import Invoice
 from app.models.registration import BillingProfile, Registration
-from app.models.user import User
-
 
 # ── Booking Period Tests ─────────────────────────────────────────────
 
@@ -248,7 +244,9 @@ async def test_generate_line_items_bulk_consolidated(db_session, conference, ten
     await db_session.refresh(reg3)
 
     # Generate consolidated line items
-    line_items, subtotal, total_discount = await generate_line_items_for_bulk_registrations(db_session, [reg1, reg2, reg3], period)
+    line_items, subtotal, _total_discount = await generate_line_items_for_bulk_registrations(
+        db_session, [reg1, reg2, reg3], period
+    )
 
     # Should have 2 line items: Tutorial (x2) and Conference Pass (x1)
     assert len(line_items) == 2

@@ -802,3 +802,132 @@ class TestTenantIsolation:
         token = _make_token(admin_pu)  # admin of tenant_pu
         res = await client.get(f"/api/v1/portal-users/{foreign_pu.id}", headers=auth_headers(token))
         assert res.status_code == 404
+
+
+# ── Error paths — 404/422/502 across every admin action ─────────────────
+
+
+class TestAccessErrorPaths:
+    @pytest.mark.asyncio
+    async def test_toggle_access_404_when_user_missing(
+        self,
+        client: AsyncClient,
+        admin_pu: User,
+    ):
+        token = _make_token(admin_pu)
+        res = await client.put(
+            f"/api/v1/portal-users/{uuid.uuid4()}/toggle-access",
+            headers=auth_headers(token),
+        )
+        assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_resend_invite_404_when_user_missing(
+        self,
+        client: AsyncClient,
+        admin_pu: User,
+    ):
+        token = _make_token(admin_pu)
+        res = await client.post(
+            f"/api/v1/portal-users/{uuid.uuid4()}/resend-invite",
+            headers=auth_headers(token),
+        )
+        assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_reset_password_404_when_user_missing(
+        self,
+        client: AsyncClient,
+        admin_pu: User,
+    ):
+        token = _make_token(admin_pu)
+        res = await client.post(
+            f"/api/v1/portal-users/{uuid.uuid4()}/reset-password",
+            headers=auth_headers(token),
+        )
+        assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_impersonate_404_when_user_missing(
+        self,
+        client: AsyncClient,
+        admin_pu: User,
+    ):
+        token = _make_token(admin_pu)
+        res = await client.post(
+            f"/api/v1/portal-users/{uuid.uuid4()}/impersonate",
+            headers=auth_headers(token),
+        )
+        assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_resend_invite_502_when_email_send_fails(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_pu: User,
+        tenant_pu: Tenant,
+    ):
+        pu = await _make_portal_user(db_session, tenant_pu, "inv502")
+        token = _make_token(admin_pu)
+
+        failing_send = AsyncMock(side_effect=RuntimeError("smtp down"))
+        with patch("app.core.email.send_email", failing_send):
+            res = await client.post(
+                f"/api/v1/portal-users/{pu.id}/resend-invite",
+                headers=auth_headers(token),
+            )
+        assert res.status_code == 502
+
+    @pytest.mark.asyncio
+    async def test_reset_password_502_when_email_send_fails(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_pu: User,
+        tenant_pu: Tenant,
+    ):
+        pu = await _make_portal_user(db_session, tenant_pu, "rst502")
+        token = _make_token(admin_pu)
+
+        failing_send = AsyncMock(side_effect=RuntimeError("smtp down"))
+        with patch("app.core.email.send_email", failing_send):
+            res = await client.post(
+                f"/api/v1/portal-users/{pu.id}/reset-password",
+                headers=auth_headers(token),
+            )
+        assert res.status_code == 502
+
+    @pytest.mark.asyncio
+    async def test_merge_404_when_source_missing(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_pu: User,
+        tenant_pu: Tenant,
+    ):
+        target = await _make_portal_user(db_session, tenant_pu, "mtgt")
+        token = _make_token(admin_pu)
+        res = await client.post(
+            f"/api/v1/portal-users/{target.id}/merge",
+            headers=auth_headers(token),
+            json={"source_user_id": str(uuid.uuid4())},
+        )
+        assert res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_merge_404_when_target_missing(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        admin_pu: User,
+        tenant_pu: Tenant,
+    ):
+        src = await _make_portal_user(db_session, tenant_pu, "msrc")
+        token = _make_token(admin_pu)
+        res = await client.post(
+            f"/api/v1/portal-users/{uuid.uuid4()}/merge",
+            headers=auth_headers(token),
+            json={"source_user_id": str(src.id)},
+        )
+        assert res.status_code == 404

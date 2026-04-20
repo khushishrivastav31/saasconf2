@@ -3,7 +3,6 @@
 POST /api/v1/portal/{slug}/register
 """
 
-
 import pytest
 from httpx import AsyncClient
 

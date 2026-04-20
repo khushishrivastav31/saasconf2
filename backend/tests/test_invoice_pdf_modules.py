@@ -6,18 +6,6 @@ that don't require DB access.
 
 from decimal import Decimal
 
-import pytest
-
-from app.core.invoice_pdf_placeholders import (
-    _format_address,
-    _format_notes_for_html,
-    _format_recipient_address_from_parts,
-    _iso_to_country_name,
-    _normalize_country_to_iso,
-    _resolve_bank_info,
-    build_company_replacements,
-    build_dual_currency_replacements,
-)
 from app.core.invoice_pdf_normalize import (
     _compute_fixed_block_padding,
     _get_content_width_px,
@@ -28,7 +16,14 @@ from app.core.invoice_pdf_normalize import (
     _preserve_empty_paragraphs,
     normalize_html_for_pdf,
 )
-
+from app.core.invoice_pdf_placeholders import (
+    _format_address,
+    _format_notes_for_html,
+    _format_recipient_address_from_parts,
+    _resolve_bank_info,
+    build_company_replacements,
+    build_dual_currency_replacements,
+)
 
 # ---------------------------------------------------------------------------
 # invoice_pdf_placeholders.py
@@ -98,7 +93,7 @@ class TestResolveBankInfo:
                 {"bank_name": "First Bank", "iban": "DE111", "bic": "BIC1"},
             ]
         }
-        name, iban, bic = _resolve_bank_info(company_info)
+        name, iban, _bic = _resolve_bank_info(company_info)
         assert name == "First Bank"
         assert iban == "DE111"
 
@@ -120,7 +115,7 @@ class TestResolveBankInfo:
             "iban": "LI1",
             "bic": "LB1",
         }
-        name, iban, bic = _resolve_bank_info(company_info)
+        name, _iban, _bic = _resolve_bank_info(company_info)
         assert name == "Legacy"
 
     def test_no_bank_info_returns_empty(self):
@@ -189,9 +184,7 @@ class TestFormatRecipientAddressFromParts:
     """Tests for _format_recipient_address_from_parts()."""
 
     def test_full_address(self):
-        result = _format_recipient_address_from_parts(
-            "123 Main St", "Apt 4", "10115", "Berlin", "DE"
-        )
+        result = _format_recipient_address_from_parts("123 Main St", "Apt 4", "10115", "Berlin", "DE")
         assert "123 Main St" in result
         assert "Apt 4" in result
         assert "10115 Berlin" in result
@@ -228,9 +221,7 @@ class TestBuildCompanyReplacements:
             "postal_code": "1010",
             "country": "AT",
             "tax_id": "ATU12345678",
-            "bank_accounts": [
-                {"bank_name": "TestBank", "iban": "AT00", "bic": "TBAT", "is_default": True}
-            ],
+            "bank_accounts": [{"bank_name": "TestBank", "iban": "AT00", "bic": "TBAT", "is_default": True}],
             "footer_text": "Thank you",
         }
 

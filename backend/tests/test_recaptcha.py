@@ -107,8 +107,6 @@ class TestValidateRecaptcha:
 
             # Score 0.6 fails with threshold 0.7
             with pytest.raises(HTTPException) as exc_info:
-                await validate_recaptcha(
-                    token="ok", secret_key="secret123", threshold=0.7
-                )
+                await validate_recaptcha(token="ok", secret_key="secret123", threshold=0.7)
             assert exc_info.value.status_code == 400
             assert "score too low" in str(exc_info.value.detail)

@@ -101,14 +101,10 @@ async def _create_unverified_applicant(db: AsyncSession, tenant: Tenant) -> CFPA
 class TestRegistration:
     """Tests for the applicant registration endpoint."""
 
-    async def test_valid_registration_returns_200(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_valid_registration_returns_200(self, client: AsyncClient, tenant: Tenant) -> None:
         """Valid registration payload creates an applicant and returns 200."""
         payload = _register_payload()
-        resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/register", json=payload
-        )
+        resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         # Rate limiting disabled in tests; 200 or 201 are both acceptable
         assert resp.status_code in (200, 201)
         body = resp.json()
@@ -121,14 +117,10 @@ class TestRegistration:
         """Successful registration inserts a CFPApplicant row into the DB."""
         email = f"dbcheck-{uuid.uuid4().hex[:8]}@example.com"
         payload = _register_payload(email=email)
-        resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/register", json=payload
-        )
+        resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         assert resp.status_code in (200, 201)
 
-        result = await db_session.execute(
-            select(CFPApplicant).where(CFPApplicant.email == email.lower())
-        )
+        result = await db_session.execute(select(CFPApplicant).where(CFPApplicant.email == email.lower()))
         applicant = result.scalar_one_or_none()
         assert applicant is not None
         assert applicant.tenant_id == tenant.id
@@ -139,24 +131,16 @@ class TestRegistration:
         """Registering with an email that already exists returns 409."""
         existing = await _create_verified_applicant(db_session, tenant)
         payload = _register_payload(email=existing.email)
-        resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/register", json=payload
-        )
+        resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         assert resp.status_code == 409
 
-    async def test_invalid_email_format_returns_422(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_invalid_email_format_returns_422(self, client: AsyncClient, tenant: Tenant) -> None:
         """A malformed email address is rejected with 422 by Pydantic."""
         payload = _register_payload(email="not-an-email")
-        resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/register", json=payload
-        )
+        resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         assert resp.status_code == 422
 
-    async def test_missing_required_fields_returns_422(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_missing_required_fields_returns_422(self, client: AsyncClient, tenant: Tenant) -> None:
         """Omitting required fields (email, password, first_name) returns 422."""
         resp = await client.post(
             f"/api/v1/portal/{tenant.slug}/register",
@@ -164,44 +148,28 @@ class TestRegistration:
         )
         assert resp.status_code == 422
 
-    async def test_password_too_short_returns_422(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_password_too_short_returns_422(self, client: AsyncClient, tenant: Tenant) -> None:
         """A password shorter than 8 characters is rejected with 422."""
         payload = _register_payload(password="Ab1")
-        resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/register", json=payload
-        )
+        resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         assert resp.status_code == 422
 
-    async def test_password_missing_uppercase_returns_422(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_password_missing_uppercase_returns_422(self, client: AsyncClient, tenant: Tenant) -> None:
         """A password without an uppercase letter is rejected with 422."""
         payload = _register_payload(password="alllower1")
-        resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/register", json=payload
-        )
+        resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         assert resp.status_code == 422
 
-    async def test_password_missing_digit_returns_422(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_password_missing_digit_returns_422(self, client: AsyncClient, tenant: Tenant) -> None:
         """A password without a digit is rejected with 422."""
         payload = _register_payload(password="NoDigitsHere")
-        resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/register", json=payload
-        )
+        resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         assert resp.status_code == 422
 
-    async def test_unknown_tenant_slug_returns_404(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_unknown_tenant_slug_returns_404(self, client: AsyncClient) -> None:
         """Registering against a non-existent tenant slug returns 404."""
         payload = _register_payload()
-        resp = await client.post(
-            "/api/v1/portal/nonexistent-tenant-xyz/register", json=payload
-        )
+        resp = await client.post("/api/v1/portal/nonexistent-tenant-xyz/register", json=payload)
         assert resp.status_code == 404
 
 
@@ -261,9 +229,7 @@ class TestEmailVerification:
         )
         assert resp.status_code == 400
 
-    async def test_invalid_token_returns_400(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_invalid_token_returns_400(self, client: AsyncClient, tenant: Tenant) -> None:
         """A completely invalid/tampered token returns 400."""
         resp = await client.post(
             f"/api/v1/portal/{tenant.slug}/verify-email",
@@ -341,9 +307,7 @@ class TestLogin:
         )
         assert resp.status_code in (401, 403)
 
-    async def test_nonexistent_email_returns_401(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_nonexistent_email_returns_401(self, client: AsyncClient, tenant: Tenant) -> None:
         """Logging in with an email that does not exist returns 401."""
         resp = await client.post(
             f"/api/v1/portal/{tenant.slug}/login",
@@ -379,9 +343,7 @@ class TestTokenRefresh:
         """A valid, non-expired refresh token issues a new access/refresh pair."""
         applicant = await _create_verified_applicant(db_session, tenant)
 
-        raw_refresh, token_hash, expires_at = create_applicant_refresh_token(
-            applicant_id=applicant.id
-        )
+        raw_refresh, token_hash, expires_at = create_applicant_refresh_token(applicant_id=applicant.id)
         db_token = ApplicantRefreshToken(
             applicant_id=applicant.id,
             token_hash=token_hash,
@@ -415,9 +377,7 @@ class TestTokenRefresh:
             "type": "applicant_refresh",
             "jti": "expired-jti",
         }
-        raw_expired = jwt.encode(
-            expired_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
-        )
+        raw_expired = jwt.encode(expired_payload, settings.JWT_SECRET_KEY, algorithm="HS256")
         token_hash = hashlib.sha256(raw_expired.encode()).hexdigest()
 
         db_token = ApplicantRefreshToken(
@@ -440,9 +400,7 @@ class TestTokenRefresh:
         """A refresh token that has been revoked (revoked_at set) is rejected."""
         applicant = await _create_verified_applicant(db_session, tenant)
 
-        raw_refresh, token_hash, expires_at = create_applicant_refresh_token(
-            applicant_id=applicant.id
-        )
+        raw_refresh, token_hash, expires_at = create_applicant_refresh_token(applicant_id=applicant.id)
         db_token = ApplicantRefreshToken(
             applicant_id=applicant.id,
             token_hash=token_hash,
@@ -458,9 +416,7 @@ class TestTokenRefresh:
         )
         assert resp.status_code == 401
 
-    async def test_invalid_refresh_token_returns_401(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_invalid_refresh_token_returns_401(self, client: AsyncClient, tenant: Tenant) -> None:
         """A completely invalid/tampered refresh token string returns 401."""
         resp = await client.post(
             f"/api/v1/portal/{tenant.slug}/refresh",
@@ -491,9 +447,7 @@ class TestPasswordReset:
         body = resp.json()
         assert "message" in body
 
-    async def test_forgot_password_nonexistent_email_returns_200(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_forgot_password_nonexistent_email_returns_200(self, client: AsyncClient, tenant: Tenant) -> None:
         """forgot-password also returns 200 for an email that does not exist (no enumeration)."""
         resp = await client.post(
             f"/api/v1/portal/{tenant.slug}/forgot-password",
@@ -591,9 +545,7 @@ class TestPasswordReset:
         )
         assert resp.status_code == 400
 
-    async def test_invalid_reset_token_returns_400(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_invalid_reset_token_returns_400(self, client: AsyncClient, tenant: Tenant) -> None:
         """An entirely invalid reset token string returns 400."""
         resp = await client.post(
             f"/api/v1/portal/{tenant.slug}/reset-password",
@@ -641,9 +593,7 @@ class TestProtectedEndpoints:
         )
         assert resp.status_code in (401, 403)
 
-    async def test_expired_jwt_returns_401(
-        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant
-    ) -> None:
+    async def test_expired_jwt_returns_401(self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant) -> None:
         """An expired applicant JWT is rejected with 401."""
         applicant = await _create_verified_applicant(db_session, tenant)
 
@@ -692,9 +642,7 @@ class TestProtectedEndpoints:
         )
         assert resp.status_code in (401, 403)
 
-    async def test_jwt_for_nonexistent_applicant_returns_401(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_jwt_for_nonexistent_applicant_returns_401(self, client: AsyncClient, tenant: Tenant) -> None:
         """A valid-looking JWT whose applicant_id does not exist in the DB returns 401."""
         fake_applicant_id = uuid.uuid4()
         token = create_applicant_access_token(
@@ -708,9 +656,7 @@ class TestProtectedEndpoints:
         )
         assert resp.status_code in (401, 403)
 
-    async def test_jwt_for_inactive_tenant_returns_401(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_jwt_for_inactive_tenant_returns_401(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """A JWT whose tenant_id points to a non-existent tenant returns 401/403."""
         fake_tenant_id = uuid.uuid4()
         fake_applicant_id = uuid.uuid4()

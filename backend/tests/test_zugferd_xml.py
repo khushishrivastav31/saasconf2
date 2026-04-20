@@ -19,10 +19,7 @@ async def test_zugferd_includes_procurement_code(invoice_with_procurement_code, 
     }
 
     # Find BuyerOrderReferencedDocument element
-    buyer_order_refs = root.xpath(
-        "//ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID",
-        namespaces=nsmap
-    )
+    buyer_order_refs = root.xpath("//ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID", namespaces=nsmap)
 
     assert len(buyer_order_refs) == 1
     assert buyer_order_refs[0].text == invoice_with_procurement_code.procurement_code
@@ -41,10 +38,7 @@ async def test_zugferd_omits_empty_procurement_code(invoice_without_procurement_
     }
 
     # Verify BuyerOrderReferencedDocument element is NOT present
-    buyer_order_refs = root.xpath(
-        "//ram:BuyerOrderReferencedDocument",
-        namespaces=nsmap
-    )
+    buyer_order_refs = root.xpath("//ram:BuyerOrderReferencedDocument", namespaces=nsmap)
 
     assert len(buyer_order_refs) == 0
 
@@ -64,7 +58,7 @@ async def test_zugferd_validates_with_procurement_code(invoice_with_procurement_
     # Verify guideline ID for EN16931 compliance
     guideline = root.xpath(
         "//ram:GuidelineSpecifiedDocumentContextParameter/ram:ID",
-        namespaces={"ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"}
+        namespaces={"ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"},
     )
     assert len(guideline) == 1
     assert "en16931" in guideline[0].text.lower()

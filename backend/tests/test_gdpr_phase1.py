@@ -25,6 +25,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.gdpr.export import build_export
 from app.core.security.pii_crypto import decrypt_pii, hash_email
 from app.models.alumni import Alumni
 from app.models.applicant_activity import ApplicantActivityLog
@@ -44,7 +45,6 @@ from app.models.training_registration import (
     TrainingRegistrationAttendee,
 )
 from app.services.base import BaseService
-from app.core.gdpr.export import build_export
 
 # ---------------------------------------------------------------------------
 # Model @validates hooks — 9 subject-identifying tables

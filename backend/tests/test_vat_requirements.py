@@ -1,8 +1,6 @@
 """Tests for VAT requirement detection."""
 
-import pytest
-
-from app.core.vat_requirements import VatRequirement, VatRequirementLevel, determine_vat_requirement
+from app.core.vat_requirements import VatRequirementLevel, determine_vat_requirement
 
 
 def test_vat_required_virtual_eu_reverse_charge():

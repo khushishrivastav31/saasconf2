@@ -67,7 +67,6 @@ class TestHtmlEscapingInEmailTemplates:
     def test_trainer_name_with_html_entities_is_escaped(self) -> None:
         """Trainer name with special chars must not break HTML structure."""
         first_name = "O'Brian & <b>Co</b>"
-        escaped = html_mod.escape(first_name)
 
         # Simulate placeholder replacement pattern
         replacements = {
@@ -129,7 +128,9 @@ class TestOfferTemplateUploadValidation:
     def test_accepts_valid_pdf(self) -> None:
         """A real PDF file with correct magic bytes should be accepted."""
         # Minimal valid PDF header
-        pdf_data = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\nxref\n0 1\n0000000000 65535 f \ntrailer\n<<>>\nstartxref\n0\n%%EOF"
+        pdf_data = (
+            b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\nxref\n0 1\n0000000000 65535 f \ntrailer\n<<>>\nstartxref\n0\n%%EOF"
+        )
         # This may or may not pass magic-byte detection depending on filetype library,
         # but at minimum it should not crash
         try:
@@ -147,7 +148,10 @@ class TestOfferTemplateUploadValidation:
 
 @pytest.mark.asyncio
 async def test_resend_invoice_email_has_rate_limit(
-    db_session: AsyncSession, tenant: Tenant, tenant_admin_user: User, client: AsyncClient,
+    db_session: AsyncSession,
+    tenant: Tenant,
+    tenant_admin_user: User,
+    client: AsyncClient,
     tenant_admin_token: str,
 ) -> None:
     """The invoice resend endpoint must return 429 after exceeding rate limit."""
@@ -156,7 +160,10 @@ async def test_resend_invoice_email_has_rate_limit(
 
     # Create minimal invoice
     training = Training(
-        id=uuid.uuid4(), tenant_id=tenant.id, name="Rate Limit Test", slug="rate-limit-test",
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        name="Rate Limit Test",
+        slug="rate-limit-test",
     )
     db.add(training)
     await db.flush()
@@ -166,28 +173,44 @@ async def test_resend_invoice_email_has_rate_limit(
     await db.flush()
 
     placement = ProgramYearTraining(
-        id=uuid.uuid4(), tenant_id=tenant.id, program_year_id=year.id,
-        training_id=training.id, start_date=date(2026, 6, 1),
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        program_year_id=year.id,
+        training_id=training.id,
+        start_date=date(2026, 6, 1),
     )
     db.add(placement)
     await db.flush()
 
     reg = TrainingRegistration(
-        id=uuid.uuid4(), tenant_id=tenant.id, placement_id=placement.id,
-        status="registered", contact_first_name="Test", contact_last_name="User",
-        contact_email="test@example.com", street="Test St 1", postal_code="12345",
-        city="Berlin", country="DE",
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        placement_id=placement.id,
+        status="registered",
+        contact_first_name="Test",
+        contact_last_name="User",
+        contact_email="test@example.com",
+        street="Test St 1",
+        postal_code="12345",
+        city="Berlin",
+        country="DE",
     )
     db.add(reg)
     await db.flush()
 
     inv = TrainingInvoice(
-        id=uuid.uuid4(), tenant_id=tenant.id,
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
         training_registration_id=reg.id,
-        invoice_number="TI-RATE-001", template_type="bank_transfer",
-        status="sent", issue_date=date(2026, 4, 1),
-        recipient_name="Test", recipient_email="test@example.com",
-        subtotal=Decimal("100.00"), total=Decimal("100.00"), currency="EUR",
+        invoice_number="TI-RATE-001",
+        template_type="bank_transfer",
+        status="sent",
+        issue_date=date(2026, 4, 1),
+        recipient_name="Test",
+        recipient_email="test@example.com",
+        subtotal=Decimal("100.00"),
+        total=Decimal("100.00"),
+        currency="EUR",
     )
     db.add(inv)
     await db.commit()

@@ -18,9 +18,19 @@ async def finance_tenant(db_session: AsyncSession, tenant):
             "number_format_preset": "us_uk",
             "company_info": {"name": "Test Corp", "city": "Berlin", "country": "DE"},
             "bank_accounts": [
-                {"bank_name": "Deutsche Bank", "iban": "DE89370400440532013000", "bic": "COBADEFFXXX", "is_default": True}
+                {
+                    "bank_name": "Deutsche Bank",
+                    "iban": "DE89370400440532013000",
+                    "bic": "COBADEFFXXX",
+                    "is_default": True,
+                }
             ],
-            "payment_reminders": {"enabled": True, "first_reminder_days": 5, "second_reminder_days": 14, "notify_admin_after_second": False},
+            "payment_reminders": {
+                "enabled": True,
+                "first_reminder_days": 5,
+                "second_reminder_days": 14,
+                "notify_admin_after_second": False,
+            },
         },
     }
     flag_modified(tenant, "settings")
@@ -144,7 +154,9 @@ async def test_bank_accounts_multiple_defaults_rejected(client: AsyncClient, ten
 
 @pytest.mark.asyncio
 async def test_invoice_templates_defaults(client: AsyncClient, tenant_admin_token):
-    resp = await client.get("/api/v1/trainings/finance/invoice-templates", headers={AUTH: f"Bearer {tenant_admin_token}"})
+    resp = await client.get(
+        "/api/v1/trainings/finance/invoice-templates", headers={AUTH: f"Bearer {tenant_admin_token}"}
+    )
     assert resp.status_code == 200
     assert resp.json()["invoice_page_format"] == "A4"
 
@@ -218,7 +230,9 @@ async def test_stripe_update(client: AsyncClient, tenant_admin_token):
 
 @pytest.mark.asyncio
 async def test_payment_reminders_defaults(client: AsyncClient, tenant_admin_token):
-    resp = await client.get("/api/v1/trainings/finance/payment-reminders", headers={AUTH: f"Bearer {tenant_admin_token}"})
+    resp = await client.get(
+        "/api/v1/trainings/finance/payment-reminders", headers={AUTH: f"Bearer {tenant_admin_token}"}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is True
@@ -270,5 +284,7 @@ async def test_configured_tenant_data(client: AsyncClient, finance_tenant, tenan
     resp = await client.get("/api/v1/trainings/finance/bank-accounts", headers={AUTH: f"Bearer {tenant_admin_token}"})
     assert len(resp.json()["bank_accounts"]) == 1
 
-    resp = await client.get("/api/v1/trainings/finance/payment-reminders", headers={AUTH: f"Bearer {tenant_admin_token}"})
+    resp = await client.get(
+        "/api/v1/trainings/finance/payment-reminders", headers={AUTH: f"Bearer {tenant_admin_token}"}
+    )
     assert resp.json()["first_reminder_days"] == 5

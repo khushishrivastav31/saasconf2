@@ -21,9 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token
 from app.models.holiday_config import CustomBlockedDay, TenantHolidayConfig
 from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.user import User
 from tests.conftest import auth_headers
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -160,13 +159,9 @@ class TestHolidayDatesEndpoint:
     """Tests for GET /trainings/holidays/dates/{year}."""
 
     @pytest.mark.asyncio
-    async def test_empty_when_no_configs(
-        self, client: AsyncClient, admin_token: str
-    ):
+    async def test_empty_when_no_configs(self, client: AsyncClient, admin_token: str):
         """Returns empty list when no holiday configs exist."""
-        resp = await client.get(
-            _url(2026), headers=auth_headers(admin_token)
-        )
+        resp = await client.get(_url(2026), headers=auth_headers(admin_token))
         assert resp.status_code == 200
         assert resp.json() == []
 
@@ -183,9 +178,7 @@ class TestHolidayDatesEndpoint:
             new_callable=AsyncMock,
             side_effect=_mock_nager,
         ):
-            resp = await client.get(
-                _url(2026), headers=auth_headers(admin_token)
-            )
+            resp = await client.get(_url(2026), headers=auth_headers(admin_token))
 
         assert resp.status_code == 200
         data = resp.json()
@@ -209,9 +202,7 @@ class TestHolidayDatesEndpoint:
             new_callable=AsyncMock,
             side_effect=_mock_nager,
         ):
-            resp = await client.get(
-                _url(2026), headers=auth_headers(admin_token)
-            )
+            resp = await client.get(_url(2026), headers=auth_headers(admin_token))
 
         assert resp.status_code == 200
         data = resp.json()
@@ -229,9 +220,7 @@ class TestHolidayDatesEndpoint:
         blocked_day: CustomBlockedDay,
     ):
         """Includes custom blocked days for the requested year."""
-        resp = await client.get(
-            _url(2026), headers=auth_headers(admin_token)
-        )
+        resp = await client.get(_url(2026), headers=auth_headers(admin_token))
 
         assert resp.status_code == 200
         data = resp.json()
@@ -248,9 +237,7 @@ class TestHolidayDatesEndpoint:
         recurring_blocked_day: CustomBlockedDay,
     ):
         """Recurring blocked days from other years are mapped to requested year."""
-        resp = await client.get(
-            _url(2026), headers=auth_headers(admin_token)
-        )
+        resp = await client.get(_url(2026), headers=auth_headers(admin_token))
 
         assert resp.status_code == 200
         data = resp.json()
@@ -286,9 +273,7 @@ class TestHolidayDatesEndpoint:
             new_callable=AsyncMock,
             side_effect=_mock_nager,
         ):
-            resp = await client.get(
-                _url(2026), headers=auth_headers(admin_token)
-            )
+            resp = await client.get(_url(2026), headers=auth_headers(admin_token))
 
         assert resp.status_code == 200
         data = resp.json()
@@ -310,9 +295,7 @@ class TestHolidayDatesEndpoint:
             new_callable=AsyncMock,
             side_effect=_mock_nager,
         ):
-            resp = await client.get(
-                _url(2026), headers=auth_headers(admin_token)
-            )
+            resp = await client.get(_url(2026), headers=auth_headers(admin_token))
 
         assert resp.status_code == 200
         data = resp.json()
@@ -333,9 +316,7 @@ class TestHolidayDatesEndpoint:
             new_callable=AsyncMock,
             side_effect=_mock_nager,
         ):
-            resp = await client.get(
-                _url(2026), headers=auth_headers(admin_token)
-            )
+            resp = await client.get(_url(2026), headers=auth_headers(admin_token))
 
         assert resp.status_code == 200
         data = resp.json()
@@ -375,8 +356,6 @@ class TestTenantIsolation:
         db_session.add(other_config)
         await db_session.commit()
 
-        resp = await client.get(
-            _url(2026), headers=auth_headers(admin_token)
-        )
+        resp = await client.get(_url(2026), headers=auth_headers(admin_token))
         assert resp.status_code == 200
         assert resp.json() == []

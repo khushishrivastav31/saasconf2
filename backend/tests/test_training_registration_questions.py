@@ -6,7 +6,6 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-
 SAMPLE_QUESTIONS = [
     {
         "id": "q-meal",
@@ -77,9 +76,7 @@ async def test_get_questions_default(client: AsyncClient, tenant_admin_token):
 
 
 @pytest.mark.asyncio
-async def test_get_questions_configured(
-    client: AsyncClient, configured_tenant, tenant_admin_token
-):
+async def test_get_questions_configured(client: AsyncClient, configured_tenant, tenant_admin_token):
     """GET returns saved configuration."""
     resp = await client.get(
         "/api/v1/trainings/registration-questions",

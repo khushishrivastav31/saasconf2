@@ -171,9 +171,7 @@ async def registered_applicant(
 
 
 @pytest.mark.asyncio
-async def test_get_questions_default(
-    client: AsyncClient, conference: Conference, tenant_admin_token: str
-):
+async def test_get_questions_default(client: AsyncClient, conference: Conference, tenant_admin_token: str):
     """GET returns defaults when no questions configured."""
     resp = await client.get(
         f"/api/v1/conferences/{conference.id}/settings/registration-questions",
@@ -186,9 +184,7 @@ async def test_get_questions_default(
 
 
 @pytest.mark.asyncio
-async def test_get_questions_configured(
-    client: AsyncClient, questions_conference: Conference, tenant_admin_token: str
-):
+async def test_get_questions_configured(client: AsyncClient, questions_conference: Conference, tenant_admin_token: str):
     """GET returns configured questions."""
     resp = await client.get(
         f"/api/v1/conferences/{questions_conference.id}/settings/registration-questions",
@@ -205,9 +201,7 @@ async def test_get_questions_configured(
 
 
 @pytest.mark.asyncio
-async def test_update_questions(
-    client: AsyncClient, conference: Conference, tenant_admin_token: str
-):
+async def test_update_questions(client: AsyncClient, conference: Conference, tenant_admin_token: str):
     """PUT saves questions correctly."""
     resp = await client.put(
         f"/api/v1/conferences/{conference.id}/settings/registration-questions",
@@ -235,9 +229,7 @@ async def test_update_questions(
 
 
 @pytest.mark.asyncio
-async def test_update_radio_requires_options(
-    client: AsyncClient, conference: Conference, tenant_admin_token: str
-):
+async def test_update_radio_requires_options(client: AsyncClient, conference: Conference, tenant_admin_token: str):
     """PUT rejects radio questions with fewer than 2 options."""
     resp = await client.put(
         f"/api/v1/conferences/{conference.id}/settings/registration-questions",
@@ -262,9 +254,7 @@ async def test_update_radio_requires_options(
 
 
 @pytest.mark.asyncio
-async def test_update_duplicate_ids_rejected(
-    client: AsyncClient, conference: Conference, tenant_admin_token: str
-):
+async def test_update_duplicate_ids_rejected(client: AsyncClient, conference: Conference, tenant_admin_token: str):
     """PUT rejects duplicate question IDs."""
     resp = await client.put(
         f"/api/v1/conferences/{conference.id}/settings/registration-questions",
@@ -272,8 +262,24 @@ async def test_update_duplicate_ids_rejected(
         json={
             "enabled": True,
             "questions": [
-                {"id": "same-id", "text": "Q1", "type": "text", "required": False, "options": [], "sort_order": 0, "is_active": True},
-                {"id": "same-id", "text": "Q2", "type": "text", "required": False, "options": [], "sort_order": 1, "is_active": True},
+                {
+                    "id": "same-id",
+                    "text": "Q1",
+                    "type": "text",
+                    "required": False,
+                    "options": [],
+                    "sort_order": 0,
+                    "is_active": True,
+                },
+                {
+                    "id": "same-id",
+                    "text": "Q2",
+                    "type": "text",
+                    "required": False,
+                    "options": [],
+                    "sort_order": 1,
+                    "is_active": True,
+                },
             ],
         },
     )
@@ -282,9 +288,7 @@ async def test_update_duplicate_ids_rejected(
 
 
 @pytest.mark.asyncio
-async def test_requires_admin(
-    client: AsyncClient, conference: Conference, regular_user_token: str
-):
+async def test_requires_admin(client: AsyncClient, conference: Conference, regular_user_token: str):
     """PUT requires admin access."""
     resp = await client.put(
         f"/api/v1/conferences/{conference.id}/settings/registration-questions",
@@ -416,9 +420,7 @@ async def test_submit_invalid_radio_option(
 
 
 @pytest.mark.asyncio
-async def test_admin_answers_empty(
-    client: AsyncClient, questions_conference: Conference, tenant_admin_token: str
-):
+async def test_admin_answers_empty(client: AsyncClient, questions_conference: Conference, tenant_admin_token: str):
     """Admin sees empty answers when none submitted."""
     resp = await client.get(
         f"/api/v1/conferences/{questions_conference.id}/registration-question-answers",
@@ -471,9 +473,7 @@ async def test_admin_answers_after_submission(
 
 
 @pytest.mark.asyncio
-async def test_update_dropdown_requires_options(
-    client: AsyncClient, conference: Conference, tenant_admin_token: str
-):
+async def test_update_dropdown_requires_options(client: AsyncClient, conference: Conference, tenant_admin_token: str):
     """PUT rejects dropdown questions with fewer than 2 options."""
     resp = await client.put(
         f"/api/v1/conferences/{conference.id}/settings/registration-questions",
