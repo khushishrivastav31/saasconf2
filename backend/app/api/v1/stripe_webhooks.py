@@ -60,8 +60,12 @@ async def stripe_webhook(
         try:
             pi = stripe.PaymentIntent.retrieve(event_dict.data.object.payment_intent)
             metadata = pi.metadata
-        except Exception:
-            pass
+        except stripe.error.StripeError as exc:
+            logger.warning(
+                "Webhook event %s: failed to retrieve PaymentIntent for charge: %s",
+                event_dict.id,
+                exc,
+            )
 
     invoice_id_str = metadata.get("invoice_id")
     if not invoice_id_str:
