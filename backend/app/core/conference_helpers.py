@@ -9,8 +9,13 @@ from app.core.exceptions import AuthorizationError, NotFoundError
 from app.models.conference import Conference
 
 
-async def get_conference_for_tenant(db, conference_id: UUID, tenant_id: UUID) -> Conference:
+async def get_conference_for_tenant(db, conference_id: UUID, tenant_id: UUID | None) -> Conference:
     """Fetch a conference and verify it belongs to the given tenant.
+
+    ``tenant_id`` is typed as optional to accept ``CurrentUser.tenant_id`` directly
+    (super-admins can lack a tenant claim). A ``None`` tenant translates to
+    ``WHERE tenant_id IS NULL`` which matches no conference, so the caller still
+    receives ``NotFoundError`` — same outcome as an invalid tenant.
 
     Raises ``NotFoundError`` when no matching conference exists.
     """

@@ -35,8 +35,13 @@ from app.schemas.form_schema import (
 router = APIRouter()
 
 
-async def get_conference_or_404(db: DbSessionDep, conference_id: UUID, tenant_id: UUID) -> Conference:
-    """Get conference by ID or raise 404."""
+async def get_conference_or_404(db: DbSessionDep, conference_id: UUID, tenant_id: UUID | None) -> Conference:
+    """Get conference by ID or raise 404.
+
+    ``tenant_id`` is typed optional to accept ``CurrentUser.tenant_id`` directly;
+    a ``None`` value translates to ``WHERE tenant_id IS NULL`` and still produces
+    a 404, so behaviour is unchanged.
+    """
     result = await db.execute(
         select(Conference).where(
             Conference.id == conference_id,
