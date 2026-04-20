@@ -96,7 +96,12 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Ready to commit — PII Phase 2.5: dual-write validators on training_attendees + cfp_applicants (audit item 2 follow-up)**.
+- **In flight — migration 208 drops `portal_user_history` (unified customer architecture, phase 7 follow-up)**.
+  - **Scope**: the customer_events reader flip + writer removal shipped a release ago. No reader or writer in app code, only the stale model + relationship + __init__ export. This commit drops the table, removes the model file, unregisters from `models/__init__.py`, removes the `history: Mapped[list["PortalUserHistory"]]` relationship from `portal_user.py`, and updates one stale docstring in `test_customer_event_service.py`.
+  - **Migration**: [208_drop_portal_user_history.py](backend/app/db/migrations/versions/208_drop_portal_user_history.py) — drops RLS policy, disables RLS, drops both indexes, drops the table. Downgrade re-creates everything from scratch (cloned from migration 204) so rollback is possible, though the rows are gone.
+  - **Status**: uncommitted on branch `chore/migration-206-drop-portal-user-history` (branch named before I realised 206 + 207 were taken; migration file is numbered 208). Running full sweep before ship.
+
+- **Committed (198df7b on main, squash-merge via PR #69) — PII Phase 2.5**: dual-write validators on training_attendees + cfp_applicants (audit item 2 follow-up).
   - **Scope**: incremental step between Phase 1 (additive migration 207 + backfill, committed on main) and Phase 3 (full property-accessor swap, deferred until staging backfill run). Extends the existing `@validates("email")` on both models to populate `email_encrypted` (via `encrypt_pii`) alongside the pre-existing `email_hash`, and adds a new `@validates("phone")` on `cfp_applicants` that dual-writes `phone_encrypted` + `phone_hash`. Net effect: new ORM-written rows no longer need the backfill pass — they already have encrypted + hash companions on insert.
   - **Model changes**:
     - [backend/app/models/training_attendee.py](backend/app/models/training_attendee.py) — added `encrypt_pii` import; extended `_sync_email_companions` to set `self.email_encrypted = encrypt_pii(value)` when value is truthy (and `None` when cleared).

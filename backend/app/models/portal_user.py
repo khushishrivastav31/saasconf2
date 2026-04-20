@@ -18,7 +18,6 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.customer_event import CustomerEvent
-    from app.models.portal_user_history import PortalUserHistory
 
 
 class PortalUser(Base):
@@ -63,12 +62,6 @@ class PortalUser(Base):
     # is enforced via (tenant_id, email_hash) created in migration 197.
     __table_args__ = (Index("idx_portal_users_tenant", "tenant_id"),)
 
-    history: Mapped[list["PortalUserHistory"]] = relationship(
-        "PortalUserHistory",
-        back_populates="portal_user",
-        cascade="all, delete-orphan",
-        order_by="PortalUserHistory.created_at.desc()",
-    )
     # customer_events uses SET NULL rather than cascade-delete so that a
     # merged user's history survives via subject_email_hash.
     customer_events: Mapped[list["CustomerEvent"]] = relationship(

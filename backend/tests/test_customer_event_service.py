@@ -2,9 +2,10 @@
 
 Phase 3 of the unified customer architecture (see
 ``.claude/plans/smooth-sprouting-perlis.md``) introduced
-``CustomerEventService`` + dual-write to both ``portal_user_history``
-and ``customer_events``. Phase 6 removed the legacy insert — these
-tests now assert the canonical row lands in ``customer_events``.
+``CustomerEventService`` as the single write path into
+``customer_events``. The legacy ``portal_user_history`` table was
+dropped in migration 208; these tests assert the canonical row lands in
+``customer_events``.
 
 Covers:
 
