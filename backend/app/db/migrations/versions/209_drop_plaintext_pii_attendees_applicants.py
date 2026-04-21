@@ -16,12 +16,15 @@ Scope:
 Preconditions (verify on each environment before applying):
   1. ``PII_ENCRYPTION_KEY`` is configured and MultiFernet can decrypt all
      historical tokens.
-  2. ``scripts/backfill_attendees_applicants_pii`` has been run — every
-     row with a non-NULL plaintext also has a non-NULL ``*_encrypted`` +
-     ``*_hash``. Otherwise the row becomes unreadable post-migration.
-  3. Application code on the target environment is already phase 3:
+  2. Application code on the target environment is already phase 3:
      no ORM-level reads of the plaintext attribute, no lookups against
      the plaintext column.
+
+This migration inlines the backfill previously shipped as
+``scripts/backfill_attendees_applicants_pii``: any row with plaintext
+but no ``*_encrypted`` companion is encrypted + hashed in-place before
+the drop.  Idempotent — if phase 2.5 dual-writes already populated
+every row, the backfill is a no-op.
 
 Irreversible: ``downgrade()`` re-creates the columns + the legacy UNIQUE
 constraint as NULLable, but CANNOT repopulate plaintext — operators must
@@ -33,6 +36,8 @@ Revises: 208
 
 import sqlalchemy as sa
 from alembic import op
+
+from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone
 
 revision = "209"
 down_revision = "208"
@@ -56,18 +61,54 @@ LEGACY_UNIQUE_CONSTRAINT = "uq_training_attendees_tenant_email"
 NEW_UNIQUE_INDEX = "uq_training_attendees_tenant_email_hash"
 
 
+def _backfill_column(bind: sa.Connection, table: str, col: str) -> int:
+    """Encrypt + hash any row with plaintext but no ``<col>_encrypted``.
+
+    Returns the number of rows written. Idempotent: only touches rows
+    where the encrypted companion is still NULL.
+    """
+    rows = bind.execute(
+        sa.text(f'SELECT id, "{col}" FROM "{table}" WHERE "{col}" IS NOT NULL AND "{col}_encrypted" IS NULL')
+    ).all()
+    if not rows:
+        return 0
+    hasher = hash_phone if col == "phone" else hash_email
+    for row_id, plaintext in rows:
+        bind.execute(
+            sa.text(
+                f'UPDATE "{table}" SET "{col}_encrypted" = :enc, '
+                f'"{col}_hash" = COALESCE("{col}_hash", :hash) WHERE id = :id'
+            ),
+            {"enc": encrypt_pii(plaintext), "hash": hasher(plaintext), "id": row_id},
+        )
+    return len(rows)
+
+
 def upgrade() -> None:
-    # Guard: abort if any row still has plaintext but missing *_encrypted —
-    # that row would become unreadable.
     bind = op.get_bind()
+
+    # RLS bypass: the Alembic connection is not tenant-scoped, and the
+    # backfill must reach every row across every tenant.
+    bind.execute(sa.text("SELECT set_config('app.is_super_admin', 'true', true)"))
+
+    # Inline backfill — populate *_encrypted + *_hash for any row that still
+    # has plaintext without its companion. No-op if phase 2.5 dual-writes
+    # already populated everything.
+    for table, col, _nullable, _length in PII_COLUMNS:
+        written = _backfill_column(bind, table, col)
+        if written:
+            print(f"[209] backfilled {written} row(s) on {table}.{col}")
+
+    # Belt-and-suspenders guard: if backfill somehow missed a row, fail
+    # loudly rather than losing data on the drop.
     for table, col, _nullable, _length in PII_COLUMNS:
         unmigrated = bind.execute(
             sa.text(f"SELECT COUNT(*) FROM {table} WHERE {col} IS NOT NULL AND {col}_encrypted IS NULL")
         ).scalar_one()
         if unmigrated:
             raise RuntimeError(
-                f"Refusing to drop {table}.{col}: {unmigrated} row(s) have plaintext "
-                f"but no {col}_encrypted. Run scripts/backfill_attendees_applicants_pii first."
+                f"Refusing to drop {table}.{col}: {unmigrated} row(s) still have plaintext "
+                f"but no {col}_encrypted after inline backfill."
             )
 
     # Swap the legacy plaintext unique constraint on training_attendees for a

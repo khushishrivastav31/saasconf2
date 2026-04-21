@@ -47,14 +47,17 @@ jobs:
               - 'frontend/eslint.config.*'
 
   # ─────────────────────────────────────────────────────────────
-  # Backend Tests (only when backend/ changed)
+  # Backend Tests
+  # On PR: path-filtered (only when backend/ changed) — fast feedback.
+  # On push to main or manual dispatch: always run — the full pipeline
+  # must exercise every suite before a deploy.
   # ─────────────────────────────────────────────────────────────
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 90
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     services:
       postgres:
@@ -146,14 +149,17 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────────────────────
-  # Frontend Tests (only when frontend src/config changed)
+  # Frontend Tests
+  # On PR: path-filtered (only when frontend src/config changed) — fast feedback.
+  # On push to main or manual dispatch: always run — the full pipeline
+  # must exercise every suite before a deploy.
   # ─────────────────────────────────────────────────────────────
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
@@ -224,7 +230,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
