@@ -17,8 +17,8 @@ export default function AddressSection({ formData, updateField }: Props) {
           <label className={fieldLabelCls}>Address Line 1</label>
           <input
             type="text"
-            value={formData.address_line1}
-            onChange={(e) => updateField('address_line1', e.target.value)}
+            value={formData.address_line_1}
+            onChange={(e) => updateField('address_line_1', e.target.value)}
             className={fieldInputCls}
           />
         </div>
@@ -26,8 +26,8 @@ export default function AddressSection({ formData, updateField }: Props) {
           <label className={fieldLabelCls}>Address Line 2</label>
           <input
             type="text"
-            value={formData.address_line2}
-            onChange={(e) => updateField('address_line2', e.target.value)}
+            value={formData.address_line_2}
+            onChange={(e) => updateField('address_line_2', e.target.value)}
             className={fieldInputCls}
           />
         </div>

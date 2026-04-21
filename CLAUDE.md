@@ -97,17 +97,15 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 
 ### Current Work State
 
-On branch `feat/pii-phase-3-accessor-swap` — PII Phase 3+5 ready to ship (2026-04-21).
-
-**In flight**
-- **PII Phase 3 + 5 (single PR)**: migration 209 drops plaintext `email`/`phone` columns from `training_attendees` + `cfp_applicants`; swaps `(tenant_id, email)` UNIQUE → `(tenant_id, email_hash)` on `training_attendees`. Model columns replaced with `@property email` / `@property phone` accessors reading via `read_pii()` and writing `*_encrypted` + `*_hash` companions. Admin email search switched to exact-match on `email_hash` when query contains `@` (mirrors `portal_users/listing.py` precedent). Full sweep green: mypy 0, ruff 0, pytest 3029 passed / 56 skipped, frontend tsc 0, eslint 0 errors, vitest 1900 passed. Ready to commit + open PR.
+On branch `feat/training-user-profile-form` — plan `.claude/plans/training-user-profile-form.md` was ~90% pre-implemented. Remaining gap was a tiny field-name mismatch: backend `portal_user_to_dict()` returns `address_line_1`/`address_line_2` (matching the model columns) but frontend `EditableProfile` used `address_line1`/`address_line2`; backend detail endpoint returned `picture_id`/`video_id` (attachment IDs) but frontend expected `picture_url`/`video_url` (download URLs). Fixed: (a) renamed frontend fields to match backend; (b) replaced ad-hoc Attachment query in `GET /trainings/users/{id}` with `get_latest_attachment_url()` so it returns download URLs directly (same helper CFP uses). Full sweep green: mypy 0, ruff 0, pytest 3029 passed / 56 skipped, tsc 0, eslint 0 errors, vitest 1900 passed. Ready to open PR.
 
 **Recently shipped (April 2026)**
-- **Arg-type mypy epic (PRs #85–#96)**: 12 PRs cleared 32 `[arg-type]` errors on `app.api.v1.*` and removed the blanket `disable_error_code = ["arg-type"]` override from `pyproject.toml`. Full unsuppressed `mypy app/` = clean.
-- **Migration 208 — drop `portal_user_history`** (PR #71, `94756e2`): phase-7 follow-up of the unified customer architecture. `customer_events` is now the single timeline source.
-- **PII Phase 2.5 — dual-write encrypted companions** (PR #69, `92cfcbd`): `@validates` on email/phone populated `*_encrypted` alongside `*_hash`. Backfill hook auto-ran on deploy (`8f6fd37`). Phase-3 PR removes both the validators and the backfill hook.
+- **Migration 209 fix-forward + CI full-pipeline gate** (PR #99, `4138e84`, admin-merged, full push-to-main pipeline green incl. staging deploy + E2E): (a) migration 209 inlines the `*_encrypted` / `*_hash` backfill so the drop is self-contained — staging had 15 `cfp_applicants` rows with plaintext but no encrypted companion because phase-2.5 `@validates` only covered rows written *after* it shipped; the first PR #98 deploy tripped the guard. Restored `scripts/backfill_attendees_applicants_pii.py` as a standalone dry-run/diagnostic. (b) `.github/workflows/staging.yml` now always runs backend + frontend + schema-drift on `push` to main and `workflow_dispatch`, keeping the path-filter optimisation only for PR builds. Rationale: a backend-only merge was silently deploying without frontend verification.
+- **PII Phase 3 + 5** (PR #98, `80fd40c`): migration 209 drops plaintext `email`/`phone` from `training_attendees` + `cfp_applicants`; swaps `training_attendees` UNIQUE from `(tenant_id, email)` → `(tenant_id, email_hash)`. Model columns replaced with `@property email` / `@property phone` accessors using `read_pii()` + `encrypt_pii()` + `hash_email()`/`hash_phone()`. Admin email search is exact-match on `email_hash` when query contains `@` (mirrors `portal_users/listing.py` precedent).
+- **Arg-type mypy epic (PRs #85–#96)**: 12 PRs cleared 32 `[arg-type]` errors on `app.api.v1.*`; `disable_error_code = ["arg-type"]` override removed. Full unsuppressed `mypy app/` = clean.
+- **Migration 208 — drop `portal_user_history`** (PR #71, `94756e2`): `customer_events` is now the single timeline source.
 - **Conference-side customer events** (`55e72ec`): CFP paper + registration lifecycle events; `CustomerTimelineCard` on CFP Applicant form.
 
 **Pending follow-ups (forward-looking, not in flight)**
-- **Conference customer events staging backfill**: `cd backend && venv/bin/python -m scripts.backfill_conference_customer_events` — one-time run on staging post-deploy.
-- **Messaging writer wire-up**: deferred — schema supports `domain="messaging"` but no writer exists.
+- **Conference customer events staging backfill**: operator task — `cd backend && venv/bin/python -m scripts.backfill_conference_customer_events` on staging. One-time, not on deploy hook (idempotent but only needed once).
+- **Messaging writer wire-up**: deferred — schema supports `domain="messaging"` but no writer exists. Revisit when messaging product work resumes.

@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
+from app.core.attachment_urls import get_latest_attachment_url
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
 from app.core.security.pii_crypto import hash_email, read_pii
@@ -103,26 +104,12 @@ async def get_portal_user_detail(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> dict:
-    """Get full portal user profile including picture/video URLs."""
-    from app.models.attachment import Attachment
-
+    """Get full portal user profile including picture/video download URLs."""
     user = await get_portal_user(db, user_id, current_user.tenant_id)
     result = portal_user_to_dict(user)
 
-    att_result = await db.execute(
-        select(Attachment).where(
-            Attachment.entity_type.in_(["portal_user_picture", "portal_user_video"]),
-            Attachment.entity_id == user.id,
-            Attachment.tenant_id == current_user.tenant_id,
-        )
-    )
-    for att in att_result.scalars().all():
-        if att.entity_type == "portal_user_picture":
-            result["picture_id"] = str(att.id)
-            result["picture_filename"] = att.filename
-        elif att.entity_type == "portal_user_video":
-            result["video_id"] = str(att.id)
-            result["video_filename"] = att.filename
+    result["picture_url"] = await get_latest_attachment_url(db, user.id, "portal_user_picture", current_user.tenant_id)
+    result["video_url"] = await get_latest_attachment_url(db, user.id, "portal_user_video", current_user.tenant_id)
 
     return result
 

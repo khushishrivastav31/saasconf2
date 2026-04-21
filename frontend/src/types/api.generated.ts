@@ -4724,7 +4724,7 @@ export type paths = {
     };
     /**
      * Get Portal User Detail
-     * @description Get full portal user profile including picture/video URLs.
+     * @description Get full portal user profile including picture/video download URLs.
      */
     get: operations['get_portal_user_detail_api_v1_trainings_users__user_id__get'];
     /**

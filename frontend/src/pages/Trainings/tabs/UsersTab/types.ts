@@ -95,8 +95,8 @@ export interface EditableProfile {
   title: string;
   company: string;
   bio: string;
-  address_line1: string;
-  address_line2: string;
+  address_line_1: string;
+  address_line_2: string;
   city: string;
   postal_code: string;
   country: string;
