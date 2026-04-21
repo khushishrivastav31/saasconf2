@@ -230,7 +230,14 @@ async def search_recipients(
     )
     sponsors = list(sponsor_result.scalars().all())
 
-    # Search volunteers (applicants with Volunteer role)
+    # Search volunteers (applicants with Volunteer role). CFPApplicant.email is
+    # encrypted — exact-match on email_hash when the query contains '@', else
+    # name-only.
+    name_filter = or_(
+        unaccent_ilike(CFPApplicant.first_name, f"%{q}%"),
+        unaccent_ilike(CFPApplicant.last_name, f"%{q}%"),
+    )
+    email_filter = or_(name_filter, CFPApplicant.email_hash == hash_email(q)) if "@" in q else name_filter
     vol_result = await db.execute(
         select(CFPApplicant)
         .join(UserRoleAssignment, UserRoleAssignment.applicant_id == CFPApplicant.id)
@@ -239,11 +246,7 @@ async def search_recipients(
             UserRole.conference_id == conference_id,
             UserRole.name == "Volunteer",
             CFPApplicant.tenant_id == current_user.require_tenant_id(),
-            or_(
-                unaccent_ilike(CFPApplicant.first_name, f"%{q}%"),
-                unaccent_ilike(CFPApplicant.last_name, f"%{q}%"),
-                unaccent_ilike(CFPApplicant.email, f"%{q}%"),
-            ),
+            email_filter,
         )
         .limit(10)
     )
@@ -282,13 +285,13 @@ async def search_recipients(
 
     # Add volunteers to results
     for volunteer in volunteers:
-        display_name = f"{volunteer.first_name} {volunteer.last_name}".strip() or volunteer.email
+        display_name = f"{volunteer.first_name} {volunteer.last_name}".strip() or (volunteer.email or "")
         results.append(
             RecipientSearchResult(
                 id=volunteer.id,
                 source_type="volunteer",
                 display_name=display_name,
-                email=volunteer.email,
+                email=volunteer.email or "",
                 company=volunteer.company,
                 address_line1=None,
                 address_line2=None,

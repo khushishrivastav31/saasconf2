@@ -13,6 +13,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import NotFoundError
+from app.core.security.pii_crypto import hash_email
 from app.models.cfp import (
     CFPApplicant,
     CFPPaper,
@@ -50,7 +51,7 @@ async def list_my_invitations(
 
     applicant_result = await db.execute(
         select(CFPApplicant).where(
-            func.lower(CFPApplicant.email) == applicant_email.strip().lower(),
+            CFPApplicant.email_hash == hash_email(applicant_email),
             CFPApplicant.tenant_id == current_user.tenant_id,
         )
     )

@@ -35,7 +35,7 @@ async def check_alumni_status(
         db,
         tenant_id=current_applicant.tenant_id,
         conference_id=conference_id,
-        user_email=current_applicant.applicant.email,
+        user_email=current_applicant.applicant.email or "",
     )
 
 
@@ -108,7 +108,7 @@ async def validate_discount_authenticated(
         tenant_id=current_applicant.tenant_id,
         conference_id=conference_id,
         code=code,
-        user_email=current_applicant.applicant.email,
+        user_email=current_applicant.applicant.email or "",
     )
 
 
@@ -141,7 +141,7 @@ async def create_payment_intent_authenticated(
         tenant_id=current_applicant.tenant_id,
         conference_id=conference_id,
         applicant_id=current_applicant.applicant_id,
-        applicant_email=current_applicant.applicant.email,
+        applicant_email=current_applicant.applicant.email or "",
         amount=data.amount,
         currency=data.currency,
     )
@@ -182,7 +182,7 @@ async def create_authenticated_registration(
         tenant_id=current_applicant.tenant_id,
         conference_id=conference_id,
         applicant_id=current_applicant.applicant_id,
-        applicant_email=current_applicant.applicant.email,
+        applicant_email=current_applicant.applicant.email or "",
         data=data,
     )
 

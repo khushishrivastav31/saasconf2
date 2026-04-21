@@ -420,7 +420,7 @@ async def get_my_training_registrations(
         att_result2 = await db.execute(
             select(TrainingAttendee).where(
                 TrainingAttendee.tenant_id == user.tenant_id,
-                func.lower(TrainingAttendee.email) == user_email_pt,
+                TrainingAttendee.email_hash == hash_email(user_email_pt),
             )
         )
         attendees = att_result2.scalars().all()

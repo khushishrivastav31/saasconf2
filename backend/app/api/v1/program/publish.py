@@ -735,7 +735,7 @@ async def export_sessions(
             session.title,
             session_type_name,
             f"{speaker.first_name} {speaker.last_name}".strip() if speaker else "",
-            speaker.email if speaker else "",
+            (speaker.email or "") if speaker else "",
             speaker.company or "" if speaker else "",
             ", ".join(cospeaker_map.get(session.paper_id, [])) if session.paper_id else "",
             paper.title if paper else "",

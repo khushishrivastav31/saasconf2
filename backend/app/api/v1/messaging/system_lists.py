@@ -169,7 +169,7 @@ async def preview_system_group(
         for a in result.scalars().all():
             items.append(
                 RecipientPreviewItem(
-                    email=a.email,
+                    email=a.email or "",
                     first_name=a.first_name,
                     last_name=a.last_name,
                     source="applicant",

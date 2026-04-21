@@ -3,13 +3,14 @@
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.attachment_urls import batch_get_attachment_urls
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.html_sanitize import sanitize_html
+from app.core.security.pii_crypto import hash_email
 from app.models.audit import AuditLog
 from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper, CFPPaperCospeaker, PaperStatus
 from app.models.settings import UserRole, UserRoleAssignment
@@ -414,12 +415,18 @@ async def list_role_assignments(
         .order_by(CFPApplicant.last_name, CFPApplicant.first_name)
     )
 
+    # Email is encrypted — exact-match on email_hash when the query contains
+    # '@', else name substring only.
+    search_clause: ColumnElement[bool] | None = None
     if search:
-        search_term = f"%{search.strip().lower()}%"
-        query = query.where(
-            func.lower(func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name)).like(search_term)
-            | func.lower(CFPApplicant.email).like(search_term)
-        )
+        search_normalized = search.strip().lower()
+        search_term = f"%{search_normalized}%"
+        name_like = func.lower(func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name)).like(search_term)
+        if "@" in search_normalized:
+            search_clause = name_like | (CFPApplicant.email_hash == hash_email(search_normalized))
+        else:
+            search_clause = name_like
+        query = query.where(search_clause)
 
     # Count
     count_query = (
@@ -428,11 +435,8 @@ async def list_role_assignments(
         .join(CFPApplicant, CFPApplicant.id == UserRoleAssignment.applicant_id)
         .where(UserRoleAssignment.user_role_id == role.id)
     )
-    if search:
-        count_query = count_query.where(
-            func.lower(func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name)).like(search_term)
-            | func.lower(CFPApplicant.email).like(search_term)
-        )
+    if search_clause is not None:
+        count_query = count_query.where(search_clause)
     total = (await db.execute(count_query)).scalar() or 0
 
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
@@ -448,7 +452,7 @@ async def list_role_assignments(
             applicant_id=row.CFPApplicant.id,
             first_name=row.CFPApplicant.first_name,
             last_name=row.CFPApplicant.last_name,
-            email=row.CFPApplicant.email,
+            email=row.CFPApplicant.email or "",
             company=row.CFPApplicant.company,
             picture_url=picture_urls.get(row.CFPApplicant.id),
             created_at=row.UserRoleAssignment.created_at,
@@ -529,7 +533,7 @@ async def create_role_assignment(
         applicant_id=applicant.id,
         first_name=applicant.first_name,
         last_name=applicant.last_name,
-        email=applicant.email,
+        email=applicant.email or "",
         company=applicant.company,
         picture_url=None,
         created_at=assignment.created_at,
@@ -616,12 +620,16 @@ async def list_assignable_applicants(
         .limit(page_size)
     )
 
+    # Email is encrypted — exact-match on email_hash when the query contains
+    # '@', else name substring only.
     if search:
-        search_term = f"%{search.strip().lower()}%"
-        query = query.where(
-            func.lower(func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name)).like(search_term)
-            | func.lower(CFPApplicant.email).like(search_term)
-        )
+        search_normalized = search.strip().lower()
+        search_term = f"%{search_normalized}%"
+        name_clause = func.lower(func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name)).like(search_term)
+        if "@" in search_normalized:
+            query = query.where(name_clause | (CFPApplicant.email_hash == hash_email(search_normalized)))
+        else:
+            query = query.where(name_clause)
 
     result = await db.execute(query)
     applicants = list(result.scalars().all())
@@ -631,7 +639,7 @@ async def list_assignable_applicants(
             id=a.id,
             first_name=a.first_name,
             last_name=a.last_name,
-            email=a.email,
+            email=a.email or "",
         )
         for a in applicants
     ]

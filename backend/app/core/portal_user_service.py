@@ -6,7 +6,7 @@ Links portal_user to training_attendee(s). Sends password-set invite email.
 
 import logging
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.portal_security import generate_password_reset_token
@@ -66,7 +66,7 @@ async def ensure_portal_user_for_registration(
     att_result = await db.execute(
         select(TrainingAttendee).where(
             TrainingAttendee.tenant_id == tenant.id,
-            func.lower(TrainingAttendee.email) == email,
+            TrainingAttendee.email_hash == hash_email(email),
             TrainingAttendee.portal_user_id.is_(None),
         )
     )

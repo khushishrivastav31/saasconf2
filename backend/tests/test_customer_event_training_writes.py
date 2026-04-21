@@ -31,6 +31,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security.pii_crypto import hash_email
 from app.models.customer import Customer
 from app.models.customer_event import ACTOR_ADMIN, CustomerEvent
 from app.models.customer_offer import CustomerOffer
@@ -422,7 +423,9 @@ class TestBackfillDualWrite:
         assert res.json()["created"] >= 1
 
         att = (
-            await db_session.execute(select(TrainingAttendee).where(TrainingAttendee.email == "bf-reg@test.com"))
+            await db_session.execute(
+                select(TrainingAttendee).where(TrainingAttendee.email_hash == hash_email("bf-reg@test.com"))
+            )
         ).scalar_one()
         events = await _customer_events_for(db_session, att.id, "training.registered")
         assert len(events) == 1
@@ -473,7 +476,9 @@ class TestBackfillDualWrite:
         assert res.status_code == 200, res.text
 
         att = (
-            await db_session.execute(select(TrainingAttendee).where(TrainingAttendee.email == "bf-offer@test.com"))
+            await db_session.execute(
+                select(TrainingAttendee).where(TrainingAttendee.email_hash == hash_email("bf-offer@test.com"))
+            )
         ).scalar_one()
         events = await _customer_events_for(db_session, att.id, "training.offer_assigned")
         assert len(events) == 1

@@ -32,7 +32,7 @@ async def get_my_registrations(
     Returns registrations across all conferences for this tenant.
     """
     tenant_id = current_applicant.tenant_id
-    user_email = current_applicant.applicant.email.lower()
+    user_email = (current_applicant.applicant.email or "").lower()
 
     result = await db.execute(
         select(Registration, BookingOption.name.label("booking_option_name"))
@@ -170,7 +170,7 @@ async def select_session(
     - Session must not be fully booked
     """
     tenant_id = current_applicant.tenant_id
-    user_email = current_applicant.applicant.email.lower()
+    user_email = (current_applicant.applicant.email or "").lower()
 
     # Load registration
     result = await db.execute(
@@ -263,7 +263,7 @@ async def get_my_bookable_sessions(
     and scoped to the user's own registration.
     """
     tenant_id = current_applicant.tenant_id
-    user_email = current_applicant.applicant.email.lower()
+    user_email = (current_applicant.applicant.email or "").lower()
 
     # Load registration
     result = await db.execute(
@@ -449,7 +449,7 @@ async def get_item_bookable_sessions(
     Same logic as main bookable sessions but scoped to an item's booking option.
     """
     tenant_id = current_applicant.tenant_id
-    user_email = current_applicant.applicant.email.lower()
+    user_email = (current_applicant.applicant.email or "").lower()
 
     # Load registration
     result = await db.execute(
@@ -651,7 +651,7 @@ async def select_item_session(
     - Session must not be fully booked
     """
     tenant_id = current_applicant.tenant_id
-    user_email = current_applicant.applicant.email.lower()
+    user_email = (current_applicant.applicant.email or "").lower()
 
     # Load registration
     result = await db.execute(

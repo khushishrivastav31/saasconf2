@@ -810,7 +810,7 @@ async def reply_to_portal_thread(
             type="applicant",
             first_name=applicant.first_name,
             last_name=applicant.last_name,
-            email=applicant.email,
+            email=applicant.email or "",
         ),
         body_html=message.body_html,
         attachments=attachment_map.get(message.id, []),

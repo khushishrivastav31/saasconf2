@@ -15,6 +15,7 @@ from app.core.csv_export import csv_response
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip
 from app.core.exceptions import NotFoundError
 from app.core.search import unaccent_ilike
+from app.core.security.pii_crypto import hash_email
 from app.models.alumni import Alumni, AlumniSource
 from app.models.audit import AuditAction, AuditLog
 from app.models.cfp_applicants import CFPApplicant
@@ -227,7 +228,7 @@ async def update_alumni(
         applicant_result = await db.execute(
             select(CFPApplicant).where(
                 CFPApplicant.tenant_id == current_user.require_tenant_id(),
-                func.lower(CFPApplicant.email) == old_email,
+                CFPApplicant.email_hash == hash_email(old_email),
             )
         )
         applicant = applicant_result.scalar_one_or_none()

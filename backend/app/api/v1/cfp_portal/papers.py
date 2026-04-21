@@ -12,6 +12,7 @@ from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.attachment_urls import PORTAL_PREFIX, batch_get_attachment_urls
 from app.core.email import send_cospeaker_invitation_email, send_email_background
 from app.core.exceptions import AuthorizationError, NotFoundError, SubmissionValidationError, ValidationError
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
@@ -583,7 +584,7 @@ def _render_portal_paper(
             applicant_id=row.applicant.id,
             first_name=row.applicant.first_name,
             last_name=row.applicant.last_name,
-            email=row.applicant.email,
+            email=row.applicant.email or "",
             invitation_status=row.invitation_status,
             invited_at=row.invited_at,
             responded_at=row.responded_at,
@@ -682,7 +683,7 @@ async def _sync_cospeakers(
         app_result = await db.execute(
             select(CFPApplicant).where(
                 CFPApplicant.tenant_id == current.tenant_id,
-                func.lower(CFPApplicant.email) == normalized,
+                CFPApplicant.email_hash == hash_email(normalized),
             )
         )
         applicant = app_result.scalar_one_or_none()

@@ -13,6 +13,7 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.security import hash_password
+from app.core.security.pii_crypto import hash_email
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
@@ -181,7 +182,7 @@ async def list_applicants(
             portal_user_id=a.portal_user_id,
             first_name=a.first_name,
             last_name=a.last_name,
-            email=a.email,
+            email=a.email or "",
             phone=a.phone,
             title=a.title,
             company=a.company,
@@ -219,7 +220,7 @@ async def create_applicant(
     existing = await db.execute(
         select(CFPApplicant.id).where(
             CFPApplicant.tenant_id == current_user.require_tenant_id(),
-            CFPApplicant.email == applicant_data.email,
+            CFPApplicant.email_hash == hash_email(applicant_data.email),
         )
     )
     if existing.scalar_one_or_none():
@@ -267,7 +268,7 @@ async def create_applicant(
         portal_user_id=applicant.portal_user_id,
         first_name=applicant.first_name,
         last_name=applicant.last_name,
-        email=applicant.email,
+        email=applicant.email or "",
         phone=applicant.phone,
         title=applicant.title,
         company=applicant.company,
@@ -341,7 +342,7 @@ async def update_applicant(
         portal_user_id=applicant.portal_user_id,
         first_name=applicant.first_name,
         last_name=applicant.last_name,
-        email=applicant.email,
+        email=applicant.email or "",
         phone=applicant.phone,
         title=applicant.title,
         company=applicant.company,

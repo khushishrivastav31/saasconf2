@@ -46,7 +46,7 @@ async def get_pending_questions_summary(
         select(Registration.conference_id)
         .where(
             Registration.tenant_id == current.tenant_id,
-            func.lower(Registration.email) == current.applicant.email.lower(),
+            func.lower(Registration.email) == (current.applicant.email or "").lower(),
             Registration.status != RegistrationStatus.CANCELLED,
         )
         .distinct()
@@ -152,7 +152,7 @@ async def submit_answers(
         select(Registration.id).where(
             Registration.conference_id == conference_id,
             Registration.tenant_id == current.tenant_id,
-            func.lower(Registration.email) == current.applicant.email.lower(),
+            func.lower(Registration.email) == (current.applicant.email or "").lower(),
             Registration.status != RegistrationStatus.CANCELLED,
         )
     )

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -112,7 +112,7 @@ async def register_applicant(
     existing = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.tenant_id == tenant.id,
-            func.lower(CFPApplicant.email) == normalized_email,
+            CFPApplicant.email_hash == hash_email(normalized_email),
         )
     )
     if existing.scalar_one_or_none():
@@ -233,7 +233,7 @@ async def verify_email(
         db,
         tenant_id=tenant.id,
         applicant_id=applicant.id,
-        applicant_email=applicant.email,
+        applicant_email=applicant.email or "",
         applicant_first_name=applicant.first_name,
         applicant_last_name=applicant.last_name,
         activity_type=ApplicantActivityType.EMAIL_VERIFIED,
@@ -263,7 +263,7 @@ async def forgot_password(
     result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.tenant_id == tenant.id,
-            func.lower(CFPApplicant.email) == normalized_email,
+            CFPApplicant.email_hash == hash_email(normalized_email),
         )
     )
     applicant = result.scalar_one_or_none()
@@ -281,7 +281,7 @@ async def forgot_password(
             db,
             tenant_id=tenant.id,
             applicant_id=applicant.id,
-            applicant_email=applicant.email,
+            applicant_email=applicant.email or "",
             applicant_first_name=applicant.first_name,
             applicant_last_name=applicant.last_name,
             activity_type=ApplicantActivityType.PASSWORD_RESET_REQUESTED,
@@ -291,7 +291,7 @@ async def forgot_password(
         portal_settings = get_settings()
         await send_password_reset_email(
             db,
-            email=applicant.email,
+            email=applicant.email or "",
             token=raw_token,
             conference_id=None,
             company_name=tenant.name,
@@ -348,7 +348,7 @@ async def reset_password(
         db,
         tenant_id=tenant.id,
         applicant_id=applicant.id,
-        applicant_email=applicant.email,
+        applicant_email=applicant.email or "",
         applicant_first_name=applicant.first_name,
         applicant_last_name=applicant.last_name,
         activity_type=ApplicantActivityType.PASSWORD_RESET_COMPLETED,
@@ -393,7 +393,7 @@ async def login_applicant(
     result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.tenant_id == tenant.id,
-            func.lower(CFPApplicant.email) == data.email.strip().lower(),
+            CFPApplicant.email_hash == hash_email(data.email),
         )
     )
     applicant = result.scalar_one_or_none()

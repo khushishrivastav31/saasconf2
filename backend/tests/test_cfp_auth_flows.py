@@ -25,6 +25,7 @@ from app.core.applicant_security import (
     generate_email_verification_token,
 )
 from app.core.security import hash_password
+from app.core.security.pii_crypto import hash_email
 from app.core.utils import utcnow
 from app.models.applicant_token import (
     ApplicantEmailVerification,
@@ -120,7 +121,9 @@ class TestRegistration:
         resp = await client.post(f"/api/v1/portal/{tenant.slug}/register", json=payload)
         assert resp.status_code in (200, 201)
 
-        result = await db_session.execute(select(CFPApplicant).where(CFPApplicant.email == email.lower()))
+        result = await db_session.execute(
+            select(CFPApplicant).where(CFPApplicant.email_hash == hash_email(email.lower()))
+        )
         applicant = result.scalar_one_or_none()
         assert applicant is not None
         assert applicant.tenant_id == tenant.id

@@ -189,7 +189,7 @@ async def export_conference_papers(
             paper.cfp.title if paper.cfp else "",
             speaker.first_name if speaker else "",
             speaker.last_name if speaker else "",
-            speaker.email if speaker else "",
+            (speaker.email or "") if speaker else "",
             speaker.company or "" if speaker else "",
             speaker.title or "" if speaker else "",
             paper.abstract_short or "",

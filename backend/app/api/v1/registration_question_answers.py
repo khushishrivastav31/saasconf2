@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 
 from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep
+from app.core.security.pii_crypto import hash_email
 from app.models.cfp_applicants import CFPApplicant
 from app.models.registration_question_answer import RegistrationQuestionAnswer
 from app.schemas.registration_questions import (
@@ -55,17 +56,19 @@ async def list_registration_question_answers(
         RegistrationQuestionAnswer.tenant_id == current_user.tenant_id,
     )
 
-    # Apply search filter if provided
+    # Apply search filter if provided. Email is encrypted — exact-match on
+    # email_hash when the query contains '@'; name substring otherwise.
     applicant_filter = None
     if search:
         search_term = f"%{search.lower()}%"
+        name_clause = func.lower(CFPApplicant.first_name).like(search_term) | func.lower(CFPApplicant.last_name).like(
+            search_term
+        )
+        if "@" in search:
+            name_clause = name_clause | (CFPApplicant.email_hash == hash_email(search))
         applicant_filter = select(CFPApplicant.id).where(
             CFPApplicant.tenant_id == current_user.tenant_id,
-            (
-                func.lower(CFPApplicant.email).like(search_term)
-                | func.lower(CFPApplicant.first_name).like(search_term)
-                | func.lower(CFPApplicant.last_name).like(search_term)
-            ),
+            name_clause,
         )
         count_query = count_query.where(RegistrationQuestionAnswer.applicant_id.in_(applicant_filter))
 
@@ -123,7 +126,7 @@ async def list_registration_question_answers(
             ApplicantAnswersResponse(
                 applicant_id=aid,
                 applicant_name=f"{applicant.first_name} {applicant.last_name}".strip(),
-                applicant_email=applicant.email,
+                applicant_email=applicant.email or "",
                 answers=[
                     QuestionAnswerResponse(
                         id=a.id,

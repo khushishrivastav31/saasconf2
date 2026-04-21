@@ -149,13 +149,17 @@ async def list_attendees(
             query = query.where(TrainingAttendee.status == status)
     if search:
         s = search.lower()
-        query = query.where(
-            or_(
-                func.lower(TrainingAttendee.first_name).contains(s),
-                func.lower(TrainingAttendee.last_name).contains(s),
-                func.lower(TrainingAttendee.email).contains(s),
-            )
+        # Email column is encrypted — exact-match on email_hash when the query
+        # contains '@', else fall back to name substring only (same pattern as
+        # portal_users/listing.py).
+        name_clause = or_(
+            func.lower(TrainingAttendee.first_name).contains(s),
+            func.lower(TrainingAttendee.last_name).contains(s),
         )
+        if "@" in search:
+            query = query.where(or_(name_clause, TrainingAttendee.email_hash == hash_email(search)))
+        else:
+            query = query.where(name_clause)
 
     count_q = select(func.count()).select_from(query.with_only_columns(TrainingAttendee.id).subquery())
     total = (await db.execute(count_q)).scalar() or 0
@@ -266,7 +270,7 @@ async def get_attendee(
             action=AuditAction.TRAINING_ATTENDEE_VIEW,
             resource_type="training_attendee",
             resource_id=att.id,
-            subject_email_hash=hash_email(att.email),
+            subject_email_hash=hash_email(att.email or ""),
         )
     )
     await db.commit()

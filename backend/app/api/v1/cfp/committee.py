@@ -14,6 +14,7 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError
 from app.core.security import hash_password
+from app.core.security.pii_crypto import hash_email
 from app.models.cfp import (
     CFPApplicant,
     CFPCommitteeMember,
@@ -53,7 +54,7 @@ def _build_committee_member_response(
         expertise_areas=member.expertise_areas or [],
         first_name=applicant.first_name,
         last_name=applicant.last_name,
-        email=applicant.email,
+        email=applicant.email or "",
         phone=applicant.phone,
         title=applicant.title,
         company=applicant.company,
@@ -194,7 +195,7 @@ async def create_committee_member(
         existing_applicant = await db.execute(
             select(CFPApplicant).where(
                 CFPApplicant.tenant_id == current_user.tenant_id,
-                func.lower(CFPApplicant.email) == normalized_email,
+                CFPApplicant.email_hash == hash_email(normalized_email),
             )
         )
         if existing_applicant.scalar_one_or_none():

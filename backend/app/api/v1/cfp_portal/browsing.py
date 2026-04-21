@@ -65,7 +65,7 @@ async def list_conferences(
     # Check registration status per conference (matched by email)
     from app.models.registration import Registration, RegistrationStatus
 
-    user_email = current.applicant.email.lower()
+    user_email = (current.applicant.email or "").lower()
     registered_conf_ids: set = set()
     if conf_ids:
         reg_result = await db.execute(

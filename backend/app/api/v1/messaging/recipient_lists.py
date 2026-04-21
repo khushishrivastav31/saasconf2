@@ -123,7 +123,7 @@ async def create_recipient_list(
                 id=a.id,
                 first_name=a.first_name,
                 last_name=a.last_name,
-                email=a.email,
+                email=a.email or "",
             )
             for a in applicants
         ],
@@ -176,7 +176,7 @@ async def get_recipient_list(
                 id=a.id,
                 first_name=a.first_name,
                 last_name=a.last_name,
-                email=a.email,
+                email=a.email or "",
             )
             for a in applicants
         ],

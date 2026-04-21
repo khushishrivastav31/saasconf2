@@ -70,7 +70,7 @@ async def list_unverified_applicants(
             id=a.id,
             first_name=a.first_name,
             last_name=a.last_name,
-            email=a.email,
+            email=a.email or "",
             created_at=a.created_at,
         )
         for a in applicants
@@ -98,7 +98,7 @@ async def _resend_verification_for_applicant(
 
     return await send_verification_email(
         db,
-        email=applicant.email,
+        email=applicant.email or "",
         token=raw_token,
         tenant_slug=tenant_slug,
         first_name=applicant.first_name,

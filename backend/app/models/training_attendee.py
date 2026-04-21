@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.security.pii_crypto import encrypt_pii, hash_email
+from app.core.security.pii_crypto import encrypt_pii, hash_email, read_pii
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class TrainingAttendee(Base):
-    """Central attendee identity, deduplicated by (tenant_id, email).
+    """Central attendee identity, deduplicated by (tenant_id, email_hash).
 
     Status:
       - active: currently assigned to a training (via registration or offer)
@@ -31,7 +31,6 @@ class TrainingAttendee(Base):
     )
     first_name: Mapped[str] = mapped_column(String(200), nullable=False)
     last_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    email: Mapped[str] = mapped_column(String(320), nullable=False)
     email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", server_default="active")
@@ -55,26 +54,27 @@ class TrainingAttendee(Base):
         cascade="all, delete-orphan",
     )
 
+    # Legacy (tenant_id, email) UNIQUE constraint retired in migration 209;
+    # uniqueness is enforced via (tenant_id, email_hash) unique index created
+    # in the same migration.
     __table_args__ = (
-        UniqueConstraint("tenant_id", "email", name="uq_training_attendees_tenant_email"),
         Index("idx_training_attendees_tenant", "tenant_id"),
         Index("idx_training_attendees_status", "status"),
         Index("idx_training_attendees_email_hash", "email_hash"),
     )
 
-    @validates("email")
-    def _sync_email_companions(self, _key: str, value: str) -> str:
-        # Dual-write during PII transition: every write populates the
-        # encrypted + hash companions so new rows don't need a backfill pass.
-        # Plaintext column is dropped in migration 208; at that point this
-        # validator is replaced by a @property setter (see portal_user.py).
-        if value:
-            self.email_hash = hash_email(value)
-            self.email_encrypted = encrypt_pii(value)
-        else:
-            self.email_hash = None
+    @property
+    def email(self) -> str | None:
+        return read_pii(self, "email")
+
+    @email.setter
+    def email(self, value: str | None) -> None:
+        if value is None:
             self.email_encrypted = None
-        return value
+            self.email_hash = None
+        else:
+            self.email_encrypted = encrypt_pii(value)
+            self.email_hash = hash_email(value)
 
     def __repr__(self) -> str:
-        return f"<TrainingAttendee {self.first_name} {self.last_name} ({self.email}) status={self.status}>"
+        return f"<TrainingAttendee {self.first_name} {self.last_name} status={self.status}>"

@@ -181,7 +181,7 @@ async def create_portal_user_for_attendee(
     existing = await db.execute(
         select(PortalUser).where(
             PortalUser.tenant_id == tenant_id,
-            PortalUser.email_hash == hash_email(att.email),
+            PortalUser.email_hash == hash_email(att.email or ""),
         )
     )
     portal_user = existing.scalar_one_or_none()

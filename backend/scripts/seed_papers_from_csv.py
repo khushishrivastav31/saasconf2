@@ -27,6 +27,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.config import get_settings
 from app.core.security import hash_password
+from app.core.security.pii_crypto import hash_email
 from app.models.associations import ConferenceCFP
 from app.models.cfp import CallForPapers, CFPApplicant, CFPPaper, CFPPaperCospeaker
 from app.models.conference import Conference
@@ -97,7 +98,7 @@ async def get_or_create_applicant(
     result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.tenant_id == tenant_id,
-            CFPApplicant.email == email_lower,
+            CFPApplicant.email_hash == hash_email(email_lower),
         )
     )
     applicant = result.scalar_one_or_none()
@@ -227,9 +228,11 @@ async def main() -> None:
         cospeakers_created = 0
         applicants_created_count = 0
 
-        # Track existing applicant emails before we start
-        result = await db.execute(select(CFPApplicant.email).where(CFPApplicant.tenant_id == tenant_id))
-        existing_emails = {r[0] for r in result.fetchall()}
+        # Track existing applicant emails by hash before we start (plaintext
+        # column was dropped in migration 209 — email_hash is the queryable
+        # identity).
+        result = await db.execute(select(CFPApplicant.email_hash).where(CFPApplicant.tenant_id == tenant_id))
+        existing_email_hashes = {r[0] for r in result.fetchall() if r[0]}
 
         for row in rows:
             title = (row.get("Title") or "").strip()
@@ -258,9 +261,10 @@ async def main() -> None:
                 website=row.get("Speaker 1 Website", ""),
                 cache=applicant_cache,
             )
-            if spk1_email.strip().lower() not in existing_emails:
+            spk1_hash = hash_email(spk1_email)
+            if spk1_hash not in existing_email_hashes:
                 applicants_created_count += 1
-                existing_emails.add(spk1_email.strip().lower())
+                existing_email_hashes.add(spk1_hash)
 
             # Session type
             csv_type = (row.get("Type of presentation") or "").strip()
@@ -317,9 +321,10 @@ async def main() -> None:
                     website=row.get(f"Speaker {spk_num} Website", ""),
                     cache=applicant_cache,
                 )
-                if spk_email.strip().lower() not in existing_emails:
+                spk_hash = hash_email(spk_email)
+                if spk_hash not in existing_email_hashes:
                     applicants_created_count += 1
-                    existing_emails.add(spk_email.strip().lower())
+                    existing_email_hashes.add(spk_hash)
 
                 # Create co-speaker association
                 assoc = CFPPaperCospeaker(

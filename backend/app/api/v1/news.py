@@ -316,7 +316,7 @@ async def send_article(
     for applicant in applicants:
         sent = await send_direct_message_email(
             db,
-            email=applicant.email,
+            email=applicant.email or "",
             first_name=applicant.first_name or "",
             subject=article.title,
             body_html=article.body_html,

@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone
+from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone, read_pii
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -27,10 +27,8 @@ class CFPApplicant(Base):
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     pronouns: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
     email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     phone_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -72,29 +70,31 @@ class CFPApplicant(Base):
         Index("idx_cfp_applicants_email_hash", "email_hash"),
     )
 
-    @validates("email")
-    def _sync_email_companions(self, _key: str, value: str) -> str:
-        # Dual-write during PII transition: populate encrypted + hash companions
-        # so new rows don't need a backfill pass. Plaintext column is dropped in
-        # migration 208; at that point this validator is replaced by a @property
-        # setter (see portal_user.py).
-        if value:
-            self.email_hash = hash_email(value)
-            self.email_encrypted = encrypt_pii(value)
-        else:
-            self.email_hash = None
-            self.email_encrypted = None
-        return value
+    @property
+    def email(self) -> str | None:
+        return read_pii(self, "email")
 
-    @validates("phone")
-    def _sync_phone_companions(self, _key: str, value: str | None) -> str | None:
-        if value:
-            self.phone_hash = hash_phone(value)
-            self.phone_encrypted = encrypt_pii(value)
+    @email.setter
+    def email(self, value: str | None) -> None:
+        if value is None:
+            self.email_encrypted = None
+            self.email_hash = None
         else:
-            self.phone_hash = None
+            self.email_encrypted = encrypt_pii(value)
+            self.email_hash = hash_email(value)
+
+    @property
+    def phone(self) -> str | None:
+        return read_pii(self, "phone")
+
+    @phone.setter
+    def phone(self, value: str | None) -> None:
+        if value is None:
             self.phone_encrypted = None
-        return value
+            self.phone_hash = None
+        else:
+            self.phone_encrypted = encrypt_pii(value)
+            self.phone_hash = hash_phone(value)
 
     def __repr__(self) -> str:
         return f"<CFPApplicant {self.first_name} {self.last_name}>"

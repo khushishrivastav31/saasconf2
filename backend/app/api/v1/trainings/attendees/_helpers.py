@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep
+from app.core.security.pii_crypto import hash_email
 from app.models.training import Training
 from app.models.training_attendee import TrainingAttendee
 from app.models.training_program import ProgramYearTraining
@@ -17,11 +18,11 @@ async def get_or_create_central_attendee(
     last_name: str,
     email: str,
 ) -> TrainingAttendee:
-    """Find or create a central TrainingAttendee record by (tenant_id, email)."""
+    """Find or create a central TrainingAttendee record by (tenant_id, email_hash)."""
     result = await db.execute(
         select(TrainingAttendee).where(
             TrainingAttendee.tenant_id == tenant_id,
-            TrainingAttendee.email == email,
+            TrainingAttendee.email_hash == hash_email(email),
         )
     )
     attendee = result.scalar_one_or_none()

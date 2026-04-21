@@ -262,7 +262,7 @@ async def bulk_send(
         # Deduplicate by email, also skip emails already covered by applicant threads
         applicant_emails: set[str] = set()
         if valid_ids:
-            applicant_emails = {a.email.lower() for a in applicants.values()}
+            applicant_emails = {(a.email or "").lower() for a in applicants.values() if a.email}
 
         seen_emails: set[str] = set(applicant_emails)
         unique_email_recipients: list[EmailRecipient] = []
@@ -543,7 +543,7 @@ async def recipient_count(
         for a in applicant_result.scalars().all():
             preview_items.append(
                 RecipientPreviewItem(
-                    email=a.email,
+                    email=a.email or "",
                     first_name=a.first_name,
                     last_name=a.last_name,
                     source="applicant",
