@@ -3,13 +3,14 @@
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import check_conference_admin_access
+from app.core.dependencies import CurrentUser, check_conference_admin_access
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.models.conference import Conference
 
 
-async def get_conference_for_tenant(db, conference_id: UUID, tenant_id: UUID | None) -> Conference:
+async def get_conference_for_tenant(db: AsyncSession, conference_id: UUID, tenant_id: UUID | None) -> Conference:
     """Fetch a conference and verify it belongs to the given tenant.
 
     ``tenant_id`` is typed as optional to accept ``CurrentUser.tenant_id`` directly
@@ -31,7 +32,7 @@ async def get_conference_for_tenant(db, conference_id: UUID, tenant_id: UUID | N
     return conference
 
 
-async def check_conference_admin(conference_id: UUID, current_user, db) -> None:
+async def check_conference_admin(conference_id: UUID, current_user: CurrentUser, db: AsyncSession) -> None:
     """Verify *current_user* has admin access to the conference.
 
     Super-admins and tenant-admins pass automatically.  For other users
