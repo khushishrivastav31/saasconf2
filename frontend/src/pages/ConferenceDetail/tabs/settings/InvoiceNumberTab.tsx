@@ -8,6 +8,8 @@ import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import type { Conference } from '../../../../types';
 import { DirtyContext } from '../../DirtyContext';
 
+const INVOICE_COUNTER_WIDTH = 5;
+
 interface InvoiceSettings {
   invoice_number_template: string;
   invoice_counter_reset: 'daily' | 'yearly';
@@ -137,7 +139,7 @@ export default function InvoiceNumberTab({
     preview = preview.replace('[YYYY]', String(now.getFullYear()));
     preview = preview.replace('[MM]', String(now.getMonth() + 1).padStart(2, '0'));
     preview = preview.replace('[DD]', String(now.getDate()).padStart(2, '0'));
-    preview = preview.replace('[Count]', String(count).padStart(5, '0'));
+    preview = preview.replace('[Count]', String(count).padStart(INVOICE_COUNTER_WIDTH, '0'));
     return preview;
   };
 
