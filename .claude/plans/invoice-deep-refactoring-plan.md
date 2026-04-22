@@ -1,6 +1,8 @@
 # Invoice Deep Refactoring Plan
 
-## Status: IN PROGRESS
+## Status: COMPLETE (verified 2026-04-22)
+
+The plan shipped. `backend/app/api/v1/invoices.py` was replaced by the `backend/app/api/v1/invoices/` package (`crud.py`, `operations.py`, `stripe.py`, `pdf.py`, `_helpers.py`, `__init__.py`, `README.md`) and business logic lives in `backend/app/services/invoice_service.py`. Unchecked checkboxes below reflect the original plan, not current state; kept as a historical record of the refactor approach.
 
 ## Goal
 Refactor `backend/app/api/v1/invoices.py` (2347 lines) into maintainable, testable architecture.
