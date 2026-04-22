@@ -21,11 +21,11 @@ Refer to the [README](README.md) for quick start instructions on setting up the 
 4. **Run tests** to ensure everything passes:
    - Backend:
      ```bash
-     pytest tests/ -v
+     cd backend && venv/bin/python -m pytest tests/ -v
      ```
    - Frontend:
      ```bash
-     npm run test:run
+     cd frontend && npm run test:run
      npx tsc --noEmit
      ```
 5. **Pre-commit hooks** will auto-format your code on commit (Ruff for Python, ESLint + Prettier for TypeScript).
@@ -93,14 +93,15 @@ You do not need to manually run formatters -- the pre-commit hooks handle this f
 ## Pull Request Process
 
 1. **CI must pass.** Branch protection requires these status checks to pass before merge:
-   - `backend-tests` -- Python test suite (pytest + mypy + ruff)
-   - `frontend-tests` -- TypeScript checks + Vitest + production build
-   - `security-audit` -- Trivy vulnerability scanning
-2. **One approving review required.** At least one maintainer must approve the PR. Stale approvals are dismissed when new commits are pushed.
-3. **Branch must be up-to-date** with `main` before merging (strict mode).
-4. **Keep PRs focused.** Each pull request should address one feature or fix. Avoid combining unrelated changes.
-5. **Include a clear description.** Explain what the PR does, why the change is needed, and any relevant context for reviewers.
-6. **Link related issues** if applicable (e.g., "Closes #42").
+   - `Backend Tests` -- Python test suite (pytest + mypy + ruff)
+   - `Frontend Tests` -- TypeScript checks + ESLint + Vitest + production build
+   - `Security Audit` -- `pip-audit` + `npm audit` dependency scanning
+   - `Secrets Scan` -- TruffleHog secrets detection
+   - `Analyze (python)` / `Analyze (javascript-typescript)` -- CodeQL
+2. **Branch must be up-to-date** with `main` before merging (strict mode).
+3. **Keep PRs focused.** Each pull request should address one feature or fix. Avoid combining unrelated changes.
+4. **Include a clear description.** Explain what the PR does, why the change is needed, and any relevant context for reviewers.
+5. **Link related issues** if applicable (e.g., "Closes #42").
 
 > **Note:** Force pushes and branch deletion are disabled on `main`.
 

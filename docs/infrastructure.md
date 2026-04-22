@@ -166,9 +166,9 @@ Triggered on pushes and pull requests to `main`.
 ### Jobs
 
 ```
-backend-tests ──┐
-                 ├─→ deploy-staging ─→ e2e-tests
-frontend-tests ─┘
+Backend Tests ──┐
+                 ├─→ Deploy to Staging ─→ E2E Tests
+Frontend Tests ─┘
 ```
 
 #### 1. Backend Tests
