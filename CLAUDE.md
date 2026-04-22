@@ -27,7 +27,8 @@ Follow this sweep before asking to merge. **Every step is mandatory** — CI rej
 4. `cd backend && ruff check app/ && ruff format --check app/` — lint + format **the whole `app/` tree**.
 5. `cd frontend && npx tsc --noEmit && npx eslint src/` — type-check + lint **the whole `src/` tree**. Targeted per-file lint is a debugging convenience, not a substitute.
 6. Full sweep: `cd backend && venv/bin/python -m pytest tests/ -v` and `cd frontend && npm run test`.
-7. For UI or user-visible changes, update the in-app handbook at `frontend/src/pages/Handbook/handbookSections.tsx`.
+7. **OpenAPI schema drift** — if you added/changed any backend endpoint, route prefix, request/response schema, or response code, run `cd frontend && JWT_SECRET_KEY=test-secret-key-for-ci-pipeline-minimum-32-chars SUPER_ADMIN_PASSWORD=TestPassword123! npm run gen:api` and commit the updated `frontend/src/types/api.generated.ts`. CI's "OpenAPI schema drift" check will fail the PR otherwise. Verify locally with `npm run gen:api:check` — it must print no output.
+8. For UI or user-visible changes, update the in-app handbook at `frontend/src/pages/Handbook/handbookSections.tsx`.
 
 **Why "whole tree" matters**: dependency bumps (Dependabot, manual upgrades) can add new lint or type-check rules that fire on code you didn't touch. A per-file check on your diff will pass while the full sweep fails on CI. Always run steps 3–6 across the full tree before pushing, especially on any PR that modifies `requirements.txt`, `package.json`, or lockfiles.
 

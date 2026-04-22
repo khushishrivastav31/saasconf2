@@ -784,7 +784,13 @@ async def register_for_training(
     )
     db.add(registration)
 
-    # Create attendees
+    # Create attendees (per-registration rows) + the shared TrainingAttendee
+    # identity row for each. The identity row is what the admin Attendee list
+    # queries and what /portal/unified/my-trainings joins through; skipping it
+    # used to silently drop newly-registered people from both views. See
+    # app/core/training_attendee_resolver.py for the dedup rules.
+    from app.core.training_attendee_resolver import resolve_or_create_training_attendee
+
     attendee_records = []
     for att in data.attendees:
         attendee = TrainingRegistrationAttendee(
@@ -802,6 +808,16 @@ async def register_for_training(
         )
         db.add(attendee)
         attendee_records.append(attendee)
+
+        if att.email:
+            training_attendee = await resolve_or_create_training_attendee(
+                db,
+                tenant_id=tenant.id,
+                email=att.email,
+                first_name=att.first_name,
+                last_name=att.last_name,
+            )
+            attendee.attendee_id = training_attendee.id
 
     await db.commit()
     await db.refresh(registration)

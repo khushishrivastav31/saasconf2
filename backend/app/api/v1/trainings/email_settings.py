@@ -29,6 +29,7 @@ TRAINING_TEMPLATE_TYPES = [
     "training_registration_confirmation",
     "training_registration_cancellation",
     "training_attendee_welcome",
+    "training_attendee_registered",
     "training_schedule_publish",
     "training_schedule_update",
     "training_invoice_send",
@@ -41,6 +42,7 @@ TRAINING_TEMPLATE_LABELS = {
     "training_registration_confirmation": "Registration Confirmation",
     "training_registration_cancellation": "Registration Cancellation",
     "training_attendee_welcome": "Attendee Welcome",
+    "training_attendee_registered": "Offer Attendee Registered",
     "training_schedule_publish": "Trainer Schedule (Initial Publish)",
     "training_schedule_update": "Trainer Schedule (Update)",
     "training_invoice_send": "Invoice Send",
@@ -98,6 +100,26 @@ TRAINING_DEFAULT_TEMPLATES: dict[str, dict[str, str]] = {
             "Hi [First Name],\n\n"
             "Welcome to [Training Name]. We're excited to have you.\n\n"
             "If you have any questions, reach out to us at [Support Email].\n\n"
+            "Best regards,\n[Company Name]"
+        ),
+    },
+    "training_attendee_registered": {
+        "subject": "You're registered for [Training Name]",
+        "body_html": (
+            "<h2>You're registered!</h2>"
+            "<p>Hi [First Name],</p>"
+            "<p>You have been registered as an attendee for "
+            "<strong>[Training Name]</strong> on [Training Date].</p>"
+            "<p>Access your portal to see training details and materials: "
+            '<a href="[Portal URL]">[Portal URL]</a></p>'
+            "<p>Best regards,<br>[Company Name]</p>"
+        ),
+        "body_text": (
+            "You're registered!\n\n"
+            "Hi [First Name],\n\n"
+            "You have been registered as an attendee for "
+            "[Training Name] on [Training Date].\n\n"
+            "Access your portal to see training details and materials: [Portal URL]\n\n"
             "Best regards,\n[Company Name]"
         ),
     },
@@ -213,6 +235,7 @@ TRAINING_DEFAULT_TEMPLATES: dict[str, dict[str, str]] = {
 
 TRAINING_TEMPLATE_PLACEHOLDERS = [
     "[Training Name]",
+    "[Training Date]",
     "[First Name]",
     "[Last Name]",
     "[Company Name]",
@@ -223,6 +246,7 @@ TRAINING_TEMPLATE_PLACEHOLDERS = [
     "[Year]",
     "[Training Count]",
     "[Changes]",
+    "[Portal URL]",
 ]
 
 

@@ -52,6 +52,7 @@ export default function AssignedPlacementsTable({ offer, onAddClick, onRemove }:
                   key={p.id}
                   placement={p}
                   offerId={offer.id}
+                  offerStatus={offer.status}
                   offerAttendeeLimit={offer.attendees}
                   totalAttendeeCount={offer.attendee_count ?? 0}
                   onRemove={() => onRemove(p.id)}

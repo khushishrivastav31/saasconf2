@@ -150,3 +150,8 @@ class AuditAction:
     PORTAL_USER_RESET_PASSWORD = "portal_user.reset_password"
     PORTAL_USER_IMPERSONATE = "portal_user.impersonate"
     PORTAL_USER_MERGE = "portal_user.merge"
+
+    # Training offer lifecycle
+    OFFER_ACCEPTED = "offer.accepted"
+    OFFER_ATTENDEE_PROMOTED = "offer_attendee.promoted"
+    OFFER_ATTENDEE_REVOKED = "offer_attendee.revoked"

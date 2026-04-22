@@ -3937,6 +3937,32 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/offers/{offer_id}/accept': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Accept Offer
+     * @description Accept an offer: promote every attendee to a TrainingAttendee + PortalUser,
+     *     then dispatch the registration email to each of them.
+     *
+     *     Rejects with 400 if any attendee has no email — they can't be promoted.
+     *     Rejects with 400 if the offer is already accepted (idempotency boundary;
+     *     post-acceptance attendee inserts flow through the create-attendee path
+     *     which runs the same promotion for new rows).
+     */
+    post: operations['accept_offer_api_v1_trainings_offers__offer_id__accept_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/offers/{offer_id}/attendees': {
     parameters: {
       query?: never;
@@ -3953,6 +3979,11 @@ export type paths = {
     /**
      * Create Attendee
      * @description Create an attendee for an offer placement.
+     *
+     *     If the parent offer is already accepted, the new attendee is
+     *     immediately promoted (TrainingAttendee + PortalUser + email) so the
+     *     post-acceptance insert mirrors the on-acceptance flow for that one
+     *     attendee. The email is only dispatched after the outer commit.
      */
     post: operations['create_attendee_api_v1_trainings_offers__offer_id__attendees_post'];
     delete?: never;
@@ -3972,12 +4003,26 @@ export type paths = {
     /**
      * Update Attendee
      * @description Update an offer attendee.
+     *
+     *     Post-acceptance behaviour:
+     *       * Email change → revoke the old identity, apply the new email,
+     *         re-promote (new TrainingAttendee + portal user + registration
+     *         email). Name + email are edited together as "the new person".
+     *       * Name-only change (email unchanged) → cosmetic sync to the linked
+     *         TrainingAttendee. No revoke, no new email.
+     *
+     *     Draft offers update freely with no side effects.
      */
     put: operations['update_attendee_api_v1_trainings_offers__offer_id__attendees__attendee_id__put'];
     post?: never;
     /**
      * Delete Attendee
      * @description Delete an offer attendee.
+     *
+     *     On an accepted offer, the attendee's access to this training is
+     *     revoked before the row is removed. The underlying PortalUser and
+     *     TrainingAttendee identity are preserved (they may legitimately be
+     *     attending other trainings via other flows).
      */
     delete: operations['delete_attendee_api_v1_trainings_offers__offer_id__attendees__attendee_id__delete'];
     options?: never;
@@ -11362,6 +11407,12 @@ export type paths = {
     /**
      * Get My Training Registrations
      * @description Get training registrations for the current portal user.
+     *
+     *     UNIONs two sources: ``TrainingRegistration`` rows via
+     *     ``TrainingRegistrationAttendee``, and ``OfferAttendee`` rows on
+     *     accepted offers. The build logic lives in
+     *     ``app.core.portal_training_listing`` to keep this file under the
+     *     600 LOC ceiling.
      */
     get: operations['get_my_training_registrations_api_v1_portal_unified_my_trainings_get'];
     put?: never;
@@ -37196,6 +37247,41 @@ export interface operations {
       path: {
         offer_id: string;
         placement_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  accept_offer_api_v1_trainings_offers__offer_id__accept_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        offer_id: string;
       };
       cookie?: never;
     };

@@ -66,7 +66,14 @@ export const trainingCustomersCategory: HandbookCategory = {
 <span class="text-gray-400">or</span>
 <span class="px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">Rejected</span>
 </div>
-<p class="text-gray-700 dark:text-gray-300 my-2">Status changes automatically: creating an offer sets it to Draft. Sending the offer document changes it to Sent. After that, manually mark as Accepted or Rejected.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2">Status changes automatically: creating an offer sets it to Draft. Sending the offer document changes it to Sent. After that, manually mark as Accepted or Rejected.</p>
+<strong>What happens on Accepted:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Every attendee listed on the offer is registered in the unified attendee list and becomes part of the trainer's class roster.</li>
+<li class="text-gray-700 dark:text-gray-300">A portal account is created (or re-used) for each attendee's email. First-time attendees receive a set-password invite so they can log in.</li>
+<li class="text-gray-700 dark:text-gray-300">Each attendee receives the <strong>Offer Attendee Registered</strong> email (editable under Settings &rarr; Email Templates) so they know which training and date they're on.</li>
+<li class="text-gray-700 dark:text-gray-300">Acceptance is blocked if any attendee is missing an email — fix the row and re-accept.</li>
+</ul>`,
           }}
         />
       ),
@@ -118,10 +125,22 @@ export const trainingCustomersCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">If the number of attendees exceeds the offer's defined attendee count, a warning is shown</li>
 <li class="text-gray-700 dark:text-gray-300">Remove individual attendees</li>
 </ul>
+<strong>Confirmations when you edit:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Delete</strong> — always asks for confirmation. After the offer is Accepted, the dialog explains the attendee will lose access to this training's portal materials (their portal account stays).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Changing the email</strong> after Acceptance — asks you to confirm. The old address is revoked from this training and the new address receives the registration email.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Name typos / corrections</strong> — save silently; the portal shows the corrected name automatically.</li>
+</ul>
+<strong>After the offer is Accepted:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Adding a new attendee runs the same promotion flow as on acceptance — portal account ensured, registration email sent, trainer roster updated.</li>
+<li class="text-gray-700 dark:text-gray-300">Removing or replacing an attendee revokes their portal access to this training but preserves their portal account for other trainings.</li>
+</ul>
 <strong>Integration:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300">The total attendee count per placement is visible in the trainer schedule</li>
 <li class="text-gray-700 dark:text-gray-300">Trainers can see how many people are attending their assigned trainings</li>
+<li class="text-gray-700 dark:text-gray-300">Accepted-offer attendees see the training in their portal under <strong>My Trainings</strong>, alongside any public-portal registrations.</li>
 </ul>`,
           }}
         />

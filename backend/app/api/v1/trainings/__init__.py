@@ -14,6 +14,7 @@ from .invoice_sync import router as invoice_sync_router
 from .invoices import router as invoices_router
 from .languages import router as languages_router
 from .location_types import router as location_types_router
+from .offer_acceptance import router as offer_acceptance_router
 from .offer_attendees import router as offer_attendees_router
 from .offer_documents import router as offer_documents_router
 from .offer_invoicing import router as offer_invoicing_router
@@ -52,6 +53,7 @@ router.include_router(finance_router)
 router.include_router(customers_router)
 router.include_router(inhouse_router)
 router.include_router(offers_router)
+router.include_router(offer_acceptance_router)
 router.include_router(offer_attendees_router)
 router.include_router(offer_documents_router)
 router.include_router(offer_invoicing_router)

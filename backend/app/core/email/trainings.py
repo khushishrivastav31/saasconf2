@@ -259,3 +259,85 @@ async def send_training_confirmation_email(
         logger.info("Sent training confirmation email to %s", registration.contact_email)
 
     return success
+
+
+async def send_offer_attendee_registered_email(
+    db: AsyncSession,
+    offer_attendee_id,  # UUID — imported lazily to avoid cycle
+    tenant: Tenant,
+) -> bool:
+    """Email an offer attendee that they've been registered for their training.
+
+    Loads the OfferAttendee fresh from the DB so background dispatch stays
+    safe against the caller's session. No-ops gracefully on missing email
+    or missing placement (logs and returns False).
+    """
+    from app.config import get_settings
+    from app.models.offer_attendee import OfferAttendee
+
+    result = await db.execute(
+        select(OfferAttendee).where(
+            OfferAttendee.id == offer_attendee_id,
+            OfferAttendee.tenant_id == tenant.id,
+        )
+    )
+    offer_attendee = result.scalar_one_or_none()
+    if offer_attendee is None:
+        logger.info("send_offer_attendee_registered_email: attendee %s not found", offer_attendee_id)
+        return False
+
+    email = (offer_attendee.email or "").strip()
+    if not email:
+        logger.info("send_offer_attendee_registered_email: no email on attendee %s", offer_attendee_id)
+        return False
+
+    company_name = _get_company_name(tenant)
+    support_email = _get_support_email(tenant)
+
+    training_name = "Training"
+    training_date = ""
+    if offer_attendee.placement_id:
+        placement_q = await db.execute(
+            select(Training.name, ProgramYearTraining.start_date)
+            .join(ProgramYearTraining, ProgramYearTraining.training_id == Training.id)
+            .where(ProgramYearTraining.id == offer_attendee.placement_id)
+        )
+        row = placement_q.first()
+        if row:
+            training_name = row[0] or "Training"
+            if row[1]:
+                training_date = row[1].isoformat()
+
+    settings = get_settings()
+    portal_url = f"{settings.PORTAL_BASE_URL}/{tenant.slug}/portal/login"
+
+    context = {
+        "First Name": _esc(offer_attendee.first_name or ""),
+        "Last Name": _esc(offer_attendee.last_name or ""),
+        "Training Name": _esc(training_name),
+        "Training Date": _esc(training_date),
+        "Company Name": _esc(company_name),
+        "Support Email": _esc(support_email),
+        "Portal URL": _esc(portal_url),
+    }
+
+    subject, body_html, body_text = _get_template(tenant, "training_attendee_registered")
+    subject = _apply_placeholders(subject, context)
+    body_html = _apply_placeholders(body_html, context)
+    body_text = _apply_placeholders(body_text, context)
+
+    email_settings = (tenant.settings or {}).get("training_email_settings", {})
+    from_name = email_settings.get("from_name") or company_name
+
+    success = await send_email(
+        to=email,
+        subject=subject,
+        html=body_html,
+        text=body_text,
+        reply_to=support_email or None,
+        tenant_from_name=from_name,
+    )
+
+    if success:
+        logger.info("Sent offer-attendee registered email to %s", email)
+    return success

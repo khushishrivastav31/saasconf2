@@ -39,18 +39,21 @@ async def test_update_email_settings(client: AsyncClient, tenant_admin_token):
 
 @pytest.mark.asyncio
 async def test_get_templates_default(client: AsyncClient, tenant_admin_token):
-    """GET returns 7 templates with defaults."""
+    """GET returns every training template type with defaults."""
+    from app.api.v1.trainings.email_settings import TRAINING_TEMPLATE_TYPES
+
     resp = await client.get(
         "/api/v1/trainings/email-templates",
         headers={"Authorization": f"Bearer {tenant_admin_token}"},
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 9
+    assert len(data) == len(TRAINING_TEMPLATE_TYPES)
     assert all(t["is_default"] is True for t in data)
     types = [t["template_type"] for t in data]
     assert "training_registration_confirmation" in types
     assert "training_invoice_send" in types
+    assert "training_attendee_registered" in types
 
 
 @pytest.mark.asyncio

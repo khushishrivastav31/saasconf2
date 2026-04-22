@@ -5,6 +5,7 @@ import { useToast } from '../../../../../components/Toast';
 import { parseApiError } from '../../../../../utils/apiError';
 import { queryKeys } from '../../../../../config/queryKeys';
 import type { OfferAttendee } from '../../../../../types/training';
+import ConfirmDialog from '../../../../../components/ConfirmDialog';
 
 // ---------------------------------------------------------------------------
 // Attendee types & helpers
@@ -56,6 +57,7 @@ export function attendeeToForm(a: OfferAttendee): AttendeeFormData {
 const AttendeeRow = React.memo(function AttendeeRow({
   attendee,
   offerId,
+  offerStatus,
   placementId,
   languages,
   isNew,
@@ -63,6 +65,13 @@ const AttendeeRow = React.memo(function AttendeeRow({
 }: {
   attendee: OfferAttendee | null;
   offerId: string;
+  /**
+   * Current offer.status — gates the confirmation modals:
+   *   - Delete confirmation always shows, copy differs when accepted.
+   *   - Email-change confirmation only shows post-acceptance.
+   *   - Name-only edits save silently in all states.
+   */
+  offerStatus: string;
   placementId: string;
   languages: Array<{ id: string; name: string }>;
   isNew?: boolean;
@@ -74,6 +83,10 @@ const AttendeeRow = React.memo(function AttendeeRow({
     attendee ? attendeeToForm(attendee) : emptyAttendeeForm()
   );
   const [isDirty, setIsDirty] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmEmailChange, setConfirmEmailChange] = useState(false);
+
+  const isAccepted = offerStatus === 'accepted';
 
   const inputClass =
     'block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100';
@@ -83,7 +96,6 @@ const AttendeeRow = React.memo(function AttendeeRow({
   const invalidateAttendees = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.offerAttendees(offerId, placementId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.customerOffers('') });
-    // Update trainer schedule to reflect new attendee counts
     queryClient.invalidateQueries({ queryKey: ['trainer-schedule'] });
     queryClient.invalidateQueries({ queryKey: ['all-offers'] });
   }, [queryClient, offerId, placementId]);
@@ -135,7 +147,25 @@ const AttendeeRow = React.memo(function AttendeeRow({
     onError: (err) => showToast(parseApiError(err), 'error'),
   });
 
+  const emailChangedPostAccept = Boolean(
+    isAccepted &&
+    attendee &&
+    (form.email || '').trim().toLowerCase() !== (attendee.email || '').trim().toLowerCase()
+  );
+
+  const handleSaveClick = () => {
+    if (emailChangedPostAccept) {
+      setConfirmEmailChange(true);
+      return;
+    }
+    saveMutation.mutate();
+  };
+
   const canSave = form.first_name.trim() && form.last_name.trim() && (isDirty || isNew);
+
+  const attendeeDisplayName = attendee
+    ? `${attendee.first_name} ${attendee.last_name}`.trim() || attendee.email || 'this attendee'
+    : 'this attendee';
 
   return (
     <tr className="bg-gray-200 dark:bg-gray-900/70">
@@ -175,7 +205,7 @@ const AttendeeRow = React.memo(function AttendeeRow({
               {canSave && (
                 <button
                   type="button"
-                  onClick={() => saveMutation.mutate()}
+                  onClick={handleSaveClick}
                   disabled={saveMutation.isPending}
                   className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                 >
@@ -202,7 +232,7 @@ const AttendeeRow = React.memo(function AttendeeRow({
               ) : (
                 <button
                   type="button"
-                  onClick={() => deleteMutation.mutate()}
+                  onClick={() => setConfirmDelete(true)}
                   disabled={deleteMutation.isPending}
                   className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5 transition-colors"
                   title="Delete attendee"
@@ -277,6 +307,43 @@ const AttendeeRow = React.memo(function AttendeeRow({
             )}
           </div>
         </div>
+
+        <ConfirmDialog
+          open={confirmDelete}
+          title="Remove attendee?"
+          message={
+            isAccepted
+              ? `${attendeeDisplayName} will lose access to this training's materials. Their portal account stays active.`
+              : 'Are you sure you want to remove this attendee?'
+          }
+          confirmLabel="Remove"
+          variant="danger"
+          onConfirm={() => {
+            setConfirmDelete(false);
+            deleteMutation.mutate();
+          }}
+          onCancel={() => setConfirmDelete(false)}
+        />
+
+        <ConfirmDialog
+          open={confirmEmailChange}
+          title="Replace registered attendee?"
+          message={
+            <>
+              You're changing a registered attendee's email.{' '}
+              <strong>{attendee?.email || 'the previous address'}</strong> will lose access to this
+              training, and a new registration email will be sent to{' '}
+              <strong>{form.email || '(new email)'}</strong>.
+            </>
+          }
+          confirmLabel="Replace attendee"
+          variant="warning"
+          onConfirm={() => {
+            setConfirmEmailChange(false);
+            saveMutation.mutate();
+          }}
+          onCancel={() => setConfirmEmailChange(false)}
+        />
       </td>
     </tr>
   );

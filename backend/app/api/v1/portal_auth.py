@@ -400,102 +400,18 @@ async def get_my_training_registrations(
     request: Request,
     db: DbSessionDep,
 ) -> dict:
-    """Get training registrations for the current portal user."""
-    from sqlalchemy.orm import joinedload
+    """Get training registrations for the current portal user.
 
-    from app.models.training_attendee import TrainingAttendee
-    from app.models.training_program import ProgramYearTraining
-    from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
+    UNIONs two sources: ``TrainingRegistration`` rows via
+    ``TrainingRegistrationAttendee``, and ``OfferAttendee`` rows on
+    accepted offers. The build logic lives in
+    ``app.core.portal_training_listing`` to keep this file under the
+    600 LOC ceiling.
+    """
+    from app.core.portal_training_listing import build_my_trainings_payload
 
     user = await _get_current_portal_user(request, db)
-
-    # Find training attendees linked to this portal user
-    att_result = await db.execute(select(TrainingAttendee).where(TrainingAttendee.portal_user_id == user.id))
-    attendees = att_result.scalars().all()
-    attendee_ids = [a.id for a in attendees]
-
-    if not attendee_ids:
-        # Fallback: find by email match
-        user_email_pt = (read_pii(user, "email") or "").lower()
-        att_result2 = await db.execute(
-            select(TrainingAttendee).where(
-                TrainingAttendee.tenant_id == user.tenant_id,
-                TrainingAttendee.email_hash == hash_email(user_email_pt),
-            )
-        )
-        attendees = att_result2.scalars().all()
-        attendee_ids = [a.id for a in attendees]
-
-    if not attendee_ids:
-        return {"items": []}
-
-    # Find registration attendee links
-    ra_result = await db.execute(
-        select(TrainingRegistrationAttendee).where(
-            TrainingRegistrationAttendee.attendee_id.in_(attendee_ids),
-        )
-    )
-    reg_att_links = ra_result.scalars().all()
-    reg_ids = list({ra.registration_id for ra in reg_att_links})
-
-    if not reg_ids:
-        return {"items": []}
-
-    # Load registrations with placement + training + location details
-    reg_result = await db.execute(
-        select(TrainingRegistration)
-        .options(
-            joinedload(TrainingRegistration.placement).joinedload(ProgramYearTraining.training),
-            joinedload(TrainingRegistration.placement).joinedload(ProgramYearTraining.location),
-        )
-        .where(TrainingRegistration.id.in_(reg_ids))
-        .order_by(TrainingRegistration.created_at.desc())
-    )
-    registrations = reg_result.scalars().unique().all()
-
-    # Build response with full training details
-    items = []
-    for reg in registrations:
-        placement = reg.placement
-        training = placement.training if placement else None
-        location = placement.location if placement else None
-
-        # Find trainer assignments for this placement
-        trainer_names = []
-        if placement:
-            from app.models.training_program import PlacementTrainer
-
-            tr_result = await db.execute(
-                select(PlacementTrainer)
-                .options(joinedload(PlacementTrainer.trainer))
-                .where(PlacementTrainer.placement_id == placement.id)
-            )
-            for pt in tr_result.scalars().unique().all():
-                if pt.trainer:
-                    trainer_names.append(f"{pt.trainer.first_name} {pt.trainer.last_name}")
-
-        items.append(
-            {
-                "registration_id": str(reg.id),
-                "status": reg.status,
-                "training_name": training.name if training else "Unknown",
-                "training_description": training.description if training else None,
-                "training_duration": training.duration if training else None,
-                "start_date": placement.start_date.isoformat() if placement and placement.start_date else None,
-                "location_name": location.name if location else None,
-                "location_city": location.city if location else None,
-                "location_country": location.country if location else None,
-                "trainers": trainer_names,
-                "exam_mode": None,  # per-attendee, populated below
-                "exam_language": None,
-                "currency": reg.currency,
-                "total": str(reg.total) if reg.total else None,
-                "payment_method": reg.payment_method,
-                "registered_at": reg.created_at.isoformat() if reg.created_at else None,
-            }
-        )
-
-    return {"items": items}
+    return await build_my_trainings_payload(db, user)
 
 
 @router.get("/portal/unified/my-trainings/{registration_id}/files")

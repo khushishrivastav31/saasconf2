@@ -13,6 +13,7 @@ import { PLACEMENT_TYPE_COLORS } from './constants';
 const PlacementRowWithAttendees = React.memo(function PlacementRowWithAttendees({
   placement,
   offerId,
+  offerStatus,
   offerAttendeeLimit,
   totalAttendeeCount,
   onRemove,
@@ -26,6 +27,7 @@ const PlacementRowWithAttendees = React.memo(function PlacementRowWithAttendees(
     placement_type: string;
   };
   offerId: string;
+  offerStatus: string;
   offerAttendeeLimit: number | null;
   totalAttendeeCount: number;
   onRemove: () => void;
@@ -134,6 +136,7 @@ const PlacementRowWithAttendees = React.memo(function PlacementRowWithAttendees(
                         key={a.id}
                         attendee={a}
                         offerId={offerId}
+                        offerStatus={offerStatus}
                         placementId={placement.id}
                         languages={languages}
                       />
@@ -142,6 +145,7 @@ const PlacementRowWithAttendees = React.memo(function PlacementRowWithAttendees(
                       <AttendeeRow
                         attendee={null}
                         offerId={offerId}
+                        offerStatus={offerStatus}
                         placementId={placement.id}
                         languages={languages}
                         isNew

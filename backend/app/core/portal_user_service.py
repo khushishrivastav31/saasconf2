@@ -82,6 +82,65 @@ async def ensure_portal_user_for_registration(
     return portal_user
 
 
+async def ensure_portal_user_for_offer_attendee(
+    db: AsyncSession,
+    offer_attendee,  # OfferAttendee — typed via TYPE_CHECKING at call sites to avoid circular import
+    tenant: Tenant,
+) -> PortalUser | None:
+    """Ensure a portal_user exists for the offer attendee's email.
+
+    Mirrors ``ensure_portal_user_for_registration`` but reads identity
+    directly from the OfferAttendee row. Links matching TrainingAttendee
+    rows and sends the password-set invite on first creation. Returns
+    ``None`` if the attendee has no email.
+
+    Commits the session when a new portal user is created (needed so the
+    invite token row + FK links are flushed before the invite email).
+    Callers should treat this like ``ensure_portal_user_for_registration``.
+    """
+    email = (offer_attendee.email or "").strip().lower()
+    if not email:
+        return None
+
+    result = await db.execute(
+        select(PortalUser).where(
+            PortalUser.tenant_id == tenant.id,
+            PortalUser.email_hash == hash_email(email),
+        )
+    )
+    portal_user = result.scalar_one_or_none()
+
+    created = False
+    if not portal_user:
+        portal_user = PortalUser(
+            tenant_id=tenant.id,
+            email=email,
+            first_name=offer_attendee.first_name or "",
+            last_name=offer_attendee.last_name or "",
+            is_active=True,
+        )
+        db.add(portal_user)
+        await db.flush()
+        created = True
+        logger.info("Created portal user for offer attendee %s (tenant %s)", email, tenant.slug)
+
+    # Link every matching TrainingAttendee that isn't already linked.
+    att_result = await db.execute(
+        select(TrainingAttendee).where(
+            TrainingAttendee.tenant_id == tenant.id,
+            TrainingAttendee.email_hash == hash_email(email),
+            TrainingAttendee.portal_user_id.is_(None),
+        )
+    )
+    for att in att_result.scalars().all():
+        att.portal_user_id = portal_user.id
+
+    if created:
+        await _send_portal_invite_email(db, portal_user, tenant)
+
+    return portal_user
+
+
 async def _send_portal_invite_email(
     db: AsyncSession,
     portal_user: PortalUser,
