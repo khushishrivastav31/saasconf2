@@ -35,12 +35,15 @@ Refer to the [README](README.md) for quick start instructions on setting up the 
 
 Use the following prefixes for branch names:
 
-- `feature/` -- New features or enhancements
+- `feat/` -- New features or enhancements
 - `fix/` -- Bug fixes
 - `refactor/` -- Code refactoring without behavior changes
 - `docs/` -- Documentation updates
+- `chore/` -- Maintenance, dependencies, tooling
 
-Examples: `feature/add-speaker-profiles`, `fix/login-redirect-loop`, `refactor/simplify-pricing-logic`
+The branch prefix should match the Conventional Commits type you plan to use in the commit message.
+
+Examples: `feat/add-speaker-profiles`, `fix/login-redirect-loop`, `refactor/simplify-pricing-logic`
 
 ## Commit Messages
 
