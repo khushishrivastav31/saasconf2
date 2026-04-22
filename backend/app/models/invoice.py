@@ -151,6 +151,7 @@ class Invoice(Base):
         Index("idx_invoices_replaced_by", "replaced_by_invoice_id"),
         Index("idx_invoices_replaces", "replaces_invoice_id"),
         Index("idx_invoices_stripe_intent", "stripe_payment_intent_id"),
+        Index("idx_invoices_status", "status"),
         # Partial unique index: enforces uniqueness for assigned numbers, allows multiple NULLs (drafts)
         Index(
             "uq_invoices_tenant_number",

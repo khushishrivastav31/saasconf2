@@ -92,6 +92,12 @@ class TrainingRegistration(Base):
         Index("idx_training_reg_status", "status"),
         Index("idx_training_reg_contact_email", "contact_email"),
         Index("idx_training_registrations_contact_email_hash", "contact_email_hash"),
+        Index(
+            "idx_training_reg_tenant_placement_status",
+            "tenant_id",
+            "placement_id",
+            "status",
+        ),
     )
 
     @validates("contact_email")
