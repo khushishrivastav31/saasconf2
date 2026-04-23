@@ -87,7 +87,7 @@ export default function CompanyForm({
       phone: tenant.phone || '',
       vat_number: tenant.vat_number || '',
       website: tenant.website || '',
-      accounting_email: tenant.accounting_email || '',
+      accounting_email: tenant.accounting_email ?? null,
       contact_persons: tenant.contact_persons || [],
       comments: tenant.comments || '',
     }),
@@ -160,6 +160,12 @@ export default function CompanyForm({
     setIsDirty(false);
   }, [buildInitialFormData]);
 
+  const buildContactsPayload = (newContacts: ContactPerson[]): TenantUpdate => ({
+    ...formData,
+    accounting_email: formData.accounting_email ? formData.accounting_email : null,
+    contact_persons: newContacts,
+  });
+
   const addContact = () => {
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
       const newContacts = [...(formData.contact_persons || []), { ...newContact }];
@@ -172,20 +178,20 @@ export default function CompanyForm({
         role: '',
       });
       setNewContactPhoneError(null);
-      updateMutation.mutate({ ...formData, contact_persons: newContacts });
+      updateMutation.mutate(buildContactsPayload(newContacts));
     }
   };
 
   const removeContact = (index: number) => {
     const newContacts = formData.contact_persons?.filter((_, i) => i !== index) || [];
     setFormData({ ...formData, contact_persons: newContacts });
-    updateMutation.mutate({ ...formData, contact_persons: newContacts });
+    updateMutation.mutate(buildContactsPayload(newContacts));
   };
 
   const updateContact = (index: number, contact: ContactPerson) => {
     const newContacts = formData.contact_persons?.map((c, i) => (i === index ? contact : c)) || [];
     setFormData({ ...formData, contact_persons: newContacts });
-    updateMutation.mutate({ ...formData, contact_persons: newContacts });
+    updateMutation.mutate(buildContactsPayload(newContacts));
   };
 
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);

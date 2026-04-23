@@ -116,6 +116,7 @@ async def tenant_with_invoices_module(
                 is_enabled=True,
             )
         )
+    tenant.accounting_email = "accounting@testcorp.example"
     await db_session.commit()
     return tenant
 

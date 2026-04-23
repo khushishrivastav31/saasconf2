@@ -110,6 +110,7 @@ async def create_tenant(
         vat_number=tenant_data.vat_number,
         website=tenant_data.website,
         email_domain=tenant_data.email_domain,
+        accounting_email=tenant_data.accounting_email,
         contact_persons=[cp.model_dump() for cp in tenant_data.contact_persons] if tenant_data.contact_persons else [],
         comments=tenant_data.comments,
     )

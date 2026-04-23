@@ -96,6 +96,7 @@ async def park_by_source(
             attendee_id=att.id,
             event_type="parked",
             placement_id=placement_id,
+            registration_id=registration_id,
             source_type=data.source_type,
             source_id=source_ref,
             notes=data.reason,
@@ -110,6 +111,7 @@ async def park_by_source(
         notes=data.reason,
         meta={
             "placement_id": str(placement_id) if placement_id else None,
+            "registration_id": str(registration_id) if registration_id else None,
             "source_type": data.source_type,
             "source_id": str(source_ref),
         },

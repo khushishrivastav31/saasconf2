@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
+from app.core.exceptions import InvoiceSendConfigurationError
 from app.core.invoice_audit import create_invoice_audit_log
 from app.core.invoice_email import (
     send_invoice_email,
@@ -179,8 +180,12 @@ async def cancel_invoice(
     invoice = await refresh_invoice_with_events(db, invoice.id)
     credit_note = await refresh_invoice_with_events(db, credit_note.id)
 
-    with contextlib.suppress(Exception):
+    try:
         await send_invoice_email(db, credit_note, conference)
+    except InvoiceSendConfigurationError:
+        raise
+    except Exception:
+        logger.exception("Best-effort credit-note email failed after cancel")
 
     # Send cancellation emails to registrations (best-effort, after transaction)
     if email_data:
@@ -377,7 +382,7 @@ async def replace_invoice(
     # Send emails (best-effort)
     payment_link_url = new_invoice.stripe_payment_link_url if new_invoice.template_type == "credit_card" else None
 
-    with contextlib.suppress(Exception):
+    try:
         await send_replacement_invoice_emails(
             db=db,
             credit_note=credit_note,
@@ -386,6 +391,10 @@ async def replace_invoice(
             payment_link_url=payment_link_url,
             custom_message=body.custom_email_message,
         )
+    except InvoiceSendConfigurationError:
+        raise
+    except Exception:
+        logger.exception("Best-effort replacement invoice email failed")
 
     return ReplaceInvoiceResponse(
         old_invoice=build_invoice_response(old_invoice),
@@ -598,7 +607,7 @@ async def convert_to_credit_card(
 
     # Send email with payment link (best-effort)
     if read_pii(invoice, "recipient_email") and payment_link_url:
-        with contextlib.suppress(Exception):
+        try:
             await send_invoice_email(
                 db=db,
                 invoice=invoice,
@@ -610,5 +619,9 @@ async def convert_to_credit_card(
                     f"<p>Please find the invoice attached, or use the button below to pay by credit card:</p>"
                 ),
             )
+        except InvoiceSendConfigurationError:
+            raise
+        except Exception:
+            logger.exception("Best-effort payment-link email failed")
 
     return {"invoice": build_invoice_response(invoice), "payment_link_url": payment_link_url}
