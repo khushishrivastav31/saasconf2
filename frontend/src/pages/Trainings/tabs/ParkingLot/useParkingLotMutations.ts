@@ -6,17 +6,21 @@ export function useParkingLotMutations(onReassignSuccess: () => void) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const deactivate = useMutation({
-    mutationFn: (attendeeId: string) =>
-      api.post(`/trainings/attendees/${attendeeId}/deactivate`, {}),
+  const cancelRegistration = useMutation({
+    mutationFn: (attendeeId: string) => api.post(`/trainings/attendees/${attendeeId}/cancel`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-attendees'] });
-      showToast('Attendee deactivated — removed from parking lot', 'success');
+      queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['training-invoices'] });
+      showToast(
+        'Booking cancelled — invoice voided, credit note sent. Attendee is now active.',
+        'success'
+      );
     },
     onError: (err: unknown) => {
       const detail =
         (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
-        'Failed to deactivate attendee';
+        'Failed to cancel registration';
       showToast(detail, 'error');
     },
   });
@@ -50,5 +54,5 @@ export function useParkingLotMutations(onReassignSuccess: () => void) {
     onError: () => showToast('Failed to reassign attendee', 'error'),
   });
 
-  return { deactivate, reassign };
+  return { cancelRegistration, reassign };
 }

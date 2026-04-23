@@ -25,6 +25,11 @@ interface Attendee {
   notes: string | null;
   current_training: string;
   current_training_date: string | null;
+  /** Server-computed: true when this attendee's public-portal booking has
+   *  a cancellable invoice (single attendee on the registration, status in
+   *  {sent, overdue, paid}, not already a credit note, not offer-origin).
+   *  Drives visibility of the "Cancel Registration" action. */
+  cancellable?: boolean;
   created_at: string | null;
   history: HistoryEvent[];
 }
@@ -120,6 +125,34 @@ export default function AttendeesTab() {
     onError: () => showToast('Failed to park attendee', 'error'),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (attendeeId: string) => api.post(`/trainings/attendees/${attendeeId}/cancel`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-attendees'] });
+      queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['training-invoices'] });
+      showToast('Booking cancelled — invoice voided, credit note sent.', 'success');
+    },
+    onError: (err: unknown) => {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
+        'Failed to cancel registration';
+      showToast(detail, 'error');
+    },
+  });
+
+  const handleCancel = (att: Attendee) => {
+    if (
+      window.confirm(
+        `Cancel the booking for ${att.first_name} ${att.last_name}?\n\n` +
+          'The invoice will be voided, a credit note will be sent to the customer, ' +
+          'and the attendee will stay active but not tied to any training.'
+      )
+    ) {
+      cancelMutation.mutate(att.id);
+    }
+  };
+
   const inputCls =
     'px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100';
 
@@ -206,6 +239,8 @@ export default function AttendeesTab() {
                   const isExpanded = expandedId === att.id;
                   return (
                     <AttendeeRow
+                      onCancel={() => handleCancel(att)}
+                      cancelling={cancelMutation.isPending}
                       key={att.id}
                       att={att}
                       expanded={isExpanded}
@@ -307,11 +342,15 @@ function AttendeeRow({
   expanded,
   onToggle,
   onPark,
+  onCancel,
+  cancelling,
 }: {
   att: Attendee;
   expanded: boolean;
   onToggle: () => void;
   onPark: () => void;
+  onCancel: () => void;
+  cancelling: boolean;
 }) {
   return (
     <>
@@ -384,17 +423,31 @@ function AttendeeRow({
                   ))}
                 </div>
               )}
-              {att.status === 'active' && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPark();
-                  }}
-                  className="mt-3 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                >
-                  Park Attendee
-                </button>
-              )}
+              <div className="mt-3 flex items-center gap-2">
+                {att.status === 'active' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPark();
+                    }}
+                    className="px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                  >
+                    Park Attendee
+                  </button>
+                )}
+                {att.cancellable && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCancel();
+                    }}
+                    disabled={cancelling}
+                    className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Cancel Registration
+                  </button>
+                )}
+              </div>
             </div>
           </td>
         </tr>

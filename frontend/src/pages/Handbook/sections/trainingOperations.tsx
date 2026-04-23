@@ -185,7 +185,15 @@ export const trainingOperationsCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">A new invoice is generated — if the original was <strong>paid</strong>, the payment transfers to the new invoice (no refund, no re-charge)</li>
 <li class="text-gray-700 dark:text-gray-300">The old registration is cleaned up if no attendees remain</li>
 </ol>
-<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Note:</strong> The reassignment flow preserves the full billing history — the credit note links to the old invoice, and the new invoice has a note explaining the transfer.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Note:</strong> The reassignment flow preserves the full billing history — the credit note links to the old invoice, and the new invoice has a note explaining the transfer.</p>
+<strong>Cancelling a registration:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Click <strong>Cancel Registration</strong> on a parked attendee (or on an active portal-registered attendee from the Attendees list) to end the booking cleanly</li>
+<li class="text-gray-700 dark:text-gray-300">The original invoice is cancelled, a credit note is issued and emailed to the customer, the registration is marked cancelled, and the attendee stays <em>active</em> (no longer in the parking lot, just not tied to a training)</li>
+<li class="text-gray-700 dark:text-gray-300">Only available for public-portal registrations with an invoice in status sent / overdue / paid. Draft invoices have nothing to credit; offer-origin attendees use the Offer flow instead</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Multi-attendee registrations are blocked:</strong> if several people registered on a single invoice, cancel the whole registration from the Invoices view — Cancel Registration only handles one-attendee bookings to avoid surprise side-effects on co-attendees</li>
+<li class="text-gray-700 dark:text-gray-300">No Stripe refund is issued automatically — operators handle refunds out of band, same as the existing Replace Invoice flow</li>
+</ul>`,
           }}
         />
       ),
@@ -201,9 +209,9 @@ export const trainingOperationsCategory: HandbookCategory = {
 <strong>Features:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300"><strong>Deduplication:</strong> Attendees are identified by email — registering for multiple trainings creates one central record</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Timeline:</strong> Each attendee has a history showing all events: registered, parked, reassigned, offer assigned, deactivated, reactivated</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Timeline:</strong> Each attendee has a history showing all events: registered, parked, reassigned, offer assigned, cancelled, offer removed</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Current placement:</strong> Shows which training(s) the attendee is currently assigned to</li>
-<li class="text-gray-700 dark:text-gray-300"><strong>Status:</strong> Active, Parked, or Inactive. An attendee is shown as Inactive when their status is explicitly "inactive" (via the Deactivate button on the parking lot or user profile) or when they are parked but their portal account is deactivated. The parking lot hides inactive users. Use the Deactivate / Reactivate actions on the attendee to change status; toggling portal access does not change the attendee status directly.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Status:</strong> Active or Parked. Historically-inactive attendees (explicit "inactive" status or parked with a deactivated portal account) still appear with that label, but the Deactivate action has been replaced by <strong>Cancel Registration</strong> — see the Parking Lot section. Parked attendees with no active portal account show as Inactive in the list filters.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Search &amp; filter:</strong> Find attendees by name, email, or training</li>
 </ul>
 <p class="text-gray-700 dark:text-gray-300 my-2"><strong>Portal account admin actions &amp; history:</strong> For the unified, tenant-wide portal-user admin view (covering both training-side and conference-side accounts), open <strong>My Company &rarr; Users</strong>. Five actions are available \u2014 <em>Toggle access</em>, <em>Resend invite</em>, <em>Reset password</em>, <em>Impersonate</em>, <em>Merge with...</em> \u2014 each writes an audit log and a per-user history entry shown on the <em>History</em> tab. Deactivation is blocked while the user has a non-parked attendee on an active training registration or an accepted offer.</p>`,

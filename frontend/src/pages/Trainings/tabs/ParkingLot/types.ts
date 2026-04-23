@@ -12,6 +12,10 @@ export interface ParkedAttendee {
   email: string;
   status: string;
   notes: string | null;
+  /** Server-computed: true when the parked attendee's pre-park registration
+   *  + its invoice are still cancellable (portal origin, single attendee,
+   *  invoice status in {sent, overdue, paid}, not already a credit note). */
+  cancellable?: boolean;
   history: HistoryEvent[];
 }
 

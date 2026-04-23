@@ -236,6 +236,7 @@ export const trainingSettingsCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Currency &amp; Tax</strong> — Set transaction/invoice currencies, number format, exchange rate, and VAT decision rules</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Numbering</strong> — Configure invoice and cancellation number templates with auto-incrementing counters</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Company Data</strong> — Set company name, address, VAT/tax IDs, contact info. Auto-populate from My Company</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Accounting Email (set on My Company):</strong> The tenant-level <em>Accounting Email</em> is CC'd on every outgoing invoice and credit-note email, alongside the Training Company contact email. <strong>It is required before invoices can be sent</strong> — attempting a send with it unset returns a clear error asking the admin to configure it first. Set it on <strong>My Company &rarr; Company Details</strong>.</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Bank Accounts</strong> — Manage multiple bank accounts with IBAN/BIC, set default for invoices</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Invoice Templates</strong> — Customize invoice body HTML for bank transfer, credit card, and credit note types. Set header/footer and page format</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>ZUGFeRD</strong> — Enable/disable EN16931 e-invoicing (auto-configured from company data)</li>

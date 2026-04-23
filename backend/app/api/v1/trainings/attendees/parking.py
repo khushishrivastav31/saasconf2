@@ -142,6 +142,7 @@ async def park_attendee(
 
     source_uuid = UUID(data.source_id)
     placement_id: UUID | None = None
+    registration_id: UUID | None = None
     exam_data: dict | None = None
 
     if data.source_type == "registration":
@@ -157,6 +158,10 @@ async def park_attendee(
                 select(TrainingRegistration.placement_id).where(TrainingRegistration.id == reg_att.registration_id)
             )
             placement_id = reg_result.scalar_one_or_none()
+            # Capture the stable registration pointer BEFORE deleting the
+            # per-attendee bridge row — Cancel Registration needs this to
+            # locate the TrainingInvoice for parked attendees later.
+            registration_id = reg_att.registration_id
             exam_data = {
                 "exam_mode": reg_att.exam_mode,
                 "exam_language": reg_att.exam_language,
@@ -195,6 +200,7 @@ async def park_attendee(
         attendee_id=att.id,
         event_type="parked",
         placement_id=placement_id,
+        registration_id=registration_id,
         source_type=data.source_type,
         source_id=source_uuid,
         notes=notes_str,
@@ -209,6 +215,7 @@ async def park_attendee(
         notes=notes_str,
         meta={
             "placement_id": str(placement_id) if placement_id else None,
+            "registration_id": str(registration_id) if registration_id else None,
             "source_type": data.source_type,
             "source_id": str(source_uuid),
         },

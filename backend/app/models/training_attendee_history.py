@@ -39,6 +39,15 @@ class TrainingAttendeeHistory(Base):
     placement_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("program_year_trainings.id", ondelete="SET NULL"), nullable=True
     )
+    # For source_type="registration" events (park, cancel), this is the stable
+    # pointer back to the TrainingRegistration even after the per-attendee
+    # bridge row (TrainingRegistrationAttendee) is deleted. Cancel Registration
+    # uses it to locate the original TrainingInvoice from a parked attendee.
+    registration_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("training_registrations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     source_type: Mapped[str | None] = mapped_column(String(30), nullable=True)  # registration | offer
     source_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -53,6 +62,7 @@ class TrainingAttendeeHistory(Base):
     __table_args__ = (
         Index("idx_training_att_history_attendee", "attendee_id"),
         Index("idx_training_att_history_placement", "placement_id"),
+        Index("idx_training_att_history_registration", "registration_id"),
     )
 
     def __repr__(self) -> str:

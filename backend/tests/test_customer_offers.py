@@ -269,6 +269,68 @@ async def test_get_offer(
     assert data["offer_number"] == "OFF-0001"
     assert len(data["placements"]) == 1
     assert data["placements"][0]["training_name"] == "AWS Solutions Architect"
+    # Fresh offer has no linked invoices — frontend uses this to enable Delete.
+    assert data["invoice_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_offer_invoice_count_reflects_linked_invoices(
+    client: AsyncClient,
+    db_session: "AsyncSession",
+    admin_o: User,
+    tenant_o: "Tenant",
+    customer_o: Customer,
+    inhouse_placement: ProgramYearTraining,
+) -> None:
+    """invoice_count is populated from training_invoices.offer_id — drives the
+    Delete Offer button's disabled state in the UI."""
+    from decimal import Decimal
+
+    from app.models.training_invoice import TrainingInvoice
+
+    token = _make_token(admin_o)
+    create_resp = await client.post(
+        BASE,
+        json={
+            "customer_id": str(customer_o.id),
+            "placement_ids": [str(inhouse_placement.id)],
+        },
+        headers=auth_headers(token),
+    )
+    assert create_resp.status_code == 201
+    offer_id = create_resp.json()["id"]
+
+    # Attach an invoice to the offer
+    import uuid as _uuid
+    from datetime import date as _date
+
+    db_session.add(
+        TrainingInvoice(
+            id=_uuid.uuid4(),
+            tenant_id=tenant_o.id,
+            offer_id=_uuid.UUID(offer_id),
+            invoice_number="TR-OFF-1",
+            template_type="bank_transfer",
+            status="sent",
+            issue_date=_date.today(),
+            recipient_name="Acme",
+            recipient_email="billing@acme.test",
+            line_items=[{"description": "Course", "quantity": 1, "unit_price": "100", "total": "100"}],
+            subtotal=Decimal("100"),
+            total=Decimal("100"),
+            currency="EUR",
+        )
+    )
+    await db_session.commit()
+
+    # Both list + single-get report invoice_count >= 1
+    list_resp = await client.get(BASE, headers=auth_headers(token))
+    assert list_resp.status_code == 200
+    assert list_resp.json()["items"][0]["invoice_count"] == 1
+
+    get_resp = await client.get(f"{BASE}/{offer_id}", headers=auth_headers(token))
+    assert get_resp.status_code == 200
+    assert get_resp.json()["invoice_count"] == 1
 
 
 @pytest.mark.asyncio

@@ -182,6 +182,12 @@ async def list_attendees(
         for pu_id, is_active in pu_rows.all():
             portal_active[pu_id] = bool(is_active)
 
+    # Which attendees on this page can fire the Cancel action? Batch-resolved
+    # in a fixed number of queries so page_size doesn't drive a fan-out.
+    from .cancellation import batch_cancellable_attendee_ids
+
+    cancellable_ids = await batch_cancellable_attendee_ids(db, list(attendees), current_user.require_tenant_id())
+
     placement_ids: set[UUID] = set()
     for att in attendees:
         for h in att.history:
@@ -225,6 +231,7 @@ async def list_attendees(
                 "current_training": current_training,
                 "current_training_date": current_training_date,
                 "portal_user_id": str(att.portal_user_id) if att.portal_user_id else None,
+                "cancellable": att.id in cancellable_ids,
                 "created_at": att.created_at.isoformat() if att.created_at else None,
                 "history": [
                     {
@@ -293,6 +300,10 @@ async def get_attendee(
         if pu and not pu.is_active:
             effective_status = "inactive"
 
+    from .cancellation import batch_cancellable_attendee_ids
+
+    cancellable_ids = await batch_cancellable_attendee_ids(db, [att], current_user.require_tenant_id())
+
     return {
         "id": str(att.id),
         "first_name": att.first_name,
@@ -300,6 +311,7 @@ async def get_attendee(
         "email": att.email,
         "status": effective_status,
         "notes": att.notes,
+        "cancellable": att.id in cancellable_ids,
         "created_at": att.created_at.isoformat() if att.created_at else None,
         "history": [
             {

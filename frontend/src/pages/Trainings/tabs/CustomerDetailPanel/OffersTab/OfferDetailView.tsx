@@ -179,7 +179,13 @@ export default function OfferDetailView({
         <button
           type="button"
           onClick={onDeleteClick}
-          className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 border border-red-200 dark:border-red-800 rounded-md transition-colors"
+          disabled={(offer.invoice_count ?? 0) > 0}
+          title={
+            (offer.invoice_count ?? 0) > 0
+              ? 'Cannot delete — this offer has invoices linked. Delete the invoices first.'
+              : undefined
+          }
+          className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 border border-red-200 dark:border-red-800 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-red-600 dark:disabled:hover:text-red-400"
         >
           Delete Offer
         </button>

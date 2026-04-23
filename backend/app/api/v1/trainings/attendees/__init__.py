@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from ._helpers import get_or_create_central_attendee
+from .cancellation import router as cancellation_router
 from .core import router as core_router
 from .parking import router as parking_router
 from .profile import router as profile_router
@@ -14,6 +15,7 @@ from .reassignment import router as reassignment_router
 router = APIRouter()
 router.include_router(parking_router)
 router.include_router(reassignment_router)
+router.include_router(cancellation_router)
 router.include_router(profile_router)
 router.include_router(core_router)
 

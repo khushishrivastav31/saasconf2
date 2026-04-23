@@ -4,11 +4,15 @@ import { formatDate, type ParkedAttendee } from './types';
 interface Props {
   attendee: ParkedAttendee;
   onReassign: (att: ParkedAttendee) => void;
-  onDeactivate: (att: ParkedAttendee) => void;
-  deactivating: boolean;
+  onCancel: (att: ParkedAttendee) => void;
+  cancelling: boolean;
 }
 
-function ParkingLotRowImpl({ attendee, onReassign, onDeactivate, deactivating }: Props) {
+function ParkingLotRowImpl({ attendee, onReassign, onCancel, cancelling }: Props) {
+  const cancellable = attendee.cancellable ?? false;
+  const cancelTitle = cancellable
+    ? undefined
+    : 'Cancellation is only available for portal registrations with a sent/overdue/paid invoice.';
   const parkedEvent = attendee.history.find((h) => h.event_type === 'parked');
   const lastTraining = attendee.history.find(
     (h) =>
@@ -44,11 +48,12 @@ function ParkingLotRowImpl({ attendee, onReassign, onDeactivate, deactivating }:
             Reassign to Training
           </button>
           <button
-            onClick={() => onDeactivate(attendee)}
-            disabled={deactivating}
-            className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-40"
+            onClick={() => onCancel(attendee)}
+            disabled={cancelling || !cancellable}
+            title={cancelTitle}
+            className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Deactivate
+            Cancel Registration
           </button>
         </div>
       </div>

@@ -73,6 +73,11 @@ export const trainingCustomersCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">A portal account is created (or re-used) for each attendee's email. First-time attendees receive a set-password invite so they can log in.</li>
 <li class="text-gray-700 dark:text-gray-300">Each attendee receives the <strong>Offer Attendee Registered</strong> email (editable under Settings &rarr; Email Templates) so they know which training and date they're on.</li>
 <li class="text-gray-700 dark:text-gray-300">Acceptance is blocked if any attendee is missing an email — fix the row and re-accept.</li>
+</ul>
+<strong>Deleting an offer:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">The <strong>Delete Offer</strong> button is disabled whenever the offer has at least one linked invoice — deleting would orphan a financial record, so the backend refuses. Delete (or cancel) the linked invoices first, then the button re-enables.</li>
+<li class="text-gray-700 dark:text-gray-300">If there are no linked invoices, delete removes the offer plus its documents and attendees, and unlinks any placements (without deleting them).</li>
 </ul>`,
           }}
         />

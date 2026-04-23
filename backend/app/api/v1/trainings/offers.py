@@ -37,7 +37,10 @@ def _tenant_filter(current_user: TenantAdminDep):
 
 
 def _offer_to_response(
-    offer: CustomerOffer, placements: list[ProgramYearTraining], attendee_count: int = 0
+    offer: CustomerOffer,
+    placements: list[ProgramYearTraining],
+    attendee_count: int = 0,
+    invoice_count: int = 0,
 ) -> CustomerOfferResponse:
     """Build a CustomerOfferResponse from an offer and its placements."""
     placement_infos = []
@@ -70,6 +73,7 @@ def _offer_to_response(
         po_number=offer.po_number,
         placements=placement_infos,
         attendee_count=attendee_count,
+        invoice_count=invoice_count,
         created_at=offer.created_at,
         updated_at=offer.updated_at,
     )
@@ -78,6 +82,19 @@ def _offer_to_response(
 async def _count_offer_attendees(db: DbSessionDep, offer_id: UUID) -> int:
     """Count attendees for an offer."""
     result = await db.execute(select(func.count()).where(OfferAttendee.offer_id == offer_id))
+    return result.scalar() or 0
+
+
+async def _count_offer_invoices(db: DbSessionDep, offer_id: UUID) -> int:
+    """Count training invoices linked to an offer.
+
+    Used to drive the "Delete Offer" UX: the backend refuses to delete an
+    offer with any linked invoice (see delete_offer below), so the UI
+    disables the button when this count is > 0.
+    """
+    from app.models.training_invoice import TrainingInvoice
+
+    result = await db.execute(select(func.count()).where(TrainingInvoice.offer_id == offer_id))
     return result.scalar() or 0
 
 
@@ -275,12 +292,15 @@ async def list_offers(
     result = await db.execute(items_q)
     offers = list(result.scalars().unique().all())
 
-    # Batch-load placements and attendee counts to avoid N+1 queries
+    # Batch-load placements, attendee counts, and invoice counts to avoid N+1 queries
     offer_ids = [o.id for o in offers]
     placements_by_offer: dict[UUID, list[ProgramYearTraining]] = {oid: [] for oid in offer_ids}
     attendee_counts: dict[UUID, int] = {oid: 0 for oid in offer_ids}
+    invoice_counts: dict[UUID, int] = {oid: 0 for oid in offer_ids}
 
     if offer_ids:
+        from app.models.training_invoice import TrainingInvoice
+
         # Batch placements
         pl_result = await db.execute(
             select(OfferPlacement.offer_id, ProgramYearTraining)
@@ -305,8 +325,23 @@ async def list_offers(
         for oid, cnt in ac_result.all():
             attendee_counts[oid] = cnt
 
+        # Batch invoice counts
+        ic_result = await db.execute(
+            select(TrainingInvoice.offer_id, func.count())
+            .where(TrainingInvoice.offer_id.in_(offer_ids))
+            .group_by(TrainingInvoice.offer_id)
+        )
+        for oid, cnt in ic_result.all():
+            if oid is not None:
+                invoice_counts[oid] = cnt
+
     items = [
-        _offer_to_response(offer, placements_by_offer.get(offer.id, []), attendee_counts.get(offer.id, 0))
+        _offer_to_response(
+            offer,
+            placements_by_offer.get(offer.id, []),
+            attendee_counts.get(offer.id, 0),
+            invoice_counts.get(offer.id, 0),
+        )
         for offer in offers
     ]
 
@@ -331,7 +366,8 @@ async def get_offer(
 
     placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    return _offer_to_response(offer, placements, ac)
+    ic = await _count_offer_invoices(db, offer.id)
+    return _offer_to_response(offer, placements, ac, ic)
 
 
 @router.post("", response_model=CustomerOfferResponse, status_code=201)
@@ -417,7 +453,8 @@ async def create_offer(
     offer = result.scalar_one()
     loaded_placements = await _load_offer_placements(db, offer.id, tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    return _offer_to_response(offer, loaded_placements, ac)
+    ic = await _count_offer_invoices(db, offer.id)
+    return _offer_to_response(offer, loaded_placements, ac, ic)
 
 
 @router.put("/{offer_id}", response_model=CustomerOfferResponse)
@@ -461,7 +498,8 @@ async def update_offer(
 
     placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    return _offer_to_response(offer, placements, ac)
+    ic = await _count_offer_invoices(db, offer.id)
+    return _offer_to_response(offer, placements, ac, ic)
 
 
 @router.post("/{offer_id}/placements", response_model=CustomerOfferResponse)
@@ -513,7 +551,8 @@ async def add_placements(
 
     loaded_placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    return _offer_to_response(offer, loaded_placements, ac)
+    ic = await _count_offer_invoices(db, offer.id)
+    return _offer_to_response(offer, loaded_placements, ac, ic)
 
 
 @router.delete("/{offer_id}/placements/{placement_id}")

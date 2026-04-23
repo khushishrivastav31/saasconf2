@@ -35,23 +35,25 @@ export default function ParkingLotTab() {
     staleTime: 60_000,
   });
 
-  const { deactivate, reassign } = useParkingLotMutations(() => setReassignTarget(null));
+  const { cancelRegistration, reassign } = useParkingLotMutations(() => setReassignTarget(null));
 
   const handleReassign = useCallback((att: ParkedAttendee) => {
     setReassignTarget(att);
   }, []);
 
-  const handleDeactivate = useCallback(
+  const handleCancel = useCallback(
     (att: ParkedAttendee) => {
       if (
         window.confirm(
-          `Deactivate ${att.first_name} ${att.last_name}? They will be removed from the parking lot and marked as Inactive. You can reactivate them later from the user view.`
+          `Cancel the booking for ${att.first_name} ${att.last_name}?\n\n` +
+            'The invoice will be voided, a credit note will be sent to the customer, ' +
+            'and the attendee will stay active (unparked) but not tied to any training.'
         )
       ) {
-        deactivate.mutate(att.id);
+        cancelRegistration.mutate(att.id);
       }
     },
-    [deactivate]
+    [cancelRegistration]
   );
 
   const items = data?.items ?? [];
@@ -123,8 +125,8 @@ export default function ParkingLotTab() {
               key={att.id}
               attendee={att}
               onReassign={handleReassign}
-              onDeactivate={handleDeactivate}
-              deactivating={deactivate.isPending}
+              onCancel={handleCancel}
+              cancelling={cancelRegistration.isPending}
             />
           ))}
         </div>

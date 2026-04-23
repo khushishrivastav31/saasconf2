@@ -2527,6 +2527,31 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/attendees/{attendee_id}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Cancel Attendee Registration
+     * @description Cancel a public-portal booking.
+     *
+     *     End state: attendee ``active``, registration + original invoice
+     *     ``cancelled``, credit note created + emailed. No Stripe refund is
+     *     issued automatically — operators handle refunds out of band, same as
+     *     the existing ``/invoices/{id}/replace`` flow.
+     */
+    post: operations['cancel_attendee_registration_api_v1_trainings_attendees__attendee_id__cancel_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/attendees/{attendee_id}/profile': {
     parameters: {
       query?: never;
@@ -15613,6 +15638,11 @@ export type components = {
       /** Faqs */
       faqs?: string | null;
     };
+    /** CancelAttendeeRequest */
+    CancelAttendeeRequest: {
+      /** Reason */
+      reason?: string | null;
+    };
     /**
      * CancelInvoiceRequest
      * @description Request body for cancelling an invoice.
@@ -16778,6 +16808,11 @@ export type components = {
        * @default 0
        */
       attendee_count?: number;
+      /**
+       * Invoice Count
+       * @default 0
+       */
+      invoice_count?: number;
       /**
        * Created At
        * Format: date-time
@@ -33555,6 +33590,45 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['ReassignRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  cancel_attendee_registration_api_v1_trainings_attendees__attendee_id__cancel_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        attendee_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CancelAttendeeRequest'];
       };
     };
     responses: {

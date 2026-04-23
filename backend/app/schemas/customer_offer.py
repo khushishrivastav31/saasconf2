@@ -70,6 +70,11 @@ class CustomerOfferResponse(BaseModel):
     po_number: str | None = None
     placements: list[OfferPlacementInfo] = Field(default_factory=list)
     attendee_count: int = 0
+    # Count of training invoices linked to this offer. Used by the UI to
+    # disable the "Delete Offer" action when > 0, since the backend refuses
+    # to delete offers with linked invoices (financial records must not be
+    # orphaned). See app/api/v1/trainings/offers.py::delete_offer.
+    invoice_count: int = 0
     created_at: datetime
     updated_at: datetime
 
