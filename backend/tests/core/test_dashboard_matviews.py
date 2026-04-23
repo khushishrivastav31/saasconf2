@@ -17,7 +17,10 @@ import psycopg2  # type: ignore[import-untyped]
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore[import-untyped]
 
-BACKEND_DIR = Path(__file__).resolve().parent.parent
+# Walk up from this file to the first directory that contains ``alembic.ini``.
+# Depth-independent so re-organizing ``tests/`` doesn't break the locator
+# (this file has moved between subdirs before — see PR history).
+BACKEND_DIR = next(p for p in Path(__file__).resolve().parents if (p / "alembic.ini").exists())
 MV_DB_NAME = "saasconf_matview_check"
 
 EXPECTED_MATVIEWS: frozenset[str] = frozenset(

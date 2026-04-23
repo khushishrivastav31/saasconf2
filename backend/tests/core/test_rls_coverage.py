@@ -87,7 +87,10 @@ KNOWN_RLS_GAPS_POLICY: frozenset[str] = KNOWN_RLS_GAPS_ENABLE | frozenset(
     }
 )
 
-BACKEND_DIR = Path(__file__).resolve().parent.parent
+# Walk up to the first directory containing ``alembic.ini`` — depth-independent
+# so ``tests/`` re-organizations don't break the locator (same pattern as
+# test_dashboard_matviews.py).
+BACKEND_DIR = next(p for p in Path(__file__).resolve().parents if (p / "alembic.ini").exists())
 RLS_DB_NAME = "saasconf_rls_check"
 
 
