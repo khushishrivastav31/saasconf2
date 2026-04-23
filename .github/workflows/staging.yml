@@ -1,10 +1,18 @@
 name: Staging CI/CD
 
 on:
+  # ``push`` is still main-only — we don't want feature branches burning
+  # CI minutes on every direct push.
   push:
     branches: [main]
+  # ``pull_request`` intentionally has NO ``branches:`` filter: that filter
+  # matches the *base* branch, which means stacked PRs (e.g. targeting
+  # ``perf/scale-indexes`` instead of ``main``) were silently skipping CI.
+  # Including ``edited`` in ``types`` so retargeting a PR's base branch
+  # (``gh pr edit --base main``) also fires CI — otherwise the first CI run
+  # on a newly-retargeted PR never starts until a separate push happens.
   pull_request:
-    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
   workflow_dispatch:
 
 concurrency:

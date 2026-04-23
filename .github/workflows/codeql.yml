@@ -3,8 +3,11 @@ name: CodeQL
 on:
   push:
     branches: [main]
+  # No ``branches:`` filter on ``pull_request`` so stacked PRs (base != main)
+  # also get scanned. ``types`` includes ``edited`` so retargeting a PR fires
+  # a fresh scan. Mirrors staging.yml — keep the two workflows in sync.
   pull_request:
-    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
   schedule:
     # Weekly full scan, Monday 07:00 UTC — catches new CodeQL rules applied
     # against unchanged code, which the push-triggered runs would miss.
