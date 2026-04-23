@@ -3845,6 +3845,31 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/offers/stats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Offer Stats
+     * @description Aggregated offer counts + training/certification totals, grouped by status.
+     *
+     *     Split from ``list_offers`` so the management dashboard can render the
+     *     stat cards without materialising every offer row — at a few thousand
+     *     offers the old ``limit=500 + sum-in-JS`` pattern either truncated the
+     *     stats silently or froze the browser.
+     */
+    get: operations['offer_stats_api_v1_trainings_offers_stats_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/offers': {
     parameters: {
       query?: never;
@@ -5252,6 +5277,10 @@ export type paths = {
      *     When conference_id is provided, only returns applicants who are either
      *     the main speaker of a paper belonging to a CFP linked to that conference,
      *     or an accepted co-speaker on such a paper.
+     *
+     *     Paginated: defaults to 100 per page, hard-capped at 500 (per CLAUDE.md
+     *     performance rules). Returns ``total`` = full filtered count so clients
+     *     can render a pager.
      */
     get: operations['list_applicants_api_v1_cfp_applicants_get'];
     put?: never;
@@ -37027,11 +37056,46 @@ export interface operations {
       };
     };
   };
+  offer_stats_api_v1_trainings_offers_stats_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   list_offers_api_v1_trainings_offers_get: {
     parameters: {
       query?: {
         customer_id?: string | null;
         search?: string | null;
+        /** @description Filter by offer status (draft/sent/accepted/rejected) */
+        status?: string | null;
         skip?: number;
         limit?: number;
       };
@@ -40146,6 +40210,10 @@ export interface operations {
       query?: {
         /** @description Filter applicants by conference */
         conference_id?: string | null;
+        /** @description Rows to skip for pagination */
+        skip?: number;
+        /** @description Rows per page (max 500) */
+        limit?: number;
       };
       header?: {
         authorization?: string | null;

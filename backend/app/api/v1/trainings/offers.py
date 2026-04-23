@@ -202,12 +202,57 @@ async def list_available_placements(
     ]
 
 
+@router.get("/stats", response_model=dict)
+async def offer_stats(
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Aggregated offer counts + training/certification totals, grouped by status.
+
+    Split from ``list_offers`` so the management dashboard can render the
+    stat cards without materialising every offer row — at a few thousand
+    offers the old ``limit=500 + sum-in-JS`` pattern either truncated the
+    stats silently or froze the browser.
+    """
+    tenant_filter = _tenant_filter(current_user)
+
+    result = await db.execute(
+        select(
+            CustomerOffer.status,
+            func.count().label("count"),
+            func.coalesce(func.sum(CustomerOffer.training_price), 0).label("training_total"),
+            func.coalesce(func.sum(CustomerOffer.certification_price), 0).label("cert_total"),
+        )
+        .where(tenant_filter)
+        .group_by(CustomerOffer.status)
+    )
+
+    by_status: dict[str, dict] = {}
+    total_count = 0
+    total_training = 0.0
+    total_cert = 0.0
+    for status, count, training, cert in result.all():
+        bucket = {"count": count, "training": float(training or 0), "cert": float(cert or 0)}
+        by_status[status or "draft"] = bucket
+        total_count += count
+        total_training += bucket["training"]
+        total_cert += bucket["cert"]
+
+    return {
+        "by_status": by_status,
+        "total_offers": total_count,
+        "total_training": total_training,
+        "total_cert": total_cert,
+    }
+
+
 @router.get("", response_model=dict)
 async def list_offers(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     customer_id: UUID | None = Query(None),
     search: str | None = Query(None),
+    status: str | None = Query(None, description="Filter by offer status (draft/sent/accepted/rejected)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
 ) -> dict:
@@ -216,6 +261,8 @@ async def list_offers(
 
     if customer_id:
         base = base.where(CustomerOffer.customer_id == customer_id)
+    if status:
+        base = base.where(CustomerOffer.status == status)
     if search:
         base = base.join(Customer, CustomerOffer.customer_id == Customer.id).where(
             unaccent_ilike(CustomerOffer.offer_number, search) | unaccent_ilike(Customer.name, search)

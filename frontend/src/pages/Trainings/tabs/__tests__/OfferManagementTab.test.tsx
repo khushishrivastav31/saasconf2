@@ -20,6 +20,33 @@ import api from '../../../../config/api';
 
 const mockApi = vi.mocked(api);
 
+const mockStats = {
+  by_status: {
+    draft: { count: 1, training: 5000, cert: 1500 },
+    sent: { count: 1, training: 3000, cert: 800 },
+    accepted: { count: 1, training: 10000, cert: 3000 },
+  },
+  total_offers: 3,
+  total_training: 18000,
+  total_cert: 5300,
+};
+
+/** Route the `api.get` mock per URL so the component can call `/offers/stats`
+ *  and `/offers` independently (each has its own query). */
+function mockGetByUrl(
+  routes: Partial<
+    Record<'offers' | 'stats', { items?: unknown[]; total?: number } | typeof mockStats>
+  >
+) {
+  mockApi.get.mockImplementation((url: string) => {
+    if (url.endsWith('/offers/stats')) {
+      return Promise.resolve({ data: routes.stats ?? mockStats });
+    }
+    const list = routes.offers ?? { items: [], total: 0 };
+    return Promise.resolve({ data: list });
+  });
+}
+
 const mockOffers = [
   {
     id: 'offer-1',
@@ -100,7 +127,7 @@ describe('OfferManagementTab', () => {
   });
 
   it('renders "Offer Management" heading', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: [] } });
+    mockGetByUrl({ offers: { items: [], total: 0 } });
     renderWithProviders(<OfferManagementTab />);
     expect(screen.getByText('Offer Management')).toBeInTheDocument();
   });
@@ -112,7 +139,10 @@ describe('OfferManagementTab', () => {
   });
 
   it('shows empty state when no offers', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: [] } });
+    mockGetByUrl({
+      offers: { items: [], total: 0 },
+      stats: { by_status: {}, total_offers: 0, total_training: 0, total_cert: 0 },
+    });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(
@@ -122,7 +152,7 @@ describe('OfferManagementTab', () => {
   });
 
   it('renders offers table with correct columns', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: mockOffers } });
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(screen.getByText('OFF-001')).toBeInTheDocument();
@@ -138,7 +168,7 @@ describe('OfferManagementTab', () => {
   });
 
   it('renders offer data correctly in table rows', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: mockOffers } });
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(screen.getByText('OFF-001')).toBeInTheDocument();
@@ -150,15 +180,16 @@ describe('OfferManagementTab', () => {
     expect(screen.getByText('OFF-003')).toBeInTheDocument();
   });
 
-  it('shows status filter buttons with counts', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: mockOffers } });
+  it('shows status filter buttons with counts from /offers/stats', async () => {
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(screen.getByText('OFF-001')).toBeInTheDocument();
     });
-    // All filter button with total count
-    expect(screen.getByText('All (3)')).toBeInTheDocument();
-    // Individual status filter buttons
+    // Counts now come from the backend stats aggregate, not the client list.
+    await waitFor(() => {
+      expect(screen.getByText('All (3)')).toBeInTheDocument();
+    });
     expect(screen.getByText('Draft (1)')).toBeInTheDocument();
     expect(screen.getByText('Sent (1)')).toBeInTheDocument();
     expect(screen.getByText('Accepted (1)')).toBeInTheDocument();
@@ -166,20 +197,21 @@ describe('OfferManagementTab', () => {
   });
 
   it('shows stats cards with revenue totals', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: mockOffers } });
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(screen.getByText('OFF-001')).toBeInTheDocument();
     });
-    // Total stats card
-    expect(screen.getByText('Total')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Total')).toBeInTheDocument();
+    });
     expect(screen.getByText('Training Revenue')).toBeInTheDocument();
     expect(screen.getByText('Certification Revenue')).toBeInTheDocument();
     expect(screen.getByText('Grand Total')).toBeInTheDocument();
   });
 
   it('renders search input', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: [] } });
+    mockGetByUrl({ offers: { items: [], total: 0 } });
     renderWithProviders(<OfferManagementTab />);
     expect(
       screen.getByPlaceholderText('Search by offer number or customer...')
@@ -188,7 +220,7 @@ describe('OfferManagementTab', () => {
 
   it('search input triggers re-fetch', async () => {
     const user = userEvent.setup();
-    mockApi.get.mockResolvedValue({ data: { items: mockOffers } });
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(screen.getByText('OFF-001')).toBeInTheDocument();
@@ -205,24 +237,29 @@ describe('OfferManagementTab', () => {
     });
   });
 
-  it('clicking status filter filters the offers', async () => {
+  it('clicking status filter re-queries /offers with status param', async () => {
     const user = userEvent.setup();
-    mockApi.get.mockResolvedValue({ data: { items: mockOffers } });
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(screen.getByText('OFF-001')).toBeInTheDocument();
     });
-    // Click "Draft" filter
     await user.click(screen.getByText('Draft (1)'));
-    // Should only show draft offer
-    expect(screen.getByText('OFF-001')).toBeInTheDocument();
-    expect(screen.queryByText('OFF-002')).not.toBeInTheDocument();
-    expect(screen.queryByText('OFF-003')).not.toBeInTheDocument();
+    // Filtering is server-side now: clicking a status fires a new /offers
+    // request with the selected status param, not a client-side row hide.
+    await waitFor(() => {
+      expect(mockApi.get).toHaveBeenCalledWith(
+        '/trainings/offers',
+        expect.objectContaining({
+          params: expect.objectContaining({ status: 'draft' }),
+        })
+      );
+    });
   });
 
   it('status dropdown changes offer status', async () => {
     const user = userEvent.setup();
-    mockApi.get.mockResolvedValue({ data: { items: mockOffers } });
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
     mockApi.put.mockResolvedValue({ data: {} });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
@@ -237,16 +274,24 @@ describe('OfferManagementTab', () => {
     });
   });
 
-  it('fetches offers from /trainings/offers', async () => {
-    mockApi.get.mockResolvedValue({ data: { items: [] } });
+  it('fetches offers from /trainings/offers with pagination defaults', async () => {
+    mockGetByUrl({ offers: { items: [], total: 0 } });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
       expect(mockApi.get).toHaveBeenCalledWith(
         '/trainings/offers',
         expect.objectContaining({
-          params: expect.objectContaining({ limit: '500' }),
+          params: expect.objectContaining({ skip: 0, limit: 100 }),
         })
       );
+    });
+  });
+
+  it('fetches aggregated stats from /trainings/offers/stats', async () => {
+    mockGetByUrl({ offers: { items: [], total: 0 } });
+    renderWithProviders(<OfferManagementTab />);
+    await waitFor(() => {
+      expect(mockApi.get).toHaveBeenCalledWith('/trainings/offers/stats');
     });
   });
 });

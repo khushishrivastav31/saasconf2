@@ -130,18 +130,21 @@ async def list_applicants(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     conference_id: UUID | None = Query(None, description="Filter applicants by conference"),
+    skip: int = Query(0, ge=0, description="Rows to skip for pagination"),
+    limit: int = Query(100, ge=1, le=500, description="Rows per page (max 500)"),
 ) -> ApplicantListResponse:
     """List applicants for the current tenant, optionally filtered by conference.
 
     When conference_id is provided, only returns applicants who are either
     the main speaker of a paper belonging to a CFP linked to that conference,
     or an accepted co-speaker on such a paper.
+
+    Paginated: defaults to 100 per page, hard-capped at 500 (per CLAUDE.md
+    performance rules). Returns ``total`` = full filtered count so clients
+    can render a pager.
     """
-    query = (
-        select(CFPApplicant)
-        .where(CFPApplicant.tenant_id == current_user.require_tenant_id())
-        .order_by(CFPApplicant.last_name, CFPApplicant.first_name)
-    )
+    tenant_id = current_user.require_tenant_id()
+    base_filters = [CFPApplicant.tenant_id == tenant_id]
 
     if conference_id is not None:
         # Sub-query: CFP IDs linked to this conference
@@ -160,8 +163,18 @@ async def list_applicants(
             )
             .scalar_subquery()
         )
-        query = query.where(CFPApplicant.id.in_(main_speaker_ids) | CFPApplicant.id.in_(cospeaker_ids))
+        base_filters.append(CFPApplicant.id.in_(main_speaker_ids) | CFPApplicant.id.in_(cospeaker_ids))
 
+    count_stmt = select(func.count()).select_from(CFPApplicant).where(*base_filters)
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    query = (
+        select(CFPApplicant)
+        .where(*base_filters)
+        .order_by(CFPApplicant.last_name, CFPApplicant.first_name)
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(query)
     applicants = list(result.scalars().all())
 
@@ -201,7 +214,7 @@ async def list_applicants(
         for a in applicants
     ]
 
-    return ApplicantListResponse(items=items, total=len(items))
+    return ApplicantListResponse(items=items, total=total)
 
 
 @router.post(

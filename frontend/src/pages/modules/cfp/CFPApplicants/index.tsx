@@ -113,6 +113,11 @@ export default function CFPApplicants({
   const [deleteTarget, setDeleteTarget] = useState<Applicant | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pagination — default 100/page, capped at backend's 500. Prevents
+  // loading several thousand applicants as a single DOM render.
+  const PAGE_SIZE = 100;
+  const [page, setPage] = useState(1);
+
   // Conference filter — only used when no conferenceId prop is passed (standalone view)
   const isStandalone = !conferenceId;
   const [filterConferenceId, setFilterConferenceId] = useState<string>('');
@@ -134,9 +139,13 @@ export default function CFPApplicants({
   const listFilterId = isStandalone ? filterConferenceId || undefined : undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['cfp-applicants', listFilterId ?? 'all'],
+    queryKey: ['cfp-applicants', listFilterId ?? 'all', page, PAGE_SIZE],
     queryFn: async () => {
-      const params = listFilterId ? { conference_id: listFilterId } : {};
+      const params: Record<string, string | number> = {
+        skip: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+      };
+      if (listFilterId) params.conference_id = listFilterId;
       const response = await api.get<ApplicantListResponse>('/cfp/applicants', { params });
       return response.data;
     },
@@ -331,8 +340,11 @@ export default function CFPApplicants({
   };
 
   const applicants = useMemo(() => data?.items || [], [data?.items]);
+  const totalApplicants = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalApplicants / PAGE_SIZE));
   const selectedApplicant = applicants.find((a) => a.id === selectedApplicantId);
-  const applicantCount = applicants.length;
+  // Display the full-tenant total in the header count, not the per-page slice.
+  const applicantCount = totalApplicants;
 
   // Filter applicants by search query
   const filteredApplicants = useMemo(() => {
@@ -496,6 +508,35 @@ export default function CFPApplicants({
           ) : (
             <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
               No users match "{searchQuery}"
+            </div>
+          )}
+
+          {/* Pager — hidden when everything fits on a single page. Search is
+              client-side over the current page; users can navigate pages to
+              search the full set. */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1 pt-2 text-sm text-gray-600 dark:text-gray-300">
+              <span>
+                Page {page} of {totalPages} · {totalApplicants} users
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

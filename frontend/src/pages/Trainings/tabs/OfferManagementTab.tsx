@@ -82,13 +82,40 @@ const OfferRow = React.memo(function OfferRow({
   );
 });
 
+interface OfferStats {
+  by_status: Record<string, { count: number; training: number; cert: number }>;
+  total_offers: number;
+  total_training: number;
+  total_cert: number;
+}
+
+interface OfferListResponse {
+  items: CustomerOffer[];
+  total: number;
+}
+
 export default function OfferManagementTab() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [, setSearchParams] = useSearchParams();
 
+  const PAGE_SIZE = 100;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Debounce search so typing doesn't hammer the backend.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  React.useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(handle);
+  }, [search]);
+
+  // Reset to page 1 whenever the filter/search changes so the user doesn't
+  // end up stuck on e.g. page 12 of an empty result set.
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter]);
 
   const handleOfferClick = useCallback(
     (offer: CustomerOffer) => {
@@ -102,51 +129,49 @@ export default function OfferManagementTab() {
     [setSearchParams]
   );
 
-  const {
-    data: offersRaw,
-    isLoading,
-    isError,
-  } = useQuery<CustomerOffer[]>({
-    queryKey: ['all-offers', search, statusFilter],
+  // Stats (counts + totals, grouped by status) come from a dedicated
+  // aggregate endpoint so we don't have to materialize every offer row
+  // client-side just to render the header cards.
+  const { data: stats } = useQuery<OfferStats>({
+    queryKey: ['all-offers-stats'],
     queryFn: async () => {
-      const params: Record<string, string> = { limit: '500' };
-      if (search) params.search = search;
-      const res = await api.get('/trainings/offers', { params });
-      return res.data.items ?? res.data;
+      const res = await api.get<OfferStats>('/trainings/offers/stats');
+      return res.data;
     },
     staleTime: 30_000,
   });
 
-  const offers = useMemo(() => {
-    const all = offersRaw ?? [];
-    if (!statusFilter) return all;
-    return all.filter((o) => o.status === statusFilter);
-  }, [offersRaw, statusFilter]);
+  const {
+    data: listData,
+    isLoading,
+    isError,
+  } = useQuery<OfferListResponse>({
+    queryKey: ['all-offers', debouncedSearch, statusFilter, page, PAGE_SIZE],
+    queryFn: async () => {
+      const params: Record<string, string | number> = {
+        skip: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+      };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (statusFilter) params.status = statusFilter;
+      const res = await api.get<OfferListResponse>('/trainings/offers', { params });
+      return res.data;
+    },
+    staleTime: 30_000,
+  });
+
+  const offers = useMemo(() => listData?.items ?? [], [listData?.items]);
+  const totalFiltered = listData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
 
   const statusCounts = useMemo(() => {
-    const all = offersRaw ?? [];
     const counts: Record<string, number> = { draft: 0, sent: 0, accepted: 0, rejected: 0 };
-    for (const o of all) counts[o.status] = (counts[o.status] || 0) + 1;
+    const by = stats?.by_status ?? {};
+    for (const s of STATUS_OPTIONS) counts[s] = by[s]?.count ?? 0;
     return counts;
-  }, [offersRaw]);
+  }, [stats]);
 
-  const stats = useMemo(() => {
-    const all = offersRaw ?? [];
-    const byStatus: Record<string, { count: number; training: number; cert: number }> = {};
-    for (const s of STATUS_OPTIONS) byStatus[s] = { count: 0, training: 0, cert: 0 };
-    let totalTraining = 0;
-    let totalCert = 0;
-    for (const o of all) {
-      const s = byStatus[o.status] ?? { count: 0, training: 0, cert: 0 };
-      s.count += 1;
-      s.training += Number(o.training_price) || 0;
-      s.cert += Number(o.certification_price) || 0;
-      byStatus[o.status] = s;
-      totalTraining += Number(o.training_price) || 0;
-      totalCert += Number(o.certification_price) || 0;
-    }
-    return { byStatus, totalTraining, totalCert, totalOffers: all.length };
-  }, [offersRaw]);
+  const totalOffers = stats?.total_offers ?? 0;
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ offerId, status }: { offerId: string; status: string }) => {
@@ -154,6 +179,7 @@ export default function OfferManagementTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-offers'] });
+      queryClient.invalidateQueries({ queryKey: ['all-offers-stats'] });
       showToast('Status updated', 'success');
     },
     onError: (err) => showToast(parseApiError(err), 'error'),
@@ -171,19 +197,19 @@ export default function OfferManagementTab() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Offer Management
-          {offers.length > 0 && (
+          {totalOffers > 0 && (
             <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
-              ({offers.length})
+              ({totalOffers})
             </span>
           )}
         </h2>
       </div>
 
       {/* Stats */}
-      {(offersRaw ?? []).length > 0 && (
+      {totalOffers > 0 && stats && (
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           {STATUS_OPTIONS.map((s) => {
-            const d = stats.byStatus[s];
+            const d = stats.by_status[s] ?? { count: 0, training: 0, cert: 0 };
             return (
               <div
                 key={s}
@@ -236,14 +262,14 @@ export default function OfferManagementTab() {
                 Total
               </span>
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                {stats.totalOffers}
+                {stats.total_offers}
               </span>
             </div>
             <div className="text-[10px] text-gray-500 dark:text-gray-400 space-y-0.5">
               <div className="flex justify-between">
                 <span>Training Revenue</span>
                 <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {stats.totalTraining.toLocaleString('de-DE', {
+                  {stats.total_training.toLocaleString('de-DE', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
@@ -253,7 +279,7 @@ export default function OfferManagementTab() {
               <div className="flex justify-between">
                 <span>Certification Revenue</span>
                 <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {stats.totalCert.toLocaleString('de-DE', {
+                  {stats.total_cert.toLocaleString('de-DE', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
@@ -263,7 +289,7 @@ export default function OfferManagementTab() {
               <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-0.5 mt-0.5">
                 <span className="font-semibold">Grand Total</span>
                 <span className="font-bold text-gray-900 dark:text-gray-100">
-                  {(stats.totalTraining + stats.totalCert).toLocaleString('de-DE', {
+                  {(stats.total_training + stats.total_cert).toLocaleString('de-DE', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
@@ -294,7 +320,7 @@ export default function OfferManagementTab() {
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
-            All ({(offersRaw ?? []).length})
+            All ({totalOffers})
           </button>
           {STATUS_OPTIONS.map((s) => (
             <button
@@ -322,7 +348,7 @@ export default function OfferManagementTab() {
         </div>
       ) : offers.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-          {(offersRaw ?? []).length === 0
+          {totalOffers === 0
             ? 'No offers yet. Create offers from the Customers tab.'
             : 'No offers match the current filter.'}
         </p>
@@ -366,6 +392,31 @@ export default function OfferManagementTab() {
               ))}
             </tbody>
           </table>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300">
+              <span>
+                Page {page} of {totalPages} · {totalFiltered} offers
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
