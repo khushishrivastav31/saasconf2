@@ -28,10 +28,6 @@ class ParkRequest(BaseModel):
     source_id: str  # UUID of the reg_attendee or offer_attendee
 
 
-class DeactivateAttendeeRequest(BaseModel):
-    notes: str | None = None
-
-
 @router.post("/park-by-source")
 async def park_by_source(
     data: ParkRequest,
@@ -224,54 +220,6 @@ async def park_attendee(
     )
     await db.commit()
 
-    return {"id": str(att.id), "status": att.status}
-
-
-@router.post("/{attendee_id}/deactivate")
-async def deactivate_attendee(
-    attendee_id: UUID,
-    data: DeactivateAttendeeRequest,
-    current_user: TenantAdminDep,
-    db: DbSessionDep,
-) -> dict:
-    """Deactivate a parked attendee — flips status to 'inactive' and hides from the parking lot.
-
-    Only attendees with status ``parked`` can be deactivated. Active attendees must be
-    parked first (via ``/park`` or ``/park-by-source``). Writes a ``deactivated`` history
-    event. Reactivation happens via the reciprocal endpoint or by toggling the linked
-    portal user back on.
-    """
-    result = await db.execute(
-        select(TrainingAttendee).where(
-            TrainingAttendee.id == attendee_id,
-            TrainingAttendee.tenant_id == current_user.require_tenant_id(),
-        )
-    )
-    att = result.scalar_one_or_none()
-    if not att:
-        raise NotFoundError("Attendee not found")
-    if att.status != "parked":
-        raise HTTPException(status_code=422, detail="Only parked attendees can be deactivated.")
-
-    att.status = "inactive"
-    deactivate_notes = data.notes or "Deactivated from parking lot"
-    db.add(
-        TrainingAttendeeHistory(
-            tenant_id=current_user.require_tenant_id(),
-            attendee_id=att.id,
-            event_type="deactivated",
-            notes=deactivate_notes,
-            created_by=current_user.user_id,
-        )
-    )
-    CustomerEventService.record_for_attendee(
-        db,
-        att,
-        event_type=CustomerEventType.TRAINING_DEACTIVATED,
-        created_by=current_user.user_id,
-        notes=deactivate_notes,
-    )
-    await db.commit()
     return {"id": str(att.id), "status": att.status}
 
 

@@ -281,25 +281,6 @@ class TestParkingDualWrite:
         assert events[0].meta["placement_id"] == str(placement.id)
 
     @pytest.mark.asyncio
-    async def test_deactivate_parked_writes_customer_event(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        admin_token: str,
-        parked_attendee: TrainingAttendee,
-    ):
-        res = await client.post(
-            f"{BASE}/attendees/{parked_attendee.id}/deactivate",
-            json={},
-            headers=auth_headers(admin_token),
-        )
-        assert res.status_code == 200, res.text
-
-        events = await _customer_events_for(db_session, parked_attendee.id, "training.deactivated")
-        assert len(events) == 1
-        assert events[0].notes == "Deactivated from parking lot"
-
-    @pytest.mark.asyncio
     async def test_reactivate_inactive_writes_customer_event(
         self,
         client: AsyncClient,
@@ -307,19 +288,16 @@ class TestParkingDualWrite:
         admin_token: str,
         parked_attendee: TrainingAttendee,
     ):
-        # Deactivate first via endpoint.
-        r1 = await client.post(
-            f"{BASE}/attendees/{parked_attendee.id}/deactivate",
-            json={},
-            headers=auth_headers(admin_token),
-        )
-        assert r1.status_code == 200
+        # Simulate a historical inactive row (the former Deactivate button
+        # wrote these; it's been retired but reactivate must still handle them).
+        parked_attendee.status = "inactive"
+        await db_session.commit()
 
-        r2 = await client.post(
+        res = await client.post(
             f"{BASE}/attendees/{parked_attendee.id}/reactivate",
             headers=auth_headers(admin_token),
         )
-        assert r2.status_code == 200, r2.text
+        assert res.status_code == 200, res.text
 
         events = await _customer_events_for(db_session, parked_attendee.id, "training.reactivated")
         assert len(events) == 1

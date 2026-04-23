@@ -406,82 +406,25 @@ async def simple_parked_attendee(db_session: AsyncSession, tenant: Tenant, tenan
 
 
 @pytest.mark.asyncio
-async def test_deactivate_parked_attendee_marks_inactive_and_records_history(
-    client: AsyncClient,
-    simple_parked_attendee: dict,
-    db_session: AsyncSession,
-) -> None:
-    """POST /attendees/{id}/deactivate: parked → inactive with 'deactivated' history event."""
-    data = simple_parked_attendee
-
-    response = await client.post(
-        f"{BASE}/attendees/{data['attendee'].id}/deactivate",
-        json={},
-        headers=auth_headers(data["token"]),
-    )
-    assert response.status_code == 200, response.text
-    assert response.json()["status"] == "inactive"
-
-    refreshed = (
-        await db_session.execute(select(TrainingAttendee).where(TrainingAttendee.id == data["attendee"].id))
-    ).scalar_one()
-    assert refreshed.status == "inactive"
-
-    events = (
-        (
-            await db_session.execute(
-                select(TrainingAttendeeHistory).where(TrainingAttendeeHistory.attendee_id == data["attendee"].id)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    assert any(e.event_type == "deactivated" for e in events)
-
-
-@pytest.mark.asyncio
-async def test_deactivate_rejects_non_parked_attendee(
-    client: AsyncClient,
-    simple_parked_attendee: dict,
-    db_session: AsyncSession,
-) -> None:
-    """Only parked attendees can be deactivated — active → 422."""
-    data = simple_parked_attendee
-
-    # Flip to active first
-    att = (
-        await db_session.execute(select(TrainingAttendee).where(TrainingAttendee.id == data["attendee"].id))
-    ).scalar_one()
-    att.status = "active"
-    await db_session.commit()
-
-    response = await client.post(
-        f"{BASE}/attendees/{data['attendee'].id}/deactivate",
-        json={},
-        headers=auth_headers(data["token"]),
-    )
-    assert response.status_code == 422
-    assert "parked" in response.json()["detail"].lower()
-
-
-@pytest.mark.asyncio
 async def test_reactivate_inactive_attendee_restores_active_status(
     client: AsyncClient,
     simple_parked_attendee: dict,
     db_session: AsyncSession,
 ) -> None:
-    """POST /attendees/{id}/reactivate: inactive → active with 'reactivated' history event."""
+    """POST /attendees/{id}/reactivate: inactive → active with 'reactivated' history event.
+
+    Sets ``status='inactive'`` directly on the row rather than through the
+    retired ``/deactivate`` endpoint — ``/reactivate`` must still handle
+    the inactive rows that historical tenants may still have.
+    """
     data = simple_parked_attendee
 
-    # Deactivate first via endpoint
-    deactivate_res = await client.post(
-        f"{BASE}/attendees/{data['attendee'].id}/deactivate",
-        json={},
-        headers=auth_headers(data["token"]),
-    )
-    assert deactivate_res.status_code == 200
+    att = (
+        await db_session.execute(select(TrainingAttendee).where(TrainingAttendee.id == data["attendee"].id))
+    ).scalar_one()
+    att.status = "inactive"
+    await db_session.commit()
 
-    # Now reactivate
     response = await client.post(
         f"{BASE}/attendees/{data['attendee'].id}/reactivate",
         headers=auth_headers(data["token"]),

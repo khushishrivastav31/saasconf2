@@ -2435,31 +2435,6 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/trainings/attendees/{attendee_id}/deactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Deactivate Attendee
-     * @description Deactivate a parked attendee — flips status to 'inactive' and hides from the parking lot.
-     *
-     *     Only attendees with status ``parked`` can be deactivated. Active attendees must be
-     *     parked first (via ``/park`` or ``/park-by-source``). Writes a ``deactivated`` history
-     *     event. Reactivation happens via the reciprocal endpoint or by toggling the linked
-     *     portal user back on.
-     */
-    post: operations['deactivate_attendee_api_v1_trainings_attendees__attendee_id__deactivate_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/trainings/attendees/{attendee_id}/reactivate': {
     parameters: {
       query?: never;
@@ -16957,11 +16932,6 @@ export type components = {
       date: string;
       /** Count */
       count: number;
-    };
-    /** DeactivateAttendeeRequest */
-    DeactivateAttendeeRequest: {
-      /** Notes */
-      notes?: string | null;
     };
     /** DeadlineCreate */
     DeadlineCreate: {
@@ -33444,45 +33414,6 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['ParkRequest'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  deactivate_attendee_api_v1_trainings_attendees__attendee_id__deactivate_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        authorization?: string | null;
-      };
-      path: {
-        attendee_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['DeactivateAttendeeRequest'];
       };
     };
     responses: {
