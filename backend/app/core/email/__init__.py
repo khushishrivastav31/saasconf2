@@ -228,6 +228,7 @@ async def send_email(
     attachments: list[dict] | None = None,
     from_email: str | None = None,
     *,
+    cc: list[str] | None = None,
     tenant_api_key: str | None = None,
     tenant_from_name: str | None = None,
     db: AsyncSession | None = None,
@@ -245,6 +246,7 @@ async def send_email(
     Args:
         attachments: Optional list of dicts with 'filename' and 'content' (base64-encoded).
         from_email: Optional override for the sender address (e.g. per-tenant domain).
+        cc: Optional CC list. Empty lists are treated the same as None.
         tenant_api_key: Per-tenant Resend API key (overrides global key).
         tenant_from_name: Per-tenant sender display name (overrides global name).
         db: Database session — when provided with tenant_id, auto-loads per-tenant settings.
@@ -291,6 +293,8 @@ async def send_email(
         }
         if reply_to:
             payload["reply_to"] = reply_to
+        if cc:
+            payload["cc"] = cc
         if attachments:
             payload["attachments"] = attachments
         await asyncio.to_thread(resend.Emails.send, payload)

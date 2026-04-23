@@ -71,6 +71,7 @@ class TenantCreate(TenantBase):
     vat_number: str | None = Field(None, max_length=50)
     website: str | None = Field(None, max_length=500)
     email_domain: str | None = Field(None, max_length=255)
+    accounting_email: EmailStr | None = None
 
     # Resend email settings
     resend_api_key: str | None = Field(None, max_length=255)
@@ -114,6 +115,7 @@ class TenantUpdate(BaseModel):
     vat_number: str | None = Field(None, max_length=50)
     website: str | None = Field(None, max_length=500)
     email_domain: str | None = Field(None, max_length=255)
+    accounting_email: EmailStr | None = None
 
     # Resend email settings
     resend_api_key: str | None = Field(None, max_length=255)
@@ -167,6 +169,7 @@ class TenantResponse(BaseModel):
     website: str | None
     logo_url: str | None = None
     email_domain: str | None = None
+    accounting_email: str | None = None
 
     # Resend email settings
     resend_api_key: str | None = None

@@ -45,6 +45,11 @@ class Tenant(Base):
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     email_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # Finance CC — required to be set before invoices/credit notes can be sent.
+    # Enforcement is at the API send-time, not the column constraint, so the
+    # column stays nullable for tenants provisioned before the field existed.
+    accounting_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Per-tenant Resend email settings (overrides global env vars when set)
     resend_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     resend_from_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

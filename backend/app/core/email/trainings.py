@@ -12,6 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.email import send_email
+from app.core.exceptions import InvoiceSendConfigurationError
+from app.core.invoice.email import ACCOUNTING_EMAIL_REQUIRED_MESSAGE
 from app.core.training_invoice_pdf import generate_training_invoice_pdf
 from app.models.tenant import Tenant
 from app.models.training import Training
@@ -140,12 +142,26 @@ async def send_training_invoice_email(
         logger.warning("No recipient email for training invoice %s", invoice.id)
         return False
 
+    # Resolve CC list up-front so the guard raises BEFORE we spend time
+    # generating a PDF. Missing accounting_email surfaces as 422.
+    if not tenant.accounting_email:
+        raise InvoiceSendConfigurationError(ACCOUNTING_EMAIL_REQUIRED_MESSAGE)
+
     # Generate PDF
     pdf_bytes = await generate_training_invoice_pdf(invoice, tenant, db)
 
     # Build email context — fall back to invoice recipient fields when no registration
     company_name = _get_company_name(tenant)
     support_email = _get_support_email(tenant)
+
+    # CC = tenant accounting_email + Training Company email (when set and
+    # not a duplicate of the accounting address or the TO recipient).
+    cc_list = [tenant.accounting_email]
+    recipient_norm = invoice.recipient_email.lower()
+    if support_email:
+        support_norm = support_email.lower()
+        if support_norm != tenant.accounting_email.lower() and support_norm != recipient_norm:
+            cc_list.append(support_email)
 
     if registration is not None:
         first_name = registration.contact_first_name or ""
@@ -204,6 +220,7 @@ async def send_training_invoice_email(
         text=body_text,
         reply_to=support_email or None,
         attachments=[attachment],
+        cc=cc_list,
         tenant_from_name=from_name,
     )
 

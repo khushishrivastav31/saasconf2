@@ -24,6 +24,7 @@ export interface Tenant {
   website: string | null;
   logo_url: string | null;
   email_domain: string | null;
+  accounting_email: string | null;
   // Resend email settings
   resend_api_key: string | null;
   resend_from_email: string | null;
@@ -81,6 +82,7 @@ export interface TenantUpdate {
   vat_number?: string;
   website?: string;
   email_domain?: string;
+  accounting_email?: string | null;
   // Resend email settings
   resend_api_key?: string;
   resend_from_email?: string;

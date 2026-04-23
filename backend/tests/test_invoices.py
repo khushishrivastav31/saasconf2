@@ -87,7 +87,13 @@ async def tenant_with_invoices_module(
     conferences_module: Module,
     invoices_module: Module,
 ) -> Tenant:
-    """Associate both conferences and invoices modules with the test tenant."""
+    """Associate both conferences and invoices modules with the test tenant.
+
+    Also seeds ``accounting_email`` because the invoice-send endpoint refuses
+    to dispatch without it (see ``InvoiceSendConfigurationError``). Tests that
+    specifically want to cover the missing-field path should override this.
+    """
+    tenant.accounting_email = "finance@test.example.com"
     for mod in (conferences_module, invoices_module):
         db_session.add(
             TenantModule(

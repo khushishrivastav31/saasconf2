@@ -87,6 +87,7 @@ export default function CompanyForm({
       phone: tenant.phone || '',
       vat_number: tenant.vat_number || '',
       website: tenant.website || '',
+      accounting_email: tenant.accounting_email || '',
       contact_persons: tenant.contact_persons || [],
       comments: tenant.comments || '',
     }),
@@ -95,6 +96,7 @@ export default function CompanyForm({
 
   const [formData, setFormData] = useState<TenantUpdate>(buildInitialFormData);
   const [isDirty, setIsDirty] = useState(false);
+  const [accountingEmailError, setAccountingEmailError] = useState<string | null>(null);
 
   const [newContact, setNewContact] = useState<ContactPerson>({
     first_name: '',
@@ -135,8 +137,22 @@ export default function CompanyForm({
       }
     }
 
+    if (formData.accounting_email) {
+      const emailError = validateEmail(formData.accounting_email);
+      if (emailError) {
+        setAccountingEmailError(emailError);
+        showToast(emailError, 'error');
+        return;
+      }
+    }
+
     const { contact_persons: _, ...payload } = formData;
-    updateMutation.mutate(payload as TenantUpdate);
+    // Empty string for accounting_email is equivalent to clearing it.
+    const normalized: TenantUpdate = {
+      ...payload,
+      accounting_email: payload.accounting_email ? payload.accounting_email : null,
+    };
+    updateMutation.mutate(normalized);
   }, [formData, updateMutation, showToast]);
 
   const handleDiscard = useCallback(() => {
@@ -391,6 +407,36 @@ export default function CompanyForm({
             onChange={(val) => handleFieldChange('vat_number', val)}
             country={formData.country || undefined}
           />
+        </div>
+
+        {/* Accounting Email */}
+        <div className="border-t dark:border-gray-700 pt-4">
+          <label
+            htmlFor="accounting-email"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Accounting Email
+          </label>
+          <input
+            id="accounting-email"
+            type="email"
+            placeholder="finance@example.com"
+            className={`mt-1 block w-full border ${
+              accountingEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
+            } rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
+            value={formData.accounting_email || ''}
+            onChange={(e) => {
+              handleFieldChange('accounting_email', e.target.value);
+              if (accountingEmailError) setAccountingEmailError(null);
+            }}
+            onBlur={(e) => setAccountingEmailError(validateEmail(e.target.value))}
+          />
+          {accountingEmailError && (
+            <p className="mt-1 text-xs text-red-600">{accountingEmailError}</p>
+          )}
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            CC'd on all invoices and credit notes. Required for sending invoices.
+          </p>
         </div>
 
         {/* Address */}

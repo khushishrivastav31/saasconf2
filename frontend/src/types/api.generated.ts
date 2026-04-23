@@ -25603,6 +25603,8 @@ export type components = {
       website?: string | null;
       /** Email Domain */
       email_domain?: string | null;
+      /** Accounting Email */
+      accounting_email?: string | null;
       /** Resend Api Key */
       resend_api_key?: string | null;
       /** Resend From Email */
@@ -25794,6 +25796,8 @@ export type components = {
       logo_url?: string | null;
       /** Email Domain */
       email_domain?: string | null;
+      /** Accounting Email */
+      accounting_email?: string | null;
       /** Resend Api Key */
       resend_api_key?: string | null;
       /** Resend From Email */
@@ -25874,6 +25878,8 @@ export type components = {
       website?: string | null;
       /** Email Domain */
       email_domain?: string | null;
+      /** Accounting Email */
+      accounting_email?: string | null;
       /** Resend Api Key */
       resend_api_key?: string | null;
       /** Resend From Email */

@@ -37,6 +37,7 @@ def _build_tenant_response(tenant: Tenant) -> TenantResponse:
         vat_number=tenant.vat_number,
         website=tenant.website,
         logo_url=tenant.logo_url,
+        accounting_email=tenant.accounting_email,
         contact_persons=[ContactPersonResponse(**cp) for cp in (tenant.contact_persons or [])],
         comments=tenant.comments,
         resend_api_key=tenant.resend_api_key,

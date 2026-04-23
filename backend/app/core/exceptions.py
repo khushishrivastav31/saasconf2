@@ -66,6 +66,17 @@ class ConflictError(SaaSConfException):
     pass
 
 
+class InvoiceSendConfigurationError(ValidationError):
+    """Raised when an invoice/credit-note send is attempted with incomplete tenant config.
+
+    Today this fires when ``tenants.accounting_email`` is unset: every invoice or credit
+    note must CC the accounting address, so the send is refused until an operator
+    configures it on *My Company*. Handled as HTTP 422 by the API layer.
+    """
+
+    pass
+
+
 class SubmissionValidationError(SaaSConfException):
     """Raised when paper submission validation fails with structured details."""
 

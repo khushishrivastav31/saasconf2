@@ -6,18 +6,53 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.email import send_email
 from app.core.email_templates import build_invoice_send_context, render_email
+from app.core.exceptions import InvoiceSendConfigurationError
 from app.core.invoice.pdf import generate_invoice_pdf
 from app.core.security.pii_crypto import read_pii
+from app.models.tenant import Tenant
 from app.schemas.email_template import EmailTemplateType
 
 if TYPE_CHECKING:
     from app.models.conference import Conference
     from app.models.invoice import Invoice
+
+
+ACCOUNTING_EMAIL_REQUIRED_MESSAGE = "Set Accounting Email on My Company before sending invoices or credit notes."
+
+
+async def _resolve_invoice_cc(
+    db: AsyncSession,
+    tenant_id: UUID,
+    recipient_email: str,
+    scope_contact_email: str | None,
+) -> list[str]:
+    """Return the CC list for an invoice/credit-note send.
+
+    Always includes the tenant ``accounting_email`` (raises
+    :class:`InvoiceSendConfigurationError` if unset), plus the scope's own
+    contact email (conference ``contact_email`` or Training Company email)
+    when it is set and not a duplicate of either the accounting address or
+    the TO recipient.
+    """
+    row = await db.execute(select(Tenant.accounting_email).where(Tenant.id == tenant_id))
+    accounting_email = row.scalar_one_or_none()
+    if not accounting_email:
+        raise InvoiceSendConfigurationError(ACCOUNTING_EMAIL_REQUIRED_MESSAGE)
+
+    cc_list = [accounting_email]
+    recipient_norm = recipient_email.lower()
+    if scope_contact_email:
+        scope_norm = scope_contact_email.lower()
+        if scope_norm != accounting_email.lower() and scope_norm != recipient_norm:
+            cc_list.append(scope_contact_email)
+    return cc_list
+
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +146,16 @@ async def send_invoice_email(
         logger.warning(f"Cannot send email for invoice {invoice.id}: no recipient email")
         return False
 
+    # Resolve CC list up-front so the guard raises BEFORE we spend time
+    # generating a PDF. Missing accounting_email surfaces as a 422 to the
+    # API caller via the InvoiceSendConfigurationError handler.
+    cc_list = await _resolve_invoice_cc(
+        db,
+        tenant_id=conference.tenant_id,
+        recipient_email=recipient_email,
+        scope_contact_email=conference.contact_email,
+    )
+
     try:
         # Generate PDF
         pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
@@ -156,6 +201,7 @@ async def send_invoice_email(
             html=rendered.body_html,
             text=rendered.body_text,
             attachments=[attachment],
+            cc=cc_list,
             db=db,
             tenant_id=conference.tenant_id,
             conference_id=conference.id,
@@ -195,7 +241,10 @@ async def send_replacement_invoice_emails(
     credit_note_sent = False
     new_invoice_sent = False
 
-    # Send credit note email
+    # Send credit note email.
+    # InvoiceSendConfigurationError (e.g. missing accounting_email) has to
+    # escape so the caller can surface it as 422 — swallowing it here would
+    # silently produce an invoice with no CC.
     try:
         credit_note_sent = await send_invoice_email(
             db=db,
@@ -203,6 +252,8 @@ async def send_replacement_invoice_emails(
             conference=conference,
             custom_message=custom_message,
         )
+    except InvoiceSendConfigurationError:
+        raise
     except Exception as e:
         logger.error(f"Failed to send credit note email for {credit_note.invoice_number}: {e}")
 
@@ -222,6 +273,8 @@ async def send_replacement_invoice_emails(
             payment_link_url=payment_link_url,
             custom_message=new_invoice_message,
         )
+    except InvoiceSendConfigurationError:
+        raise
     except Exception as e:
         logger.error(f"Failed to send new invoice email for {new_invoice.invoice_number}: {e}")
 

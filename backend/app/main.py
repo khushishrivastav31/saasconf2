@@ -20,6 +20,7 @@ from app.core.exceptions import (
     AuthenticationError,
     AuthorizationError,
     ConflictError,
+    InvoiceSendConfigurationError,
     NotFoundError,
     SaaSConfException,
     SubmissionValidationError,
@@ -272,6 +273,12 @@ async def submission_validation_error_handler(request: Request, exc: SubmissionV
     if exc.char_errors:
         detail["char_errors"] = exc.char_errors
     return _cors_response(request, 422, {"detail": detail})
+
+
+@app.exception_handler(InvoiceSendConfigurationError)
+async def invoice_send_config_error_handler(request: Request, exc: InvoiceSendConfigurationError) -> JSONResponse:
+    """Missing tenant-level invoice config (e.g. accounting_email) → 422."""
+    return _cors_response(request, 422, {"detail": exc.message, "type": "invoice_send_configuration_error"})
 
 
 @app.exception_handler(SaaSConfException)
