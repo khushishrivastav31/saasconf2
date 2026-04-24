@@ -694,3 +694,117 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
           retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # Rollback staging on E2E failure
+  #
+  # Fires when deploy-staging succeeded (new code + containers
+  # live on staging) but E2E tests caught a regression. Restores
+  # the ``:previous`` image tags that the deploy job captured in
+  # its "Tag previous images for rollback" step, then force-
+  # recreates backend/frontend/nginx off those older images.
+  #
+  # Scope: image-tag swap only. DB migrations already ran during
+  # deploy and are assumed forward-compatible with the previous
+  # code (our migrations are additive). If a rollback needs to
+  # also revert DB state, do it manually — auto-reverting
+  # migrations is destructive and out of scope here.
+  # ─────────────────────────────────────────────────────────────
+  rollback-staging:
+    name: Rollback Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+    needs: [deploy-staging, e2e-tests]
+    if: |
+      always() &&
+      needs.deploy-staging.result == 'success' &&
+      needs.e2e-tests.result == 'failure' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Restore :previous image tags
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << EOF
+            set -e
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            SHORT_SHA="${GITHUB_SHA::8}"
+            rolled_back=0
+            for svc in backend frontend; do
+              img=\$(docker compose images \$svc --format json 2>/dev/null | head -1 | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Repository',''))" 2>/dev/null || true)
+              if [ -z "\$img" ]; then
+                echo "::warning::Could not resolve image repo for \$svc; skipping"
+                continue
+              fi
+              if ! docker image inspect "\$img:previous" >/dev/null 2>&1; then
+                echo "::warning::No \$img:previous tag found — cannot roll back \$svc"
+                continue
+              fi
+              # Preserve the broken image under a SHA tag for post-mortem,
+              # then swap :previous into :latest so docker compose up picks
+              # up the older image.
+              docker tag "\$img:latest" "\$img:failed-\$SHORT_SHA" || true
+              docker tag "\$img:previous" "\$img:latest"
+              echo "Rolled back \$img:latest ← :previous (broken image saved as :failed-\$SHORT_SHA)"
+              rolled_back=\$((rolled_back + 1))
+            done
+
+            if [ "\$rolled_back" -eq 0 ]; then
+              echo "::error::No services were rolled back — :previous tags missing"
+              exit 1
+            fi
+
+            echo "Restarting app containers off the restored :latest tags..."
+            docker compose up -d --force-recreate --no-deps backend frontend nginx
+          EOF
+
+      - name: Verify rollback health
+        run: |
+          echo "Waiting for rolled-back services to come up..."
+          sleep 20
+
+          for i in 1 2 3 4 5 6 7 8; do
+            echo "Post-rollback health check $i/8..."
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1) || true
+            echo "  HTTP status: $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Backend healthy after rollback"
+              break
+            fi
+            if [ "$i" -eq 8 ]; then
+              echo "::error::Backend still unhealthy after rollback — staging needs manual intervention"
+              exit 1
+            fi
+            sleep 15
+          done
+
+          for i in 1 2 3 4 5; do
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://staging.sonrisa.ventures 2>&1) || true
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Frontend healthy after rollback"
+              break
+            fi
+            if [ "$i" -eq 5 ]; then
+              echo "::error::Frontend still unhealthy after rollback — staging needs manual intervention"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Notify rollback
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "::warning::Staging rolled back to previous release after E2E failure on ${GITHUB_SHA::8}. Investigate and push a fix."
+          else
+            echo "::error::Rollback attempt FAILED. Staging may be in a degraded state — SSH in and inspect manually."
+          fi
