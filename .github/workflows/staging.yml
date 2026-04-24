@@ -526,12 +526,22 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
             cd ${{ env.STAGING_PATH }}/deploy/staging
 
-            # Tag current images as :previous for rollback
+            # Tag current :latest images as :previous so the rollback-staging
+            # job can restore them if E2E later fails. ``docker compose images``
+            # prints a table with the Repository in column 2 of row 2 (header
+            # is row 1). We parsed via ``--format json`` previously, but
+            # Compose v2 returns a JSON *array* that ``head -1`` shreds into
+            # ``[`` — python then crashed and $img was silently empty, so
+            # :previous tags never got created. Awk on the plain table is
+            # format-stable.
             for svc in backend frontend; do
-              img=$(docker compose images $svc --format json 2>/dev/null | head -1 | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Repository',''))" 2>/dev/null || true)
+              img=$(docker compose images "$svc" 2>/dev/null | awk 'NR==2 {print $2}')
+              echo "Resolved image repo for $svc: '${img:-<empty>}'"
               if [ -n "$img" ]; then
                 docker tag "$img:latest" "$img:previous" 2>/dev/null || true
                 echo "Tagged $img:latest → $img:previous"
+              else
+                echo "::warning::Could not resolve image repo for $svc — rollback will have nothing to restore"
               fi
             done
           EOF
@@ -800,32 +810,41 @@ jobs:
 
       - name: Restore :previous image tags
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << EOF
+          # Pre-compute SHORT_SHA locally so the remote heredoc can be
+          # single-quoted (no $-expansion surprises). ``GITHUB_SHA`` is always
+          # exported in GH Actions runners.
+          SHORT_SHA="${GITHUB_SHA::8}"
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+            "export SHORT_SHA='$SHORT_SHA' && bash -s" << 'EOF'
             set -e
             cd ${{ env.STAGING_PATH }}/deploy/staging
 
-            SHORT_SHA="${GITHUB_SHA::8}"
+            # Awk-on-plain-table matches the tag-previous step. Compose v2's
+            # --format json returns an array that head -1 reduces to "[",
+            # breaking the old python pipe silently — hence rollback never
+            # actually ran. Keep the two sites consistent.
             rolled_back=0
             for svc in backend frontend; do
-              img=\$(docker compose images \$svc --format json 2>/dev/null | head -1 | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Repository',''))" 2>/dev/null || true)
-              if [ -z "\$img" ]; then
-                echo "::warning::Could not resolve image repo for \$svc; skipping"
+              img=$(docker compose images "$svc" 2>/dev/null | awk 'NR==2 {print $2}')
+              echo "Resolved image repo for $svc: '${img:-<empty>}'"
+              if [ -z "$img" ]; then
+                echo "::warning::Could not resolve image repo for $svc; skipping"
                 continue
               fi
-              if ! docker image inspect "\$img:previous" >/dev/null 2>&1; then
-                echo "::warning::No \$img:previous tag found — cannot roll back \$svc"
+              if ! docker image inspect "$img:previous" >/dev/null 2>&1; then
+                echo "::warning::No $img:previous tag found — cannot roll back $svc"
                 continue
               fi
               # Preserve the broken image under a SHA tag for post-mortem,
               # then swap :previous into :latest so docker compose up picks
               # up the older image.
-              docker tag "\$img:latest" "\$img:failed-\$SHORT_SHA" || true
-              docker tag "\$img:previous" "\$img:latest"
-              echo "Rolled back \$img:latest ← :previous (broken image saved as :failed-\$SHORT_SHA)"
-              rolled_back=\$((rolled_back + 1))
+              docker tag "$img:latest" "$img:failed-$SHORT_SHA" || true
+              docker tag "$img:previous" "$img:latest"
+              echo "Rolled back $img:latest ← :previous (broken image saved as :failed-$SHORT_SHA)"
+              rolled_back=$((rolled_back + 1))
             done
 
-            if [ "\$rolled_back" -eq 0 ]; then
+            if [ "$rolled_back" -eq 0 ]; then
               echo "::error::No services were rolled back — :previous tags missing"
               exit 1
             fi
