@@ -186,10 +186,14 @@ jobs:
 
       - name: Lint
         working-directory: frontend
-        # Budget is the current count of grandfathered max-lines warnings
-        # (files >400 LOC). Must stay ≤ current count; lower as files are
-        # split. See frontend/eslint.config.js comment + audit step 38.
-        run: npx eslint src/ --max-warnings 105
+        # Budget mixes two warning sources: grandfathered max-lines warnings
+        # (files >400 LOC) and, since the 2026-04 bump of
+        # ``eslint-plugin-react-hooks`` to 6.x, React Compiler
+        # ``incompatible-library`` notices on ``react-hook-form`` ``watch()``
+        # call sites. Must stay ≤ current count; lower as files are split
+        # and ``watch()`` calls migrate to ``useWatch({ control, name })``.
+        # See frontend/eslint.config.js comment + audit step 38.
+        run: npx eslint src/ --max-warnings 106
 
       - name: Type check
         working-directory: frontend

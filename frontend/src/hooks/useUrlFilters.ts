@@ -44,6 +44,11 @@ export function useUrlFilters<T extends FilterConfig>(config: T): UseUrlFiltersR
   const configRef = useRef(config);
   configRef.current = config;
 
+  // Stable primitive key of config's shape, used as a memo dep.
+  // Captures the same re-compute signal as spreading Object.keys(config)
+  // without violating react-hooks/use-memo's array-literal requirement.
+  const configKeysKey = Object.keys(config).join('|');
+
   // Read current values from URL params
   const values = useMemo(() => {
     const result: Record<string, string | number> = {};
@@ -60,7 +65,7 @@ export function useUrlFilters<T extends FilterConfig>(config: T): UseUrlFiltersR
     }
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, ...Object.keys(config)]);
+  }, [searchParams, configKeysKey]);
 
   // Debounced search value
   const searchValue = typeof config.search === 'string' ? (values.search as string) : undefined;
@@ -104,7 +109,7 @@ export function useUrlFilters<T extends FilterConfig>(config: T): UseUrlFiltersR
     }
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createSetter, ...Object.keys(config)]);
+  }, [createSetter, configKeysKey]);
 
   // hasActiveFilters: true if any filter differs from its default (excluding page)
   const hasActiveFilters = useMemo(() => {
@@ -114,7 +119,7 @@ export function useUrlFilters<T extends FilterConfig>(config: T): UseUrlFiltersR
     }
     return false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, ...Object.keys(config)]);
+  }, [values, configKeysKey]);
 
   // clearAllFilters: reset everything to defaults
   const clearAllFilters = useCallback(() => {

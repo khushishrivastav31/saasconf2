@@ -131,14 +131,6 @@ export default function AuthenticatedRegistrationForm({
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
 
-  // Auto-fetch ALUMNI discount validation on mount if eligible
-  useEffect(() => {
-    if (alumniInfo?.has_discount && conferenceId) {
-      fetchAlumniDiscount();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alumniInfo?.has_discount, conferenceId]);
-
   const fetchAlumniDiscount = async () => {
     if (!conferenceId) return;
 
@@ -151,6 +143,14 @@ export default function AuthenticatedRegistrationForm({
       console.error('Failed to fetch ALUMNI discount:', error);
     }
   };
+
+  // Auto-fetch ALUMNI discount validation on mount if eligible
+  useEffect(() => {
+    if (alumniInfo?.has_discount && conferenceId) {
+      fetchAlumniDiscount();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alumniInfo?.has_discount, conferenceId]);
 
   // Validate a manually-entered discount code (mirrors public form behaviour)
   const validateDiscountCode = useCallback(

@@ -34,14 +34,6 @@ function PaymentForm({
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
-    // When parent form is submitted, trigger payment confirmation
-    if (isSubmitting && stripe && elements && !isProcessing) {
-      handlePayment();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubmitting]);
-
   const handlePayment = async () => {
     if (!stripe || !elements || isProcessing) {
       return;
@@ -70,6 +62,14 @@ function PaymentForm({
       setIsProcessing(false);
     }
   };
+
+  useEffect(() => {
+    // When parent form is submitted, trigger payment confirmation
+    if (isSubmitting && stripe && elements && !isProcessing) {
+      handlePayment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubmitting]);
 
   // PaymentElement options with pre-filled billing name
   const paymentElementOptions = billingName
