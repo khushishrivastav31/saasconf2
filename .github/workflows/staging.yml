@@ -104,11 +104,19 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install system dependencies (WeasyPrint)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
-            libcairo2 libgdk-pixbuf-2.0-0 libffi-dev libglib2.0-0 fonts-dejavu-core
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          # Cached across runs — saves ~90s vs. cold apt-get install.
+          packages: >-
+            libpango-1.0-0
+            libpangocairo-1.0-0
+            libpangoft2-1.0-0
+            libcairo2
+            libgdk-pixbuf-2.0-0
+            libffi-dev
+            libglib2.0-0
+            fonts-dejavu-core
+          version: 1.0
 
       - name: Install dependencies
         working-directory: backend
@@ -123,11 +131,20 @@ jobs:
           ruff check app/
           ruff format --check app/
 
+      - name: Cache mypy type-check results
+        uses: actions/cache@v4
+        with:
+          path: backend/.mypy_cache
+          # Invalidate on requirements (deps drive type surface) + app/ changes
+          # (mypy caches per-file hash internally, so this is best-effort).
+          key: mypy-${{ runner.os }}-py3.12-${{ hashFiles('backend/requirements.txt', 'backend/pyproject.toml') }}
+          restore-keys: |
+            mypy-${{ runner.os }}-py3.12-
+
       - name: Type check with mypy
         working-directory: backend
         run: |
           pip install mypy==1.19.1
-          rm -rf .mypy_cache
           mypy app/ --config-file=pyproject.toml
 
       - name: Run tests
@@ -138,7 +155,13 @@ jobs:
           JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
           SUPER_ADMIN_PASSWORD: TestPassword123!
         run: |
-          pytest tests/ -v --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=50
+          # -n auto spreads the 3,000+ tests across all available cores.
+          # Each xdist worker gets its own per-worker test database via
+          # conftest.py (PYTEST_XDIST_WORKER → test_gwN), so the per-test
+          # TRUNCATE loop stays isolated. --dist=loadfile keeps all tests in
+          # one file on the same worker so module-level fixtures aren't
+          # rebuilt. No -v: parallel output is noisy and hard to read.
+          pytest tests/ -n auto --dist=loadfile --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=50
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6

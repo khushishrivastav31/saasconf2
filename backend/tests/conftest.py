@@ -60,8 +60,43 @@ def _mock_resend_client(request):
 # ── Test database engine ─────────────────────────────────────────────────
 # NullPool prevents connection reuse across event loops, avoiding
 # asyncpg "attached to a different loop" errors.
+#
+# Under pytest-xdist each worker is a separate process; without isolation
+# they would TRUNCATE each other's data mid-test. We detect the worker id
+# from ``PYTEST_XDIST_WORKER`` (set by xdist itself) and route each worker
+# to its own dedicated database (``<base>_gw0``, ``_gw1``, …). Serial runs
+# leave the URL untouched.
+#
+# DATABASE_URL override is done BEFORE any app import so
+# ``settings.DATABASE_URL`` (cached) picks up the per-worker value.
 
-TEST_DATABASE_URL = os.environ["DATABASE_URL"]
+_BASE_DATABASE_URL = os.environ["DATABASE_URL"]
+
+
+def _derive_worker_database_url(base_url: str, worker_id: str) -> str:
+    """Return ``base_url`` with ``_<worker_id>`` appended to the DB name."""
+    # URL shape: ``postgresql+asyncpg://user:pass@host:port/dbname``
+    scheme_and_host, _, dbname = base_url.rpartition("/")
+    return f"{scheme_and_host}/{dbname}_{worker_id}"
+
+
+_XDIST_WORKER = os.environ.get("PYTEST_XDIST_WORKER", "").strip()
+if _XDIST_WORKER:
+    TEST_DATABASE_URL = _derive_worker_database_url(_BASE_DATABASE_URL, _XDIST_WORKER)
+    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+else:
+    TEST_DATABASE_URL = _BASE_DATABASE_URL
+
+
+def _admin_database_url(test_db_url: str) -> str:
+    """Return the same server URL pointing at the ``postgres`` maintenance DB.
+
+    Needed because ``CREATE DATABASE`` cannot run inside a transaction and
+    cannot target the database you are currently connected to.
+    """
+    scheme_and_host, _, _ = test_db_url.rpartition("/")
+    return f"{scheme_and_host}/postgres"
+
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 TestSessionLocal = async_sessionmaker(
@@ -79,7 +114,35 @@ RLS_BYPASS = text("SELECT set_config('app.is_super_admin', 'true', true)")
 # ── Database lifecycle fixtures ──────────────────────────────────────────
 
 
+async def _ensure_worker_database_exists() -> None:
+    """Create the per-worker test database when running under xdist.
+
+    No-op for the serial case (``PYTEST_XDIST_WORKER`` empty) — the existing
+    ``saasconf_test`` DB is assumed to already exist (created by the local
+    docker-compose setup or the CI postgres service).
+    """
+    if not _XDIST_WORKER:
+        return
+    _, _, dbname = TEST_DATABASE_URL.rpartition("/")
+    admin_engine = create_async_engine(
+        _admin_database_url(TEST_DATABASE_URL),
+        isolation_level="AUTOCOMMIT",
+        poolclass=NullPool,
+    )
+    try:
+        async with admin_engine.connect() as conn:
+            exists = (await conn.execute(text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": dbname})).scalar()
+            if not exists:
+                # Quote the identifier manually since asyncpg/SQLAlchemy won't
+                # parameterize DDL. ``dbname`` comes from our own URL derivation
+                # above (worker id is ``gwN``), so it's safe to interpolate.
+                await conn.execute(text(f'CREATE DATABASE "{dbname}"'))
+    finally:
+        await admin_engine.dispose()
+
+
 async def _create_tables() -> None:
+    await _ensure_worker_database_exists()
     async with test_engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS unaccent"))
         await conn.run_sync(Base.metadata.create_all)
