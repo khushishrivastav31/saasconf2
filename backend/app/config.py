@@ -53,7 +53,15 @@ class Settings(BaseSettings):
     # JWT Configuration
     JWT_SECRET_KEY: str  # No default — MUST be set via environment variable
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    # 60 min access tokens with 7-day rotating refresh tokens. The shorter
+    # 15-minute window we used previously was incompatible with the E2E
+    # suite (~25 min single-worker on CI): the access token expired
+    # mid-suite, the first 401 triggered a refresh, refresh-token rotation
+    # invalidated the original token in admin.json, and every subsequent
+    # context loaded from the stale storageState got bounced to /login.
+    # 60 min is industry-standard for SaaS; the rotating refresh token
+    # remains the defense-in-depth against long-lived bearer-token theft.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # PII column encryption (Fernet key — generate with Fernet.generate_key())
