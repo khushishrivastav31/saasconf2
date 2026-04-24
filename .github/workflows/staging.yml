@@ -141,7 +141,7 @@ jobs:
           pytest tests/ -v --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=50
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         if: github.event_name == 'push'
         with:
           files: backend/coverage.xml
@@ -318,7 +318,7 @@ jobs:
         run: npm audit --audit-level=critical
 
       - name: Scan for vulnerabilities in Dockerfiles
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -340,7 +340,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@v3.94.0
+        uses: trufflesecurity/trufflehog@v3.95.2
         with:
           extra_args: --only-verified
 
