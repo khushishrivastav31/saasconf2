@@ -17,6 +17,12 @@ import psycopg2  # type: ignore[import-untyped]
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore[import-untyped]
 
+# Entire module is ``slow`` — the fixture runs ``alembic upgrade head`` in a
+# subprocess (~9s setup) and ``test_downgrade_drops_matviews`` runs a full
+# downgrade+upgrade cycle (~500s). PR events in CI deselect with
+# ``-m "not slow"``; push-to-main still runs the whole suite.
+pytestmark = pytest.mark.slow
+
 # Walk up from this file to the first directory that contains ``alembic.ini``.
 # Depth-independent so re-organizing ``tests/`` doesn't break the locator
 # (this file has moved between subdirs before — see PR history).

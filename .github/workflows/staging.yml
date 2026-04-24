@@ -46,6 +46,11 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              # CI-config edits must revalidate the backend suite — the
+              # pytest invocation + env live here, and regressions in the
+              # workflow (e.g. a broken --cov toggle) are only catchable
+              # by actually running the tests.
+              - '.github/workflows/staging.yml'
             frontend:
               - 'frontend/src/**'
               - 'frontend/e2e/**'
@@ -53,6 +58,8 @@ jobs:
               - 'frontend/tsconfig*.json'
               - 'frontend/vite.config.*'
               - 'frontend/eslint.config.*'
+              # Same rationale as the backend filter: re-run on CI edits.
+              - '.github/workflows/staging.yml'
 
   # ─────────────────────────────────────────────────────────────
   # Backend Tests
@@ -161,7 +168,25 @@ jobs:
           # TRUNCATE loop stays isolated. --dist=loadfile keeps all tests in
           # one file on the same worker so module-level fixtures aren't
           # rebuilt. No -v: parallel output is noisy and hard to read.
-          pytest tests/ -n auto --dist=loadfile --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=50
+          #
+          # Coverage.py is a ~25-40% tax. We only pay it on push-to-main
+          # runs (which upload to Codecov); PR events skip it to keep CI
+          # feedback fast. --durations=50 prints the slowest 50 tests so
+          # we can spot structural slowdowns as the suite grows.
+          #
+          # ``-m "not slow"`` on PR events deselects the two migration-chain
+          # integrity tests (test_dashboard_matviews, test_rls_coverage)
+          # that each spawn ``alembic upgrade/downgrade`` subprocesses and
+          # collectively consume ~17 min of wall time on their own. The
+          # push-to-main run still executes them so regressions in the
+          # matviews or RLS-coverage guards are caught before any deploy.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pytest tests/ -n auto --dist=loadfile --durations=50 -m "not slow"
+          else
+            pytest tests/ -n auto --dist=loadfile --durations=50 \
+              --cov=app --cov-report=xml --cov-report=html \
+              --cov-report=term-missing --cov-fail-under=50
+          fi
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
@@ -173,7 +198,8 @@ jobs:
 
       - name: Upload backend coverage report
         uses: actions/upload-artifact@v7
-        if: always()
+        # Only exists on push-to-main runs (PR runs skip --cov for speed).
+        if: github.event_name == 'push'
         with:
           name: backend-coverage-report
           path: backend/htmlcov/

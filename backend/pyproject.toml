@@ -168,6 +168,13 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 markers = [
     "no_mock_email: opt out of the autouse _mock_resend_client fixture",
+    # Tests that spawn alembic subprocesses (full migration chain up/down)
+    # or otherwise take tens of seconds on their own. Skipped on PR events
+    # in CI via ``-m "not slow"`` to keep feedback fast; push-to-main runs
+    # the full suite including these. As of 2026-04-24, the two slow test
+    # modules (``test_dashboard_matviews``, ``test_rls_coverage``) account
+    # for ~17 of ~19 minutes of local wall time.
+    "slow: runs full alembic migration cycles; skipped on PR events",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",

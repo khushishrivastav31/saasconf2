@@ -40,6 +40,14 @@ import psycopg2  # type: ignore[import-untyped]
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore[import-untyped]
 
+# Entire module is ``slow`` — the fixture runs ``alembic upgrade head`` in a
+# subprocess (full migration chain, ~7s setup) and teardown drops the DB
+# (another ~500s on systems with slow disk). PR events in CI deselect this
+# with ``-m "not slow"``; push-to-main still runs it, so RLS regressions
+# are caught before any staging deploy.
+pytestmark = pytest.mark.slow
+
+
 # Tables that have `tenant_id` but do NOT yet have `ENABLE ROW LEVEL SECURITY`.
 # Snapshotted 2026-04-17, shrunk 2026-04-20 after migration 206 closed 7 gaps.
 # Adding to this set is forbidden; removing is a win.
