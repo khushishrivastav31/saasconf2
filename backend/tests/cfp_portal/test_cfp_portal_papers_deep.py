@@ -227,7 +227,7 @@ class TestPaperResponseFields:
     """Verify full response field population including cfp_title, conference_name, session_type_name."""
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_create_paper_with_all_fields(
         self,
         mock_email: AsyncMock,
@@ -275,7 +275,7 @@ class TestPaperResponseFields:
         assert data["submitted_at"] is None
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_email_background")
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_email_background")
     async def test_paper_with_multiple_cospeakers_full_response(
         self,
         mock_bg_email: MagicMock,
@@ -817,7 +817,7 @@ class TestCospeakerSync:
     """Test cospeaker add/remove/update sync logic."""
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_remove_cospeaker_by_updating_list(
         self,
         mock_email: AsyncMock,
@@ -855,7 +855,7 @@ class TestCospeakerSync:
         assert cospeakers[0]["email"] == second_applicant.email
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_cospeaker_nonexistent_email_fails(
         self,
         mock_email: AsyncMock,
@@ -879,7 +879,7 @@ class TestCospeakerSync:
         assert "no registered applicant" in resp.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_existing_cospeaker_preserves_status_on_update(
         self,
         mock_email: AsyncMock,
@@ -1113,7 +1113,7 @@ class TestAttachments:
         assert resp.status_code == 403
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_upload_paper_video_to_non_draft_fails(
         self,
         mock_email: AsyncMock,
@@ -1632,7 +1632,7 @@ class TestInvitationListDetail:
     """Test invitation list includes all enriched fields."""
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_invitation_includes_cfp_and_conference_info(
         self,
         mock_email: AsyncMock,

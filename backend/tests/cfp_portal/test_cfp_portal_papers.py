@@ -438,7 +438,7 @@ class TestPortalPapers:
         assert data["total"] == 0
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_create_paper(
         self,
         mock_email: AsyncMock,
@@ -488,7 +488,7 @@ class TestPortalPapers:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_list_papers_after_create(
         self,
         mock_email: AsyncMock,
@@ -520,7 +520,7 @@ class TestPortalPapers:
         assert "Listed Paper" in titles
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_get_paper_detail(
         self,
         mock_email: AsyncMock,
@@ -569,7 +569,7 @@ class TestPortalPapers:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_update_paper(
         self,
         mock_email: AsyncMock,
@@ -597,7 +597,7 @@ class TestPortalPapers:
         assert data["abstract_short"] == "New abstract"
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_update_non_draft_fails(
         self,
         mock_email: AsyncMock,
@@ -630,7 +630,7 @@ class TestPortalPapers:
         assert update_resp.status_code == 400
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_submit_paper(
         self,
         mock_email: AsyncMock,
@@ -657,7 +657,7 @@ class TestPortalPapers:
         assert data["submitted_at"] is not None
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_submit_non_draft_fails(
         self,
         mock_email: AsyncMock,
@@ -689,7 +689,7 @@ class TestPortalPapers:
         assert resp2.status_code == 400
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_unsubmit_paper(
         self,
         mock_email: AsyncMock,
@@ -723,7 +723,7 @@ class TestPortalPapers:
         assert data["submitted_at"] is None
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_unsubmit_draft_fails(
         self,
         mock_email: AsyncMock,
@@ -747,7 +747,7 @@ class TestPortalPapers:
         assert resp.status_code == 400
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_full_lifecycle(
         self,
         mock_email: AsyncMock,
@@ -803,7 +803,7 @@ class TestPortalPapers:
         assert resub_resp.json()["status"] == "submitted"
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_delete_draft_paper(
         self,
         mock_email: AsyncMock,
@@ -835,7 +835,7 @@ class TestPortalPapers:
         assert get_resp.status_code == 404
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_delete_submitted_fails(
         self,
         mock_email: AsyncMock,
@@ -866,7 +866,7 @@ class TestPortalPapers:
         assert del_resp.status_code == 400
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_other_applicant_cannot_access(
         self,
         mock_email: AsyncMock,
@@ -908,7 +908,7 @@ class TestPortalPapers:
         assert del_resp.status_code == 404
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_email_background")
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_email_background")
     async def test_create_paper_with_cospeakers(
         self,
         mock_bg_email: MagicMock,
@@ -939,7 +939,7 @@ class TestPortalPapers:
         mock_bg_email.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_max_cospeakers(
         self,
         mock_email: AsyncMock,
@@ -979,7 +979,7 @@ class TestPortalPapers:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_cannot_add_self_as_cospeaker(
         self,
         mock_email: AsyncMock,
@@ -1035,7 +1035,7 @@ class TestPortalInvitations:
         assert data["total"] == 0
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_cospeaker_sees_invitation(
         self,
         mock_email: AsyncMock,
@@ -1074,7 +1074,7 @@ class TestPortalInvitations:
         assert inv["main_speaker_last_name"] == "Speaker"
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_accept_invitation(
         self,
         mock_email: AsyncMock,
@@ -1113,7 +1113,7 @@ class TestPortalInvitations:
         assert inv["invitation_status"] == "accepted"
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_decline_invitation(
         self,
         mock_email: AsyncMock,
@@ -1152,7 +1152,7 @@ class TestPortalInvitations:
         assert inv["invitation_status"] == "declined"
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_double_response_fails(
         self,
         mock_email: AsyncMock,
