@@ -88,6 +88,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+          --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,size=1g
+          --shm-size 1g
 
       redis:
         image: redis:7.4-alpine
@@ -165,9 +167,15 @@ jobs:
           # -n auto spreads the 3,000+ tests across all available cores.
           # Each xdist worker gets its own per-worker test database via
           # conftest.py (PYTEST_XDIST_WORKER → test_gwN), so the per-test
-          # TRUNCATE loop stays isolated. --dist=loadfile keeps all tests in
-          # one file on the same worker so module-level fixtures aren't
-          # rebuilt. No -v: parallel output is noisy and hard to read.
+          # TRUNCATE loop stays isolated.
+          #
+          # ``--dist=worksteal`` (xdist 3.0+): hands tests out one at a
+          # time and lets idle workers steal pending tests from busy ones.
+          # We previously used ``loadfile`` which keeps an entire file on
+          # one worker — a single large file becomes a wall-time floor.
+          # ``worksteal`` rebalances at runtime and trims the long-tail
+          # worker; the win compounds when we move to 4+ core runners.
+          # No -v: parallel output is noisy and hard to read.
           #
           # Coverage.py is a ~25-40% tax. We only pay it on push-to-main
           # runs (which upload to Codecov); PR events skip it to keep CI
@@ -181,9 +189,9 @@ jobs:
           # in the ``backend-slow-tests`` job (push-to-main only), keeping
           # this critical-path job focused on the ~3k unit/integration tests.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pytest tests/ -n auto --dist=loadfile --durations=50 -m "not slow"
+            pytest tests/ -n auto --dist=worksteal --durations=50 -m "not slow"
           else
-            pytest tests/ -n auto --dist=loadfile --durations=50 -m "not slow" \
+            pytest tests/ -n auto --dist=worksteal --durations=50 -m "not slow" \
               --cov=app --cov-report=xml --cov-report=html \
               --cov-report=term-missing --cov-fail-under=50
           fi
@@ -235,6 +243,7 @@ jobs:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
           POSTGRES_DB: test
+          POSTGRES_INITDB_ARGS: "--data-checksums=off"
         ports:
           - 5432:5432
         options: >-
@@ -242,6 +251,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+          --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,size=1g
+          --shm-size 1g
 
     steps:
       - name: Checkout code
