@@ -9,14 +9,14 @@ packages = [{include = "app"}]
 [tool.poetry.dependencies]
 python = "^3.12"
 # Web framework
-fastapi = "0.135.1"
-uvicorn = {version = "0.41.0", extras = ["standard"]}
+fastapi = "0.136.1"
+uvicorn = {version = "0.46.0", extras = ["standard"]}
 starlette = "0.52.1"
 python-multipart = "0.0.22"
 # Database
 sqlalchemy = "2.0.48"
 asyncpg = "0.31.0"
-psycopg2-binary = "2.9.11"
+psycopg2-binary = "2.9.12"
 alembic = "1.18.4"
 redis = "7.3.0"
 # Auth & security
@@ -26,8 +26,8 @@ pyotp = "2.9.0"
 qrcode = "8.0"
 cairosvg = "2.9.0"
 # Validation
-pydantic = "2.12.5"
-pydantic-settings = "2.13.1"
+pydantic = "2.13.3"
+pydantic-settings = "2.14.0"
 email-validator = "2.3.0"
 phonenumbers = "9.0.25"
 python-stdnum = "2.2"
@@ -40,12 +40,12 @@ factur-x = "3.15"
 pypdf = "6.9.1"
 openpyxl = "3.1.5"
 mammoth = "1.11.0"
-striprtf = "0.0.29"
+striprtf = "0.0.31"
 python-docx = "1.2.0"
 html2docx = "1.6.0"
 lxml = "6.0.2"
 # Payments
-stripe = "14.4.1"
+stripe = "15.1.0"
 # Infrastructure
 slowapi = "0.1.9"
 sentry-sdk = {version = "2.54.0", extras = ["fastapi"]}
