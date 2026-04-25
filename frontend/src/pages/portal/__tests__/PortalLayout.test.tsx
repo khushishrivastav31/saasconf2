@@ -30,7 +30,13 @@ import portalApi from '../../../config/portalApi';
 const mockPortalApi = vi.mocked(portalApi);
 
 interface ApiHandlers {
-  trainings?: { items: Array<{ id: number }> };
+  trainings?: {
+    items: Array<{
+      id: number;
+      start_date?: string | null;
+      status?: string;
+    }>;
+  };
 }
 
 function setupApi({ trainings = { items: [] } }: ApiHandlers = {}) {
@@ -93,5 +99,63 @@ describe('PortalLayout — Trainings sidebar entry', () => {
     expect(screen.queryByRole('link', { name: /my trainings/i })).not.toBeInTheDocument();
     // The whole "TRAININGS" section heading should also be absent.
     expect(screen.queryByText(/^trainings$/i)).not.toBeInTheDocument();
+  });
+
+  // "Active" badge = upcoming (start_date >= today) AND not cancelled. The
+  // sidebar render at PortalLayout.tsx:643 only paints the badge span when
+  // the count is > 0 — same affordance as Assigned Papers's
+  // ``pendingAssignments``. Items with no start_date are ignored
+  // (we can't tell if they're upcoming).
+  it('shows an active-trainings badge counting only upcoming, non-cancelled items', async () => {
+    const today = new Date();
+    const future = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const past = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    setupApi({
+      trainings: {
+        items: [
+          { id: 1, start_date: future, status: 'paid' }, // counts
+          { id: 2, start_date: future, status: 'registered' }, // counts
+          { id: 3, start_date: future, status: 'cancelled' }, // excluded — cancelled
+          { id: 4, start_date: past, status: 'completed' }, // excluded — past
+          { id: 5, start_date: null, status: 'paid' }, // excluded — no date
+        ],
+      },
+    });
+
+    renderLayout();
+
+    const link = await screen.findByRole('link', { name: /my trainings/i });
+    expect(link).toBeInTheDocument();
+    // The badge text "2" lives in a sibling <span> next to the name. The
+    // accessible name of the link concatenates them as "My Trainings2"
+    // (no whitespace). Asserting on the link's textContent is the cleanest
+    // way to require both pieces.
+    expect(link.textContent).toContain('My Trainings');
+    expect(link.textContent).toMatch(/2/);
+  });
+
+  it('does not paint a badge when no trainings are upcoming', async () => {
+    const past = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    setupApi({
+      trainings: {
+        items: [
+          { id: 1, start_date: past, status: 'completed' },
+          { id: 2, start_date: past, status: 'paid' },
+        ],
+      },
+    });
+
+    renderLayout();
+
+    const link = await screen.findByRole('link', { name: /my trainings/i });
+    // Link is visible (hasTrainings is still true), but no count.
+    expect(link).toBeInTheDocument();
+    expect(link.textContent).toContain('My Trainings');
+    // The badge span is gated by ``(item.badge ?? 0) > 0`` in
+    // PortalLayout.tsx:643, so when activeTrainingsCount is 0 the link's
+    // textContent is just the label — no digits.
+    expect(link.textContent).not.toMatch(/\d/);
   });
 });

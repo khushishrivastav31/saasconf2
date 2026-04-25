@@ -274,11 +274,18 @@ function PortalLayout() {
 
   // Backend returns ``{items: [...]}`` (see backend/app/core/portal_training_listing.py).
   // Enabled for any logged-in portal user — training-only users (no
-  // ``applicant`` record) still need the sidebar entry.
+  // ``applicant`` record) still need the sidebar entry. We pull
+  // ``start_date`` and ``status`` so we can render an "upcoming" badge
+  // in the nav (same affordance as Assigned Papers).
+  interface SidebarTrainingItem {
+    id: number;
+    start_date: string | null;
+    status: string;
+  }
   const { data: trainingsResponse } = useQuery({
     queryKey: ['portal-my-trainings'],
     queryFn: async () => {
-      const res = await portalApi.get<{ items: Array<{ id: number }> }>(
+      const res = await portalApi.get<{ items: SidebarTrainingItem[] }>(
         '/portal/unified/my-trainings'
       );
       return res.data;
@@ -286,7 +293,18 @@ function PortalLayout() {
     enabled: !!portalMe,
     staleTime: 60000,
   });
-  const hasTrainings = (trainingsResponse?.items?.length ?? 0) > 0;
+  const trainingsItems = trainingsResponse?.items ?? [];
+  const hasTrainings = trainingsItems.length > 0;
+  // "Active" = start_date today or later AND not cancelled. Items without
+  // a start_date are excluded (we can't tell if they're upcoming). The
+  // ISO ``YYYY-MM-DD`` string compare works because ``start_date`` is a
+  // calendar date, not a timestamp — see
+  // backend/app/core/portal_training_listing.py:103 (.isoformat() on a
+  // ``date``, not ``datetime``).
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const activeTrainingsCount = trainingsItems.filter(
+    (t) => t.start_date && t.start_date >= todayIso && t.status !== 'cancelled'
+  ).length;
 
   // Pending registration questions gate
   interface PendingQuestionData {
@@ -413,6 +431,7 @@ function PortalLayout() {
                 name: 'My Trainings',
                 href: `${basePath}/trainings`,
                 icon: AcademicCapIcon,
+                badge: activeTrainingsCount,
               },
             ],
           },
