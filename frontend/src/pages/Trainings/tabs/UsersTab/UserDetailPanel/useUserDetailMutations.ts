@@ -68,7 +68,7 @@ export function useUserDetailMutations({
       const { access_token, portal_user_name } = res.data;
       localStorage.setItem('portal_access_token', access_token);
       const tenantSlug = window.location.pathname.split('/')[2] || '';
-      window.open(`/${tenantSlug}/trainings/portal/dashboard`, '_blank');
+      window.open(`/${tenantSlug}/portal/trainings`, '_blank');
       showToast(`Viewing portal as ${portal_user_name}`, 'info');
     },
     onError: () => showToast('Failed to impersonate user', 'error'),

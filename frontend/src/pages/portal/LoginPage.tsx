@@ -59,7 +59,8 @@ function LoginPage() {
       const me = await login({ email, password });
       sessionStorage.setItem('just_logged_in', 'true');
       if (!me.has_conference_account && me.has_training_account) {
-        navigate(`/${companySlug}/trainings/portal/dashboard`);
+        // Training-only user — land them on the unified portal's trainings list.
+        navigate(`${basePath}/trainings`);
       } else {
         navigate(`${basePath}/news`);
       }

@@ -74,12 +74,15 @@ const MyExpensesPage = lazy(() => import('./pages/portal/PortalExpensesTab'));
 const PublicRegistrationPage = lazy(() => import('./pages/PublicRegistration'));
 const PublicTrainingPortalPage = lazy(() => import('./pages/PublicTrainingPortal'));
 
-// Training Portal (authenticated)
-const TrainingPortalLayout = lazy(() => import('./pages/TrainingPortal/PortalLayout'));
+// Training set-password page — kept under the legacy ``/trainings/portal/``
+// path because backend access tokens (in production emails) link to it.
+// The rest of the old Training Portal subtree was inlined into the unified
+// portal at /:companySlug/portal/trainings.
 const TrainingPortalSetPassword = lazy(() => import('./pages/TrainingPortal/SetPasswordPage'));
-const TrainingPortalDashboard = lazy(() => import('./pages/TrainingPortal/DashboardPage'));
-const TrainingPortalDetail = lazy(() => import('./pages/TrainingPortal/TrainingDetailPage'));
-const TrainingPortalPrivacy = lazy(() => import('./pages/TrainingPortal/PrivacyPage'));
+
+// Unified portal training views (live inside the conference portal layout).
+const MyTrainingsPage = lazy(() => import('./pages/portal/MyTrainingsPage'));
+const PortalTrainingDetailPage = lazy(() => import('./pages/portal/TrainingDetailPage'));
 
 function LazyFallback() {
   return (
@@ -113,6 +116,27 @@ function LegacyRegisterRedirect() {
 function LegacyCFPPortalRedirect() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   return <Navigate to={`/${tenantSlug}/portal/news`} replace />;
+}
+
+// The old /:tenantSlug/trainings/portal/ subtree was retired in favour of
+// the unified portal. These three components keep deep links from old
+// emails / bookmarks pointed at the new home rather than 404-ing.
+function LegacyTrainingPortalDashboardRedirect() {
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  return <Navigate to={`/${tenantSlug}/portal/trainings`} replace />;
+}
+
+function LegacyTrainingPortalDetailRedirect() {
+  const { tenantSlug, registrationId } = useParams<{
+    tenantSlug: string;
+    registrationId: string;
+  }>();
+  return <Navigate to={`/${tenantSlug}/portal/trainings/${registrationId}`} replace />;
+}
+
+function LegacyTrainingPortalPrivacyRedirect() {
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  return <Navigate to={`/${tenantSlug}/portal/privacy`} replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -461,20 +485,25 @@ function App() {
             element={<TrainingPortalSetPassword />}
           />
 
-          {/* Training Portal — authenticated routes */}
+          {/* Legacy Training Portal authenticated URLs — redirected into the
+              unified portal at /:companySlug/portal/trainings. Kept around
+              for old bookmarks and emailed links. */}
+          <Route
+            path=":tenantSlug/trainings/portal/dashboard"
+            element={<LegacyTrainingPortalDashboardRedirect />}
+          />
+          <Route
+            path=":tenantSlug/trainings/portal/training/:registrationId"
+            element={<LegacyTrainingPortalDetailRedirect />}
+          />
+          <Route
+            path=":tenantSlug/trainings/portal/privacy"
+            element={<LegacyTrainingPortalPrivacyRedirect />}
+          />
           <Route
             path=":tenantSlug/trainings/portal"
-            element={
-              <ErrorBoundary>
-                <TrainingPortalLayout />
-              </ErrorBoundary>
-            }
-          >
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<TrainingPortalDashboard />} />
-            <Route path="training/:registrationId" element={<TrainingPortalDetail />} />
-            <Route path="privacy" element={<TrainingPortalPrivacy />} />
-          </Route>
+            element={<LegacyTrainingPortalDashboardRedirect />}
+          />
 
           {/* CFP Applicant Portal — authenticated routes */}
           <Route
@@ -503,6 +532,8 @@ function App() {
             <Route path="my-registrations" element={<MyRegistrationsPage />} />
             <Route path="my-expenses/:conferenceId" element={<MyExpensesPage />} />
             <Route path="invoices" element={<PortalInvoicesPage />} />
+            <Route path="trainings" element={<MyTrainingsPage />} />
+            <Route path="trainings/:registrationId" element={<PortalTrainingDetailPage />} />
           </Route>
 
           {/* Legacy redirects for old URLs / emailed links */}

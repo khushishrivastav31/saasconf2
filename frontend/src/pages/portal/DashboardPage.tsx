@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import portalApi from '../../config/portalApi';
 import { usePortalBasePath } from '../../hooks/usePortalBasePath';
@@ -22,7 +22,6 @@ interface ConferenceGroup {
 
 function DashboardPage() {
   const basePath = usePortalBasePath();
-  const { companySlug } = useParams<{ companySlug: string }>();
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data, isLoading } = useQuery({
@@ -34,17 +33,17 @@ function DashboardPage() {
     refetchInterval: 30000,
   });
 
-  const { data: trainingRegistrations } = useQuery({
+  const { data: trainingsResponse } = useQuery({
     queryKey: ['portal-my-trainings'],
     queryFn: async () => {
-      const res = await portalApi.get<TrainingRegistrationSummary[]>(
+      const res = await portalApi.get<{ items: TrainingRegistrationSummary[] }>(
         '/portal/unified/my-trainings'
       );
       return res.data;
     },
     staleTime: 60000,
   });
-  const trainingCount = trainingRegistrations?.length ?? 0;
+  const trainingCount = trainingsResponse?.items?.length ?? 0;
 
   const papers = useMemo(() => data?.items || [], [data?.items]);
   const paperCount = papers.length;
@@ -95,7 +94,7 @@ function DashboardPage() {
     <div className="space-y-6">
       {trainingCount > 0 && (
         <Link
-          to={`/${companySlug}/trainings/portal/dashboard`}
+          to={`${basePath}/trainings`}
           className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           <div>

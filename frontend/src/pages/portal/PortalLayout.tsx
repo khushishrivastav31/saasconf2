@@ -272,16 +272,21 @@ function PortalLayout() {
   });
   const hasInvoices = (invoiceData?.total ?? 0) > 0;
 
-  const { data: trainingRegistrations } = useQuery({
+  // Backend returns ``{items: [...]}`` (see backend/app/core/portal_training_listing.py).
+  // Enabled for any logged-in portal user — training-only users (no
+  // ``applicant`` record) still need the sidebar entry.
+  const { data: trainingsResponse } = useQuery({
     queryKey: ['portal-my-trainings'],
     queryFn: async () => {
-      const res = await portalApi.get<Array<{ id: number }>>('/portal/unified/my-trainings');
+      const res = await portalApi.get<{ items: Array<{ id: number }> }>(
+        '/portal/unified/my-trainings'
+      );
       return res.data;
     },
-    enabled: !!applicant,
+    enabled: !!portalMe,
     staleTime: 60000,
   });
-  const hasTrainings = (trainingRegistrations?.length ?? 0) > 0;
+  const hasTrainings = (trainingsResponse?.items?.length ?? 0) > 0;
 
   // Pending registration questions gate
   interface PendingQuestionData {
@@ -338,10 +343,12 @@ function PortalLayout() {
     );
   }
 
-  if (!applicant) {
-    if (portalMe && !portalMe.has_conference_account && portalMe.has_training_account) {
-      return <Navigate to={`/${companySlug}/trainings/portal/dashboard`} replace />;
-    }
+  // Auth gate: a portal user must be logged in. Training-only users
+  // (``has_training_account`` without a CFP applicant record) used to be
+  // redirected to a separate /trainings/portal/dashboard subtree; that
+  // subtree is gone now and the unified portal renders for them with the
+  // CFP-specific sections (Papers, Program Committee, Conferences) hidden.
+  if (!applicant && !portalMe?.has_training_account) {
     return <Navigate to={`${basePath}/user/login`} replace />;
   }
 
@@ -353,9 +360,12 @@ function PortalLayout() {
   };
   type NavSection = { label: string; items: NavItem[] };
 
-  // Show Papers section if any conference has CFPs or user can submit out-of-timeframe
+  // Show Papers section if user has a CFP applicant record AND any
+  // conference exposes a CFP (or they're allowed to submit out-of-timeframe).
+  // Training-only users have no ``applicant``, so this evaluates false.
   const hasCfpAccess =
-    (conferences ?? []).some((c) => c.cfps.length > 0) || applicant.allow_out_of_timeframe;
+    !!applicant &&
+    ((conferences ?? []).some((c) => c.cfps.length > 0) || applicant.allow_out_of_timeframe);
 
   const navSections: NavSection[] = [
     ...(hasCfpAccess
@@ -401,7 +411,7 @@ function PortalLayout() {
             items: [
               {
                 name: 'My Trainings',
-                href: `/${companySlug}/trainings/portal/dashboard`,
+                href: `${basePath}/trainings`,
                 icon: AcademicCapIcon,
               },
             ],
@@ -764,9 +774,11 @@ function PortalLayout() {
               </Link>
               <div className="text-sm">
                 <p className="font-medium text-gray-900 dark:text-gray-100">
-                  {`${applicant.first_name} ${applicant.last_name}`.trim()}
+                  {`${applicant?.first_name ?? portalMe?.first_name ?? ''} ${applicant?.last_name ?? portalMe?.last_name ?? ''}`.trim()}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">{applicant.email}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  {applicant?.email ?? portalMe?.email ?? ''}
+                </p>
               </div>
               <button
                 onClick={logout}
