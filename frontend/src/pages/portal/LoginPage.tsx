@@ -197,10 +197,14 @@ function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="portal-login-email"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Email
             </label>
             <input
+              id="portal-login-email"
               type="email"
               required
               value={email}
@@ -219,10 +223,14 @@ function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="portal-login-password"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Password
             </label>
             <input
+              id="portal-login-password"
               type="password"
               required
               value={password}
