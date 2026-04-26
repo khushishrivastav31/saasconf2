@@ -55,6 +55,11 @@ export async function portalLogin(page: Page) {
   // is the real success signal; this URL match just ensures we're past
   // ``/user/login``.
   await expect(page).toHaveURL(/portal\/(news|dashboard|trainings)/i, { timeout: 15000 });
-  await page.waitForFunction(() => !!localStorage.getItem('applicant_access_token'), { timeout: 10000 });
+  // The portal app stores the access token under ``portal_access_token``
+  // (see ``frontend/src/config/portalApi.ts`` ``TOKEN_KEY``). The previous
+  // ``applicant_access_token`` key was renamed during the portal-unification
+  // work and the test never tracked the rename — that's why portal-setup
+  // timed out on a key that never gets set.
+  await page.waitForFunction(() => !!localStorage.getItem('portal_access_token'), { timeout: 10000 });
   await page.context().storageState({ path: PORTAL_STORAGE_STATE });
 }
