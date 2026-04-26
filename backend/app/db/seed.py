@@ -290,6 +290,11 @@ async def seed_e2e_portal_user(session: AsyncSession) -> None:
         applicant = CFPApplicant(
             tenant_id=tenant.id,
             email=email,
+            # CFPApplicant.password_hash is NOT NULL (legacy from before the
+            # PortalUser unification). Login goes through PortalUser, so this
+            # value is never actually verified — it's column-bookkeeping. Use
+            # the same bcrypt hash so the row is still well-formed.
+            password_hash=hash_password(settings.E2E_PORTAL_PASSWORD),
             first_name="E2E",
             last_name="Portal",
             allow_out_of_timeframe=True,
