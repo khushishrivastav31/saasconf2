@@ -604,15 +604,30 @@ jobs:
           EOF
 
       - name: Seed platform data
+        env:
+          # Pass-through to the seed script so it can create / update the
+          # E2E test portal user (consumed by ``seed_e2e_portal_user`` in
+          # backend/app/db/seed.py). Empty values mean "skip seeding the
+          # E2E user" — safe in any environment that didn't set them.
+          E2E_PORTAL_EMAIL: ${{ secrets.E2E_PORTAL_EMAIL }}
+          E2E_PORTAL_PASSWORD: ${{ secrets.E2E_PORTAL_PASSWORD }}
+          E2E_PORTAL_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'SEED_EOF'
+          # Unquoted heredoc so the GH-Actions-supplied env vars expand
+          # locally before the SSH transport. Single-quoted ``-e`` values
+          # keep the secrets intact across the docker exec arg parsing.
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} <<EOF
             cd ${{ env.STAGING_PATH }}/deploy/staging
             echo "Seeding platform data..."
-            docker compose exec -T backend python -u -m app.db.seed 2>&1
-            echo "Seed exit code: $?"
+            docker compose exec -T \\
+              -e E2E_PORTAL_EMAIL='$E2E_PORTAL_EMAIL' \\
+              -e E2E_PORTAL_PASSWORD='$E2E_PORTAL_PASSWORD' \\
+              -e E2E_PORTAL_TENANT_SLUG='$E2E_PORTAL_TENANT_SLUG' \\
+              backend python -u -m app.db.seed 2>&1
+            echo "Seed exit code: \$?"
             echo "Container status:"
             docker compose ps
-          SEED_EOF
+          EOF
 
       - name: Verify containers are running
         run: |

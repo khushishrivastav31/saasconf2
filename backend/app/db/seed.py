@@ -10,10 +10,13 @@ from app.config import get_settings
 from app.core.security import hash_password, verify_password
 from app.core.security.pii_crypto import hash_email
 from app.db.session import async_session_maker
+from app.models.cfp_applicants import CFPApplicant
 from app.models.conference import Conference
 from app.models.module import Module
 from app.models.platform_currency import PlatformCurrency
+from app.models.portal_user import PortalUser
 from app.models.settings import VolunteerRole
+from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 
 logger = logging.getLogger(__name__)
@@ -220,6 +223,87 @@ async def seed_conference_defaults(session: AsyncSession) -> None:
     logger.info(f"Seeded defaults for {len(conferences)} conference(s).")
 
 
+async def seed_e2e_portal_user(session: AsyncSession) -> None:
+    """Seed the E2E test portal user when configured.
+
+    Reads ``E2E_PORTAL_EMAIL`` / ``E2E_PORTAL_PASSWORD`` / ``E2E_PORTAL_TENANT_SLUG``
+    from settings; skips entirely when any are unset (so dev and prod
+    installs don't grow a stray test user). Idempotent: updates the
+    password if the user already exists, ensures the linked CFP applicant
+    record is present so the conference portal layout renders for E2E
+    tests (the layout redirects to /login when neither an applicant nor
+    a training account is found — see
+    ``frontend/src/pages/portal/PortalLayout.tsx`` line 341).
+    """
+    if not (settings.E2E_PORTAL_EMAIL and settings.E2E_PORTAL_PASSWORD and settings.E2E_PORTAL_TENANT_SLUG):
+        return
+
+    email = settings.E2E_PORTAL_EMAIL.strip().lower()
+    tenant_slug = settings.E2E_PORTAL_TENANT_SLUG.strip()
+
+    tenant_result = await session.execute(select(Tenant).where(Tenant.slug == tenant_slug))
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        logger.warning("E2E portal seed: tenant slug %r not found, skipping", tenant_slug)
+        return
+
+    # Find or create the PortalUser
+    pu_result = await session.execute(
+        select(PortalUser).where(
+            PortalUser.tenant_id == tenant.id,
+            PortalUser.email_hash == hash_email(email),
+        )
+    )
+    portal_user = pu_result.scalar_one_or_none()
+
+    if portal_user:
+        if not verify_password(settings.E2E_PORTAL_PASSWORD, portal_user.password_hash or ""):
+            portal_user.password_hash = hash_password(settings.E2E_PORTAL_PASSWORD)
+            logger.info("E2E portal seed: password updated for %s", email)
+        else:
+            logger.info("E2E portal seed: portal user %s already in sync", email)
+    else:
+        portal_user = PortalUser(
+            tenant_id=tenant.id,
+            email=email,
+            password_hash=hash_password(settings.E2E_PORTAL_PASSWORD),
+            first_name="E2E",
+            last_name="Portal",
+            is_active=True,
+        )
+        session.add(portal_user)
+        await session.flush()
+        logger.info("E2E portal seed: created portal user %s (tenant %s)", email, tenant_slug)
+
+    # Find or create a CFPApplicant linked to this PortalUser. The portal
+    # layout requires an applicant record to render — without it the user
+    # gets bounced to /login on first nav.
+    app_result = await session.execute(
+        select(CFPApplicant).where(
+            CFPApplicant.tenant_id == tenant.id,
+            CFPApplicant.email_hash == hash_email(email),
+        )
+    )
+    applicant = app_result.scalar_one_or_none()
+
+    if applicant is None:
+        applicant = CFPApplicant(
+            tenant_id=tenant.id,
+            email=email,
+            first_name="E2E",
+            last_name="Portal",
+            allow_out_of_timeframe=True,
+            portal_user_id=portal_user.id,
+        )
+        session.add(applicant)
+        logger.info("E2E portal seed: created CFP applicant for %s", email)
+    elif applicant.portal_user_id != portal_user.id:
+        applicant.portal_user_id = portal_user.id
+        logger.info("E2E portal seed: linked applicant for %s to portal user", email)
+
+    await session.commit()
+
+
 async def seed_database() -> None:
     """Run all seed functions."""
     logger.info("Starting database seeding...")
@@ -229,6 +313,7 @@ async def seed_database() -> None:
         await seed_default_modules(session)
         await seed_default_currencies(session)
         await seed_conference_defaults(session)
+        await seed_e2e_portal_user(session)
 
     logger.info("Database seeding complete!")
 

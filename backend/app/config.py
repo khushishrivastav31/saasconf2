@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # E2E test portal user — only seeded on staging when all three are set.
+    # Empty in dev / prod so we don't accidentally create a stray test user.
+    # Used by ``app.db.seed.seed_e2e_portal_user`` and consumed at deploy
+    # time via the ``Seed platform data`` step in ``.github/workflows/staging.yml``.
+    E2E_PORTAL_EMAIL: str = ""
+    E2E_PORTAL_PASSWORD: str = ""
+    E2E_PORTAL_TENANT_SLUG: str = ""
+
     # PII column encryption (Fernet key — generate with Fernet.generate_key())
     # Empty = encryption disabled (dev convenience; staging/prod must set it).
     # PII_ENCRYPTION_KEYS_OLD: comma-separated previous keys kept for read fallback
