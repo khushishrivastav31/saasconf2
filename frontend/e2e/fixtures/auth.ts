@@ -47,7 +47,14 @@ export async function portalLogin(page: Page) {
   await page.getByLabel(/password/i).fill(password);
   await page.getByRole('button', { name: /sign in/i }).click();
 
-  await expect(page).toHaveURL(/portal\/dashboard/i, { timeout: 15000 });
+  // LoginPage routes the user to ``/portal/news`` by default, or
+  // ``/portal/trainings`` for training-only accounts (see
+  // frontend/src/pages/portal/LoginPage.tsx:61-65). The previous
+  // ``/portal/dashboard`` assertion was stale — the dashboard route still
+  // exists but isn't where the login lands. The localStorage check below
+  // is the real success signal; this URL match just ensures we're past
+  // ``/user/login``.
+  await expect(page).toHaveURL(/portal\/(news|dashboard|trainings)/i, { timeout: 15000 });
   await page.waitForFunction(() => !!localStorage.getItem('applicant_access_token'), { timeout: 10000 });
   await page.context().storageState({ path: PORTAL_STORAGE_STATE });
 }
