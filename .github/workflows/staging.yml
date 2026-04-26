@@ -579,6 +579,39 @@ jobs:
             fi
           EOF
 
+      - name: Reclaim docker disk space on staging
+        # Staging filled up its disk on 2026-04-26 during a docker compose
+        # build (see PR #141 deploy run). Cause was accumulated build cache
+        # plus :failed-<sha> tags from rollback cycles. Cleanup runs every
+        # deploy now so the disk doesn't drift back into a wedged state.
+        # We deliberately preserve :latest, :previous, and recent :failed-*
+        # tags (last 14 days, kept for post-mortem) — only stale layers
+        # and dangling images get removed.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            echo "=== Disk usage BEFORE cleanup ==="
+            df -h / | tail -1
+            docker system df 2>/dev/null || true
+
+            # Dangling images (untagged) and unused build cache > 7 days.
+            # ``docker image prune`` (no -a) only touches dangling images,
+            # so :latest/:previous/:failed-* tags stay intact.
+            docker image prune -f 2>&1 | tail -3 || true
+            docker builder prune -f --filter "until=168h" 2>&1 | tail -3 || true
+
+            # Remove :failed-* tags older than 14 days. They exist for
+            # post-mortem after a rollback; 14 days is a generous window
+            # before they become disk weight rather than evidence.
+            docker images --format '{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}' \
+              | awk -v cutoff="$(date -d '14 days ago' '+%Y-%m-%d')" \
+                  '/:failed-/ { split($2, d, " "); if (d[1] < cutoff) print $1 }' \
+              | xargs -r docker rmi -f 2>&1 | tail -5 || true
+
+            echo "=== Disk usage AFTER cleanup ==="
+            df -h / | tail -1
+            docker system df 2>/dev/null || true
+          EOF
+
       - name: Rebuild and restart containers
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
