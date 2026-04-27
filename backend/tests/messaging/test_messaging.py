@@ -253,6 +253,56 @@ class TestMessageThreadModel:
 
         assert thread.bulk_id == bulk_id
 
+    async def test_legacy_constructor_auto_populates_domain_fields(
+        self, db_session: AsyncSession, tenant: Tenant, conference: Conference
+    ) -> None:
+        """Existing constructors that only pass conference_id must keep working.
+
+        Migration 213 made domain + domain_entity_id NOT NULL on
+        message_threads. The before_insert listener mirrors conference_id
+        into domain_entity_id and defaults domain to 'conference'. Without
+        this, every existing MessageThread(...) callsite would 500 on insert.
+        """
+        thread = MessageThread(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            subject="Legacy constructor",
+        )
+        db_session.add(thread)
+        await db_session.commit()
+        await db_session.refresh(thread)
+
+        assert thread.domain == "conference"
+        assert thread.domain_entity_id == conference.id
+
+    async def test_explicit_domain_entity_id_is_not_overwritten(
+        self, db_session: AsyncSession, tenant: Tenant, conference: Conference
+    ) -> None:
+        """When PR 3 wires up training threads, the caller will set
+        domain='training' + domain_entity_id=<registration_id> explicitly. The
+        listener must leave those values alone — only fill in defaults when
+        the new fields are unset.
+        """
+        registration_id = uuid.uuid4()
+        thread = MessageThread(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            # conference_id stays NOT NULL until a follow-up migration; for now
+            # training-domain threads still need a conference_id placeholder.
+            # We're only verifying that the listener honors explicit overrides.
+            conference_id=conference.id,
+            domain="training",
+            domain_entity_id=registration_id,
+            subject="Training broadcast",
+        )
+        db_session.add(thread)
+        await db_session.commit()
+        await db_session.refresh(thread)
+
+        assert thread.domain == "training"
+        assert thread.domain_entity_id == registration_id
+
     async def test_thread_relationships(
         self,
         db_session: AsyncSession,

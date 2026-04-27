@@ -3,11 +3,29 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    event,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+# Known thread-anchor domains. ``conference`` is the legacy default; ``training``
+# is added by PR 3 of the training-messaging plan. The DB CHECK constraint
+# (migration 213) enforces this at write time.
+THREAD_DOMAIN_CONFERENCE = "conference"
+THREAD_DOMAIN_TRAINING = "training"
+THREAD_DOMAINS = (THREAD_DOMAIN_CONFERENCE, THREAD_DOMAIN_TRAINING)
 
 
 class MessageTemplate(Base):
@@ -125,6 +143,14 @@ class MessageThread(Base):
     conference_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
     )
+    # Generic anchor: pairs with ``conference_id`` while we transition the
+    # messaging system to support both conference and training threads.
+    # The ``before_insert`` listener below mirrors ``conference_id`` into
+    # ``domain_entity_id`` so existing constructors keep working unchanged.
+    # Training broadcasts (PR 3) set ``domain='training'`` explicitly with the
+    # ``TrainingRegistration`` id as the anchor.
+    domain: Mapped[str] = mapped_column(String(20), nullable=False, default=THREAD_DOMAIN_CONFERENCE)
+    domain_entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     bulk_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     has_attachments: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
@@ -150,9 +176,29 @@ class MessageThread(Base):
     )
 
     __table_args__ = (
+        CheckConstraint(
+            f"domain IN ({', '.join(repr(d) for d in THREAD_DOMAINS)})",
+            name="ck_message_threads_domain",
+        ),
         Index("idx_message_threads_tenant", "tenant_id"),
         Index("idx_message_threads_conference", "tenant_id", "conference_id"),
+        Index("idx_message_threads_domain_entity", "tenant_id", "domain", "domain_entity_id"),
     )
+
+
+@event.listens_for(MessageThread, "before_insert")
+def _mirror_conference_id_to_domain_entity(mapper, connection, target: "MessageThread") -> None:
+    """Default the generic anchor to the legacy ``conference_id`` at insert.
+
+    Lets every existing ``MessageThread(...)`` constructor keep working without
+    explicitly setting ``domain`` / ``domain_entity_id``. New training-domain
+    code sets both fields directly and this listener becomes a no-op for those
+    rows.
+    """
+    if target.domain_entity_id is None and target.conference_id is not None:
+        target.domain_entity_id = target.conference_id
+    if not target.domain:
+        target.domain = THREAD_DOMAIN_CONFERENCE
 
 
 class MessageParticipant(Base):
