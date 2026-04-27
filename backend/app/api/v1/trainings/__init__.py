@@ -14,6 +14,7 @@ from .invoice_sync import router as invoice_sync_router
 from .invoices import router as invoices_router
 from .languages import router as languages_router
 from .location_types import router as location_types_router
+from .messaging import placement_router as messaging_placement_router
 from .messaging import router as messaging_router
 from .messaging_admin import router as messaging_admin_router
 from .messaging_templates import router as messaging_templates_router
@@ -64,6 +65,7 @@ router.include_router(offer_templates_router)
 router.include_router(portal_settings_router)
 router.include_router(registrations_router)
 router.include_router(messaging_router)
+router.include_router(messaging_placement_router)
 router.include_router(messaging_admin_router)
 router.include_router(messaging_templates_router)
 router.include_router(invoices_router)

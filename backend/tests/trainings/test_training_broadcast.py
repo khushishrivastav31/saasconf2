@@ -259,7 +259,7 @@ class TestBroadcastHappyPath:
             ],
         )
         with patch(
-            "app.services.training_messaging.send_direct_message_email",
+            "app.services.training_messaging._core.send_direct_message_email",
             AsyncMock(return_value=True),
         ) as send_mock:
             resp = await client.post(
@@ -364,7 +364,7 @@ class TestAudienceIsolation:
             attendees=[("Train", "Person", "trainee@example.com")],
         )
         with patch(
-            "app.services.training_messaging.send_direct_message_email",
+            "app.services.training_messaging._core.send_direct_message_email",
             AsyncMock(return_value=True),
         ):
             resp = await client.post(
@@ -456,7 +456,7 @@ class TestAudienceIsolation:
             attendees=[("Alice", "Liddell", shared_email)],
         )
         with patch(
-            "app.services.training_messaging.send_direct_message_email",
+            "app.services.training_messaging._core.send_direct_message_email",
             AsyncMock(return_value=True),
         ):
             resp = await client.post(
@@ -544,7 +544,7 @@ class TestBroadcastEdgeCases:
             ],
         )
         with patch(
-            "app.services.training_messaging.send_direct_message_email",
+            "app.services.training_messaging._core.send_direct_message_email",
             AsyncMock(return_value=True),
         ) as send_mock:
             resp = await client.post(
@@ -576,7 +576,7 @@ class TestBroadcastEdgeCases:
             ],
         )
         with patch(
-            "app.services.training_messaging.send_direct_message_email",
+            "app.services.training_messaging._core.send_direct_message_email",
             AsyncMock(return_value=True),
         ):
             resp = await client.post(
@@ -604,7 +604,7 @@ class TestBroadcastEdgeCases:
             attendees=[("Alice", "Liddell", "alice@example.com")],
         )
         with patch(
-            "app.services.training_messaging.send_direct_message_email",
+            "app.services.training_messaging._core.send_direct_message_email",
             AsyncMock(return_value=True),
         ):
             resp = await client.post(
@@ -642,7 +642,7 @@ class TestBroadcastEdgeCases:
         )
         side_effects = [Exception("smtp down"), True]
         mock = AsyncMock(side_effect=side_effects)
-        with patch("app.services.training_messaging.send_direct_message_email", mock):
+        with patch("app.services.training_messaging._core.send_direct_message_email", mock):
             resp = await client.post(
                 f"/api/v1/trainings/registrations/{reg.id}/messages/broadcast",
                 json={"subject": "Hi", "body_html": "<p>Hi</p>"},

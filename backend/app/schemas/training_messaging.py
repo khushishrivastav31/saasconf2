@@ -47,3 +47,37 @@ class TrainingBroadcastResponse(BaseModel):
     skipped_count: int = 0  # recipients with no email or duplicates
     created_at: datetime
     recipients: list[TrainingBroadcastRecipient]
+
+
+class PlacementBroadcastRequest(BaseModel):
+    """Admin request to broadcast to every attendee on a placement.
+
+    Same body shape as ``TrainingBroadcastRequest``; the ``placement_id``
+    is supplied via the URL path. The fan-out collects attendees from
+    every registration on that placement, dedupes by lowercased email,
+    and creates one ``MessageThread`` per surviving attendee anchored on
+    that attendee's own registration.
+    """
+
+    subject: str = Field(..., min_length=1, max_length=500)
+    body_html: str = Field(..., min_length=1)
+    template_id: UUID | None = None
+    screen_overlay_id: UUID | None = None
+
+
+class PlacementBroadcastResponse(BaseModel):
+    """Result of a placement-wide training broadcast.
+
+    ``recipients`` includes every attendee that received a thread,
+    regardless of which registration they were on. The thread anchor
+    (``domain_entity_id``) on each created row points at the recipient's
+    *own* registration, so the unified portal inbox still shows them
+    grouped per registration.
+    """
+
+    bulk_id: UUID
+    placement_id: UUID
+    sent_count: int
+    skipped_count: int = 0
+    created_at: datetime
+    recipients: list[TrainingBroadcastRecipient]

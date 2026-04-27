@@ -1,19 +1,18 @@
-"""Training-broadcast service: anchor a thread per attendee on a registration.
+"""Training-broadcast core: shared helpers used by every broadcast surface.
 
-Mirrors the conference bulk-send shape (see ``app/api/v1/messaging/bulk.py``):
-one ``MessageThread`` per recipient, all sharing a ``bulk_id``, so each
-attendee gets their own 1:1 reply thread but the admin can view the whole
-broadcast as a group.
+Holds:
+  - The participant-type constant.
+  - ``substitute_training_variables`` placeholder rendering.
+  - ``_AnchoredAttendee`` + dedup helper.
+  - ``_emit_threads_for_attendees`` and ``_dispatch_broadcast_emails`` —
+    the actual thread/message/email writers.
+  - ``_load_registration_with_context`` (used by the registration-level
+    broadcast).
 
-Key differences from the conference path:
-  - Anchor is ``domain='training'`` + ``domain_entity_id=<registration.id>``
-    (not ``conference_id``, which stays NULL for training threads — see
-    migration 214).
-  - Recipients come from ``TrainingRegistrationAttendee`` rows, not
-    ``CFPApplicant``. ``participant_type='training_attendee'`` with
-    ``participant_id=<TrainingRegistrationAttendee.id>``.
-  - Variable substitution exposes training-specific placeholders
-    (``[Training Name]``, ``[Placement Date]``, ``[Company Name]``).
+Kept private (leading underscore on all but the constant + the public
+``substitute_training_variables`` helper). Both broadcast surfaces
+(``broadcasts.py`` in this package) call these helpers — same dedup
+rule, same thread-creation logic, same email-fanout shape.
 """
 
 import logging
@@ -27,8 +26,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+# Re-exported at the package level so tests can patch it via the canonical
+# ``app.services.training_messaging.send_direct_message_email`` path.
 from app.core.email import send_direct_message_email
-from app.core.html_sanitize import sanitize_html
 from app.core.security.pii_crypto import read_pii
 from app.models.messaging import (
     THREAD_DOMAIN_TRAINING,
@@ -59,6 +59,19 @@ class _PreparedRecipient:
     thread_id: UUID
 
 
+@dataclass
+class _AnchoredAttendee:
+    """An attendee plus the registration it belongs to + the company name on
+    that registration. Bundled together so the placement-level broadcast
+    can fan out across registrations with each thread anchored on the
+    right one.
+    """
+
+    attendee: TrainingRegistrationAttendee
+    registration_id: UUID
+    company_name: str
+
+
 def substitute_training_variables(
     text: str,
     *,
@@ -76,11 +89,6 @@ def substitute_training_variables(
 
       [First Name], [Last Name], [Email],
       [Training Name], [Placement Date], [Company Name]
-
-    Mirrors the shape of ``substitute_template_variables`` in
-    ``app/api/v1/messaging/_shared.py`` so behavior stays consistent across
-    domains. Kept as a separate function so the conference helper can stay
-    in its existing file (which is over the project's split threshold).
     """
     replacements = {
         "[First Name]": html_escape(first_name),
@@ -138,54 +146,55 @@ async def _load_registration_with_context(
     return registration, training_name, placement_date
 
 
-async def broadcast_to_registration_attendees(
-    db: AsyncSession,
-    *,
-    tenant_id: UUID,
-    registration_id: UUID,
-    sender_user_id: UUID,
-    subject_template: str,
-    body_html_template: str,
-    screen_overlay_id: UUID | None = None,
-) -> tuple[UUID, list[_PreparedRecipient], int]:
-    """Send a broadcast to every attendee on a single training registration.
+def _filter_and_dedupe_attendees(
+    anchored: list[_AnchoredAttendee],
+) -> tuple[list[_AnchoredAttendee], int]:
+    """Drop empty-email rows and deduplicate by lowercased email.
 
-    Creates one ``MessageThread`` per attendee (anchored on the registration
-    via ``domain='training'`` + ``domain_entity_id=registration_id``), with
-    the admin and the attendee as participants, plus the initial ``Message``.
-    Then dispatches the per-recipient email with substituted variables.
-
-    Returns ``(bulk_id, prepared_recipients, skipped_count)``. The caller
-    is responsible for ``commit`` and for shaping the response.
+    Returns ``(eligible, skipped_count)``. Used by both the
+    registration-level and placement-level broadcasts so the dedup rule
+    stays identical across surfaces.
     """
-    registration, training_name, placement_date = await _load_registration_with_context(db, tenant_id, registration_id)
-
-    # Filter to attendees with non-empty email; deduplicate by lowercased email
-    # so a registration that lists the same email twice still gets one thread.
-    seen_emails: set[str] = set()
-    eligible: list[TrainingRegistrationAttendee] = []
+    seen: set[str] = set()
+    eligible: list[_AnchoredAttendee] = []
     skipped = 0
-    for a in registration.attendees:
-        email_norm = (a.email or "").strip().lower()
+    for entry in anchored:
+        email_norm = (entry.attendee.email or "").strip().lower()
         if not email_norm:
             skipped += 1
             continue
-        if email_norm in seen_emails:
+        if email_norm in seen:
             skipped += 1
             continue
-        seen_emails.add(email_norm)
-        eligible.append(a)
+        seen.add(email_norm)
+        eligible.append(entry)
+    return eligible, skipped
 
-    if not eligible:
-        return uuid.uuid4(), [], skipped
 
-    sanitized_body = sanitize_html(body_html_template)
-    bulk_id = uuid.uuid4()
+def _emit_threads_for_attendees(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    sender_user_id: UUID,
+    bulk_id: UUID,
+    eligible: list[_AnchoredAttendee],
+    subject_template: str,
+    sanitized_body_template: str,
+    training_name: str,
+    placement_date: str,
+    screen_overlay_id: UUID | None,
+) -> list[_PreparedRecipient]:
+    """Add one ``MessageThread`` per attendee with the substituted content.
+
+    Each thread is anchored on the attendee's *own* registration (so a
+    placement-level broadcast still produces threads pinned to the right
+    registration in the recipient's portal). All threads in this batch
+    share ``bulk_id`` so the admin Messages tab groups them.
+    """
     now = datetime.now(UTC)
-    company_name = registration.company_name or ""
-
     prepared: list[_PreparedRecipient] = []
-    for attendee in eligible:
+    for entry in eligible:
+        attendee = entry.attendee
         subj = substitute_training_variables(
             subject_template,
             first_name=attendee.first_name or "",
@@ -193,30 +202,28 @@ async def broadcast_to_registration_attendees(
             email=attendee.email or "",
             training_name=training_name,
             placement_date=placement_date,
-            company_name=company_name,
+            company_name=entry.company_name,
         )
         body = substitute_training_variables(
-            sanitized_body,
+            sanitized_body_template,
             first_name=attendee.first_name or "",
             last_name=attendee.last_name or "",
             email=attendee.email or "",
             training_name=training_name,
             placement_date=placement_date,
-            company_name=company_name,
+            company_name=entry.company_name,
         )
 
         thread_id = uuid.uuid4()
         # Training-domain thread: conference_id stays NULL, the generic
-        # anchor points at the registration. The before_insert listener
-        # only mirrors conference_id for the conference domain, so we need
-        # to set domain + domain_entity_id explicitly here.
+        # anchor points at the registration the attendee belongs to.
         db.add(
             MessageThread(
                 id=thread_id,
                 tenant_id=tenant_id,
                 conference_id=None,
                 domain=THREAD_DOMAIN_TRAINING,
-                domain_entity_id=registration_id,
+                domain_entity_id=entry.registration_id,
                 subject=subj,
                 bulk_id=bulk_id,
                 screen_overlay_id=screen_overlay_id,
@@ -260,18 +267,7 @@ async def broadcast_to_registration_attendees(
                 thread_id=thread_id,
             )
         )
-
-    await db.flush()
-
-    await _dispatch_broadcast_emails(
-        db,
-        tenant_id=tenant_id,
-        sender_user_id=sender_user_id,
-        training_name=training_name,
-        prepared=prepared,
-    )
-
-    return bulk_id, prepared, skipped
+    return prepared
 
 
 async def _dispatch_broadcast_emails(

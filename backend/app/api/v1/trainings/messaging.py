@@ -1,12 +1,17 @@
 """Admin training messaging endpoints.
 
-Today: broadcast a message to every attendee on a single
-``TrainingRegistration``. The admin clicks "Message attendees" on a
-RegistrationRow expansion in the trainings UI; the request lands here.
+Two surfaces:
+  - ``POST /registrations/{registration_id}/messages/broadcast`` —
+    message every attendee of one registration. Wired to the
+    "Message attendees" button on the RegistrationRow expansion.
+  - ``POST /placements/{placement_id}/messages/broadcast`` — message
+    every attendee across every registration on one placement (the
+    "training session" level). Wired to the Compose button on the
+    admin Messages tab.
 
-Future PRs in the messaging plan layer on:
-  - Listing training broadcast threads from the admin side (PR 2/4).
-  - Templates / recipient lists / dynamic lists (PR 4).
+Both paths anchor each thread on the recipient's own registration via
+``domain='training'`` + ``domain_entity_id=<registration.id>`` and share
+a ``bulk_id`` per send so the admin Messages tab groups them.
 """
 
 from datetime import UTC, datetime
@@ -16,13 +21,21 @@ from fastapi import APIRouter, status
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.schemas.training_messaging import (
+    PlacementBroadcastRequest,
+    PlacementBroadcastResponse,
     TrainingBroadcastRecipient,
     TrainingBroadcastRequest,
     TrainingBroadcastResponse,
 )
-from app.services.training_messaging import broadcast_to_registration_attendees
+from app.services.training_messaging import (
+    broadcast_to_placement_attendees,
+    broadcast_to_registration_attendees,
+)
 
+# Two routers: each carries its own URL prefix so the placement and
+# registration surfaces are mounted side-by-side without colliding.
 router = APIRouter(prefix="/registrations", tags=["training-messaging"])
+placement_router = APIRouter(prefix="/placements", tags=["training-messaging"])
 
 
 @router.post(
@@ -57,6 +70,55 @@ async def broadcast_to_registration(
     return TrainingBroadcastResponse(
         bulk_id=bulk_id,
         registration_id=registration_id,
+        sent_count=len(recipients),
+        skipped_count=skipped,
+        created_at=datetime.now(UTC),
+        recipients=[
+            TrainingBroadcastRecipient(
+                attendee_id=r.attendee_id,
+                email=r.email,
+                first_name=r.first_name,
+                last_name=r.last_name,
+                thread_id=r.thread_id,
+            )
+            for r in recipients
+        ],
+    )
+
+
+@placement_router.post(
+    "/{placement_id}/messages/broadcast",
+    response_model=PlacementBroadcastResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def broadcast_to_placement(
+    placement_id: UUID,
+    data: PlacementBroadcastRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> PlacementBroadcastResponse:
+    """Broadcast a message to every attendee across every registration on a placement.
+
+    Each attendee gets their own thread anchored on their own
+    registration (so a 5-attendee booking and a 1-attendee booking
+    produce thread anchors that match the recipient's portal view).
+    All threads share one ``bulk_id`` so the admin Messages tab shows
+    the send as a single row.
+    """
+    bulk_id, recipients, skipped = await broadcast_to_placement_attendees(
+        db,
+        tenant_id=current_user.require_tenant_id(),
+        placement_id=placement_id,
+        sender_user_id=current_user.user_id,
+        subject_template=data.subject,
+        body_html_template=data.body_html,
+        screen_overlay_id=data.screen_overlay_id,
+    )
+    await db.commit()
+
+    return PlacementBroadcastResponse(
+        bulk_id=bulk_id,
+        placement_id=placement_id,
         sent_count=len(recipients),
         skipped_count=skipped,
         created_at=datetime.now(UTC),

@@ -4484,6 +4484,32 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/placements/{placement_id}/messages/broadcast': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Broadcast To Placement
+     * @description Broadcast a message to every attendee across every registration on a placement.
+     *
+     *     Each attendee gets their own thread anchored on their own
+     *     registration (so a 5-attendee booking and a 1-attendee booking
+     *     produce thread anchors that match the recipient's portal view).
+     *     All threads share one ``bulk_id`` so the admin Messages tab shows
+     *     the send as a single row.
+     */
+    post: operations['broadcast_to_placement_api_v1_trainings_placements__placement_id__messages_broadcast_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/messaging/broadcasts': {
     parameters: {
       query?: never;
@@ -20795,6 +20821,62 @@ export type components = {
       subtotal_revenue: string;
       /** Tax Amount */
       tax_amount: string;
+    };
+    /**
+     * PlacementBroadcastRequest
+     * @description Admin request to broadcast to every attendee on a placement.
+     *
+     *     Same body shape as ``TrainingBroadcastRequest``; the ``placement_id``
+     *     is supplied via the URL path. The fan-out collects attendees from
+     *     every registration on that placement, dedupes by lowercased email,
+     *     and creates one ``MessageThread`` per surviving attendee anchored on
+     *     that attendee's own registration.
+     */
+    PlacementBroadcastRequest: {
+      /** Subject */
+      subject: string;
+      /** Body Html */
+      body_html: string;
+      /** Template Id */
+      template_id?: string | null;
+      /** Screen Overlay Id */
+      screen_overlay_id?: string | null;
+    };
+    /**
+     * PlacementBroadcastResponse
+     * @description Result of a placement-wide training broadcast.
+     *
+     *     ``recipients`` includes every attendee that received a thread,
+     *     regardless of which registration they were on. The thread anchor
+     *     (``domain_entity_id``) on each created row points at the recipient's
+     *     *own* registration, so the unified portal inbox still shows them
+     *     grouped per registration.
+     */
+    PlacementBroadcastResponse: {
+      /**
+       * Bulk Id
+       * Format: uuid
+       */
+      bulk_id: string;
+      /**
+       * Placement Id
+       * Format: uuid
+       */
+      placement_id: string;
+      /** Sent Count */
+      sent_count: number;
+      /**
+       * Skipped Count
+       * @default 0
+       */
+      skipped_count?: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Recipients */
+      recipients: components['schemas']['TrainingBroadcastRecipient'][];
     };
     /**
      * PlacementChangeResponse
@@ -38697,6 +38779,43 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['TrainingBroadcastResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  broadcast_to_placement_api_v1_trainings_placements__placement_id__messages_broadcast_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        placement_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PlacementBroadcastRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PlacementBroadcastResponse'];
         };
       };
       /** @description Validation Error */
