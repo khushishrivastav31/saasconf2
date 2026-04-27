@@ -30,6 +30,7 @@ from sqlalchemy.orm import joinedload
 # ``app.services.training_messaging.send_direct_message_email`` path.
 from app.core.email import send_direct_message_email
 from app.core.security.pii_crypto import read_pii
+from app.models.attachment import Attachment
 from app.models.messaging import (
     THREAD_DOMAIN_TRAINING,
     Message,
@@ -57,6 +58,7 @@ class _PreparedRecipient:
     subject: str
     body_html: str
     thread_id: UUID
+    message_id: UUID  # set client-side so attachment-linking can run before flush
 
 
 @dataclass
@@ -183,6 +185,7 @@ def _emit_threads_for_attendees(
     training_name: str,
     placement_date: str,
     screen_overlay_id: UUID | None,
+    has_attachments: bool = False,
 ) -> list[_PreparedRecipient]:
     """Add one ``MessageThread`` per attendee with the substituted content.
 
@@ -190,6 +193,11 @@ def _emit_threads_for_attendees(
     placement-level broadcast still produces threads pinned to the right
     registration in the recipient's portal). All threads in this batch
     share ``bulk_id`` so the admin Messages tab groups them.
+
+    ``has_attachments`` flags the resulting ``MessageThread`` so the
+    portal inbox can render the attachment indicator without an extra
+    query. Callers that pass attachment ids should pass ``True`` here
+    AND call ``_duplicate_attachments_per_message`` after the flush.
     """
     now = datetime.now(UTC)
     prepared: list[_PreparedRecipient] = []
@@ -215,6 +223,7 @@ def _emit_threads_for_attendees(
         )
 
         thread_id = uuid.uuid4()
+        message_id = uuid.uuid4()
         # Training-domain thread: conference_id stays NULL, the generic
         # anchor points at the registration the attendee belongs to.
         db.add(
@@ -227,6 +236,7 @@ def _emit_threads_for_attendees(
                 subject=subj,
                 bulk_id=bulk_id,
                 screen_overlay_id=screen_overlay_id,
+                has_attachments=has_attachments,
             )
         )
         db.add(
@@ -248,6 +258,7 @@ def _emit_threads_for_attendees(
         )
         db.add(
             Message(
+                id=message_id,
                 tenant_id=tenant_id,
                 thread_id=thread_id,
                 sender_type="user",
@@ -265,9 +276,61 @@ def _emit_threads_for_attendees(
                 subject=subj,
                 body_html=body,
                 thread_id=thread_id,
+                message_id=message_id,
             )
         )
     return prepared
+
+
+async def _duplicate_attachments_per_message(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    source_attachment_ids: list[UUID],
+    target_message_ids: list[UUID],
+) -> None:
+    """For each source attachment + each target message, create a fresh
+    ``Attachment`` row pointing at the message.
+
+    The source row is left in place (entity_id is the placeholder set by
+    the upload endpoint). Realistically those become orphans after the
+    broadcast; a periodic cleanup job will reap them. We trade a little
+    storage for not having to invent a many-to-many junction table — the
+    existing 1-attachment-per-message contract on ``Attachment`` model
+    stays intact.
+
+    No-op when either list is empty.
+    """
+    if not source_attachment_ids or not target_message_ids:
+        return
+    sources = (
+        (
+            await db.execute(
+                select(Attachment).where(
+                    Attachment.id.in_(source_attachment_ids),
+                    Attachment.tenant_id == tenant_id,
+                    Attachment.entity_type == "message",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for src in sources:
+        for msg_id in target_message_ids:
+            db.add(
+                Attachment(
+                    tenant_id=tenant_id,
+                    entity_type="message",
+                    entity_id=msg_id,
+                    filename=src.filename,
+                    content_type=src.content_type,
+                    file_size=src.file_size,
+                    file_data=src.file_data,
+                    description=src.description,
+                    uploaded_by=src.uploaded_by,
+                )
+            )
 
 
 async def _dispatch_broadcast_emails(

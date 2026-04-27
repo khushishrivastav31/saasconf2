@@ -32,6 +32,7 @@ from app.models.training_registration import TrainingRegistration, TrainingRegis
 from ._core import (
     _AnchoredAttendee,
     _dispatch_broadcast_emails,
+    _duplicate_attachments_per_message,
     _emit_threads_for_attendees,
     _filter_and_dedupe_attendees,
     _load_registration_with_context,
@@ -48,6 +49,7 @@ async def broadcast_to_registration_attendees(
     subject_template: str,
     body_html_template: str,
     screen_overlay_id: UUID | None = None,
+    attachment_ids: list[UUID] | None = None,
 ) -> tuple[UUID, list[_PreparedRecipient], int]:
     """Send a broadcast to every attendee on a single training registration.
 
@@ -68,6 +70,7 @@ async def broadcast_to_registration_attendees(
         return bulk_id, [], skipped
 
     sanitized_body = sanitize_html(body_html_template)
+    has_attachments = bool(attachment_ids)
     prepared = _emit_threads_for_attendees(
         db,
         tenant_id=tenant_id,
@@ -79,7 +82,16 @@ async def broadcast_to_registration_attendees(
         training_name=training_name,
         placement_date=placement_date,
         screen_overlay_id=screen_overlay_id,
+        has_attachments=has_attachments,
     )
+
+    if attachment_ids:
+        await _duplicate_attachments_per_message(
+            db,
+            tenant_id=tenant_id,
+            source_attachment_ids=attachment_ids,
+            target_message_ids=[r.message_id for r in prepared],
+        )
 
     await db.flush()
 
@@ -104,6 +116,7 @@ async def broadcast_to_placement_attendees(
     body_html_template: str,
     screen_overlay_id: UUID | None = None,
     attendee_ids: list[UUID] | None = None,
+    attachment_ids: list[UUID] | None = None,
 ) -> tuple[UUID, list[_PreparedRecipient], int]:
     """Send a broadcast to attendees across registrations on a placement.
 
@@ -173,6 +186,7 @@ async def broadcast_to_placement_attendees(
         return bulk_id, [], skipped
 
     sanitized_body = sanitize_html(body_html_template)
+    has_attachments = bool(attachment_ids)
     prepared = _emit_threads_for_attendees(
         db,
         tenant_id=tenant_id,
@@ -184,7 +198,16 @@ async def broadcast_to_placement_attendees(
         training_name=training_name,
         placement_date=placement_date,
         screen_overlay_id=screen_overlay_id,
+        has_attachments=has_attachments,
     )
+
+    if attachment_ids:
+        await _duplicate_attachments_per_message(
+            db,
+            tenant_id=tenant_id,
+            source_attachment_ids=attachment_ids,
+            target_message_ids=[r.message_id for r in prepared],
+        )
 
     await db.flush()
 
@@ -211,6 +234,7 @@ async def broadcast_to_attendees_by_id(
     subject_template: str,
     body_html_template: str,
     screen_overlay_id: UUID | None = None,
+    attachment_ids: list[UUID] | None = None,
 ) -> tuple[UUID, list[_PreparedRecipient], int]:
     """Send a broadcast to a list of attendees regardless of placement.
 
@@ -263,6 +287,7 @@ async def broadcast_to_attendees_by_id(
             placement.start_date.isoformat() if placement.start_date else "",
         )
 
+    has_attachments = bool(attachment_ids)
     for placement_id, pairs in by_placement.items():
         training_name, placement_date = placement_meta[placement_id]
         anchored = [
@@ -284,7 +309,16 @@ async def broadcast_to_attendees_by_id(
                 training_name=training_name,
                 placement_date=placement_date,
                 screen_overlay_id=screen_overlay_id,
+                has_attachments=has_attachments,
             )
+        )
+
+    if attachment_ids and prepared:
+        await _duplicate_attachments_per_message(
+            db,
+            tenant_id=tenant_id,
+            source_attachment_ids=attachment_ids,
+            target_message_ids=[r.message_id for r in prepared],
         )
 
     await db.flush()

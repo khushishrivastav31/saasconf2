@@ -629,6 +629,202 @@ class TestPlacementBroadcast:
         # Only Alice was real; the bogus id silently dropped.
         assert resp.json()["sent_count"] == 1
 
+    async def test_upload_endpoint_creates_staged_attachment(
+        self,
+        client: AsyncClient,
+        pb_admin: User,
+    ) -> None:
+        """The admin uploads a file before clicking Send; the endpoint
+        returns an Attachment row with a placeholder entity_id that the
+        broadcast will later duplicate per recipient."""
+        # Plain text avoids ``validate_upload``'s magic-bytes check (which
+        # fails for fake-PDF bytes that don't carry the ``%PDF`` header).
+        resp = await client.post(
+            "/api/v1/trainings/messaging/upload",
+            files={"file": ("agenda.txt", b"hello", "text/plain")},
+            headers=auth_headers(_admin_token(pb_admin)),
+        )
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert body["filename"] == "agenda.txt"
+        assert body["file_size"] == 5
+        assert body["entity_type"] == "message"
+        # entity_id is a placeholder UUID — not yet linked to a message.
+        assert body["entity_id"] is not None
+
+    async def test_upload_rejects_oversize_file(
+        self,
+        client: AsyncClient,
+        pb_admin: User,
+        monkeypatch: object,
+    ) -> None:
+        """Files over the configured ``MAX_UPLOAD_SIZE_MB`` get a 400.
+
+        We monkeypatch ``MAX_UPLOAD_SIZE_MB`` down to 0 (any non-empty
+        upload becomes "too large") so the test stays fast and avoids
+        clashing with the upstream Starlette body-size limit.
+        """
+        from app.config import get_settings
+
+        # Lower the limit to 0 MB so any upload trips it.
+        get_settings().MAX_UPLOAD_SIZE_MB = 0  # type: ignore[misc]
+        try:
+            resp = await client.post(
+                "/api/v1/trainings/messaging/upload",
+                files={"file": ("any.txt", b"x", "text/plain")},
+                headers=auth_headers(_admin_token(pb_admin)),
+            )
+            assert resp.status_code == 400, resp.text
+            assert "size exceeds" in resp.text.lower()
+        finally:
+            # Restore default so unrelated tests aren't poisoned.
+            get_settings().MAX_UPLOAD_SIZE_MB = 10  # type: ignore[misc]
+
+    async def test_download_endpoint_returns_bytes_and_blocks_other_tenants(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        pb_tenant: Tenant,
+        pb_admin: User,
+    ) -> None:
+        from app.models.attachment import Attachment
+
+        # My own attachment — admin can download.
+        mine = Attachment(
+            tenant_id=pb_tenant.id,
+            entity_type="message",
+            entity_id=uuid.uuid4(),
+            filename="ours.txt",
+            content_type="text/plain",
+            file_size=4,
+            file_data=b"ours",
+            uploaded_by=pb_admin.id,
+        )
+        db_session.add(mine)
+        # Other tenant's attachment — admin must NOT see.
+        other = Tenant(id=uuid.uuid4(), name="Other", slug=f"o-{uuid.uuid4().hex[:6]}")
+        db_session.add(other)
+        await db_session.flush()
+        theirs = Attachment(
+            tenant_id=other.id,
+            entity_type="message",
+            entity_id=uuid.uuid4(),
+            filename="theirs.txt",
+            content_type="text/plain",
+            file_size=6,
+            file_data=b"theirs",
+        )
+        db_session.add(theirs)
+        await db_session.commit()
+        await db_session.refresh(mine)
+        await db_session.refresh(theirs)
+
+        # Mine: 200 with the bytes.
+        resp = await client.get(
+            f"/api/v1/trainings/messaging/attachments/{mine.id}/download",
+            headers=auth_headers(_admin_token(pb_admin)),
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.content == b"ours"
+        # Theirs: 404 (no leak — same response shape as if it never existed).
+        resp = await client.get(
+            f"/api/v1/trainings/messaging/attachments/{theirs.id}/download",
+            headers=auth_headers(_admin_token(pb_admin)),
+        )
+        assert resp.status_code == 404, resp.text
+
+    async def test_attachments_duplicate_per_recipient(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        pb_tenant: Tenant,
+        pb_admin: User,
+        pb_placement: ProgramYearTraining,
+    ) -> None:
+        """An admin upload + broadcast must duplicate the attachment row per
+        recipient message so each recipient's portal can download their own
+        copy. The thread also flips ``has_attachments=True``."""
+        from app.models.attachment import Attachment
+
+        # 2 recipients on the placement.
+        await _make_reg(
+            db_session,
+            pb_tenant,
+            pb_placement,
+            attendees=[
+                ("Alice", "L", "alice@example.com"),
+                ("Bob", "B", "bob@example.com"),
+            ],
+        )
+        # Pre-stage one attachment (the admin uploaded a file before clicking Send).
+        staged = Attachment(
+            tenant_id=pb_tenant.id,
+            entity_type="message",
+            entity_id=uuid.uuid4(),  # placeholder
+            filename="agenda.pdf",
+            content_type="application/pdf",
+            file_size=1024,
+            file_data=b"fake-pdf-bytes",
+            uploaded_by=pb_admin.id,
+        )
+        db_session.add(staged)
+        await db_session.commit()
+        await db_session.refresh(staged)
+
+        with patch(
+            "app.services.training_messaging._core.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ):
+            resp = await client.post(
+                _endpoint(pb_placement.id),
+                json={
+                    "subject": "Hi",
+                    "body_html": "<p>Hi</p>",
+                    "attachment_ids": [str(staged.id)],
+                },
+                headers=auth_headers(_admin_token(pb_admin)),
+            )
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert body["sent_count"] == 2
+
+        # 2 recipients × 1 source attachment = 2 *new* attachment rows
+        # pointing at each recipient's first message. The original staged
+        # row stays put.
+        bulk_id = uuid.UUID(body["bulk_id"])
+        threads = (
+            (await db_session.execute(select(MessageThread).where(MessageThread.bulk_id == bulk_id))).scalars().all()
+        )
+        thread_ids = [t.id for t in threads]
+        # All threads have has_attachments flipped to True.
+        for t in threads:
+            assert t.has_attachments is True
+        # Pull all attachments tied to this broadcast's messages.
+        from app.models.messaging import Message
+
+        msg_rows = (
+            (await db_session.execute(select(Message).where(Message.thread_id.in_(thread_ids)))).scalars().all()
+        )
+        msg_ids = [m.id for m in msg_rows]
+        att_rows = (
+            (
+                await db_session.execute(
+                    select(Attachment).where(
+                        Attachment.entity_type == "message",
+                        Attachment.entity_id.in_(msg_ids),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(att_rows) == 2
+        for att in att_rows:
+            assert att.filename == "agenda.pdf"
+            assert att.file_data == b"fake-pdf-bytes"
+            # Each row points at a real message id (not the placeholder).
+            assert att.entity_id in set(msg_ids)
+
     async def test_empty_placement_returns_zero_recipients(
         self,
         client: AsyncClient,

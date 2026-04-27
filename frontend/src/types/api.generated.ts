@@ -4535,6 +4535,56 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/messaging/upload': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload Training Message Attachment
+     * @description Stage a file for inclusion in a training broadcast.
+     *
+     *     Mirrors the portal-side upload (``cfp_portal/messaging/attachments``):
+     *     the admin uploads the file, gets back an ``Attachment`` row with a
+     *     placeholder ``entity_id``. When the broadcast actually fires, the
+     *     service duplicates this row per recipient message via
+     *     ``_duplicate_attachments_per_message``.
+     */
+    post: operations['upload_training_message_attachment_api_v1_trainings_messaging_upload_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/messaging/attachments/{attachment_id}/download': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download Training Message Attachment
+     * @description Download a training-message attachment.
+     *
+     *     Tenant-scoped: any admin in the tenant can download; we don't
+     *     additionally restrict to the original uploader because admins
+     *     routinely share access to broadcasts they didn't personally send.
+     */
+    get: operations['download_training_message_attachment_api_v1_trainings_messaging_attachments__attachment_id__download_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/messaging/broadcasts': {
     parameters: {
       query?: never;
@@ -14166,6 +14216,11 @@ export type components = {
       template_id?: string | null;
       /** Screen Overlay Id */
       screen_overlay_id?: string | null;
+      /**
+       * Attachment Ids
+       * @default []
+       */
+      attachment_ids?: string[];
     };
     /**
      * AttendeesBroadcastResponse
@@ -14700,6 +14755,11 @@ export type components = {
     };
     /** Body_upload_qr_logo_api_v1_conferences__conference_id__settings_badge_settings_qr_logo_post */
     Body_upload_qr_logo_api_v1_conferences__conference_id__settings_badge_settings_qr_logo_post: {
+      /** File */
+      file: string;
+    };
+    /** Body_upload_training_message_attachment_api_v1_trainings_messaging_upload_post */
+    Body_upload_training_message_attachment_api_v1_trainings_messaging_upload_post: {
       /** File */
       file: string;
     };
@@ -20995,6 +21055,11 @@ export type components = {
       screen_overlay_id?: string | null;
       /** Attendee Ids */
       attendee_ids?: string[] | null;
+      /**
+       * Attachment Ids
+       * @default []
+       */
+      attachment_ids?: string[];
     };
     /**
      * PlacementBroadcastResponse
@@ -26868,6 +26933,11 @@ export type components = {
       template_id?: string | null;
       /** Screen Overlay Id */
       screen_overlay_id?: string | null;
+      /**
+       * Attachment Ids
+       * @default []
+       */
+      attachment_ids?: string[];
     };
     /**
      * TrainingBroadcastResponse
@@ -39005,6 +39075,74 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AttendeesBroadcastResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  upload_training_message_attachment_api_v1_trainings_messaging_upload_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_upload_training_message_attachment_api_v1_trainings_messaging_upload_post'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AttachmentResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  download_training_message_attachment_api_v1_trainings_messaging_attachments__attachment_id__download_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        attachment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
         };
       };
       /** @description Validation Error */

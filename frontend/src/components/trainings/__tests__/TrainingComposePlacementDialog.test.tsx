@@ -294,6 +294,7 @@ describe('TrainingComposePlacementDialog', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/trainings/placements/pl-1/messages/broadcast', {
         subject: 'Reminder for [Training Name]',
         body_html: '<p>Hi [First Name]</p>',
+        attachment_ids: [],
       })
     );
     await waitFor(() => expect(onClose).toHaveBeenCalled());

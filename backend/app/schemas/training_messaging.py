@@ -24,6 +24,7 @@ class TrainingBroadcastRequest(BaseModel):
     body_html: str = Field(..., min_length=1)
     template_id: UUID | None = None
     screen_overlay_id: UUID | None = None
+    attachment_ids: list[UUID] = []
 
 
 class TrainingBroadcastRecipient(BaseModel):
@@ -70,6 +71,7 @@ class PlacementBroadcastRequest(BaseModel):
     template_id: UUID | None = None
     screen_overlay_id: UUID | None = None
     attendee_ids: list[UUID] | None = None
+    attachment_ids: list[UUID] = []
 
 
 class PlacementBroadcastResponse(BaseModel):
@@ -103,6 +105,7 @@ class AttendeesBroadcastRequest(BaseModel):
     body_html: str = Field(..., min_length=1)
     template_id: UUID | None = None
     screen_overlay_id: UUID | None = None
+    attachment_ids: list[UUID] = []
 
 
 class AttendeesBroadcastResponse(BaseModel):

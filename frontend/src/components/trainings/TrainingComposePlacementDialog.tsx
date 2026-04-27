@@ -9,6 +9,8 @@ import TrainingAttendeeSearchPicker, {
   type AttendeeSearchHit,
 } from './TrainingAttendeeSearchPicker';
 import ComposeRecipientModeToggle, { type RecipientMode } from './ComposeRecipientModeToggle';
+import TrainingVariableButtons from './TrainingVariableButtons';
+import MessageFileAttach, { type StagedAttachment } from '../MessageFileAttach';
 
 interface BroadcastResponse {
   bulk_id: string;
@@ -59,15 +61,6 @@ interface PlacementOption {
   attendees: AttendeeShape[];
 }
 
-const TRAINING_TEMPLATE_VARIABLES: { label: string; token: string }[] = [
-  { label: 'First Name', token: '[First Name]' },
-  { label: 'Last Name', token: '[Last Name]' },
-  { label: 'Email', token: '[Email]' },
-  { label: 'Training Name', token: '[Training Name]' },
-  { label: 'Placement Date', token: '[Placement Date]' },
-  { label: 'Company Name', token: '[Company Name]' },
-];
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -95,6 +88,7 @@ export default function TrainingComposePlacementDialog({
   // Search-mode state: full hits (so chips have the display name + email +
   // training context) rather than just ids.
   const [searchSelected, setSearchSelected] = useState<AttendeeSearchHit[]>([]);
+  const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -116,6 +110,7 @@ export default function TrainingComposePlacementDialog({
         setSelectedAttendeeIds(new Set());
       }
       setSearchSelected([]);
+      setAttachments([]);
       setSubject('');
       setBodyHtml('');
       setSelectedTemplateId('');
@@ -182,6 +177,7 @@ export default function TrainingComposePlacementDialog({
 
   const sendMutation = useMutation({
     mutationFn: async (): Promise<BroadcastResponse> => {
+      const attachmentIds = attachments.map((a) => a.id);
       // Search mode → cross-placement endpoint with the picked attendee ids.
       if (recipientMode === 'search') {
         const resp = await api.post<BroadcastResponse>(
@@ -190,6 +186,7 @@ export default function TrainingComposePlacementDialog({
             subject,
             body_html: bodyHtml,
             attendee_ids: searchSelected.map((s) => s.attendee_id),
+            attachment_ids: attachmentIds,
           }
         );
         return resp.data;
@@ -199,7 +196,8 @@ export default function TrainingComposePlacementDialog({
         subject: string;
         body_html: string;
         attendee_ids?: string[];
-      } = { subject, body_html: bodyHtml };
+        attachment_ids: string[];
+      } = { subject, body_html: bodyHtml, attachment_ids: attachmentIds };
       if (recipientScope === 'specific') {
         payload.attendee_ids = Array.from(selectedAttendeeIds);
       }
@@ -374,32 +372,18 @@ export default function TrainingComposePlacementDialog({
           />
         </div>
 
+        <TrainingVariableButtons onInsert={insertVariable} />
+
         <div>
-          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Variables (click to insert)
+          <div className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Attachments
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {TRAINING_TEMPLATE_VARIABLES.map((v) => (
-              <div key={v.token} className="flex gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => insertVariable(v.token, 'subject')}
-                  title={`Insert ${v.token} into subject`}
-                  className="px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                  {v.label}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertVariable(v.token, 'body')}
-                  title={`Insert ${v.token} into body`}
-                  className="px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                  ↓
-                </button>
-              </div>
-            ))}
-          </div>
+          <MessageFileAttach
+            apiClient={api}
+            uploadPath="/trainings/messaging/upload"
+            attachments={attachments}
+            onAttachmentsChange={setAttachments}
+          />
         </div>
       </div>
 

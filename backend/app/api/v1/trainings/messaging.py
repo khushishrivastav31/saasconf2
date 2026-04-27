@@ -1,25 +1,35 @@
 """Admin training messaging endpoints.
 
-Two surfaces:
+Surfaces:
   - ``POST /registrations/{registration_id}/messages/broadcast`` —
-    message every attendee of one registration. Wired to the
-    "Message attendees" button on the RegistrationRow expansion.
+    message every attendee of one registration.
   - ``POST /placements/{placement_id}/messages/broadcast`` — message
-    every attendee across every registration on one placement (the
-    "training session" level). Wired to the Compose button on the
-    admin Messages tab.
+    every attendee across every registration on one placement.
+  - ``POST /messaging/broadcasts/by-attendees`` — cross-placement
+    by-attendee-id send (search-attendee mode in the Compose dialog).
+  - ``POST /messaging/upload`` — staged file upload for attachments.
+  - ``GET /messaging/attachments/{id}/download`` — admin download of
+    a staged or sent attachment (tenant-scoped).
 
-Both paths anchor each thread on the recipient's own registration via
-``domain='training'`` + ``domain_entity_id=<registration.id>`` and share
-a ``bulk_id`` per send so the admin Messages tab groups them.
+Each broadcast path anchors a thread per recipient on the recipient's
+own registration via ``domain='training'`` + ``domain_entity_id`` and
+shares a ``bulk_id`` per send so the admin Messages tab groups them.
 """
 
+import uuid as _uuid
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, File, UploadFile, status
+from fastapi.responses import Response
+from sqlalchemy import select
 
+from app.config import get_settings
 from app.core.dependencies import DbSessionDep, TenantAdminDep
+from app.core.exceptions import NotFoundError, ValidationError
+from app.core.file_validation import safe_content_disposition, sanitize_filename, validate_upload
+from app.models.attachment import Attachment
+from app.schemas.attachment import AttachmentResponse
 from app.schemas.training_messaging import (
     AttendeesBroadcastRequest,
     AttendeesBroadcastResponse,
@@ -35,11 +45,101 @@ from app.services.training_messaging import (
     broadcast_to_registration_attendees,
 )
 
-# Three routers: registration / placement / cross-placement (by attendees).
-# Each carries its own URL prefix so they mount side-by-side without colliding.
+# Routers grouped by URL prefix so they mount side-by-side without colliding.
 router = APIRouter(prefix="/registrations", tags=["training-messaging"])
 placement_router = APIRouter(prefix="/placements", tags=["training-messaging"])
 attendees_broadcast_router = APIRouter(prefix="/messaging/broadcasts", tags=["training-messaging"])
+attachments_router = APIRouter(prefix="/messaging", tags=["training-messaging"])
+
+
+@attachments_router.post("/upload", response_model=AttachmentResponse, status_code=201)
+async def upload_training_message_attachment(
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    file: UploadFile = File(...),
+) -> AttachmentResponse:
+    """Stage a file for inclusion in a training broadcast.
+
+    Mirrors the portal-side upload (``cfp_portal/messaging/attachments``):
+    the admin uploads the file, gets back an ``Attachment`` row with a
+    placeholder ``entity_id``. When the broadcast actually fires, the
+    service duplicates this row per recipient message via
+    ``_duplicate_attachments_per_message``.
+    """
+    tenant_id = current_user.require_tenant_id()
+
+    file_data = await file.read()
+    file_size = len(file_data)
+    settings = get_settings()
+    max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file_size > max_size:
+        raise ValidationError(f"File size exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)")
+
+    content_type = file.content_type or "application/octet-stream"
+    verified_type = validate_upload(file_data, content_type, "message")
+    safe_filename = sanitize_filename(file.filename or "unnamed")
+
+    attachment = Attachment(
+        tenant_id=tenant_id,
+        entity_type="message",
+        entity_id=_uuid.uuid4(),  # placeholder until the broadcast fires
+        filename=safe_filename,
+        content_type=verified_type,
+        file_size=file_size,
+        file_data=file_data,
+        uploaded_by=current_user.user_id,
+    )
+    db.add(attachment)
+    await db.commit()
+    await db.refresh(attachment)
+
+    return AttachmentResponse(
+        id=attachment.id,
+        tenant_id=attachment.tenant_id,
+        entity_type=attachment.entity_type,
+        entity_id=attachment.entity_id,
+        filename=attachment.filename,
+        content_type=attachment.content_type,
+        file_size=attachment.file_size,
+        description=attachment.description,
+        uploaded_by=attachment.uploaded_by,
+        created_at=attachment.created_at,
+        updated_at=attachment.updated_at,
+    )
+
+
+@attachments_router.get("/attachments/{attachment_id}/download")
+async def download_training_message_attachment(
+    attachment_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> Response:
+    """Download a training-message attachment.
+
+    Tenant-scoped: any admin in the tenant can download; we don't
+    additionally restrict to the original uploader because admins
+    routinely share access to broadcasts they didn't personally send.
+    """
+    tenant_id = current_user.require_tenant_id()
+    result = await db.execute(
+        select(Attachment).where(
+            Attachment.id == attachment_id,
+            Attachment.tenant_id == tenant_id,
+            Attachment.entity_type == "message",
+        )
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise NotFoundError("Attachment not found")
+
+    return Response(
+        content=attachment.file_data,
+        media_type=attachment.content_type,
+        headers={
+            "Content-Disposition": safe_content_disposition(attachment.filename),
+            "Content-Length": str(attachment.file_size),
+        },
+    )
 
 
 @router.post(
@@ -68,6 +168,7 @@ async def broadcast_to_registration(
         subject_template=data.subject,
         body_html_template=data.body_html,
         screen_overlay_id=data.screen_overlay_id,
+        attachment_ids=data.attachment_ids or None,
     )
     await db.commit()
 
@@ -118,6 +219,7 @@ async def broadcast_to_placement(
         body_html_template=data.body_html,
         screen_overlay_id=data.screen_overlay_id,
         attendee_ids=data.attendee_ids,
+        attachment_ids=data.attachment_ids or None,
     )
     await db.commit()
 
@@ -165,6 +267,7 @@ async def broadcast_to_attendees(
         subject_template=data.subject,
         body_html_template=data.body_html,
         screen_overlay_id=data.screen_overlay_id,
+        attachment_ids=data.attachment_ids or None,
     )
     await db.commit()
 
