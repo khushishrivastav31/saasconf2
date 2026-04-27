@@ -140,15 +140,27 @@ class MessageThread(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
+    # Nullable as of migration 214: training-domain threads anchor on
+    # ``TrainingRegistration`` and leave this column NULL.
+    #
+    # The ``Mapped[UUID]`` annotation deliberately omits ``| None`` even
+    # though the DB column is nullable. Reasoning: every conference-domain
+    # code path queries by ``MessageThread.conference_id == X`` first and
+    # therefore reads ``.conference_id`` only for rows where the value is
+    # non-null. Training-domain code reads ``.domain_entity_id`` instead.
+    # The one place that aggregates *all* threads (``global_unread.py``)
+    # filters by ``domain == 'conference'`` to keep the invariant.
+    #
+    # If a future caller crosses domains, narrow with an ``assert
+    # thread.conference_id is not None`` rather than weakening this type.
     conference_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("conferences.id", ondelete="CASCADE"), nullable=True
     )
-    # Generic anchor: pairs with ``conference_id`` while we transition the
-    # messaging system to support both conference and training threads.
-    # The ``before_insert`` listener below mirrors ``conference_id`` into
-    # ``domain_entity_id`` so existing constructors keep working unchanged.
-    # Training broadcasts (PR 3) set ``domain='training'`` explicitly with the
-    # ``TrainingRegistration`` id as the anchor.
+    # Generic anchor: pairs with ``conference_id`` for conference threads, or
+    # holds the ``TrainingRegistration.id`` for training threads. The
+    # ``before_insert`` listener below mirrors ``conference_id`` into
+    # ``domain_entity_id`` so existing conference-domain constructors keep
+    # working unchanged.
     domain: Mapped[str] = mapped_column(String(20), nullable=False, default=THREAD_DOMAIN_CONFERENCE)
     domain_entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -190,15 +202,22 @@ class MessageThread(Base):
 def _mirror_conference_id_to_domain_entity(mapper, connection, target: "MessageThread") -> None:
     """Default the generic anchor to the legacy ``conference_id`` at insert.
 
-    Lets every existing ``MessageThread(...)`` constructor keep working without
-    explicitly setting ``domain`` / ``domain_entity_id``. New training-domain
-    code sets both fields directly and this listener becomes a no-op for those
-    rows.
+    Lets every existing conference-domain ``MessageThread(...)`` constructor
+    keep working without explicitly setting ``domain`` / ``domain_entity_id``.
+
+    Only mirrors when domain is the conference default — training-domain
+    callers MUST set ``domain_entity_id`` explicitly. If they forget, the
+    NOT NULL constraint rejects the insert (loud failure rather than a
+    silent point-at-the-wrong-thing bug).
     """
-    if target.domain_entity_id is None and target.conference_id is not None:
-        target.domain_entity_id = target.conference_id
     if not target.domain:
         target.domain = THREAD_DOMAIN_CONFERENCE
+    if (
+        target.domain == THREAD_DOMAIN_CONFERENCE
+        and target.domain_entity_id is None
+        and target.conference_id is not None
+    ):
+        target.domain_entity_id = target.conference_id
 
 
 class MessageParticipant(Base):

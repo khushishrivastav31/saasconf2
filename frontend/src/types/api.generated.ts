@@ -4459,6 +4459,31 @@ export type paths = {
     patch: operations['update_registration_attendee_api_v1_trainings_registrations__registration_id__attendees__attendee_id__patch'];
     trace?: never;
   };
+  '/api/v1/trainings/registrations/{registration_id}/messages/broadcast': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Broadcast To Registration
+     * @description Broadcast a message to every attendee on a training registration.
+     *
+     *     Each attendee gets their own thread (so replies stay 1:1) anchored on
+     *     the registration via ``domain='training'`` + ``domain_entity_id``. All
+     *     threads share a ``bulk_id`` so the admin can later view the broadcast
+     *     as a single send.
+     */
+    post: operations['broadcast_to_registration_api_v1_trainings_registrations__registration_id__messages_broadcast_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/invoices': {
     parameters: {
       query?: never;
@@ -26459,6 +26484,77 @@ export type components = {
       po_number?: string | null;
     };
     /**
+     * TrainingBroadcastRecipient
+     * @description A single recipient resolved from a registration's attendees.
+     */
+    TrainingBroadcastRecipient: {
+      /**
+       * Attendee Id
+       * Format: uuid
+       */
+      attendee_id: string;
+      /** Email */
+      email: string;
+      /** First Name */
+      first_name: string;
+      /** Last Name */
+      last_name: string;
+      /**
+       * Thread Id
+       * Format: uuid
+       */
+      thread_id: string;
+    };
+    /**
+     * TrainingBroadcastRequest
+     * @description Admin request to broadcast a message to all attendees of a training registration.
+     *
+     *     The ``registration_id`` is supplied via the URL path; this body carries
+     *     only the message content. A ``MessageTemplate.id`` may be supplied to
+     *     pre-load subject + body server-side, but the client typically renders the
+     *     template into the request fields client-side and sends raw text.
+     */
+    TrainingBroadcastRequest: {
+      /** Subject */
+      subject: string;
+      /** Body Html */
+      body_html: string;
+      /** Template Id */
+      template_id?: string | null;
+      /** Screen Overlay Id */
+      screen_overlay_id?: string | null;
+    };
+    /**
+     * TrainingBroadcastResponse
+     * @description Result of a training broadcast send.
+     */
+    TrainingBroadcastResponse: {
+      /**
+       * Bulk Id
+       * Format: uuid
+       */
+      bulk_id: string;
+      /**
+       * Registration Id
+       * Format: uuid
+       */
+      registration_id: string;
+      /** Sent Count */
+      sent_count: number;
+      /**
+       * Skipped Count
+       * @default 0
+       */
+      skipped_count?: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Recipients */
+      recipients: components['schemas']['TrainingBroadcastRecipient'][];
+    };
+    /**
      * TrainingCreate
      * @description Schema for creating a training.
      */
@@ -38419,6 +38515,43 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  broadcast_to_registration_api_v1_trainings_registrations__registration_id__messages_broadcast_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        registration_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TrainingBroadcastRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrainingBroadcastResponse'];
         };
       };
       /** @description Validation Error */

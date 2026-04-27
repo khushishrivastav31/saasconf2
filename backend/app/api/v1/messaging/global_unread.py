@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.models.conference import Conference
-from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.messaging import THREAD_DOMAIN_CONFERENCE, Message, MessageParticipant, MessageThread
 from app.schemas.messaging import ConferenceUnreadCount, GlobalUnreadCountResponse
 
 router = APIRouter()
@@ -52,7 +52,12 @@ async def get_global_unread_count(
             MessageThread,
             (MessageThread.id == my_threads.c.thread_id)
             & (MessageThread.tenant_id == tenant_id)
-            & (MessageThread.archived_at.is_(None)),
+            & (MessageThread.archived_at.is_(None))
+            # This endpoint groups by conference_id; training threads have
+            # NULL there and would land in a None bucket that ConferenceUnreadCount
+            # cannot represent. Scope to conference-domain threads here — the
+            # unified per-domain unread count is the portal inbox's job (PR 2).
+            & (MessageThread.domain == THREAD_DOMAIN_CONFERENCE),
         )
         .join(last_msg, last_msg.c.thread_id == my_threads.c.thread_id)
         .where((my_threads.c.last_read_at.is_(None)) | (last_msg.c.last_at > my_threads.c.last_read_at))

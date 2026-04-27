@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
+import TrainingBroadcastDialog from '../../../components/trainings/TrainingBroadcastDialog';
 
 interface Attendee {
   id: string;
@@ -75,6 +76,7 @@ function RegistrationRow({
     sourceType: string;
     name: string;
   } | null>(null);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
 
   const parkMutation = useMutation({
     mutationFn: ({ sourceId, sourceType }: { sourceId: string; sourceType: string }) =>
@@ -207,6 +209,19 @@ function RegistrationRow({
         <tr>
           <td colSpan={7} className="px-0 py-0">
             <div className="bg-gray-50 dark:bg-gray-900/50 px-8 py-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="mb-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setBroadcastOpen(true);
+                  }}
+                  className="px-3 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                  title="Send a message to every attendee on this registration"
+                >
+                  Message attendees
+                </button>
+              </div>
               <table className="min-w-full text-xs">
                 <thead>
                   <tr className="text-gray-500 dark:text-gray-400 uppercase text-[10px]">
@@ -282,6 +297,15 @@ function RegistrationRow({
           </td>
         </tr>
       )}
+
+      {/* Broadcast dialog: anchored on the registration. */}
+      <TrainingBroadcastDialog
+        open={broadcastOpen}
+        onClose={() => setBroadcastOpen(false)}
+        registrationId={reg.id}
+        trainingName={reg.training_name}
+        attendees={reg.attendees}
+      />
 
       {/* Park confirmation dialog */}
       {parkConfirm && (
