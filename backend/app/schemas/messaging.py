@@ -75,6 +75,13 @@ class ThreadListItem(BaseModel):
     created_at: datetime
     bulk_id: UUID | None = None
     archived_at: datetime | None = None
+    # Generic anchor (PR 1 added the columns; PR 2b surfaces them so the
+    # portal inbox can group/filter by domain). ``domain_entity_name`` is
+    # resolved per-domain (conference name or training placement label) for
+    # the chip label — clients should not assume how it's derived.
+    domain: str = "conference"
+    domain_entity_id: UUID | None = None
+    domain_entity_name: str | None = None
 
 
 class ThreadListResponse(BaseModel):
@@ -102,6 +109,12 @@ class ThreadDetailResponse(BaseModel):
     messages: list[MessageResponse]
     created_at: datetime
     updated_at: datetime
+    # Same anchor surface as ``ThreadListItem`` — kept in sync so the portal
+    # detail view can render domain-appropriate context (training name vs
+    # conference name) without a second roundtrip.
+    domain: str = "conference"
+    domain_entity_id: UUID | None = None
+    domain_entity_name: str | None = None
 
 
 # --- Admin create / reply ---

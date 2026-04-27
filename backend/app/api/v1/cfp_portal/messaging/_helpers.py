@@ -10,14 +10,19 @@ import re
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.core.security.pii_crypto import read_pii
+from app.core.security.pii_crypto import hash_email, read_pii
 from app.models.attachment import Attachment
 from app.models.cfp import CFPApplicant
 from app.models.messaging import MessageParticipant
+from app.models.training import Training
+from app.models.training_program import ProgramYearTraining
+from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 from app.models.user import User
 from app.schemas.messaging import MessageAttachmentInfo, SenderInfo
+from app.services.training_messaging import PARTICIPANT_TYPE_TRAINING_ATTENDEE
 
 logger = logging.getLogger(__name__)
 
@@ -161,3 +166,90 @@ async def _link_attachments_to_message(db, attachment_ids: list[UUID], message_i
     )
     for a in result.scalars():
         a.entity_id = message_id
+
+
+async def _resolve_my_participant_keys(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    applicant_id: UUID,
+    applicant_email: str,
+) -> list[tuple[str, UUID]]:
+    """Return every (participant_type, participant_id) pair that represents *me*.
+
+    The portal user logs in as a ``CFPApplicant`` (legacy) but in PR 3 the
+    same person can also be a ``TrainingRegistrationAttendee`` if they
+    booked a training. The unified inbox shows both threads, so we have
+    to enumerate every shape the user appears under in
+    ``message_participants``.
+
+    The applicant key is the obvious one. Training-attendee keys come from
+    the ``training_registration_attendees`` rows where ``email_hash``
+    matches the applicant's email — same identity rule the seed uses to
+    link the two sides.
+    """
+    keys: list[tuple[str, UUID]] = [("applicant", applicant_id)]
+
+    if not applicant_email:
+        return keys
+
+    email_h = hash_email(applicant_email)
+    rows = await db.execute(
+        select(TrainingRegistrationAttendee.id).where(
+            TrainingRegistrationAttendee.tenant_id == tenant_id,
+            TrainingRegistrationAttendee.email_hash == email_h,
+        )
+    )
+    for (attendee_id,) in rows.all():
+        keys.append((PARTICIPANT_TYPE_TRAINING_ATTENDEE, attendee_id))
+    return keys
+
+
+async def _resolve_domain_entity_names(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    domain_pairs: set[tuple[str, UUID]],
+) -> dict[tuple[str, UUID], str]:
+    """Batch-resolve a display label for each ``(domain, entity_id)`` pair.
+
+    Used by the unified portal inbox to render a chip / context label for
+    each thread without a per-thread roundtrip. Conference threads use
+    ``Conference.name``; training threads join through
+    ``TrainingRegistration → ProgramYearTraining → Training`` to surface
+    the training's name. Pairs that don't resolve get omitted — the FE
+    falls back to "Unknown" rendering.
+    """
+    name_map: dict[tuple[str, UUID], str] = {}
+
+    conference_ids = [eid for d, eid in domain_pairs if d == "conference"]
+    training_reg_ids = [eid for d, eid in domain_pairs if d == "training"]
+
+    if conference_ids:
+        # Late import to keep this helper from pulling Conference into modules
+        # that don't otherwise need it.
+        from app.models.conference import Conference
+
+        rows = await db.execute(
+            select(Conference.id, Conference.name).where(
+                Conference.id.in_(conference_ids),
+                Conference.tenant_id == tenant_id,
+            )
+        )
+        for cid, cname in rows.all():
+            name_map[("conference", cid)] = cname or ""
+
+    if training_reg_ids:
+        rows = await db.execute(
+            select(TrainingRegistration.id, Training.name)
+            .join(ProgramYearTraining, ProgramYearTraining.id == TrainingRegistration.placement_id)
+            .join(Training, Training.id == ProgramYearTraining.training_id)
+            .where(
+                TrainingRegistration.id.in_(training_reg_ids),
+                TrainingRegistration.tenant_id == tenant_id,
+            )
+        )
+        for rid, tname in rows.all():
+            name_map[("training", rid)] = tname or ""
+
+    return name_map

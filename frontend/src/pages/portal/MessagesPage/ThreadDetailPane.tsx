@@ -72,7 +72,11 @@ export default function ThreadDetailPane({
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
             {threadDetail.subject}
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Conversation with Organizer</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {threadDetail.domain_entity_name
+              ? `${threadDetail.domain === 'training' ? 'Training' : 'Conference'}: ${threadDetail.domain_entity_name}`
+              : 'Conversation with Organizer'}
+          </p>
         </div>
         {/* Archive button */}
         <button

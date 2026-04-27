@@ -27,6 +27,8 @@ from ._helpers import (
     _fetch_message_attachments,
     _link_attachments_to_message,
     _notify_other_participants,
+    _resolve_domain_entity_names,
+    _resolve_my_participant_keys,
     _resolve_senders,
 )
 
@@ -39,9 +41,8 @@ async def get_portal_thread(
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> ThreadDetailResponse:
-    """Get thread with all messages (applicant must be participant)."""
+    """Get thread with all messages (portal user must be participant under any of their identities)."""
     tenant_id = current_applicant.tenant_id
-    applicant_id = current_applicant.applicant_id
 
     result = await db.execute(
         select(MessageThread)
@@ -58,10 +59,17 @@ async def get_portal_thread(
     if not thread:
         raise NotFoundError("Thread not found")
 
-    # Verify applicant is a participant
-    is_participant = any(
-        p.participant_type == "applicant" and p.participant_id == applicant_id for p in thread.participants
+    # Verify the portal user participates under ANY of their identities
+    # (CFP applicant or training-attendee). PR 2b made this a union so the
+    # unified inbox can render training threads too.
+    my_keys = await _resolve_my_participant_keys(
+        db,
+        tenant_id=tenant_id,
+        applicant_id=current_applicant.applicant_id,
+        applicant_email=current_applicant.applicant.email or "",
     )
+    key_set = {(t, i) for t, i in my_keys}
+    is_participant = any((p.participant_type, p.participant_id) in key_set for p in thread.participants)
     if not is_participant:
         raise NotFoundError("Thread not found")
 
@@ -111,6 +119,13 @@ async def get_portal_thread(
                 )
             )
 
+    # Resolve a display label for the thread's domain anchor (training name
+    # or conference name) so the FE can render context without a second hop.
+    domain_pair: set[tuple[str, UUID]] = set()
+    if thread.domain_entity_id is not None:
+        domain_pair.add((thread.domain, thread.domain_entity_id))
+    name_map = await _resolve_domain_entity_names(db, tenant_id=tenant_id, domain_pairs=domain_pair)
+
     return ThreadDetailResponse(
         id=thread.id,
         subject=thread.subject,
@@ -120,6 +135,11 @@ async def get_portal_thread(
         messages=messages,
         created_at=thread.created_at,
         updated_at=thread.updated_at,
+        domain=thread.domain,
+        domain_entity_id=thread.domain_entity_id,
+        domain_entity_name=(
+            name_map.get((thread.domain, thread.domain_entity_id)) if thread.domain_entity_id else None
+        ),
     )
 
 
@@ -229,7 +249,13 @@ async def reply_to_portal_thread(
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> MessageResponse:
-    """Applicant replies to a thread."""
+    """Reply to a thread.
+
+    Conference threads: the user's CFP-applicant identity is the sender.
+    Training threads: the matching ``training_attendee`` participant row
+    becomes the sender — same shape as the admin-side training broadcast
+    so the conversation stays consistent.
+    """
     tenant_id = current_applicant.tenant_id
     applicant_id = current_applicant.applicant_id
 
@@ -244,26 +270,28 @@ async def reply_to_portal_thread(
     if not thread:
         raise NotFoundError("Thread not found")
 
-    p_result = await db.execute(
-        select(MessageParticipant).where(
-            MessageParticipant.thread_id == thread_id,
-            MessageParticipant.participant_type == "applicant",
-            MessageParticipant.participant_id == applicant_id,
-        )
+    my_keys = await _resolve_my_participant_keys(
+        db,
+        tenant_id=tenant_id,
+        applicant_id=applicant_id,
+        applicant_email=current_applicant.applicant.email or "",
     )
-    participant = p_result.scalar_one_or_none()
+    key_set = {(t, i) for t, i in my_keys}
+    p_result = await db.execute(select(MessageParticipant).where(MessageParticipant.thread_id == thread_id))
+    all_participants = list(p_result.scalars().all())
+    participant = next((p for p in all_participants if (p.participant_type, p.participant_id) in key_set), None)
     if not participant:
         raise NotFoundError("Thread not found")
 
     # Mark as read
     participant.last_read_at = datetime.now(UTC)
 
-    # Create message
+    # Create message — sender identity matches whichever participant row was used.
     message = Message(
         tenant_id=tenant_id,
         thread_id=thread_id,
-        sender_type="applicant",
-        sender_id=applicant_id,
+        sender_type=participant.participant_type,
+        sender_id=participant.participant_id,
         body_html=sanitize_html(data.body_html),
     )
     db.add(message)
@@ -279,36 +307,42 @@ async def reply_to_portal_thread(
     await db.commit()
     await db.refresh(message)
 
-    # Send email notifications
-    conf_result = await db.execute(select(Conference).where(Conference.id == thread.conference_id))
-    conference = conf_result.scalar_one_or_none()
-    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
-    tenant_obj = tenant_result.scalar_one_or_none()
-    tenant_slug = tenant_obj.slug if tenant_obj else ""
-    await _notify_other_participants(
-        db,
-        thread,
-        "applicant",
-        applicant_id,
-        conference.name if conference else "",
-        tenant_slug,
-        thread.conference_id,
-    )
+    # Send email notifications. The notification helper is conference-bound
+    # (it expects ``conference_id`` and a conference name); for training
+    # threads we skip it for now — the recipients still get the new-message
+    # surface in the admin training inbox once that lands. Cross-domain
+    # notifications are tracked as a follow-up.
+    if thread.domain == "conference" and thread.conference_id is not None:
+        conf_result = await db.execute(select(Conference).where(Conference.id == thread.conference_id))
+        conference = conf_result.scalar_one_or_none()
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+        tenant_obj = tenant_result.scalar_one_or_none()
+        tenant_slug = tenant_obj.slug if tenant_obj else ""
+        await _notify_other_participants(
+            db,
+            thread,
+            participant.participant_type,
+            participant.participant_id,
+            conference.name if conference else "",
+            tenant_slug,
+            thread.conference_id,
+        )
 
     # Fetch attachments for this message
     attachment_map = await _fetch_message_attachments(db, [message.id])
 
     applicant = current_applicant.applicant
+    sender_info = SenderInfo(
+        id=participant.participant_id,
+        type=participant.participant_type,
+        first_name=applicant.first_name,
+        last_name=applicant.last_name,
+        email=applicant.email or "",
+    )
     return MessageResponse(
         id=message.id,
         thread_id=message.thread_id,
-        sender=SenderInfo(
-            id=applicant.id,
-            type="applicant",
-            first_name=applicant.first_name,
-            last_name=applicant.last_name,
-            email=applicant.email or "",
-        ),
+        sender=sender_info,
         body_html=message.body_html,
         attachments=attachment_map.get(message.id, []),
         created_at=message.created_at,
@@ -321,17 +355,27 @@ async def mark_portal_thread_read(
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> dict:
-    """Mark a thread as read for the current applicant."""
-    result = await db.execute(
-        select(MessageParticipant).where(
-            MessageParticipant.thread_id == thread_id,
-            MessageParticipant.participant_type == "applicant",
-            MessageParticipant.participant_id == current_applicant.applicant_id,
-        )
+    """Mark a thread as read for the current portal user.
+
+    Updates ``last_read_at`` on every participant row that represents the
+    user — both the CFP-applicant row and any training-attendee rows that
+    match the user's email — so unread-count converges across domains.
+    """
+    my_keys = await _resolve_my_participant_keys(
+        db,
+        tenant_id=current_applicant.tenant_id,
+        applicant_id=current_applicant.applicant_id,
+        applicant_email=current_applicant.applicant.email or "",
     )
-    participant = result.scalar_one_or_none()
-    if participant:
-        participant.last_read_at = datetime.now(UTC)
+    key_set = {(t, i) for t, i in my_keys}
+    rows = await db.execute(select(MessageParticipant).where(MessageParticipant.thread_id == thread_id))
+    now = datetime.now(UTC)
+    touched = False
+    for p in rows.scalars():
+        if (p.participant_type, p.participant_id) in key_set:
+            p.last_read_at = now
+            touched = True
+    if touched:
         await db.commit()
 
     return {"ok": True}

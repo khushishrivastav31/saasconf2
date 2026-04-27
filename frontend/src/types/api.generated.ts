@@ -11924,7 +11924,12 @@ export type paths = {
     };
     /**
      * List My Threads
-     * @description List applicant's message threads.
+     * @description List the portal user's message threads across all domains.
+     *
+     *     Includes both conference threads (where the user is a CFP applicant
+     *     participant) and training threads (where the user's email matches a
+     *     ``TrainingRegistrationAttendee``). Optional ``domain`` filter for
+     *     inbox chips on the FE.
      */
     get: operations['list_my_threads_api_v1_portal_messages_get'];
     put?: never;
@@ -11950,7 +11955,7 @@ export type paths = {
     put?: never;
     /**
      * Archive Portal Thread
-     * @description Archive a thread for the applicant.
+     * @description Archive a thread for the portal user.
      */
     post: operations['archive_portal_thread_api_v1_portal_messages__thread_id__archive_post'];
     delete?: never;
@@ -11970,7 +11975,7 @@ export type paths = {
     put?: never;
     /**
      * Unarchive Portal Thread
-     * @description Unarchive a thread for the applicant.
+     * @description Unarchive a thread for the portal user.
      */
     post: operations['unarchive_portal_thread_api_v1_portal_messages__thread_id__unarchive_post'];
     delete?: never;
@@ -11988,7 +11993,7 @@ export type paths = {
     };
     /**
      * Get Portal Unread Count
-     * @description Get count of unread threads for current applicant.
+     * @description Get count of unread threads for the current portal user across all domains.
      */
     get: operations['get_portal_unread_count_api_v1_portal_messages_unread_count_get'];
     put?: never;
@@ -12008,7 +12013,7 @@ export type paths = {
     };
     /**
      * Get Portal Thread
-     * @description Get thread with all messages (applicant must be participant).
+     * @description Get thread with all messages (portal user must be participant under any of their identities).
      */
     get: operations['get_portal_thread_api_v1_portal_messages__thread_id__get'];
     put?: never;
@@ -12030,7 +12035,12 @@ export type paths = {
     put?: never;
     /**
      * Reply To Portal Thread
-     * @description Applicant replies to a thread.
+     * @description Reply to a thread.
+     *
+     *     Conference threads: the user's CFP-applicant identity is the sender.
+     *     Training threads: the matching ``training_attendee`` participant row
+     *     becomes the sender — same shape as the admin-side training broadcast
+     *     so the conversation stays consistent.
      */
     post: operations['reply_to_portal_thread_api_v1_portal_messages__thread_id__reply_post'];
     delete?: never;
@@ -12050,7 +12060,11 @@ export type paths = {
     put?: never;
     /**
      * Mark Portal Thread Read
-     * @description Mark a thread as read for the current applicant.
+     * @description Mark a thread as read for the current portal user.
+     *
+     *     Updates ``last_read_at`` on every participant row that represents the
+     *     user — both the CFP-applicant row and any training-attendee rows that
+     *     match the user's email — so unread-count converges across domains.
      */
     post: operations['mark_portal_thread_read_api_v1_portal_messages__thread_id__read_post'];
     delete?: never;
@@ -26052,6 +26066,15 @@ export type components = {
        * Format: date-time
        */
       updated_at: string;
+      /**
+       * Domain
+       * @default conference
+       */
+      domain?: string;
+      /** Domain Entity Id */
+      domain_entity_id?: string | null;
+      /** Domain Entity Name */
+      domain_entity_name?: string | null;
     };
     /**
      * ThreadListItem
@@ -26101,6 +26124,15 @@ export type components = {
       bulk_id?: string | null;
       /** Archived At */
       archived_at?: string | null;
+      /**
+       * Domain
+       * @default conference
+       */
+      domain?: string;
+      /** Domain Entity Id */
+      domain_entity_id?: string | null;
+      /** Domain Entity Name */
+      domain_entity_name?: string | null;
     };
     /**
      * ThreadListResponse
@@ -55442,6 +55474,8 @@ export interface operations {
         page?: number;
         page_size?: number;
         conference_id?: string | null;
+        /** @description Filter by thread domain. One of 'conference', 'training'. Omit for all. */
+        domain?: string | null;
         archived?: boolean;
       };
       header?: {

@@ -5,11 +5,11 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select, tuple_
 
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError
-from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.messaging import THREAD_DOMAINS, Message, MessageParticipant, MessageThread
 from app.schemas.messaging import (
     SenderInfo,
     ThreadListItem,
@@ -17,9 +17,28 @@ from app.schemas.messaging import (
     UnreadCountResponse,
 )
 
-from ._helpers import _resolve_senders, _strip_html
+from ._helpers import (
+    _resolve_domain_entity_names,
+    _resolve_my_participant_keys,
+    _resolve_senders,
+    _strip_html,
+)
 
 router = APIRouter()
+
+
+def _participant_match_clause(my_keys: list[tuple[str, UUID]]):
+    """SQL clause that matches any (participant_type, participant_id) in my_keys.
+
+    Postgres handles ``tuple_(...) IN ((..), (..))`` cleanly. The ``or_``
+    fallback covers the edge case where keys is empty (the ``and_(False)``
+    pattern would also work but ``False`` isn't a valid SQL bool here).
+    """
+    if not my_keys:
+        return and_(MessageParticipant.thread_id.is_(None))
+    return tuple_(MessageParticipant.participant_type, MessageParticipant.participant_id).in_(
+        [(t, i) for t, i in my_keys]
+    )
 
 
 @router.get("/portal/messages", response_model=ThreadListResponse)
@@ -29,17 +48,35 @@ async def list_my_threads(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     conference_id: UUID | None = None,
+    domain: str | None = Query(
+        None,
+        description="Filter by thread domain. One of 'conference', 'training'. Omit for all.",
+    ),
     archived: bool = False,
 ) -> ThreadListResponse:
-    """List applicant's message threads."""
+    """List the portal user's message threads across all domains.
+
+    Includes both conference threads (where the user is a CFP applicant
+    participant) and training threads (where the user's email matches a
+    ``TrainingRegistrationAttendee``). Optional ``domain`` filter for
+    inbox chips on the FE.
+    """
     tenant_id = current_applicant.tenant_id
     applicant_id = current_applicant.applicant_id
+    applicant_email = current_applicant.applicant.email or ""
 
-    # Find threads where applicant is a participant
-    my_thread_ids_q = select(MessageParticipant.thread_id).where(
-        MessageParticipant.participant_type == "applicant",
-        MessageParticipant.participant_id == applicant_id,
+    if domain is not None and domain not in THREAD_DOMAINS:
+        raise NotFoundError(f"Unknown domain '{domain}'")
+
+    my_keys = await _resolve_my_participant_keys(
+        db,
+        tenant_id=tenant_id,
+        applicant_id=applicant_id,
+        applicant_email=applicant_email,
     )
+
+    # Find threads where I'm a participant under ANY of my identities.
+    my_thread_ids_q = select(MessageParticipant.thread_id).where(_participant_match_clause(my_keys))
 
     query = (
         select(MessageThread)
@@ -58,6 +95,8 @@ async def list_my_threads(
 
     if conference_id:
         query = query.where(MessageThread.conference_id == conference_id)
+    if domain:
+        query = query.where(MessageThread.domain == domain)
 
     # Count
     count_q = select(func.count()).select_from(query.subquery())
@@ -103,12 +142,11 @@ async def list_my_threads(
     )
     msg_counts: dict[UUID, int] = dict(count_result.tuples().all())
 
-    # My read status
+    # My read status — match against any of my identities.
     participant_result = await db.execute(
         select(MessageParticipant).where(
             MessageParticipant.thread_id.in_(thread_ids),
-            MessageParticipant.participant_type == "applicant",
-            MessageParticipant.participant_id == applicant_id,
+            _participant_match_clause(my_keys),
         )
     )
     my_participants = {p.thread_id: p for p in participant_result.scalars()}
@@ -135,6 +173,10 @@ async def list_my_threads(
         info = sender_map.get((p.participant_type, p.participant_id))
         if info:
             other_participants_map.setdefault(p.thread_id, []).append(info)
+
+    # Domain entity names for chip rendering.
+    domain_pairs: set[tuple[str, UUID]] = {(t.domain, t.domain_entity_id) for t in threads if t.domain_entity_id}
+    name_map = await _resolve_domain_entity_names(db, tenant_id=tenant_id, domain_pairs=domain_pairs)
 
     items = []
     for thread in threads:
@@ -165,10 +207,78 @@ async def list_my_threads(
                 created_at=thread.created_at,
                 bulk_id=thread.bulk_id,
                 archived_at=thread.archived_at,
+                domain=thread.domain,
+                domain_entity_id=thread.domain_entity_id,
+                domain_entity_name=name_map.get((thread.domain, thread.domain_entity_id)),
             )
         )
 
     return ThreadListResponse(items=items, total=total, page=page, page_size=page_size)
+
+
+def _verify_my_thread(
+    thread: MessageThread | None,
+    my_keys: list[tuple[str, UUID]],
+    participant_rows: list[MessageParticipant],
+) -> None:
+    """Raise 404 if the thread is missing or I'm not a participant.
+
+    Re-uses the participant rows already loaded by the caller so we avoid
+    a second SELECT round-trip.
+    """
+    if thread is None:
+        raise NotFoundError("Thread not found")
+    key_set = {(t, i) for t, i in my_keys}
+    if not any((p.participant_type, p.participant_id) in key_set for p in participant_rows):
+        raise NotFoundError("Thread not found")
+
+
+async def _archive_or_unarchive(
+    thread_id: UUID,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+    *,
+    archived_at: datetime | None,
+) -> dict:
+    tenant_id = current_applicant.tenant_id
+
+    thread = (
+        (
+            await db.execute(
+                select(MessageThread).where(
+                    MessageThread.id == thread_id,
+                    MessageThread.tenant_id == tenant_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    my_keys = await _resolve_my_participant_keys(
+        db,
+        tenant_id=tenant_id,
+        applicant_id=current_applicant.applicant_id,
+        applicant_email=current_applicant.applicant.email or "",
+    )
+    participant_rows = list(
+        (
+            await db.execute(
+                select(MessageParticipant).where(
+                    MessageParticipant.thread_id == thread_id,
+                    _participant_match_clause(my_keys),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    _verify_my_thread(thread, my_keys, participant_rows)
+    assert thread is not None  # narrowed by _verify_my_thread
+
+    thread.archived_at = archived_at
+    await db.commit()
+    return {"ok": True}
 
 
 @router.post("/portal/messages/{thread_id}/archive")
@@ -177,33 +287,8 @@ async def archive_portal_thread(
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> dict:
-    """Archive a thread for the applicant."""
-    tenant_id = current_applicant.tenant_id
-
-    result = await db.execute(
-        select(MessageThread).where(
-            MessageThread.id == thread_id,
-            MessageThread.tenant_id == tenant_id,
-        )
-    )
-    thread = result.scalar_one_or_none()
-    if not thread:
-        raise NotFoundError("Thread not found")
-
-    # Verify participation
-    p_result = await db.execute(
-        select(MessageParticipant).where(
-            MessageParticipant.thread_id == thread_id,
-            MessageParticipant.participant_type == "applicant",
-            MessageParticipant.participant_id == current_applicant.applicant_id,
-        )
-    )
-    if not p_result.scalar_one_or_none():
-        raise NotFoundError("Thread not found")
-
-    thread.archived_at = datetime.now(UTC)
-    await db.commit()
-    return {"ok": True}
+    """Archive a thread for the portal user."""
+    return await _archive_or_unarchive(thread_id, current_applicant, db, archived_at=datetime.now(UTC))
 
 
 @router.post("/portal/messages/{thread_id}/unarchive")
@@ -212,32 +297,8 @@ async def unarchive_portal_thread(
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> dict:
-    """Unarchive a thread for the applicant."""
-    tenant_id = current_applicant.tenant_id
-
-    result = await db.execute(
-        select(MessageThread).where(
-            MessageThread.id == thread_id,
-            MessageThread.tenant_id == tenant_id,
-        )
-    )
-    thread = result.scalar_one_or_none()
-    if not thread:
-        raise NotFoundError("Thread not found")
-
-    p_result = await db.execute(
-        select(MessageParticipant).where(
-            MessageParticipant.thread_id == thread_id,
-            MessageParticipant.participant_type == "applicant",
-            MessageParticipant.participant_id == current_applicant.applicant_id,
-        )
-    )
-    if not p_result.scalar_one_or_none():
-        raise NotFoundError("Thread not found")
-
-    thread.archived_at = None
-    await db.commit()
-    return {"ok": True}
+    """Unarchive a thread for the portal user."""
+    return await _archive_or_unarchive(thread_id, current_applicant, db, archived_at=None)
 
 
 @router.get("/portal/messages/unread-count", response_model=UnreadCountResponse)
@@ -245,16 +306,19 @@ async def get_portal_unread_count(
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> UnreadCountResponse:
-    """Get count of unread threads for current applicant."""
+    """Get count of unread threads for the current portal user across all domains."""
     tenant_id = current_applicant.tenant_id
-    applicant_id = current_applicant.applicant_id
+
+    my_keys = await _resolve_my_participant_keys(
+        db,
+        tenant_id=tenant_id,
+        applicant_id=current_applicant.applicant_id,
+        applicant_email=current_applicant.applicant.email or "",
+    )
 
     my_threads = (
         select(MessageParticipant.thread_id, MessageParticipant.last_read_at)
-        .where(
-            MessageParticipant.participant_type == "applicant",
-            MessageParticipant.participant_id == applicant_id,
-        )
+        .where(_participant_match_clause(my_keys))
         .subquery()
     )
 

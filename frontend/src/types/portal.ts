@@ -490,6 +490,8 @@ export interface PortalMessageResponse {
   created_at: string;
 }
 
+export type PortalThreadDomain = 'conference' | 'training';
+
 export interface PortalThreadListItem {
   id: string;
   subject: string;
@@ -501,6 +503,9 @@ export interface PortalThreadListItem {
   message_count: number;
   created_at: string;
   archived_at: string | null;
+  domain: PortalThreadDomain;
+  domain_entity_id: string | null;
+  domain_entity_name: string | null;
 }
 
 export interface PortalThreadListResponse {
@@ -527,6 +532,9 @@ export interface PortalThreadDetailResponse {
   messages: PortalMessageResponse[];
   created_at: string;
   updated_at: string;
+  domain: PortalThreadDomain;
+  domain_entity_id: string | null;
+  domain_entity_name: string | null;
 }
 
 export interface PortalUnreadCountResponse {

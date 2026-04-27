@@ -4,10 +4,22 @@ import { useSearchParams } from 'react-router';
 import portalApi from '../../../config/portalApi';
 import { useApplicantAuth } from '../../../hooks/useApplicantAuth';
 import { type StagedAttachment } from '../../../components/MessageFileAttach';
-import type { PortalThreadListResponse, PortalThreadDetailResponse } from '../../../types/portal';
+import type {
+  PortalThreadListResponse,
+  PortalThreadDetailResponse,
+  PortalThreadDomain,
+} from '../../../types/portal';
 import PortalComposeModal from './ComposeModal';
 import ThreadDetailPane from './ThreadDetailPane';
 import { formatRelativeDate } from './utils';
+
+type DomainFilter = 'all' | PortalThreadDomain;
+
+const DOMAIN_FILTERS: { value: DomainFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'conference', label: 'Conferences' },
+  { value: 'training', label: 'Trainings' },
+];
 
 export default function MessagesPage() {
   const { applicant } = useApplicantAuth();
@@ -20,6 +32,7 @@ export default function MessagesPage() {
   const [replyAttachments, setReplyAttachments] = useState<StagedAttachment[]>([]);
   const [showCompose, setShowCompose] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [domainFilter, setDomainFilter] = useState<DomainFilter>('all');
 
   useEffect(() => {
     if (threadIdParam) setSelectedThreadId(threadIdParam);
@@ -27,9 +40,10 @@ export default function MessagesPage() {
 
   // Thread list
   const { data: threadList, isLoading } = useQuery({
-    queryKey: ['portal-messages', showArchived],
+    queryKey: ['portal-messages', showArchived, domainFilter],
     queryFn: async () => {
       const params = new URLSearchParams({ archived: String(showArchived) });
+      if (domainFilter !== 'all') params.set('domain', domainFilter);
       const resp = await portalApi.get(`/portal/messages?${params}`);
       return resp.data as PortalThreadListResponse;
     },
@@ -144,7 +158,29 @@ export default function MessagesPage() {
         </button>
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="flex" style={{ height: 'calc(100vh - 220px)' }}>
+        {/* Domain filter chips. Hidden when looking at a single thread on
+            mobile so the detail view gets the full screen width. */}
+        <div
+          className={`px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex gap-1.5 ${
+            selectedThreadId ? 'hidden lg:flex' : 'flex'
+          }`}
+        >
+          {DOMAIN_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setDomainFilter(f.value)}
+              className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
+                domainFilter === f.value
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex" style={{ height: 'calc(100vh - 260px)' }}>
           {/* Thread list */}
           <div
             className={`w-full lg:w-80 border-r overflow-y-auto flex-shrink-0 ${
@@ -192,6 +228,19 @@ export default function MessagesPage() {
                           {formatRelativeDate(thread.last_message_at)}
                         </span>
                       </div>
+                      {thread.domain_entity_name && (
+                        <div className="mt-0.5">
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              thread.domain === 'training'
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                            }`}
+                          >
+                            {thread.domain_entity_name}
+                          </span>
+                        </div>
+                      )}
                       {thread.last_message_preview && (
                         <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
                           {thread.last_message_preview}

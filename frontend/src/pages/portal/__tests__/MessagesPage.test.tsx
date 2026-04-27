@@ -70,7 +70,10 @@ function makeThread(
   id: string,
   subject: string,
   unread = false,
-  archivedAt: string | null = null
+  archivedAt: string | null = null,
+  domainOverrides: Partial<
+    Pick<PortalThreadListResponse['items'][0], 'domain' | 'domain_entity_id' | 'domain_entity_name'>
+  > = {}
 ): PortalThreadListResponse['items'][0] {
   return {
     id,
@@ -89,6 +92,10 @@ function makeThread(
     message_count: 1,
     created_at: '2025-03-01T00:00:00Z',
     archived_at: archivedAt,
+    domain: 'conference',
+    domain_entity_id: 'entity-1',
+    domain_entity_name: 'Default Conference',
+    ...domainOverrides,
   };
 }
 
@@ -228,8 +235,10 @@ describe('MessagesPage', () => {
         expect(screen.getByText('Unread Thread')).toBeInTheDocument();
       });
 
-      // The unread dot is a <span> with rounded-full bg-blue-600
-      const dot = container.querySelector('.rounded-full.bg-blue-600');
+      // The unread dot is a <span> sized w-2 h-2. The selector pins those
+      // two classes so it doesn't accidentally match the new domain filter
+      // chip (button.rounded-full.bg-blue-600 — different element + size).
+      const dot = container.querySelector('span.w-2.h-2.rounded-full.bg-blue-600');
       expect(dot).toBeTruthy();
     });
 
@@ -243,7 +252,7 @@ describe('MessagesPage', () => {
         expect(screen.getByText('Read Thread')).toBeInTheDocument();
       });
 
-      expect(container.querySelector('.rounded-full.bg-blue-600')).toBeNull();
+      expect(container.querySelector('span.w-2.h-2.rounded-full.bg-blue-600')).toBeNull();
     });
 
     it('renders the Archived toggle button', async () => {
@@ -253,6 +262,70 @@ describe('MessagesPage', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /archived/i })).toBeInTheDocument();
+      });
+    });
+
+    it('renders the domain entity name pill on each thread', async () => {
+      const threads = [
+        makeThread('t1', 'Conf Thread', false, null, {
+          domain: 'conference',
+          domain_entity_name: 'AwesomeConf 2026',
+        }),
+        makeThread('t2', 'Training Thread', false, null, {
+          domain: 'training',
+          domain_entity_name: 'ITIL Foundation',
+        }),
+      ];
+      mockPortalApi.get.mockResolvedValueOnce({ data: makeThreadListResponse(threads) });
+
+      renderWithProviders(<MessagesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('AwesomeConf 2026')).toBeInTheDocument();
+        expect(screen.getByText('ITIL Foundation')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('domain filter chips', () => {
+    it('clicking a domain chip refetches with ?domain=<value>', async () => {
+      const user = userEvent.setup();
+      // Initial 'all' fetch returns one of each.
+      const allThreads = [
+        makeThread('t1', 'Conf A', false, null, { domain: 'conference' }),
+        makeThread('t2', 'Train B', false, null, { domain: 'training' }),
+      ];
+      // After clicking Trainings, only the training thread comes back.
+      mockPortalApi.get
+        .mockResolvedValueOnce({ data: makeThreadListResponse(allThreads) })
+        .mockResolvedValueOnce({
+          data: makeThreadListResponse([allThreads[1]]),
+        });
+
+      renderWithProviders(<MessagesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Conf A')).toBeInTheDocument();
+      });
+
+      const trainingsChip = screen.getByRole('button', { name: 'Trainings' });
+      await user.click(trainingsChip);
+
+      // Second fetch carries ?domain=training.
+      await waitFor(() => {
+        const calls = mockPortalApi.get.mock.calls.map((c) => c[0]);
+        expect(calls.some((url) => String(url).includes('domain=training'))).toBe(true);
+      });
+    });
+
+    it('does not include ?domain= when "All" is active', async () => {
+      mockPortalApi.get.mockResolvedValueOnce({ data: makeThreadListResponse([]) });
+
+      renderWithProviders(<MessagesPage />);
+
+      await waitFor(() => {
+        const url = String(mockPortalApi.get.mock.calls[0][0]);
+        expect(url).not.toContain('domain=');
       });
     });
   });
