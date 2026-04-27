@@ -1,30 +1,26 @@
-"""Admin training-messaging list endpoints.
+"""Admin training-messaging list + lookup endpoints.
 
-The Messages tab in the trainings module landed earlier as a "Coming soon"
-stub (``frontend/src/pages/Trainings/tabs/MessagesTab.tsx``). This module
-fills it in: list training-domain broadcasts grouped by ``bulk_id`` so an
-admin can see every send at a glance, with per-broadcast subject, training
-context, recipient count, and sent-at timestamp.
-
-The per-registration broadcast endpoint stays in ``messaging.py``; the
-list lives here so it can mount under ``/trainings/messaging/broadcasts``
-without colliding with the ``/trainings/registrations`` prefix.
+- ``GET /trainings/messaging/broadcasts`` — list past broadcasts grouped
+  by ``bulk_id`` (powers the Messages tab table).
+- ``GET /trainings/messaging/attendees`` — search training attendees by
+  name/email so the Compose dialog can pick a recipient without
+  forcing the admin to navigate to a training session first.
 """
 
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.models.messaging import THREAD_DOMAIN_TRAINING, MessageThread
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining
-from app.models.training_registration import TrainingRegistration
+from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 
-router = APIRouter(prefix="/messaging/broadcasts", tags=["training-messaging"])
+router = APIRouter(prefix="/messaging", tags=["training-messaging"])
 
 
 class TrainingBroadcastSummary(BaseModel):
@@ -46,7 +42,25 @@ class TrainingBroadcastSummaryListResponse(BaseModel):
     total: int
 
 
-@router.get("", response_model=TrainingBroadcastSummaryListResponse)
+class AttendeeSearchHit(BaseModel):
+    """A single match in the attendee-by-name/email search."""
+
+    attendee_id: UUID  # TrainingRegistrationAttendee.id
+    first_name: str
+    last_name: str
+    email: str
+    registration_id: UUID
+    placement_id: UUID
+    training_name: str | None
+    training_date: str | None
+
+
+class AttendeeSearchResponse(BaseModel):
+    items: list[AttendeeSearchHit]
+    total: int
+
+
+@router.get("/broadcasts", response_model=TrainingBroadcastSummaryListResponse)
 async def list_training_broadcasts(
     current_user: TenantAdminDep,
     db: DbSessionDep,
@@ -109,3 +123,72 @@ async def list_training_broadcasts(
         for row in rows
     ]
     return TrainingBroadcastSummaryListResponse(items=items, total=len(items))
+
+
+@router.get("/attendees", response_model=AttendeeSearchResponse)
+async def search_training_attendees(
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    q: str = Query("", description="Substring search on first name, last name, or email."),
+    limit: int = Query(20, ge=1, le=100),
+) -> AttendeeSearchResponse:
+    """Search training attendees by name or email.
+
+    Returns matches across every registration on every placement the
+    admin's tenant owns, joined with the training context so the picker
+    can show "Alice Liddell · alice@example.com — ITIL Foundation, 2026-11-10".
+
+    Matches are case-insensitive substring (``ILIKE %q%``). Empty ``q``
+    returns the first ``limit`` rows ordered by name — useful for "show
+    me a starting list" UX.
+    """
+    tenant_id = current_user.require_tenant_id()
+
+    stmt = (
+        select(
+            TrainingRegistrationAttendee.id.label("attendee_id"),
+            TrainingRegistrationAttendee.first_name,
+            TrainingRegistrationAttendee.last_name,
+            TrainingRegistrationAttendee.email,
+            TrainingRegistration.id.label("registration_id"),
+            ProgramYearTraining.id.label("placement_id"),
+            Training.name.label("training_name"),
+            ProgramYearTraining.start_date.label("training_date"),
+        )
+        .join(
+            TrainingRegistration,
+            TrainingRegistration.id == TrainingRegistrationAttendee.registration_id,
+        )
+        .join(ProgramYearTraining, ProgramYearTraining.id == TrainingRegistration.placement_id)
+        .join(Training, Training.id == ProgramYearTraining.training_id)
+        .where(TrainingRegistrationAttendee.tenant_id == tenant_id)
+        .order_by(TrainingRegistrationAttendee.last_name, TrainingRegistrationAttendee.first_name)
+        .limit(limit)
+    )
+
+    q_norm = q.strip()
+    if q_norm:
+        like = f"%{q_norm}%"
+        stmt = stmt.where(
+            or_(
+                TrainingRegistrationAttendee.first_name.ilike(like),
+                TrainingRegistrationAttendee.last_name.ilike(like),
+                TrainingRegistrationAttendee.email.ilike(like),
+            )
+        )
+
+    rows = (await db.execute(stmt)).all()
+    items = [
+        AttendeeSearchHit(
+            attendee_id=row.attendee_id,
+            first_name=row.first_name,
+            last_name=row.last_name,
+            email=row.email,
+            registration_id=row.registration_id,
+            placement_id=row.placement_id,
+            training_name=row.training_name,
+            training_date=row.training_date.isoformat() if row.training_date else None,
+        )
+        for row in rows
+    ]
+    return AttendeeSearchResponse(items=items, total=len(items))

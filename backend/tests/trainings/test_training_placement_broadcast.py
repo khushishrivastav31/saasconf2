@@ -318,6 +318,317 @@ class TestPlacementBroadcast:
         )
         assert resp.status_code == 404, resp.text
 
+    async def test_attendee_ids_filter_narrows_audience(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        pb_tenant: Tenant,
+        pb_admin: User,
+        pb_placement: ProgramYearTraining,
+    ) -> None:
+        """``attendee_ids`` lets the FE send to one attendee or any subset.
+
+        Two registrations, 3 attendees total. We pin one attendee from
+        each registration (cross-registration filter) and assert only
+        those two get threads.
+        """
+        reg_a = await _make_reg(
+            db_session,
+            pb_tenant,
+            pb_placement,
+            attendees=[
+                ("Alice", "L", "alice@example.com"),
+                ("Bob", "B", "bob@example.com"),
+            ],
+        )
+        reg_b = await _make_reg(
+            db_session,
+            pb_tenant,
+            pb_placement,
+            attendees=[("Carol", "K", "carol@example.com")],
+        )
+        # Pull attendee ids: Alice from reg_a, Carol from reg_b.
+        attendees_a = (
+            (
+                await db_session.execute(
+                    select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.registration_id == reg_a.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        alice = next(a for a in attendees_a if a.email == "alice@example.com")
+        attendees_b = (
+            (
+                await db_session.execute(
+                    select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.registration_id == reg_b.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        carol = next(a for a in attendees_b if a.email == "carol@example.com")
+
+        with patch(
+            "app.services.training_messaging._core.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ) as send_mock:
+            resp = await client.post(
+                _endpoint(pb_placement.id),
+                json={
+                    "subject": "Hi",
+                    "body_html": "<p>Hi</p>",
+                    "attendee_ids": [str(alice.id), str(carol.id)],
+                },
+                headers=auth_headers(_admin_token(pb_admin)),
+            )
+
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert body["sent_count"] == 2
+        assert {r["email"] for r in body["recipients"]} == {
+            "alice@example.com",
+            "carol@example.com",
+        }
+        # Bob (not in attendee_ids) gets no thread + no email.
+        assert send_mock.await_count == 2
+        sent_emails = {kwargs["email"] for _, kwargs in send_mock.call_args_list}
+        assert "bob@example.com" not in sent_emails
+
+    async def test_attendee_ids_with_one_id_sends_to_one(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        pb_tenant: Tenant,
+        pb_admin: User,
+        pb_placement: ProgramYearTraining,
+    ) -> None:
+        """The "Message this one attendee" entry point on the registrations
+        view boils down to a single-element ``attendee_ids`` list."""
+        reg = await _make_reg(
+            db_session,
+            pb_tenant,
+            pb_placement,
+            attendees=[
+                ("Alice", "L", "alice@example.com"),
+                ("Bob", "B", "bob@example.com"),
+            ],
+        )
+        attendees = (
+            (
+                await db_session.execute(
+                    select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.registration_id == reg.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        bob = next(a for a in attendees if a.email == "bob@example.com")
+
+        with patch(
+            "app.services.training_messaging._core.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ):
+            resp = await client.post(
+                _endpoint(pb_placement.id),
+                json={"subject": "Hi", "body_html": "<p>Hi</p>", "attendee_ids": [str(bob.id)]},
+                headers=auth_headers(_admin_token(pb_admin)),
+            )
+        body = resp.json()
+        assert body["sent_count"] == 1
+        assert body["recipients"][0]["email"] == "bob@example.com"
+
+    async def test_empty_attendee_ids_list_is_explicit_no_op(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        pb_tenant: Tenant,
+        pb_admin: User,
+        pb_placement: ProgramYearTraining,
+    ) -> None:
+        """Passing an EMPTY ``attendee_ids`` list = "explicitly no recipients".
+
+        Distinguished from ``None``/omitted (= "all attendees"). Catches an
+        FE bug where a multi-select with nothing checked would otherwise
+        silently broadcast to everyone.
+        """
+        await _make_reg(
+            db_session,
+            pb_tenant,
+            pb_placement,
+            attendees=[("Alice", "L", "alice@example.com")],
+        )
+        with patch(
+            "app.services.training_messaging._core.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ) as send_mock:
+            resp = await client.post(
+                _endpoint(pb_placement.id),
+                json={"subject": "Hi", "body_html": "<p>Hi</p>", "attendee_ids": []},
+                headers=auth_headers(_admin_token(pb_admin)),
+            )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["sent_count"] == 0
+        assert send_mock.await_count == 0
+
+    async def test_by_attendees_endpoint_spans_placements(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        pb_tenant: Tenant,
+        pb_admin: User,
+        pb_placement: ProgramYearTraining,
+    ) -> None:
+        """``POST /trainings/messaging/broadcasts/by-attendees`` lets the
+        Compose dialog send to attendees from DIFFERENT placements in
+        a single bulk. We pin the cross-placement case here.
+        """
+        # Second placement under the same tenant.
+        from datetime import date as _date
+
+        from app.models.location import Location as _Location
+        from app.models.training import Training as _Training
+        from app.models.training_program import (
+            ProgramYearTraining as _PYT,
+        )
+        from app.models.training_program import (
+            TrainingProgramYear as _TPY,
+        )
+
+        tr2 = _Training(
+            id=uuid.uuid4(),
+            tenant_id=pb_tenant.id,
+            name="PSM I",
+            slug=f"psm-{uuid.uuid4().hex[:6]}",
+            duration=2,
+        )
+        loc2 = _Location(id=uuid.uuid4(), tenant_id=pb_tenant.id, name="Munich", code=f"MUC{uuid.uuid4().hex[:2]}")
+        py2 = _TPY(id=uuid.uuid4(), tenant_id=pb_tenant.id, year=2027)
+        db_session.add_all([tr2, loc2, py2])
+        await db_session.flush()
+        placement2 = _PYT(
+            id=uuid.uuid4(),
+            tenant_id=pb_tenant.id,
+            program_year_id=py2.id,
+            training_id=tr2.id,
+            start_date=_date(2027, 1, 15),
+            placement_type="open",
+            location_id=loc2.id,
+            is_active=True,
+        )
+        db_session.add(placement2)
+        await db_session.commit()
+
+        # One attendee on placement 1, one on placement 2.
+        reg1 = await _make_reg(
+            db_session,
+            pb_tenant,
+            pb_placement,
+            attendees=[("Alice", "L", "alice@example.com")],
+        )
+        reg2 = await _make_reg(
+            db_session,
+            pb_tenant,
+            placement2,
+            attendees=[("Bob", "B", "bob@example.com")],
+        )
+        attendees1 = (
+            (
+                await db_session.execute(
+                    select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.registration_id == reg1.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        attendees2 = (
+            (
+                await db_session.execute(
+                    select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.registration_id == reg2.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        alice = attendees1[0]
+        bob = attendees2[0]
+
+        with patch(
+            "app.services.training_messaging._core.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ) as send_mock:
+            resp = await client.post(
+                "/api/v1/trainings/messaging/broadcasts/by-attendees",
+                json={
+                    "attendee_ids": [str(alice.id), str(bob.id)],
+                    "subject": "Reminder for [Training Name]",
+                    "body_html": "<p>Hi [First Name]</p>",
+                },
+                headers=auth_headers(_admin_token(pb_admin)),
+            )
+
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert body["sent_count"] == 2
+        # Both threads share one bulk_id (single send across placements).
+        bulk_id = uuid.UUID(body["bulk_id"])
+        threads = (
+            (await db_session.execute(select(MessageThread).where(MessageThread.bulk_id == bulk_id))).scalars().all()
+        )
+        assert len(threads) == 2
+        # Each thread anchors on its own registration (different placements).
+        anchors = {t.domain_entity_id for t in threads}
+        assert anchors == {reg1.id, reg2.id}
+        # Subject for Alice's thread substitutes ITIL, Bob's substitutes PSM.
+        subjects_by_anchor = {t.domain_entity_id: t.subject for t in threads}
+        assert "ITIL Foundation" in subjects_by_anchor[reg1.id]
+        assert "PSM I" in subjects_by_anchor[reg2.id]
+        # Two emails dispatched.
+        assert send_mock.await_count == 2
+
+    async def test_by_attendees_endpoint_drops_other_tenant_ids(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        pb_tenant: Tenant,
+        pb_admin: User,
+        pb_placement: ProgramYearTraining,
+    ) -> None:
+        """Stale / cross-tenant ids are silently excluded — no 404, no
+        leak of the existence of other-tenant attendees."""
+        reg = await _make_reg(
+            db_session,
+            pb_tenant,
+            pb_placement,
+            attendees=[("Alice", "L", "alice@example.com")],
+        )
+        attendees = (
+            (
+                await db_session.execute(
+                    select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.registration_id == reg.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        alice = attendees[0]
+        with patch(
+            "app.services.training_messaging._core.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ):
+            resp = await client.post(
+                "/api/v1/trainings/messaging/broadcasts/by-attendees",
+                json={
+                    "attendee_ids": [str(alice.id), str(uuid.uuid4())],
+                    "subject": "Hi",
+                    "body_html": "<p>Hi</p>",
+                },
+                headers=auth_headers(_admin_token(pb_admin)),
+            )
+        assert resp.status_code == 201
+        # Only Alice was real; the bogus id silently dropped.
+        assert resp.json()["sent_count"] == 1
+
     async def test_empty_placement_returns_zero_recipients(
         self,
         client: AsyncClient,

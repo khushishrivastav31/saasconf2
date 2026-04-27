@@ -4510,6 +4510,31 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/messaging/broadcasts/by-attendees': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Broadcast To Attendees
+     * @description Broadcast to a list of attendees regardless of placement.
+     *
+     *     The Compose dialog's "Search attendee" mode picks attendees by name
+     *     or email and may span multiple training sessions. Each thread still
+     *     anchors on the recipient's own registration; all share one
+     *     ``bulk_id`` so the Messages tab groups them.
+     */
+    post: operations['broadcast_to_attendees_api_v1_trainings_messaging_broadcasts_by_attendees_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/messaging/broadcasts': {
     parameters: {
       query?: never;
@@ -4534,6 +4559,34 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/messaging/attendees': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Search Training Attendees
+     * @description Search training attendees by name or email.
+     *
+     *     Returns matches across every registration on every placement the
+     *     admin's tenant owns, joined with the training context so the picker
+     *     can show "Alice Liddell · alice@example.com — ITIL Foundation, 2026-11-10".
+     *
+     *     Matches are case-insensitive substring (``ILIKE %q%``). Empty ``q``
+     *     returns the first ``limit`` rows ordered by name — useful for "show
+     *     me a starting list" UX.
+     */
+    get: operations['search_training_attendees_api_v1_trainings_messaging_attendees_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/messaging/templates': {
     parameters: {
       query?: never;
@@ -4543,18 +4596,22 @@ export type paths = {
     };
     /**
      * List Training Templates
-     * @description List message templates for the tenant.
+     * @description List training templates for the tenant.
      *
-     *     The pool is shared with the conference-side admin templates — same
-     *     tenant, same rows, same ``MessageTemplate`` table. A name uniqueness
-     *     constraint at the DB layer (``uq_message_templates_tenant_name``)
-     *     keeps the namespace clean.
+     *     Only returns ``category='training'`` rows. Conference templates
+     *     written via the CFP admin surface stay invisible here.
      */
     get: operations['list_training_templates_api_v1_trainings_messaging_templates_get'];
     put?: never;
     /**
      * Create Training Template
-     * @description Create a new message template (tenant-scoped, name-unique).
+     * @description Create a new training template.
+     *
+     *     Name is unique within the tenant across BOTH categories — the DB
+     *     constraint ``uq_message_templates_tenant_name`` is global so a
+     *     conference-category and a training-category template can't share a
+     *     name. Surfaces the conflict as a 400 with the offender name so the
+     *     admin can see what they collided with.
      */
     post: operations['create_training_template_api_v1_trainings_messaging_templates_post'];
     delete?: never;
@@ -4573,13 +4630,16 @@ export type paths = {
     get?: never;
     /**
      * Update Training Template
-     * @description Update a message template (rename, change subject/body/overlay).
+     * @description Update a training template (rename, change subject/body/overlay).
+     *
+     *     Refuses to touch a conference-category template (404) so a stray
+     *     training-side request can't accidentally rewrite a CFP template.
      */
     put: operations['update_training_template_api_v1_trainings_messaging_templates__template_id__put'];
     post?: never;
     /**
      * Delete Training Template
-     * @description Delete a message template.
+     * @description Delete a training template. Conference-category rows return 404.
      */
     delete: operations['delete_training_template_api_v1_trainings_messaging_templates__template_id__delete'];
     options?: never;
@@ -14049,6 +14109,92 @@ export type components = {
        */
       updated_at: string;
     };
+    /**
+     * AttendeeSearchHit
+     * @description A single match in the attendee-by-name/email search.
+     */
+    AttendeeSearchHit: {
+      /**
+       * Attendee Id
+       * Format: uuid
+       */
+      attendee_id: string;
+      /** First Name */
+      first_name: string;
+      /** Last Name */
+      last_name: string;
+      /** Email */
+      email: string;
+      /**
+       * Registration Id
+       * Format: uuid
+       */
+      registration_id: string;
+      /**
+       * Placement Id
+       * Format: uuid
+       */
+      placement_id: string;
+      /** Training Name */
+      training_name: string | null;
+      /** Training Date */
+      training_date: string | null;
+    };
+    /** AttendeeSearchResponse */
+    AttendeeSearchResponse: {
+      /** Items */
+      items: components['schemas']['AttendeeSearchHit'][];
+      /** Total */
+      total: number;
+    };
+    /**
+     * AttendeesBroadcastRequest
+     * @description Admin request to broadcast to a list of attendees regardless of placement.
+     *
+     *     Used by the "Search attendee" recipient mode in the Compose dialog —
+     *     attendees may sit on different training sessions, but the admin
+     *     sees a single send.
+     */
+    AttendeesBroadcastRequest: {
+      /** Attendee Ids */
+      attendee_ids: string[];
+      /** Subject */
+      subject: string;
+      /** Body Html */
+      body_html: string;
+      /** Template Id */
+      template_id?: string | null;
+      /** Screen Overlay Id */
+      screen_overlay_id?: string | null;
+    };
+    /**
+     * AttendeesBroadcastResponse
+     * @description Result of a search-attendee broadcast.
+     *
+     *     No single ``placement_id`` makes sense — the response just lists the
+     *     recipients that actually received a thread.
+     */
+    AttendeesBroadcastResponse: {
+      /**
+       * Bulk Id
+       * Format: uuid
+       */
+      bulk_id: string;
+      /** Sent Count */
+      sent_count: number;
+      /**
+       * Skipped Count
+       * @default 0
+       */
+      skipped_count?: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Recipients */
+      recipients: components['schemas']['TrainingBroadcastRecipient'][];
+    };
     /** AttendeesCompanyResponse */
     AttendeesCompanyResponse: {
       /** Companies */
@@ -20824,13 +20970,19 @@ export type components = {
     };
     /**
      * PlacementBroadcastRequest
-     * @description Admin request to broadcast to every attendee on a placement.
+     * @description Admin request to broadcast to attendees on a placement.
      *
      *     Same body shape as ``TrainingBroadcastRequest``; the ``placement_id``
      *     is supplied via the URL path. The fan-out collects attendees from
      *     every registration on that placement, dedupes by lowercased email,
      *     and creates one ``MessageThread`` per surviving attendee anchored on
      *     that attendee's own registration.
+     *
+     *     ``attendee_ids`` narrows the audience: omit (or send an empty list)
+     *     to message every attendee on the placement; supply a list of
+     *     ``TrainingRegistrationAttendee`` ids to message only those. Useful
+     *     for the per-attendee message button on the registrations view —
+     *     the FE sends a single id and gets a one-recipient broadcast.
      */
     PlacementBroadcastRequest: {
       /** Subject */
@@ -20841,6 +20993,8 @@ export type components = {
       template_id?: string | null;
       /** Screen Overlay Id */
       screen_overlay_id?: string | null;
+      /** Attendee Ids */
+      attendee_ids?: string[] | null;
     };
     /**
      * PlacementBroadcastResponse
@@ -38829,6 +38983,41 @@ export interface operations {
       };
     };
   };
+  broadcast_to_attendees_api_v1_trainings_messaging_broadcasts_by_attendees_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AttendeesBroadcastRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AttendeesBroadcastResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   list_training_broadcasts_api_v1_trainings_messaging_broadcasts_get: {
     parameters: {
       query?: never;
@@ -38847,6 +39036,41 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['TrainingBroadcastSummaryListResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  search_training_attendees_api_v1_trainings_messaging_attendees_get: {
+    parameters: {
+      query?: {
+        /** @description Substring search on first name, last name, or email. */
+        q?: string;
+        limit?: number;
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AttendeeSearchResponse'];
         };
       };
       /** @description Validation Error */

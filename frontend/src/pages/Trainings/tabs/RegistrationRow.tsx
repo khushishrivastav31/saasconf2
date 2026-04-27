@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
-import TrainingBroadcastDialog from '../../../components/trainings/TrainingBroadcastDialog';
+import TrainingComposePlacementDialog from '../../../components/trainings/TrainingComposePlacementDialog';
 
 interface Attendee {
   id: string;
@@ -76,7 +76,13 @@ function RegistrationRow({
     sourceType: string;
     name: string;
   } | null>(null);
-  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  // ``messageAttendeeId`` opens the placement-broadcast dialog pre-pinned to
+  // a single attendee — the entry point from the per-attendee Message
+  // button below the registration row. The placement-level "Message all
+  // training attendees" button on TrainingGroupRow covers the broader
+  // scope; we deliberately don't surface a registration-level send any
+  // more (it sat awkwardly between those two and was just noise).
+  const [messageAttendeeId, setMessageAttendeeId] = useState<string | null>(null);
 
   const parkMutation = useMutation({
     mutationFn: ({ sourceId, sourceType }: { sourceId: string; sourceType: string }) =>
@@ -209,19 +215,6 @@ function RegistrationRow({
         <tr>
           <td colSpan={7} className="px-0 py-0">
             <div className="bg-gray-50 dark:bg-gray-900/50 px-8 py-3 border-t border-gray-200 dark:border-gray-700">
-              <div className="mb-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setBroadcastOpen(true);
-                  }}
-                  className="px-3 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20"
-                  title="Send a message to every attendee on this registration"
-                >
-                  Message attendees
-                </button>
-              </div>
               <table className="min-w-full text-xs">
                 <thead>
                   <tr className="text-gray-500 dark:text-gray-400 uppercase text-[10px]">
@@ -230,6 +223,7 @@ function RegistrationRow({
                     <th className="text-left py-1 pr-4">Exam</th>
                     <th className="text-left py-1 pr-4">Language</th>
                     <th className="text-left py-1 pr-4">Extra Time</th>
+                    <th className="text-left py-1 pr-2" />
                     <th className="text-left py-1 w-12" />
                   </tr>
                 </thead>
@@ -273,6 +267,21 @@ function RegistrationRow({
                           className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                         />
                       </td>
+                      <td className="py-1 pr-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => setMessageAttendeeId(att.id)}
+                          disabled={!att.email || att.email.trim().length === 0}
+                          className="px-2 py-0.5 text-[10px] font-medium text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title={
+                            !att.email || att.email.trim().length === 0
+                              ? 'Attendee has no email — cannot message'
+                              : `Send a message to ${att.first_name} ${att.last_name}`
+                          }
+                        >
+                          Message
+                        </button>
+                      </td>
                       <td className="py-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
@@ -298,13 +307,13 @@ function RegistrationRow({
         </tr>
       )}
 
-      {/* Broadcast dialog: anchored on the registration. */}
-      <TrainingBroadcastDialog
-        open={broadcastOpen}
-        onClose={() => setBroadcastOpen(false)}
-        registrationId={reg.id}
-        trainingName={reg.training_name}
-        attendees={reg.attendees}
+      {/* Per-attendee message dialog: opens the placement-broadcast flow with
+          the placement and the attendee both pre-pinned. */}
+      <TrainingComposePlacementDialog
+        open={messageAttendeeId !== null}
+        onClose={() => setMessageAttendeeId(null)}
+        initialPlacementId={reg.placement_id}
+        initialAttendeeIds={messageAttendeeId ? [messageAttendeeId] : undefined}
       />
 
       {/* Park confirmation dialog */}

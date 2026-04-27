@@ -1,13 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import Modal from '../Modal';
 import RichTextEditor from '../common/RichTextEditor';
 import { useToast } from '../Toast';
+import TrainingRecipientPicker, { type RecipientScope } from './TrainingRecipientPicker';
+import TrainingAttendeeSearchPicker, {
+  type AttendeeSearchHit,
+} from './TrainingAttendeeSearchPicker';
+import ComposeRecipientModeToggle, { type RecipientMode } from './ComposeRecipientModeToggle';
 
-interface PlacementBroadcastResponse {
+interface BroadcastResponse {
   bulk_id: string;
-  placement_id: string;
   sent_count: number;
   skipped_count: number;
   recipients: { thread_id: string; email: string }[];
@@ -25,12 +29,20 @@ interface MessageTemplateListResponse {
   total: number;
 }
 
+interface AttendeeShape {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 interface TrainingRegistrationItem {
   id: string;
   placement_id: string;
   training_name: string;
   training_date: string | null;
   attendee_count: number;
+  attendees: AttendeeShape[];
 }
 
 interface TrainingRegistrationsResponse {
@@ -44,10 +56,9 @@ interface PlacementOption {
   placement_id: string;
   training_name: string;
   training_date: string | null;
-  attendee_count: number;
+  attendees: AttendeeShape[];
 }
 
-// Variables backend's substitute_training_variables() recognises.
 const TRAINING_TEMPLATE_VARIABLES: { label: string; token: string }[] = [
   { label: 'First Name', token: '[First Name]' },
   { label: 'Last Name', token: '[Last Name]' },
@@ -60,20 +71,57 @@ const TRAINING_TEMPLATE_VARIABLES: { label: string; token: string }[] = [
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Optional pre-selected placement (e.g. opened from a TrainingGroupRow button). */
+  initialPlacementId?: string;
+  /** Optional pre-selected attendees (e.g. opened from a single attendee row).
+   *  When provided, the scope defaults to 'specific' and the listed ids are
+   *  pre-checked. */
+  initialAttendeeIds?: string[];
 }
 
-export default function TrainingComposePlacementDialog({ open, onClose }: Props) {
+export default function TrainingComposePlacementDialog({
+  open,
+  onClose,
+  initialPlacementId,
+  initialAttendeeIds,
+}: Props) {
+  const [recipientMode, setRecipientMode] = useState<RecipientMode>('session');
   const [placementId, setPlacementId] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [recipientScope, setRecipientScope] = useState<RecipientScope>('all');
+  const [selectedAttendeeIds, setSelectedAttendeeIds] = useState<Set<string>>(new Set());
+  // Search-mode state: full hits (so chips have the display name + email +
+  // training context) rather than just ids.
+  const [searchSelected, setSearchSelected] = useState<AttendeeSearchHit[]>([]);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  // Derive placement options from the registrations list (each registration
-  // carries placement_id + training_name + training_date). Group by placement
-  // and sum attendee counts so the picker shows "ITIL Foundation — 17.8.2026
-  // (4 attendees)". Lazy-loaded only when the dialog is open.
+  // Apply initial values when the dialog opens / props change. The state
+  // persists between opens (modal stays mounted) so we reset based on the
+  // provided initial values each time ``open`` flips on.
+  useEffect(() => {
+    if (open) {
+      // Pre-pinned launches always start in session mode (the entry point
+      // is a known training/registration). Search mode is reachable only
+      // via the explicit toggle in the dialog header.
+      setRecipientMode('session');
+      setPlacementId(initialPlacementId ?? '');
+      if (initialAttendeeIds && initialAttendeeIds.length > 0) {
+        setRecipientScope('specific');
+        setSelectedAttendeeIds(new Set(initialAttendeeIds));
+      } else {
+        setRecipientScope('all');
+        setSelectedAttendeeIds(new Set());
+      }
+      setSearchSelected([]);
+      setSubject('');
+      setBodyHtml('');
+      setSelectedTemplateId('');
+    }
+  }, [open, initialPlacementId, initialAttendeeIds]);
+
   const { data: regs } = useQuery({
     queryKey: ['training-registrations-for-compose'],
     queryFn: async (): Promise<TrainingRegistrationsResponse> => {
@@ -86,19 +134,22 @@ export default function TrainingComposePlacementDialog({ open, onClose }: Props)
     staleTime: 60_000,
   });
 
+  // Group registrations by placement; collect every attendee under each
+  // placement so the "specific attendees" picker can list them flat.
   const placementOptions: PlacementOption[] = useMemo(() => {
     if (!regs?.items) return [];
     const byPlacement = new Map<string, PlacementOption>();
     for (const r of regs.items) {
       const existing = byPlacement.get(r.placement_id);
+      const incoming = r.attendees ?? [];
       if (existing) {
-        existing.attendee_count += r.attendee_count;
+        existing.attendees.push(...incoming);
       } else {
         byPlacement.set(r.placement_id, {
           placement_id: r.placement_id,
           training_name: r.training_name,
           training_date: r.training_date,
-          attendee_count: r.attendee_count,
+          attendees: [...incoming],
         });
       }
     }
@@ -109,7 +160,6 @@ export default function TrainingComposePlacementDialog({ open, onClose }: Props)
     });
   }, [regs]);
 
-  // Templates: shared pool with conference admin, reused via the trainings endpoint.
   const { data: templates } = useQuery({
     queryKey: ['training-message-templates'],
     queryFn: async (): Promise<MessageTemplateListResponse> => {
@@ -131,10 +181,31 @@ export default function TrainingComposePlacementDialog({ open, onClose }: Props)
   };
 
   const sendMutation = useMutation({
-    mutationFn: async (): Promise<PlacementBroadcastResponse> => {
-      const resp = await api.post<PlacementBroadcastResponse>(
+    mutationFn: async (): Promise<BroadcastResponse> => {
+      // Search mode → cross-placement endpoint with the picked attendee ids.
+      if (recipientMode === 'search') {
+        const resp = await api.post<BroadcastResponse>(
+          '/trainings/messaging/broadcasts/by-attendees',
+          {
+            subject,
+            body_html: bodyHtml,
+            attendee_ids: searchSelected.map((s) => s.attendee_id),
+          }
+        );
+        return resp.data;
+      }
+      // Session mode → placement broadcast, optionally narrowed by ids.
+      const payload: {
+        subject: string;
+        body_html: string;
+        attendee_ids?: string[];
+      } = { subject, body_html: bodyHtml };
+      if (recipientScope === 'specific') {
+        payload.attendee_ids = Array.from(selectedAttendeeIds);
+      }
+      const resp = await api.post<BroadcastResponse>(
         `/trainings/placements/${placementId}/messages/broadcast`,
-        { subject, body_html: bodyHtml }
+        payload
       );
       return resp.data;
     },
@@ -148,10 +219,6 @@ export default function TrainingComposePlacementDialog({ open, onClose }: Props)
         'success'
       );
       queryClient.invalidateQueries({ queryKey: ['training-broadcasts'] });
-      setPlacementId('');
-      setSubject('');
-      setBodyHtml('');
-      setSelectedTemplateId('');
       onClose();
     },
     onError: () => showToast('Failed to send broadcast', 'error'),
@@ -163,12 +230,37 @@ export default function TrainingComposePlacementDialog({ open, onClose }: Props)
   };
 
   const selectedPlacement = placementOptions.find((p) => p.placement_id === placementId);
-  const recipientHint = selectedPlacement
-    ? `${selectedPlacement.attendee_count} attendee${selectedPlacement.attendee_count === 1 ? '' : 's'} across registrations on this session`
-    : 'Pick a training session above.';
+  const placementAttendees = selectedPlacement?.attendees ?? [];
+  const sessionRecipientCount =
+    recipientScope === 'all' ? placementAttendees.length : selectedAttendeeIds.size;
+  const recipientCount = recipientMode === 'search' ? searchSelected.length : sessionRecipientCount;
+
+  const toggleAttendee = (attendeeId: string) => {
+    setSelectedAttendeeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(attendeeId)) next.delete(attendeeId);
+      else next.add(attendeeId);
+      return next;
+    });
+  };
+
+  const addSearchHit = (hit: AttendeeSearchHit) => {
+    setSearchSelected((prev) =>
+      prev.some((p) => p.attendee_id === hit.attendee_id) ? prev : [...prev, hit]
+    );
+  };
+
+  const removeSearchHit = (attendeeId: string) => {
+    setSearchSelected((prev) => prev.filter((p) => p.attendee_id !== attendeeId));
+  };
+
+  const recipientsReady =
+    recipientMode === 'search'
+      ? searchSelected.length > 0
+      : placementId.length > 0 && sessionRecipientCount > 0;
 
   const canSend =
-    placementId.length > 0 &&
+    recipientsReady &&
     subject.trim().length > 0 &&
     bodyHtml.trim().length > 0 &&
     bodyHtml.trim() !== '<p></p>' &&
@@ -177,30 +269,54 @@ export default function TrainingComposePlacementDialog({ open, onClose }: Props)
   return (
     <Modal open={open} onClose={onClose} title="Compose broadcast">
       <div className="px-6 py-4 space-y-4">
-        <div>
-          <label
-            htmlFor="training-compose-placement"
-            className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Training session
-          </label>
-          <select
-            id="training-compose-placement"
-            value={placementId}
-            onChange={(e) => setPlacementId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">— Pick a session —</option>
-            {placementOptions.map((p) => (
-              <option key={p.placement_id} value={p.placement_id}>
-                {p.training_name}
-                {p.training_date ? ` — ${p.training_date}` : ''} ({p.attendee_count} attendee
-                {p.attendee_count === 1 ? '' : 's'})
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{recipientHint}</p>
-        </div>
+        <ComposeRecipientModeToggle mode={recipientMode} onChange={setRecipientMode} />
+
+        {recipientMode === 'search' && (
+          <TrainingAttendeeSearchPicker
+            selected={searchSelected}
+            onAdd={addSearchHit}
+            onRemove={removeSearchHit}
+          />
+        )}
+
+        {recipientMode === 'session' && (
+          <div>
+            <label
+              htmlFor="training-compose-placement"
+              className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Training session
+            </label>
+            <select
+              id="training-compose-placement"
+              value={placementId}
+              onChange={(e) => {
+                setPlacementId(e.target.value);
+                setSelectedAttendeeIds(new Set());
+              }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">— Pick a session —</option>
+              {placementOptions.map((p) => (
+                <option key={p.placement_id} value={p.placement_id}>
+                  {p.training_name}
+                  {p.training_date ? ` — ${p.training_date}` : ''} ({p.attendees.length} attendee
+                  {p.attendees.length === 1 ? '' : 's'})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {recipientMode === 'session' && selectedPlacement && (
+          <TrainingRecipientPicker
+            attendees={placementAttendees}
+            scope={recipientScope}
+            onScopeChange={setRecipientScope}
+            selectedIds={selectedAttendeeIds}
+            onToggle={toggleAttendee}
+          />
+        )}
 
         {templates && templates.items.length > 0 && (
           <div>
@@ -302,11 +418,7 @@ export default function TrainingComposePlacementDialog({ open, onClose }: Props)
           disabled={!canSend}
           className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md disabled:opacity-50"
         >
-          {sendMutation.isPending
-            ? 'Sending…'
-            : selectedPlacement
-              ? `Send to ${selectedPlacement.attendee_count}`
-              : 'Send'}
+          {sendMutation.isPending ? 'Sending…' : `Send to ${recipientCount}`}
         </button>
       </div>
     </Modal>

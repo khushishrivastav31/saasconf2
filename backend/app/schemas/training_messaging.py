@@ -50,19 +50,26 @@ class TrainingBroadcastResponse(BaseModel):
 
 
 class PlacementBroadcastRequest(BaseModel):
-    """Admin request to broadcast to every attendee on a placement.
+    """Admin request to broadcast to attendees on a placement.
 
     Same body shape as ``TrainingBroadcastRequest``; the ``placement_id``
     is supplied via the URL path. The fan-out collects attendees from
     every registration on that placement, dedupes by lowercased email,
     and creates one ``MessageThread`` per surviving attendee anchored on
     that attendee's own registration.
+
+    ``attendee_ids`` narrows the audience: omit (or send an empty list)
+    to message every attendee on the placement; supply a list of
+    ``TrainingRegistrationAttendee`` ids to message only those. Useful
+    for the per-attendee message button on the registrations view —
+    the FE sends a single id and gets a one-recipient broadcast.
     """
 
     subject: str = Field(..., min_length=1, max_length=500)
     body_html: str = Field(..., min_length=1)
     template_id: UUID | None = None
     screen_overlay_id: UUID | None = None
+    attendee_ids: list[UUID] | None = None
 
 
 class PlacementBroadcastResponse(BaseModel):
@@ -77,6 +84,35 @@ class PlacementBroadcastResponse(BaseModel):
 
     bulk_id: UUID
     placement_id: UUID
+    sent_count: int
+    skipped_count: int = 0
+    created_at: datetime
+    recipients: list[TrainingBroadcastRecipient]
+
+
+class AttendeesBroadcastRequest(BaseModel):
+    """Admin request to broadcast to a list of attendees regardless of placement.
+
+    Used by the "Search attendee" recipient mode in the Compose dialog —
+    attendees may sit on different training sessions, but the admin
+    sees a single send.
+    """
+
+    attendee_ids: list[UUID] = Field(..., min_length=1)
+    subject: str = Field(..., min_length=1, max_length=500)
+    body_html: str = Field(..., min_length=1)
+    template_id: UUID | None = None
+    screen_overlay_id: UUID | None = None
+
+
+class AttendeesBroadcastResponse(BaseModel):
+    """Result of a search-attendee broadcast.
+
+    No single ``placement_id`` makes sense — the response just lists the
+    recipients that actually received a thread.
+    """
+
+    bulk_id: UUID
     sent_count: int
     skipped_count: int = 0
     created_at: datetime

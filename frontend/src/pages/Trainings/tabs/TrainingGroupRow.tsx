@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import RegistrationRow, { type ExamLanguage } from './RegistrationRow';
 import OfferAttendeeRow, { groupOfferAttendeesByOffer } from './OfferAttendeeRow';
 import { formatTrainingDate, type TrainingGroup } from './registrationGroups';
+import TrainingComposePlacementDialog from '../../../components/trainings/TrainingComposePlacementDialog';
 
 interface Props {
   group: TrainingGroup;
@@ -30,6 +32,7 @@ export default function TrainingGroupRow({
   onNavigateOffer,
 }: Props) {
   const isEmpty = group.registrations.length === 0 && group.offerAttendees.length === 0;
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -184,6 +187,26 @@ export default function TrainingGroupRow({
       </div>
 
       {!isCollapsed && !isEmpty && (
+        <div className="px-4 pt-3 pb-2 flex justify-end bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setBroadcastOpen(true);
+            }}
+            disabled={group.totalAttendees === 0}
+            className="px-3 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              group.totalAttendees === 0
+                ? 'No attendees on this training session'
+                : 'Send a message to every attendee on this training session'
+            }
+          >
+            Message attendees
+          </button>
+        </div>
+      )}
+      {!isCollapsed && !isEmpty && (
         <table className="min-w-full text-sm table-fixed">
           <colgroup>
             <col className="w-8" />
@@ -246,6 +269,12 @@ export default function TrainingGroupRow({
           </tbody>
         </table>
       )}
+
+      <TrainingComposePlacementDialog
+        open={broadcastOpen}
+        onClose={() => setBroadcastOpen(false)}
+        initialPlacementId={group.placementId}
+      />
     </div>
   );
 }

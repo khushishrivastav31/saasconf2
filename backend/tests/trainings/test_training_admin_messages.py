@@ -217,6 +217,167 @@ class TestList:
         assert body["items"][0]["subject"] == "Newer"
         assert body["items"][1]["subject"] == "Older"
 
+    async def test_searches_attendees_by_name_or_email(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        am_tenant: Tenant,
+        am_admin: User,
+    ) -> None:
+        from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
+
+        placement = await _make_placement(db_session, am_tenant, "ITIL Foundation")
+        # Two registrations on this placement, three attendees total.
+        reg = TrainingRegistration(
+            id=uuid.uuid4(),
+            tenant_id=am_tenant.id,
+            placement_id=placement.id,
+            status="paid",
+            language="en",
+            street="Main",
+            postal_code="10117",
+            city="Berlin",
+            country="DE",
+            contact_first_name="Pat",
+            contact_last_name="C",
+            contact_email=f"pat-{uuid.uuid4().hex[:6]}@x.test",
+            payment_method="bank_transfer",
+        )
+        db_session.add(reg)
+        await db_session.flush()
+        for first, last, email in [
+            ("Alice", "Liddell", "alice@example.com"),
+            ("Bob", "Builder", "bob@example.com"),
+            ("Carol", "Kane", "alicia@other.com"),
+        ]:
+            db_session.add(
+                TrainingRegistrationAttendee(
+                    id=uuid.uuid4(),
+                    tenant_id=am_tenant.id,
+                    registration_id=reg.id,
+                    first_name=first,
+                    last_name=last,
+                    email=email,
+                )
+            )
+        await db_session.commit()
+
+        # Substring "ali" should match Alice (first name) AND alicia (email).
+        resp = await client.get(
+            "/api/v1/trainings/messaging/attendees?q=ali",
+            headers=auth_headers(_token(am_admin)),
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        emails = sorted(item["email"] for item in body["items"])
+        assert emails == ["alice@example.com", "alicia@other.com"]
+        # Each hit carries the placement context for the picker UI.
+        for item in body["items"]:
+            assert item["placement_id"] == str(placement.id)
+            assert item["training_name"] == "ITIL Foundation"
+            assert item["training_date"] == "2026-11-10"
+            assert item["registration_id"] == str(reg.id)
+
+    async def test_empty_query_returns_first_page(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        am_tenant: Tenant,
+        am_admin: User,
+    ) -> None:
+        from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
+
+        placement = await _make_placement(db_session, am_tenant, "PSM I")
+        reg = TrainingRegistration(
+            id=uuid.uuid4(),
+            tenant_id=am_tenant.id,
+            placement_id=placement.id,
+            status="paid",
+            language="en",
+            street="X",
+            postal_code="0",
+            city="X",
+            country="DE",
+            contact_first_name="P",
+            contact_last_name="C",
+            contact_email=f"p-{uuid.uuid4().hex[:6]}@x.test",
+            payment_method="bank_transfer",
+        )
+        db_session.add(reg)
+        await db_session.flush()
+        db_session.add(
+            TrainingRegistrationAttendee(
+                id=uuid.uuid4(),
+                tenant_id=am_tenant.id,
+                registration_id=reg.id,
+                first_name="Solo",
+                last_name="Person",
+                email="solo@example.com",
+            )
+        )
+        await db_session.commit()
+
+        resp = await client.get(
+            "/api/v1/trainings/messaging/attendees",
+            headers=auth_headers(_token(am_admin)),
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        # No ``q`` filter — returns whatever's in the tenant up to ``limit``.
+        assert body["total"] == 1
+        assert body["items"][0]["email"] == "solo@example.com"
+
+    async def test_search_does_not_leak_other_tenants(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        am_tenant: Tenant,
+        am_admin: User,
+    ) -> None:
+        from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
+
+        # Set up another tenant + a matching email there. Must NOT show up.
+        other = Tenant(id=uuid.uuid4(), name="Other", slug=f"o-{uuid.uuid4().hex[:6]}")
+        db_session.add(other)
+        await db_session.flush()
+        other_placement = await _make_placement(db_session, other, "Other Training")
+        other_reg = TrainingRegistration(
+            id=uuid.uuid4(),
+            tenant_id=other.id,
+            placement_id=other_placement.id,
+            status="paid",
+            language="en",
+            street="X",
+            postal_code="0",
+            city="X",
+            country="DE",
+            contact_first_name="X",
+            contact_last_name="Y",
+            contact_email="x@x.test",
+            payment_method="bank_transfer",
+        )
+        db_session.add(other_reg)
+        await db_session.flush()
+        db_session.add(
+            TrainingRegistrationAttendee(
+                id=uuid.uuid4(),
+                tenant_id=other.id,
+                registration_id=other_reg.id,
+                first_name="Stranger",
+                last_name="Person",
+                email="stranger@example.com",
+            )
+        )
+        await db_session.commit()
+
+        resp = await client.get(
+            "/api/v1/trainings/messaging/attendees?q=stranger",
+            headers=auth_headers(_token(am_admin)),
+        )
+        body = resp.json()
+        # My tenant has zero attendees with "stranger" in name/email.
+        assert body["total"] == 0
+
     async def test_empty_when_only_conference_threads_exist(
         self,
         client: AsyncClient,

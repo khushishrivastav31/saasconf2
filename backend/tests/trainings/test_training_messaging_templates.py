@@ -32,7 +32,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password
-from app.models.messaging import MessageTemplate
+from app.models.messaging import TEMPLATE_CATEGORY_CONFERENCE, TEMPLATE_CATEGORY_TRAINING, MessageTemplate
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
@@ -105,7 +105,7 @@ async def tt_non_admin(db_session: AsyncSession, tt_tenant: Tenant) -> User:
 
 
 class TestList:
-    async def test_lists_tenant_templates_only(
+    async def test_lists_only_training_category_for_my_tenant(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -113,7 +113,7 @@ class TestList:
         tt_other_tenant: Tenant,
         tt_admin: User,
     ) -> None:
-        # Mine
+        # My training-category templates — these should appear.
         db_session.add_all(
             [
                 MessageTemplate(
@@ -121,22 +121,36 @@ class TestList:
                     name="Welcome",
                     subject="Welcome to the training",
                     body_html="<p>Hi [First Name]</p>",
+                    category=TEMPLATE_CATEGORY_TRAINING,
                 ),
                 MessageTemplate(
                     tenant_id=tt_tenant.id,
                     name="Reminder",
                     subject="Reminder for [Training Name]",
                     body_html="<p>Reminder body</p>",
+                    category=TEMPLATE_CATEGORY_TRAINING,
                 ),
             ]
         )
-        # Another tenant — must NOT appear in my list.
+        # Conference-category template on the SAME tenant — must NOT appear,
+        # this is the bug PR 215 was specifically meant to fix.
+        db_session.add(
+            MessageTemplate(
+                tenant_id=tt_tenant.id,
+                name="Working Group",
+                subject="conf subject",
+                body_html="<p>conf body</p>",
+                category=TEMPLATE_CATEGORY_CONFERENCE,
+            )
+        )
+        # Another tenant — must NOT appear regardless of category.
         db_session.add(
             MessageTemplate(
                 tenant_id=tt_other_tenant.id,
                 name="Other tenant template",
                 subject="x",
                 body_html="<p>x</p>",
+                category=TEMPLATE_CATEGORY_TRAINING,
             )
         )
         await db_session.commit()
@@ -200,6 +214,7 @@ class TestCreate:
                 name="Reminder",
                 subject="x",
                 body_html="<p>x</p>",
+                category=TEMPLATE_CATEGORY_TRAINING,
             )
         )
         await db_session.commit()
@@ -216,6 +231,34 @@ class TestCreate:
         assert resp.status_code == 400, resp.text
         assert "already exists" in resp.text
 
+    async def test_create_writes_training_category(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tt_admin: User,
+    ) -> None:
+        """The training endpoint must always stamp ``category='training'`` —
+        otherwise the new row would default to conference and disappear from
+        its own list view."""
+        resp = await client.post(
+            TEMPLATES_BASE,
+            json={
+                "name": "Day-of instructions",
+                "subject": "Day of [Training Name]",
+                "body_html": "<p>Body</p>",
+            },
+            headers=auth_headers(_admin_token(tt_admin)),
+        )
+        assert resp.status_code == 201, resp.text
+        # Round-trip: GET it back; if category=conference it'd be filtered out.
+        listed = await client.get(TEMPLATES_BASE, headers=auth_headers(_admin_token(tt_admin)))
+        assert listed.json()["total"] == 1
+        # And the row in the DB has the right category.
+        row = (
+            await db_session.execute(select(MessageTemplate).where(MessageTemplate.name == "Day-of instructions"))
+        ).scalar_one()
+        assert row.category == TEMPLATE_CATEGORY_TRAINING
+
 
 class TestUpdate:
     async def test_updates_subject_and_body(
@@ -230,6 +273,7 @@ class TestUpdate:
             name="Reminder",
             subject="Old subject",
             body_html="<p>Old body</p>",
+            category=TEMPLATE_CATEGORY_TRAINING,
         )
         db_session.add(t)
         await db_session.commit()
@@ -254,8 +298,12 @@ class TestUpdate:
         tt_tenant: Tenant,
         tt_admin: User,
     ) -> None:
-        a = MessageTemplate(tenant_id=tt_tenant.id, name="A", subject="x", body_html="<p>x</p>")
-        b = MessageTemplate(tenant_id=tt_tenant.id, name="B", subject="y", body_html="<p>y</p>")
+        a = MessageTemplate(
+            tenant_id=tt_tenant.id, name="A", subject="x", body_html="<p>x</p>", category=TEMPLATE_CATEGORY_TRAINING
+        )
+        b = MessageTemplate(
+            tenant_id=tt_tenant.id, name="B", subject="y", body_html="<p>y</p>", category=TEMPLATE_CATEGORY_TRAINING
+        )
         db_session.add_all([a, b])
         await db_session.commit()
         await db_session.refresh(a)
@@ -266,6 +314,33 @@ class TestUpdate:
             headers=auth_headers(_admin_token(tt_admin)),
         )
         assert resp.status_code == 400, resp.text
+
+    async def test_cannot_update_conference_category_template(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tt_tenant: Tenant,
+        tt_admin: User,
+    ) -> None:
+        """A conference-category row in the same tenant must be invisible to
+        the training-side update endpoint — 404, not silent rewrite."""
+        cf = MessageTemplate(
+            tenant_id=tt_tenant.id,
+            name="Working Group",
+            subject="conf",
+            body_html="<p>conf</p>",
+            category=TEMPLATE_CATEGORY_CONFERENCE,
+        )
+        db_session.add(cf)
+        await db_session.commit()
+        await db_session.refresh(cf)
+
+        resp = await client.put(
+            f"{TEMPLATES_BASE}/{cf.id}",
+            json={"subject": "Hijacked"},
+            headers=auth_headers(_admin_token(tt_admin)),
+        )
+        assert resp.status_code == 404, resp.text
 
     async def test_other_tenant_template_404(
         self,
@@ -280,6 +355,7 @@ class TestUpdate:
             name="Other",
             subject="x",
             body_html="<p>x</p>",
+            category=TEMPLATE_CATEGORY_TRAINING,
         )
         db_session.add(t)
         await db_session.commit()
@@ -306,6 +382,7 @@ class TestDelete:
             name="To delete",
             subject="x",
             body_html="<p>x</p>",
+            category=TEMPLATE_CATEGORY_TRAINING,
         )
         db_session.add(t)
         await db_session.commit()
@@ -320,3 +397,32 @@ class TestDelete:
         # Row gone.
         gone = await db_session.execute(select(MessageTemplate).where(MessageTemplate.id == t.id))
         assert gone.scalar_one_or_none() is None
+
+    async def test_cannot_delete_conference_category_template(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tt_tenant: Tenant,
+        tt_admin: User,
+    ) -> None:
+        """Same protection as update — a conference-category row in this
+        tenant is opaque to the training-side delete endpoint."""
+        cf = MessageTemplate(
+            tenant_id=tt_tenant.id,
+            name="Working Group",
+            subject="conf",
+            body_html="<p>conf</p>",
+            category=TEMPLATE_CATEGORY_CONFERENCE,
+        )
+        db_session.add(cf)
+        await db_session.commit()
+        await db_session.refresh(cf)
+
+        resp = await client.delete(
+            f"{TEMPLATES_BASE}/{cf.id}",
+            headers=auth_headers(_admin_token(tt_admin)),
+        )
+        assert resp.status_code == 404, resp.text
+        # Row is still there.
+        still = await db_session.execute(select(MessageTemplate).where(MessageTemplate.id == cf.id))
+        assert still.scalar_one_or_none() is not None

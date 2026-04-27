@@ -27,6 +27,13 @@ THREAD_DOMAIN_CONFERENCE = "conference"
 THREAD_DOMAIN_TRAINING = "training"
 THREAD_DOMAINS = (THREAD_DOMAIN_CONFERENCE, THREAD_DOMAIN_TRAINING)
 
+# ``MessageTemplate.category`` discriminator. Conference templates use
+# CFP-applicant placeholders; training templates use training-attendee
+# placeholders. Migration 215 adds the column and the CHECK constraint.
+TEMPLATE_CATEGORY_CONFERENCE = "conference"
+TEMPLATE_CATEGORY_TRAINING = "training"
+TEMPLATE_CATEGORIES = (TEMPLATE_CATEGORY_CONFERENCE, TEMPLATE_CATEGORY_TRAINING)
+
 
 class MessageTemplate(Base):
     """Reusable message template scoped to a tenant."""
@@ -40,6 +47,11 @@ class MessageTemplate(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    # Discriminator added in migration 215 — ``conference`` (the legacy
+    # default for every existing row) or ``training``. The trainings
+    # module only ever shows / writes ``training`` templates so the two
+    # admin surfaces don't bleed into each other's pickers.
+    category: Mapped[str] = mapped_column(String(20), nullable=False, default=TEMPLATE_CATEGORY_CONFERENCE)
     screen_overlay_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("screen_overlays.id", ondelete="SET NULL"), nullable=True
     )
@@ -53,8 +65,13 @@ class MessageTemplate(Base):
     )
 
     __table_args__ = (
+        CheckConstraint(
+            f"category IN ({', '.join(repr(c) for c in TEMPLATE_CATEGORIES)})",
+            name="ck_message_templates_category",
+        ),
         UniqueConstraint("tenant_id", "name", name="uq_message_templates_tenant_name"),
         Index("idx_message_templates_tenant", "tenant_id"),
+        Index("idx_message_templates_tenant_category", "tenant_id", "category"),
     )
 
 

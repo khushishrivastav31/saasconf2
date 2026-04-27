@@ -27,7 +27,7 @@ from sqlalchemy.orm import joinedload
 from app.core.html_sanitize import sanitize_html
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining
-from app.models.training_registration import TrainingRegistration
+from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 
 from ._core import (
     _AnchoredAttendee,
@@ -103,12 +103,20 @@ async def broadcast_to_placement_attendees(
     subject_template: str,
     body_html_template: str,
     screen_overlay_id: UUID | None = None,
+    attendee_ids: list[UUID] | None = None,
 ) -> tuple[UUID, list[_PreparedRecipient], int]:
-    """Send a broadcast to every attendee across every registration on a placement.
+    """Send a broadcast to attendees across registrations on a placement.
 
     Use case: admin wants to message all confirmed attendees of one
     training session in one go even though those attendees are split
     across multiple booking registrations.
+
+    ``attendee_ids`` narrows the audience: omit (or pass ``None``/empty
+    list) to message every attendee on the placement; supply specific
+    ``TrainingRegistrationAttendee`` ids to message just those. Ids
+    that don't belong to a registration on this placement are silently
+    dropped — they don't surface as 404s because the admin shouldn't
+    have to think about cross-placement bookkeeping.
 
     Threads still anchor on each attendee's *own* registration — the
     placement-level fan-out is just a convenient audience, not a new
@@ -144,10 +152,19 @@ async def broadcast_to_placement_attendees(
     )
     registrations = (await db.execute(regs_stmt)).unique().scalars().all()
 
+    # When the caller pinned specific attendees, narrow the candidate
+    # pool to exactly those rows. Empty list = explicit "none" — caller
+    # gets back a no-op broadcast, not the whole placement.
+    explicit_ids: set[UUID] | None = None
+    if attendee_ids is not None:
+        explicit_ids = set(attendee_ids)
+
     anchored: list[_AnchoredAttendee] = []
     for reg in registrations:
         company_name = reg.company_name or ""
         for a in reg.attendees:
+            if explicit_ids is not None and a.id not in explicit_ids:
+                continue
             anchored.append(_AnchoredAttendee(attendee=a, registration_id=reg.id, company_name=company_name))
     eligible, skipped = _filter_and_dedupe_attendees(anchored)
 
@@ -180,3 +197,105 @@ async def broadcast_to_placement_attendees(
     )
 
     return bulk_id, prepared, skipped
+
+
+# --- Cross-placement send (search-attendee flow) ---
+
+
+async def broadcast_to_attendees_by_id(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    sender_user_id: UUID,
+    attendee_ids: list[UUID],
+    subject_template: str,
+    body_html_template: str,
+    screen_overlay_id: UUID | None = None,
+) -> tuple[UUID, list[_PreparedRecipient], int]:
+    """Send a broadcast to a list of attendees regardless of placement.
+
+    Use case: the admin found recipients via name/email search in the
+    Compose dialog and may have picked attendees who sit on different
+    training sessions. We group them by placement internally so each
+    thread substitutes the right ``[Training Name]`` / ``[Placement Date]``,
+    but the admin sees a single send in the Messages tab — one
+    ``bulk_id`` covers them all.
+
+    Returns ``(bulk_id, prepared_recipients, skipped_count)``. Caller
+    commits. Empty ``attendee_ids`` returns a no-op (zero recipients).
+    Ids that don't belong to this tenant are silently dropped — same
+    rule as the placement broadcast.
+    """
+    bulk_id = uuid.uuid4()
+    if not attendee_ids:
+        return bulk_id, [], 0
+
+    rows = (
+        await db.execute(
+            select(
+                TrainingRegistrationAttendee,
+                TrainingRegistration,
+                ProgramYearTraining,
+                Training,
+            )
+            .join(
+                TrainingRegistration,
+                TrainingRegistration.id == TrainingRegistrationAttendee.registration_id,
+            )
+            .join(ProgramYearTraining, ProgramYearTraining.id == TrainingRegistration.placement_id)
+            .join(Training, Training.id == ProgramYearTraining.training_id)
+            .where(
+                TrainingRegistrationAttendee.tenant_id == tenant_id,
+                TrainingRegistrationAttendee.id.in_(attendee_ids),
+            )
+        )
+    ).all()
+
+    sanitized_body = sanitize_html(body_html_template)
+    prepared: list[_PreparedRecipient] = []
+    total_skipped = 0
+    by_placement: dict[UUID, list[tuple[TrainingRegistrationAttendee, TrainingRegistration]]] = {}
+    placement_meta: dict[UUID, tuple[str, str]] = {}
+    for attendee, reg, placement, training in rows:
+        by_placement.setdefault(placement.id, []).append((attendee, reg))
+        placement_meta[placement.id] = (
+            training.name or "",
+            placement.start_date.isoformat() if placement.start_date else "",
+        )
+
+    for placement_id, pairs in by_placement.items():
+        training_name, placement_date = placement_meta[placement_id]
+        anchored = [
+            _AnchoredAttendee(attendee=a, registration_id=r.id, company_name=r.company_name or "") for a, r in pairs
+        ]
+        eligible, skipped = _filter_and_dedupe_attendees(anchored)
+        total_skipped += skipped
+        if not eligible:
+            continue
+        prepared.extend(
+            _emit_threads_for_attendees(
+                db,
+                tenant_id=tenant_id,
+                sender_user_id=sender_user_id,
+                bulk_id=bulk_id,
+                eligible=eligible,
+                subject_template=subject_template,
+                sanitized_body_template=sanitized_body,
+                training_name=training_name,
+                placement_date=placement_date,
+                screen_overlay_id=screen_overlay_id,
+            )
+        )
+
+    await db.flush()
+
+    if prepared:
+        await _dispatch_broadcast_emails(
+            db,
+            tenant_id=tenant_id,
+            sender_user_id=sender_user_id,
+            training_name="",
+            prepared=prepared,
+        )
+
+    return bulk_id, prepared, total_skipped

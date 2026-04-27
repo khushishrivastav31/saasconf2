@@ -1,17 +1,15 @@
 """Admin training-broadcast template CRUD.
 
-Templates are tenant-scoped (the existing ``MessageTemplate`` model already
-fits — it carries no conference reference), so the conference admin's
-templates and the training admin's templates share the same pool. PR 4a
-exposes the pool through a training-scoped endpoint so the
-``TrainingBroadcastDialog`` can pick / save / edit templates without
-having to fake a conference context.
+Templates carry a ``category`` discriminator (``conference`` vs
+``training``) added in migration 215. The training-side endpoints only
+ever read or write ``category='training'`` rows so the conference admin's
+CFP-applicant templates and the training admin's training-attendee
+templates don't leak into each other's pickers.
 
 The conference path lives in ``app/api/v1/messaging/templates.py`` and
-keeps its conference-id-keyed shape for back-compat. Long-term, both
-sides could collapse to a single ``/admin/messaging/templates`` route;
-for now, we keep them parallel so neither has to bend the other's
-contract.
+keeps its existing shape; back-compat preserved because every template
+predating migration 215 was created via the conference admin and
+defaulted to ``category='conference'``.
 """
 
 from uuid import UUID
@@ -21,7 +19,7 @@ from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.messaging import MessageTemplate
+from app.models.messaging import TEMPLATE_CATEGORY_TRAINING, MessageTemplate
 from app.schemas.messaging import (
     MessageTemplateCreate,
     MessageTemplateListResponse,
@@ -49,15 +47,20 @@ async def list_training_templates(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> MessageTemplateListResponse:
-    """List message templates for the tenant.
+    """List training templates for the tenant.
 
-    The pool is shared with the conference-side admin templates — same
-    tenant, same rows, same ``MessageTemplate`` table. A name uniqueness
-    constraint at the DB layer (``uq_message_templates_tenant_name``)
-    keeps the namespace clean.
+    Only returns ``category='training'`` rows. Conference templates
+    written via the CFP admin surface stay invisible here.
     """
     tenant_id = current_user.require_tenant_id()
-    query = select(MessageTemplate).where(MessageTemplate.tenant_id == tenant_id).order_by(MessageTemplate.name)
+    query = (
+        select(MessageTemplate)
+        .where(
+            MessageTemplate.tenant_id == tenant_id,
+            MessageTemplate.category == TEMPLATE_CATEGORY_TRAINING,
+        )
+        .order_by(MessageTemplate.name)
+    )
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     rows = (await db.execute(query)).scalars().all()
     return MessageTemplateListResponse(items=[_to_response(t) for t in rows], total=total)
@@ -69,7 +72,14 @@ async def create_training_template(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> MessageTemplateResponse:
-    """Create a new message template (tenant-scoped, name-unique)."""
+    """Create a new training template.
+
+    Name is unique within the tenant across BOTH categories — the DB
+    constraint ``uq_message_templates_tenant_name`` is global so a
+    conference-category and a training-category template can't share a
+    name. Surfaces the conflict as a 400 with the offender name so the
+    admin can see what they collided with.
+    """
     tenant_id = current_user.require_tenant_id()
     existing = await db.execute(
         select(MessageTemplate).where(
@@ -86,6 +96,7 @@ async def create_training_template(
         subject=data.subject,
         body_html=data.body_html,
         screen_overlay_id=data.screen_overlay_id,
+        category=TEMPLATE_CATEGORY_TRAINING,
     )
     db.add(template)
     await db.commit()
@@ -100,13 +111,18 @@ async def update_training_template(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> MessageTemplateResponse:
-    """Update a message template (rename, change subject/body/overlay)."""
+    """Update a training template (rename, change subject/body/overlay).
+
+    Refuses to touch a conference-category template (404) so a stray
+    training-side request can't accidentally rewrite a CFP template.
+    """
     tenant_id = current_user.require_tenant_id()
 
     result = await db.execute(
         select(MessageTemplate).where(
             MessageTemplate.id == template_id,
             MessageTemplate.tenant_id == tenant_id,
+            MessageTemplate.category == TEMPLATE_CATEGORY_TRAINING,
         )
     )
     template = result.scalar_one_or_none()
@@ -143,13 +159,14 @@ async def delete_training_template(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> None:
-    """Delete a message template."""
+    """Delete a training template. Conference-category rows return 404."""
     tenant_id = current_user.require_tenant_id()
 
     result = await db.execute(
         select(MessageTemplate).where(
             MessageTemplate.id == template_id,
             MessageTemplate.tenant_id == tenant_id,
+            MessageTemplate.category == TEMPLATE_CATEGORY_TRAINING,
         )
     )
     template = result.scalar_one_or_none()

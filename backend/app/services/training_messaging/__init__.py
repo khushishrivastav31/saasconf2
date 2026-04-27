@@ -20,12 +20,14 @@ from ._core import (
     substitute_training_variables,
 )
 from .broadcasts import (
+    broadcast_to_attendees_by_id,
     broadcast_to_placement_attendees,
     broadcast_to_registration_attendees,
 )
 
 __all__ = [
     "PARTICIPANT_TYPE_TRAINING_ATTENDEE",
+    "broadcast_to_attendees_by_id",
     "broadcast_to_placement_attendees",
     "broadcast_to_registration_attendees",
     "send_direct_message_email",
