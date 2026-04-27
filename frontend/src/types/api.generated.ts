@@ -4484,6 +4484,30 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/messaging/broadcasts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Training Broadcasts
+     * @description List training-domain broadcasts (bulk-id grouped) for the tenant.
+     *
+     *     Threads created with ``domain='training'`` carry a ``bulk_id`` that
+     *     groups every recipient of one send. We aggregate on that key so the
+     *     admin sees one row per send instead of one row per attendee.
+     */
+    get: operations['list_training_broadcasts_api_v1_trainings_messaging_broadcasts_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/messaging/templates': {
     parameters: {
       query?: never;
@@ -26640,6 +26664,42 @@ export type components = {
       recipients: components['schemas']['TrainingBroadcastRecipient'][];
     };
     /**
+     * TrainingBroadcastSummary
+     * @description One row in the admin Messages tab — represents one bulk send.
+     */
+    TrainingBroadcastSummary: {
+      /**
+       * Bulk Id
+       * Format: uuid
+       */
+      bulk_id: string;
+      /** Subject */
+      subject: string;
+      /**
+       * Registration Id
+       * Format: uuid
+       */
+      registration_id: string;
+      /** Training Name */
+      training_name: string | null;
+      /** Placement Date */
+      placement_date: string | null;
+      /** Recipient Count */
+      recipient_count: number;
+      /**
+       * Last Sent At
+       * Format: date-time
+       */
+      last_sent_at: string;
+    };
+    /** TrainingBroadcastSummaryListResponse */
+    TrainingBroadcastSummaryListResponse: {
+      /** Items */
+      items: components['schemas']['TrainingBroadcastSummary'][];
+      /** Total */
+      total: number;
+    };
+    /**
      * TrainingCreate
      * @description Schema for creating a training.
      */
@@ -38637,6 +38697,37 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['TrainingBroadcastResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_training_broadcasts_api_v1_trainings_messaging_broadcasts_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrainingBroadcastSummaryListResponse'];
         };
       };
       /** @description Validation Error */
