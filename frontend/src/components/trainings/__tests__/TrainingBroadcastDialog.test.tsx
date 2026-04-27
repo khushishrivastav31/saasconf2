@@ -6,7 +6,7 @@ import TrainingBroadcastDialog, { TRAINING_TEMPLATE_VARIABLES } from '../Trainin
 import { ToastProvider } from '../../Toast';
 
 vi.mock('../../../config/api', () => ({
-  default: { post: vi.fn() },
+  default: { post: vi.fn(), get: vi.fn() },
 }));
 
 // Stub the rich-text editor with a simple textarea so userEvent.type works.
@@ -67,6 +67,9 @@ function renderDialog(props?: Partial<React.ComponentProps<typeof TrainingBroadc
 describe('TrainingBroadcastDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: templates list is empty so the existing tests don't see a
+    // "Use template" picker and don't have to model api.get behavior.
+    mockApi.get = vi.fn().mockResolvedValue({ data: { items: [], total: 0 } });
   });
 
   it('renders the recipient count, excluding attendees with empty email', () => {
@@ -147,5 +150,81 @@ describe('TrainingBroadcastDialog', () => {
       '[Placement Date]',
       '[Company Name]',
     ]);
+  });
+
+  describe('templates integration', () => {
+    it('shows the picker when templates exist and applies one on selection', async () => {
+      mockApi.get = vi.fn().mockResolvedValue({
+        data: {
+          items: [
+            {
+              id: 'tmpl-1',
+              name: 'Reminder',
+              subject: 'Reminder: [Training Name]',
+              body_html: '<p>Hi [First Name]</p>',
+              created_at: '2026-04-27T10:00:00Z',
+              updated_at: '2026-04-27T10:00:00Z',
+            },
+          ],
+          total: 1,
+        },
+      });
+
+      const user = userEvent.setup();
+      renderDialog();
+
+      const picker = await screen.findByLabelText(/Use template/i);
+      await user.selectOptions(picker, 'tmpl-1');
+
+      // Subject got pre-filled from the template; the Send button is now
+      // enabled because subject + body are populated.
+      const subject = screen.getByLabelText(/Subject/i) as HTMLInputElement;
+      expect(subject.value).toBe('Reminder: [Training Name]');
+      expect(screen.getByRole('button', { name: /Send to 2/ })).toBeEnabled();
+    });
+
+    it('hides the picker when there are no templates', async () => {
+      // Default beforeEach mock returns empty list. Wait one tick for the
+      // query to settle, then assert the picker is absent.
+      renderDialog();
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalled());
+      expect(screen.queryByLabelText(/Use template/i)).toBeNull();
+    });
+
+    it('Save as template POSTs the current subject + body with the prompted name', async () => {
+      mockApi.post = vi.fn().mockResolvedValue({
+        data: {
+          id: 'tmpl-new',
+          name: 'New Template',
+          subject: 'Hi',
+          body_html: '<p>Body</p>',
+          created_at: '2026-04-27T10:00:00Z',
+          updated_at: '2026-04-27T10:00:00Z',
+        },
+      });
+      const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('New Template');
+
+      const user = userEvent.setup();
+      renderDialog();
+
+      // Fill subject + body so the button enables.
+      await user.click(screen.getByLabelText(/Subject/i));
+      await user.paste('Hi');
+      await user.click(screen.getByTestId('body-editor'));
+      await user.paste('<p>Body</p>');
+
+      await user.click(screen.getByRole('button', { name: /Save as template/i }));
+
+      expect(promptSpy).toHaveBeenCalled();
+      await waitFor(() =>
+        expect(mockApi.post).toHaveBeenCalledWith('/trainings/messaging/templates', {
+          name: 'New Template',
+          subject: 'Hi',
+          body_html: '<p>Body</p>',
+        })
+      );
+
+      promptSpy.mockRestore();
+    });
   });
 });

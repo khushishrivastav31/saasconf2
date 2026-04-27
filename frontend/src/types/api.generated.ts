@@ -4484,6 +4484,59 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/messaging/templates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Training Templates
+     * @description List message templates for the tenant.
+     *
+     *     The pool is shared with the conference-side admin templates — same
+     *     tenant, same rows, same ``MessageTemplate`` table. A name uniqueness
+     *     constraint at the DB layer (``uq_message_templates_tenant_name``)
+     *     keeps the namespace clean.
+     */
+    get: operations['list_training_templates_api_v1_trainings_messaging_templates_get'];
+    put?: never;
+    /**
+     * Create Training Template
+     * @description Create a new message template (tenant-scoped, name-unique).
+     */
+    post: operations['create_training_template_api_v1_trainings_messaging_templates_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/messaging/templates/{template_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Update Training Template
+     * @description Update a message template (rename, change subject/body/overlay).
+     */
+    put: operations['update_training_template_api_v1_trainings_messaging_templates__template_id__put'];
+    post?: never;
+    /**
+     * Delete Training Template
+     * @description Delete a message template.
+     */
+    delete: operations['delete_training_template_api_v1_trainings_messaging_templates__template_id__delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/invoices': {
     parameters: {
       query?: never;
@@ -38585,6 +38638,140 @@ export interface operations {
         content: {
           'application/json': components['schemas']['TrainingBroadcastResponse'];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_training_templates_api_v1_trainings_messaging_templates_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessageTemplateListResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_training_template_api_v1_trainings_messaging_templates_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MessageTemplateCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessageTemplateResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_training_template_api_v1_trainings_messaging_templates__template_id__put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        template_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MessageTemplateUpdate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessageTemplateResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_training_template_api_v1_trainings_messaging_templates__template_id__delete: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        template_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Validation Error */
       422: {

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import Modal from '../Modal';
 import RichTextEditor from '../common/RichTextEditor';
@@ -18,6 +18,20 @@ interface BroadcastResponse {
   sent_count: number;
   skipped_count: number;
   recipients: { thread_id: string; email: string }[];
+}
+
+interface MessageTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body_html: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface MessageTemplateListResponse {
+  items: MessageTemplate[];
+  total: number;
 }
 
 interface TrainingBroadcastDialogProps {
@@ -49,13 +63,65 @@ export default function TrainingBroadcastDialog({
 }: TrainingBroadcastDialogProps) {
   const [subject, setSubject] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  // Templates pool is shared with the conference admin's templates — same
+  // tenant, same row set. Lazy-load only when the dialog is open so we
+  // don't fetch during the first render of every RegistrationRow.
+  const { data: templates } = useQuery({
+    queryKey: ['training-message-templates'],
+    queryFn: async (): Promise<MessageTemplateListResponse> => {
+      const resp = await api.get<MessageTemplateListResponse>('/trainings/messaging/templates');
+      return resp.data;
+    },
+    enabled: open,
+    staleTime: 60_000,
+  });
+
+  const applyTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (!templateId) return;
+    const t = templates?.items.find((x) => x.id === templateId);
+    if (t) {
+      setSubject(t.subject);
+      setBodyHtml(t.body_html);
+    }
+  };
 
   const eligibleRecipients = useMemo(
     () => attendees.filter((a) => a.email && a.email.trim().length > 0),
     [attendees]
   );
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (name: string): Promise<MessageTemplate> => {
+      const resp = await api.post<MessageTemplate>('/trainings/messaging/templates', {
+        name,
+        subject,
+        body_html: bodyHtml,
+      });
+      return resp.data;
+    },
+    onSuccess: (saved) => {
+      showToast(`Saved template "${saved.name}"`, 'success');
+      queryClient.invalidateQueries({ queryKey: ['training-message-templates'] });
+      setSelectedTemplateId(saved.id);
+    },
+    onError: (err: unknown) => {
+      // axios error shape: err.response?.data?.detail typically holds a 400 message
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      showToast(detail || 'Failed to save template', 'error');
+    },
+  });
+
+  const handleSaveTemplate = () => {
+    const name = window.prompt('Template name?');
+    if (name && name.trim().length > 0) {
+      saveTemplateMutation.mutate(name.trim());
+    }
+  };
 
   const sendMutation = useMutation({
     mutationFn: async (): Promise<BroadcastResponse> => {
@@ -77,6 +143,7 @@ export default function TrainingBroadcastDialog({
       queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
       setSubject('');
       setBodyHtml('');
+      setSelectedTemplateId('');
       onClose();
     },
     onError: () => showToast('Failed to send broadcast', 'error'),
@@ -107,6 +174,30 @@ export default function TrainingBroadcastDialog({
           )}
           .
         </div>
+
+        {templates && templates.items.length > 0 && (
+          <div>
+            <label
+              htmlFor="training-broadcast-template"
+              className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Use template
+            </label>
+            <select
+              id="training-broadcast-template"
+              value={selectedTemplateId}
+              onChange={(e) => applyTemplate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">— Start from scratch —</option>
+              {templates.items.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label
@@ -170,6 +261,20 @@ export default function TrainingBroadcastDialog({
       </div>
 
       <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleSaveTemplate}
+          disabled={
+            !subject.trim() ||
+            !bodyHtml.trim() ||
+            bodyHtml.trim() === '<p></p>' ||
+            saveTemplateMutation.isPending
+          }
+          className="mr-auto px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+          title="Save the current subject + body as a reusable template"
+        >
+          {saveTemplateMutation.isPending ? 'Saving…' : 'Save as template'}
+        </button>
         <button
           type="button"
           onClick={onClose}
