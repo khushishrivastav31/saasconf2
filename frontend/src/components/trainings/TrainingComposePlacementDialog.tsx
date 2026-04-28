@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import Modal from '../Modal';
-import RichTextEditor from '../common/RichTextEditor';
+import RichTextEditor, { type RichTextEditorHandle } from '../common/RichTextEditor';
 import { useToast } from '../Toast';
 import TrainingRecipientPicker, { type RecipientScope } from './TrainingRecipientPicker';
 import TrainingAttendeeSearchPicker, {
@@ -89,6 +89,12 @@ export default function TrainingComposePlacementDialog({
   // training context) rather than just ids.
   const [searchSelected, setSearchSelected] = useState<AttendeeSearchHit[]>([]);
   const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
+  // Variable-pill insert needs to know which input the user touched
+  // last; the buttons live outside both inputs, so we track focus
+  // ourselves rather than relying on document.activeElement.
+  const [lastFocused, setLastFocused] = useState<'subject' | 'body'>('body');
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyEditorRef = useRef<RichTextEditorHandle>(null);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -222,9 +228,22 @@ export default function TrainingComposePlacementDialog({
     onError: () => showToast('Failed to send broadcast', 'error'),
   });
 
-  const insertVariable = (token: string, target: 'subject' | 'body') => {
-    if (target === 'subject') setSubject((s) => `${s}${token}`);
-    else setBodyHtml((b) => `${b}${token}`);
+  const insertVariable = (token: string) => {
+    if (lastFocused === 'subject' && subjectRef.current) {
+      const input = subjectRef.current;
+      const start = input.selectionStart ?? subject.length;
+      const end = input.selectionEnd ?? subject.length;
+      const next = subject.slice(0, start) + token + subject.slice(end);
+      setSubject(next);
+      // Restore caret after React paints the new value.
+      requestAnimationFrame(() => {
+        input.focus();
+        const cursor = start + token.length;
+        input.setSelectionRange(cursor, cursor);
+      });
+      return;
+    }
+    bodyEditorRef.current?.insertText(token);
   };
 
   const selectedPlacement = placementOptions.find((p) => p.placement_id === placementId);
@@ -354,9 +373,11 @@ export default function TrainingComposePlacementDialog({
           </label>
           <input
             id="training-compose-subject"
+            ref={subjectRef}
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
+            onFocus={() => setLastFocused('subject')}
             maxLength={500}
             placeholder="e.g. Reminder: [Training Name] starts soon"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -370,11 +391,14 @@ export default function TrainingComposePlacementDialog({
           >
             Body
           </label>
-          <RichTextEditor
-            value={bodyHtml}
-            onChange={setBodyHtml}
-            placeholder="Write your message. Click a variable below to insert it."
-          />
+          <div onFocusCapture={() => setLastFocused('body')}>
+            <RichTextEditor
+              ref={bodyEditorRef}
+              value={bodyHtml}
+              onChange={setBodyHtml}
+              placeholder="Write your message. Click a variable below to insert it."
+            />
+          </div>
         </div>
 
         <TrainingVariableButtons onInsert={insertVariable} />

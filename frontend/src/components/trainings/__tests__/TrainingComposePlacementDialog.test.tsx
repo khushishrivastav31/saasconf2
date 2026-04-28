@@ -130,6 +130,37 @@ describe('TrainingComposePlacementDialog', () => {
     expect(screen.getByText(/Trainings → Settings → Message Templates/i)).toBeInTheDocument();
   });
 
+  it('renders one variable button per token (not separate subject/body buttons)', async () => {
+    renderDialog();
+    // Wait for dialog to mount.
+    await screen.findByLabelText(/Subject/i);
+    // Exactly six variables, one button each.
+    const labels = [
+      'First Name',
+      'Last Name',
+      'Email',
+      'Training Name',
+      'Placement Date',
+      'Company Name',
+    ];
+    for (const label of labels) {
+      const matches = screen.getAllByRole('button', { name: label });
+      expect(matches.length).toBe(1);
+    }
+  });
+
+  it('inserts a variable into the subject when the subject was last focused', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    const subject = await screen.findByLabelText(/Subject/i);
+    await user.click(subject);
+    await user.paste('Hello');
+    // Click the First Name variable button.
+    const firstNameBtn = screen.getByRole('button', { name: 'First Name' });
+    await user.click(firstNameBtn);
+    expect((subject as HTMLInputElement).value).toBe('Hello[First Name]');
+  });
+
   it('disables Send until placement, subject, and body are all populated', async () => {
     const user = userEvent.setup();
     renderDialog();

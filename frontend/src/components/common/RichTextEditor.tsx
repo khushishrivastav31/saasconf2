@@ -1,7 +1,16 @@
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { getEditorExtensions } from './richtext/extensions';
 import EditorToolbar from './richtext/EditorToolbar';
+
+/** Imperative API exposed via ref so parents can drive the editor
+ *  (e.g. insert a placeholder token at the current cursor position). */
+export interface RichTextEditorHandle {
+  /** Insert plain text at the current cursor; focuses the editor. */
+  insertText: (text: string) => void;
+  /** Move focus into the editor without changing content. */
+  focus: () => void;
+}
 
 interface PromptDialogState {
   open: boolean;
@@ -87,18 +96,21 @@ interface RichTextEditorProps {
 
 const EMPTY_BODY = '<p></p>';
 
-export default function RichTextEditor({
-  value,
-  onChange,
-  placeholder = '',
-  rows = 3,
-  maxRows = 15,
-  className = '',
-  disabled = false,
-  minLength,
-  maxLength,
-  editorClassName = '',
-}: RichTextEditorProps) {
+function RichTextEditor(
+  {
+    value,
+    onChange,
+    placeholder = '',
+    rows = 3,
+    maxRows = 15,
+    className = '',
+    disabled = false,
+    minLength,
+    maxLength,
+    editorClassName = '',
+  }: RichTextEditorProps,
+  ref: React.Ref<RichTextEditorHandle>
+) {
   const [charCount, setCharCount] = useState(0);
   const [, setSelectionUpdate] = useState(0); // Force re-render on selection change
   const defaultPromptState: PromptDialogState = {
@@ -183,6 +195,19 @@ export default function RichTextEditor({
 
   // Keep ref in sync so drop/paste handlers can access the editor
   editorRef.current = editor;
+
+  useImperativeHandle(
+    ref,
+    (): RichTextEditorHandle => ({
+      insertText: (text: string) => {
+        editorRef.current?.chain().focus().insertContent(text).run();
+      },
+      focus: () => {
+        editorRef.current?.commands.focus();
+      },
+    }),
+    []
+  );
 
   // Initialize char count after mount (avoids state update before mount warning)
   useEffect(() => {
@@ -383,3 +408,5 @@ export default function RichTextEditor({
     </div>
   );
 }
+
+export default forwardRef<RichTextEditorHandle, RichTextEditorProps>(RichTextEditor);
