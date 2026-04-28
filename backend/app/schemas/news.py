@@ -32,9 +32,18 @@ class NewsArticleUpdate(BaseModel):
 
 
 class NewsArticleResponse(BaseModel):
+    """News article response schema.
+
+    ``conference_id`` is null for training-domain articles (tenant-wide
+    trainings news, see migration 217). ``domain`` carries the
+    discriminator (``conference`` | ``training``) so the FE can render
+    the right context label.
+    """
+
     id: UUID
     tenant_id: UUID
-    conference_id: UUID
+    conference_id: UUID | None = None
+    domain: str = "conference"
     title: str
     body_html: str
     is_published: bool
@@ -69,9 +78,17 @@ class NewsArticleSendResponse(BaseModel):
 
 
 class PortalNewsArticle(BaseModel):
+    """Portal-facing news article.
+
+    ``conference_id`` / ``conference_name`` are nullable so the unified
+    portal feed can also surface tenant-wide training news (no
+    conference anchor).
+    """
+
     id: UUID
-    conference_id: UUID
-    conference_name: str
+    conference_id: UUID | None = None
+    conference_name: str | None = None
+    domain: str = "conference"
     title: str
     body_html: str
     published_at: datetime

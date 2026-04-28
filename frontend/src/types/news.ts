@@ -1,7 +1,8 @@
 export interface NewsArticle {
   id: string;
   tenant_id: string;
-  conference_id: string;
+  conference_id: string | null;
+  domain?: 'conference' | 'training';
   title: string;
   body_html: string;
   is_published: boolean;

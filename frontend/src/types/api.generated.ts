@@ -4850,6 +4850,75 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/news': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Training Articles
+     * @description List every training-domain news article in the tenant (drafts + published).
+     */
+    get: operations['list_training_articles_api_v1_trainings_news_get'];
+    put?: never;
+    /**
+     * Create Training Article
+     * @description Create a tenant-wide training news article (draft by default).
+     */
+    post: operations['create_training_article_api_v1_trainings_news_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/news/{article_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Training Article */
+    get: operations['get_training_article_api_v1_trainings_news__article_id__get'];
+    /** Update Training Article */
+    put: operations['update_training_article_api_v1_trainings_news__article_id__put'];
+    post?: never;
+    /** Delete Training Article */
+    delete: operations['delete_training_article_api_v1_trainings_news__article_id__delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/news/{article_id}/send': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send Training Article
+     * @description Email a published training news article to every training attendee in the tenant.
+     *
+     *     The conference equivalent supports filter combinations (paper status,
+     *     committee role, recipient list, …); for trainings we ship the basic
+     *     "broadcast to all training attendees" path. Refining recipient
+     *     selection (per-placement, per-program-year, per-status) is a
+     *     follow-up.
+     */
+    post: operations['send_training_article_api_v1_trainings_news__article_id__send_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/screen-overlays': {
     parameters: {
       query?: never;
@@ -12513,7 +12582,14 @@ export type paths = {
     };
     /**
      * List Portal News
-     * @description List published news articles for conferences the applicant has access to.
+     * @description List published news for the portal user.
+     *
+     *     Surfaces:
+     *       - Conference news for any conference the user can access (via
+     *         papers or committee membership).
+     *       - Training news (tenant-wide) when the user is a training-portal
+     *         identity (any matching ``TrainingRegistrationAttendee`` in the
+     *         tenant).
      */
     get: operations['list_portal_news_api_v1_portal_news_get'];
     put?: never;
@@ -12535,8 +12611,10 @@ export type paths = {
      * Get Portal News Article
      * @description Get a single published news article.
      *
-     *     The article must be published and belong to a conference the applicant
-     *     has access to (via papers or committee membership).
+     *     The article must be published and either:
+     *       - belong to a conference the applicant has access to, OR
+     *       - be a training-domain article in a tenant where the applicant
+     *         has a training-portal identity.
      */
     get: operations['get_portal_news_article_api_v1_portal_news__article_id__get'];
     put?: never;
@@ -19936,7 +20014,15 @@ export type components = {
       /** Total */
       total: number;
     };
-    /** NewsArticleResponse */
+    /**
+     * NewsArticleResponse
+     * @description News article response schema.
+     *
+     *     ``conference_id`` is null for training-domain articles (tenant-wide
+     *     trainings news, see migration 217). ``domain`` carries the
+     *     discriminator (``conference`` | ``training``) so the FE can render
+     *     the right context label.
+     */
     NewsArticleResponse: {
       /**
        * Id
@@ -19948,11 +20034,13 @@ export type components = {
        * Format: uuid
        */
       tenant_id: string;
+      /** Conference Id */
+      conference_id?: string | null;
       /**
-       * Conference Id
-       * Format: uuid
+       * Domain
+       * @default conference
        */
-      conference_id: string;
+      domain?: string;
       /** Title */
       title: string;
       /** Body Html */
@@ -21975,20 +22063,29 @@ export type components = {
       /** Theme Preference */
       theme_preference?: string | null;
     };
-    /** PortalNewsArticle */
+    /**
+     * PortalNewsArticle
+     * @description Portal-facing news article.
+     *
+     *     ``conference_id`` / ``conference_name`` are nullable so the unified
+     *     portal feed can also surface tenant-wide training news (no
+     *     conference anchor).
+     */
     PortalNewsArticle: {
       /**
        * Id
        * Format: uuid
        */
       id: string;
-      /**
-       * Conference Id
-       * Format: uuid
-       */
-      conference_id: string;
+      /** Conference Id */
+      conference_id?: string | null;
       /** Conference Name */
-      conference_name: string;
+      conference_name?: string | null;
+      /**
+       * Domain
+       * @default conference
+       */
+      domain?: string;
       /** Title */
       title: string;
       /** Body Html */
@@ -39882,6 +39979,210 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_training_articles_api_v1_trainings_news_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NewsArticleListResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_training_article_api_v1_trainings_news_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NewsArticleCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NewsArticleResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_training_article_api_v1_trainings_news__article_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        article_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NewsArticleResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_training_article_api_v1_trainings_news__article_id__put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        article_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NewsArticleUpdate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NewsArticleResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_training_article_api_v1_trainings_news__article_id__delete: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        article_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  send_training_article_api_v1_trainings_news__article_id__send_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        article_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NewsArticleSendResponse'];
+        };
       };
       /** @description Validation Error */
       422: {

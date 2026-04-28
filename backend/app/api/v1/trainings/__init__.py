@@ -21,6 +21,7 @@ from .messaging import placement_router as messaging_placement_router
 from .messaging import router as messaging_router
 from .messaging_admin import router as messaging_admin_router
 from .messaging_templates import router as messaging_templates_router
+from .news import router as news_router
 from .offer_acceptance import router as offer_acceptance_router
 from .offer_attendees import router as offer_attendees_router
 from .offer_documents import router as offer_documents_router
@@ -75,6 +76,7 @@ router.include_router(messaging_attachments_router)
 router.include_router(messaging_admin_router)
 router.include_router(admin_threads_router)
 router.include_router(messaging_templates_router)
+router.include_router(news_router)
 router.include_router(screen_overlays_router)
 router.include_router(invoices_router)
 router.include_router(invoice_operations_router)

@@ -1,4 +1,5 @@
-"""News article model for conference newsletters."""
+"""News article model — supports both conference-scoped and tenant-wide
+training-scoped news via a ``domain`` discriminator (migration 217)."""
 
 import uuid
 from datetime import datetime
@@ -17,6 +18,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
+NEWS_DOMAIN_CONFERENCE = "conference"
+NEWS_DOMAIN_TRAINING = "training"
+NEWS_DOMAINS = (NEWS_DOMAIN_CONFERENCE, NEWS_DOMAIN_TRAINING)
+
 
 class NewsArticle(Base):
     __tablename__ = "news_articles"
@@ -27,11 +32,15 @@ class NewsArticle(Base):
         ForeignKey("tenants.id", ondelete="CASCADE"),
         nullable=False,
     )
-    conference_id: Mapped[uuid.UUID] = mapped_column(
+    # Conference-scoped news carries a conference_id; training-scoped
+    # ones leave it NULL (the row is tenant-wide for the trainings
+    # module). Migration 217 enforces the pairing via a CHECK constraint.
+    conference_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("conferences.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
+    domain: Mapped[str] = mapped_column(String(20), nullable=False, server_default=NEWS_DOMAIN_CONFERENCE)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     body_html: Mapped[str] = mapped_column(Text, nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -61,6 +70,13 @@ class NewsArticle(Base):
         Index(
             "ix_news_articles_published",
             "conference_id",
+            "is_published",
+            "published_at",
+        ),
+        Index(
+            "ix_news_articles_tenant_domain_published",
+            "tenant_id",
+            "domain",
             "is_published",
             "published_at",
         ),
