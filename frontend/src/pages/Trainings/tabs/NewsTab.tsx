@@ -8,6 +8,8 @@ import RichTextEditor from '../../../components/common/RichTextEditor';
 import RichTextDisplay from '../../../components/common/RichTextDisplay';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { useErrorState } from '../../../hooks/useErrorState';
+import { useModalState } from '../../../hooks/useModalState';
 import { useToast } from '../../../components/Toast';
 import { formatDateTime } from '../../../utils/formatDate';
 import { parseApiError } from '../../../utils/apiError';
@@ -37,13 +39,13 @@ const QUERY_KEY = ['training-news'];
 export default function NewsTab() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [deleteTarget, setDeleteTarget] = useState<NewsArticle | null>(null);
-  const [publishTarget, setPublishTarget] = useState<NewsArticle | null>(null);
-  const [sendTarget, setSendTarget] = useState<NewsArticle | null>(null);
+  const deleteModal = useModalState<NewsArticle>();
+  const publishModal = useModalState<NewsArticle>();
+  const sendModal = useModalState<NewsArticle>();
 
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEY,
@@ -90,12 +92,12 @@ export default function NewsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setDeleteTarget(null);
+      deleteModal.close();
       showToast('Article deleted', 'success');
     },
     onError: (err) => {
       setError(parseApiError(err));
-      setDeleteTarget(null);
+      deleteModal.close();
     },
   });
 
@@ -135,12 +137,12 @@ export default function NewsTab() {
   }
 
   function handleConfirmPublish() {
-    if (!publishTarget) return;
+    if (!publishModal.target) return;
     updateMutation.mutate({
-      id: publishTarget.id,
-      payload: { is_published: !publishTarget.is_published },
+      id: publishModal.target.id,
+      payload: { is_published: !publishModal.target.is_published },
     });
-    setPublishTarget(null);
+    publishModal.close();
   }
 
   function authorName(article: NewsArticle): string {
@@ -221,7 +223,7 @@ export default function NewsTab() {
                     ✏️
                   </button>
                   <button
-                    onClick={() => setPublishTarget(article)}
+                    onClick={() => publishModal.open(article)}
                     className="p-2 text-gray-400 dark:text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
                     title={article.is_published ? 'Unpublish' : 'Publish'}
                     aria-label={article.is_published ? 'Unpublish' : 'Publish'}
@@ -230,7 +232,7 @@ export default function NewsTab() {
                   </button>
                   {article.is_published && (
                     <button
-                      onClick={() => setSendTarget(article)}
+                      onClick={() => sendModal.open(article)}
                       className="p-2 text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
                       title="Send to attendees"
                       aria-label="Send article"
@@ -239,7 +241,7 @@ export default function NewsTab() {
                     </button>
                   )}
                   <button
-                    onClick={() => setDeleteTarget(article)}
+                    onClick={() => deleteModal.open(article)}
                     className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                     title="Delete"
                     aria-label="Delete article"
@@ -314,33 +316,33 @@ export default function NewsTab() {
       </Modal>
 
       <ConfirmDialog
-        open={!!deleteTarget}
+        open={deleteModal.isOpen}
         title="Delete Article"
-        message={`Delete "${deleteTarget?.title}"?`}
+        message={`Delete "${deleteModal.target?.title}"?`}
         confirmLabel="Delete"
         variant="danger"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteModal.target && deleteMutation.mutate(deleteModal.target.id)}
+        onCancel={deleteModal.close}
       />
 
       <ConfirmDialog
-        open={!!publishTarget}
-        title={publishTarget?.is_published ? 'Unpublish Article' : 'Publish Article'}
+        open={publishModal.isOpen}
+        title={publishModal.target?.is_published ? 'Unpublish Article' : 'Publish Article'}
         message={
-          publishTarget?.is_published
-            ? `Unpublish "${publishTarget.title}"? It will no longer be visible to portal users.`
-            : `Publish "${publishTarget?.title}"? It will become visible to all training-portal users.`
+          publishModal.target?.is_published
+            ? `Unpublish "${publishModal.target.title}"? It will no longer be visible to portal users.`
+            : `Publish "${publishModal.target?.title}"? It will become visible to all training-portal users.`
         }
-        confirmLabel={publishTarget?.is_published ? 'Unpublish' : 'Publish'}
+        confirmLabel={publishModal.target?.is_published ? 'Unpublish' : 'Publish'}
         onConfirm={handleConfirmPublish}
-        onCancel={() => setPublishTarget(null)}
+        onCancel={publishModal.close}
       />
 
       <SendTrainingNewsModal
-        isOpen={!!sendTarget}
-        onClose={() => setSendTarget(null)}
-        articleId={sendTarget?.id ?? ''}
-        articleTitle={sendTarget?.title ?? ''}
+        isOpen={sendModal.isOpen}
+        onClose={sendModal.close}
+        articleId={sendModal.target?.id ?? ''}
+        articleTitle={sendModal.target?.title ?? ''}
         onSent={(emailsSent) =>
           showToast(`Sent to ${emailsSent} attendee${emailsSent === 1 ? '' : 's'}`, 'success')
         }

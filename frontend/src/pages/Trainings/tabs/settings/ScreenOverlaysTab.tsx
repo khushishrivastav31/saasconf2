@@ -6,6 +6,8 @@ import { parseApiError } from '../../../../utils/apiError';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import { useErrorState } from '../../../../hooks/useErrorState';
+import { useModalState } from '../../../../hooks/useModalState';
 import { emptyForm } from '../../../../components/screen-overlays/constants';
 import {
   OverlayForm,
@@ -30,12 +32,12 @@ export default function ScreenOverlaysTab() {
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ScreenOverlay | null>(null);
+  const [error, setError] = useErrorState();
+  const deleteModal = useModalState<ScreenOverlay>();
+  const previewModal = useModalState<ScreenOverlay>();
   const [createForm, setCreateForm] = useState<ScreenOverlayCreate>(emptyForm());
   const [editForm, setEditForm] = useState<ScreenOverlayUpdate>({});
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const [previewOverlay, setPreviewOverlay] = useState<ScreenOverlay | null>(null);
   const pendingImagePreview = pendingImageFile ? URL.createObjectURL(pendingImageFile) : null;
 
   const { data, isLoading } = useQuery({
@@ -92,7 +94,7 @@ export default function ScreenOverlaysTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setDeleteTarget(null);
+      deleteModal.close();
       setError(null);
     },
     onError: (err) => setError(parseApiError(err)),
@@ -304,9 +306,9 @@ export default function ScreenOverlaysTab() {
                   key={overlay.id}
                   overlay={overlay}
                   isAdmin
-                  onPreview={setPreviewOverlay}
+                  onPreview={previewModal.open}
                   onEdit={startEditing}
-                  onDelete={setDeleteTarget}
+                  onDelete={deleteModal.open}
                   onToggleActive={(id, is_active) => toggleActiveMutation.mutate({ id, is_active })}
                 />
               ))}
@@ -316,17 +318,17 @@ export default function ScreenOverlaysTab() {
       )}
 
       <ConfirmDialog
-        open={!!deleteTarget}
+        open={deleteModal.isOpen}
         title="Delete Screen Overlay"
-        message={`Are you sure you want to delete the overlay "${deleteTarget?.title}"?`}
+        message={`Are you sure you want to delete the overlay "${deleteModal.target?.title}"?`}
         confirmLabel="Delete"
         variant="danger"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteModal.target && deleteMutation.mutate(deleteModal.target.id)}
+        onCancel={deleteModal.close}
       />
 
-      {previewOverlay && (
-        <OverlayPreviewModal overlay={previewOverlay} onDismiss={() => setPreviewOverlay(null)} />
+      {previewModal.isOpen && previewModal.target && (
+        <OverlayPreviewModal overlay={previewModal.target} onDismiss={previewModal.close} />
       )}
     </div>
   );

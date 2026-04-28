@@ -11,6 +11,7 @@ import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import OverlaySelector from '../../../components/OverlaySelector';
 import { useConferenceCrud } from '../../../hooks/api';
+import { useModalState } from '../../../hooks/useModalState';
 
 interface NewsTabProps {
   conference: { id: string; name: string };
@@ -35,9 +36,9 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
   const [form, setForm] = useState<ArticleFormState>(emptyForm);
-  const [deleteTarget, setDeleteTarget] = useState<NewsArticle | null>(null);
-  const [publishTarget, setPublishTarget] = useState<NewsArticle | null>(null);
-  const [sendTarget, setSendTarget] = useState<NewsArticle | null>(null);
+  const deleteModal = useModalState<NewsArticle>();
+  const publishModal = useModalState<NewsArticle>();
+  const sendModal = useModalState<NewsArticle>();
 
   // ── Data + Mutations ───────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
     queryKey: queryKeys.news.byConference(conferenceId),
     onCreateSuccess: () => closeModal(),
     onUpdateSuccess: () => closeModal(),
-    onDeleteSuccess: () => setDeleteTarget(null),
+    onDeleteSuccess: () => deleteModal.close(),
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────
@@ -102,12 +103,12 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
   }
 
   function handleConfirmPublish() {
-    if (!publishTarget) return;
+    if (!publishModal.target) return;
     updateMutation.mutate({
-      id: publishTarget.id,
-      data: { is_published: !publishTarget.is_published },
+      id: publishModal.target.id,
+      data: { is_published: !publishModal.target.is_published },
     });
-    setPublishTarget(null);
+    publishModal.close();
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────
@@ -246,7 +247,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
 
                     {/* Publish / Unpublish */}
                     <button
-                      onClick={() => setPublishTarget(article)}
+                      onClick={() => publishModal.open(article)}
                       className={`p-2 rounded transition-colors ${
                         article.is_published
                           ? 'text-green-500 hover:text-orange-600 hover:bg-orange-50'
@@ -294,7 +295,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                     {/* Send email (only published) */}
                     {article.is_published && (
                       <button
-                        onClick={() => setSendTarget(article)}
+                        onClick={() => sendModal.open(article)}
                         className="p-2 text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
                         title="Send as email"
                       >
@@ -316,7 +317,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
 
                     {/* Delete */}
                     <button
-                      onClick={() => setDeleteTarget(article)}
+                      onClick={() => deleteModal.open(article)}
                       className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                       title="Delete article"
                     >
@@ -400,38 +401,38 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
 
       {/* Publish / Unpublish confirmation */}
       <ConfirmDialog
-        open={!!publishTarget}
-        title={publishTarget?.is_published ? 'Unpublish Article' : 'Publish Article'}
+        open={publishModal.isOpen}
+        title={publishModal.target?.is_published ? 'Unpublish Article' : 'Publish Article'}
         message={
-          publishTarget?.is_published
-            ? `Are you sure you want to unpublish "${publishTarget?.title ?? ''}"? It will no longer be visible to portal users.`
-            : `Are you sure you want to publish "${publishTarget?.title ?? ''}"? It will become visible to all portal users.`
+          publishModal.target?.is_published
+            ? `Are you sure you want to unpublish "${publishModal.target?.title ?? ''}"? It will no longer be visible to portal users.`
+            : `Are you sure you want to publish "${publishModal.target?.title ?? ''}"? It will become visible to all portal users.`
         }
-        confirmLabel={publishTarget?.is_published ? 'Unpublish' : 'Publish'}
+        confirmLabel={publishModal.target?.is_published ? 'Unpublish' : 'Publish'}
         variant="warning"
         onConfirm={handleConfirmPublish}
-        onCancel={() => setPublishTarget(null)}
+        onCancel={publishModal.close}
       />
 
       {/* Delete confirmation */}
       <ConfirmDialog
-        open={!!deleteTarget}
+        open={deleteModal.isOpen}
         title="Delete Article"
-        message={`Are you sure you want to delete "${deleteTarget?.title ?? ''}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${deleteModal.target?.title ?? ''}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={() => {
-          if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+          if (deleteModal.target) deleteMutation.mutate(deleteModal.target.id);
         }}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={deleteModal.close}
       />
 
       {/* Send email modal */}
-      {sendTarget && (
+      {sendModal.target && (
         <SendNewsModal
-          isOpen={!!sendTarget}
-          onClose={() => setSendTarget(null)}
-          articleId={sendTarget.id}
-          articleTitle={sendTarget.title}
+          isOpen={sendModal.isOpen}
+          onClose={sendModal.close}
+          articleId={sendModal.target.id}
+          articleTitle={sendModal.target.title}
           conferenceId={conferenceId}
         />
       )}
