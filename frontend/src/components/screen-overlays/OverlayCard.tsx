@@ -1,7 +1,7 @@
-import type { ScreenOverlay } from '../../../../types';
-import api from '../../../../config/api';
-import { stripHtml } from '../../../../utils/richText';
-import { EyeIcon, EditIcon, DeleteIcon } from '../../icons';
+import type { ScreenOverlay } from '../../types';
+import api from '../../config/api';
+import { stripHtml } from '../../utils/richText';
+import { EyeIcon, EditIcon, DeleteIcon } from '../../pages/ConferenceDetail/icons';
 import { triggerBadgeClass } from './constants';
 
 interface OverlayCardProps {

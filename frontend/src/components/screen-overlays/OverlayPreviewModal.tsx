@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import type { ScreenOverlay } from '../../../../types';
-import api from '../../../../config/api';
-import RichTextDisplay from '../../../../components/common/RichTextDisplay';
+import type { ScreenOverlay } from '../../types';
+import api from '../../config/api';
+import RichTextDisplay from '../common/RichTextDisplay';
 
 interface OverlayPreviewModalProps {
   overlay: ScreenOverlay;

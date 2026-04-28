@@ -1,11 +1,7 @@
 import { useRef } from 'react';
-import type {
-  ScreenOverlayCreate,
-  OverlayTriggerType,
-  OverlayAnimationStyle,
-} from '../../../../types';
-import RichTextEditor from '../../../../components/common/RichTextEditor';
-import api from '../../../../config/api';
+import type { ScreenOverlayCreate, OverlayTriggerType, OverlayAnimationStyle } from '../../types';
+import RichTextEditor from '../common/RichTextEditor';
+import api from '../../config/api';
 import { TRIGGER_OPTIONS, ANIMATION_OPTIONS } from './constants';
 
 interface OverlayFormProps {

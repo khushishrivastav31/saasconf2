@@ -11,10 +11,13 @@ import { parseApiError } from '../../../../utils/apiError';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
-import { emptyForm } from './constants';
-import { OverlayForm, OverlayImageUpload } from './OverlayForm';
-import { OverlayCard } from './OverlayCard';
-import { OverlayPreviewModal } from './OverlayPreviewModal';
+import { emptyForm } from '../../../../components/screen-overlays/constants';
+import {
+  OverlayForm,
+  OverlayImageUpload,
+} from '../../../../components/screen-overlays/OverlayForm';
+import { OverlayCard } from '../../../../components/screen-overlays/OverlayCard';
+import { OverlayPreviewModal } from '../../../../components/screen-overlays/OverlayPreviewModal';
 
 function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
   const queryClient = useQueryClient();

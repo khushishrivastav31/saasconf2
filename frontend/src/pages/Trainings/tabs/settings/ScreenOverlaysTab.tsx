@@ -6,13 +6,13 @@ import { parseApiError } from '../../../../utils/apiError';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
-import { emptyForm } from '../../../ConferenceDetail/tabs/ScreenOverlaysTab/constants';
+import { emptyForm } from '../../../../components/screen-overlays/constants';
 import {
   OverlayForm,
   OverlayImageUpload,
-} from '../../../ConferenceDetail/tabs/ScreenOverlaysTab/OverlayForm';
-import { OverlayCard } from '../../../ConferenceDetail/tabs/ScreenOverlaysTab/OverlayCard';
-import { OverlayPreviewModal } from '../../../ConferenceDetail/tabs/ScreenOverlaysTab/OverlayPreviewModal';
+} from '../../../../components/screen-overlays/OverlayForm';
+import { OverlayCard } from '../../../../components/screen-overlays/OverlayCard';
+import { OverlayPreviewModal } from '../../../../components/screen-overlays/OverlayPreviewModal';
 
 const API_BASE = '/trainings/screen-overlays';
 const QUERY_KEY = ['training-screen-overlays'];

@@ -1,8 +1,4 @@
-import type {
-  OverlayTriggerType,
-  OverlayAnimationStyle,
-  ScreenOverlayCreate,
-} from '../../../../types';
+import type { OverlayTriggerType, OverlayAnimationStyle, ScreenOverlayCreate } from '../../types';
 
 export const TRIGGER_OPTIONS: { value: OverlayTriggerType; label: string }[] = [
   { value: 'first_registration', label: 'First Registration' },
