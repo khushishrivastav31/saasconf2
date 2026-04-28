@@ -6,6 +6,7 @@ import RichTextEditor, {
   type RichTextEditorHandle,
 } from '../../../../components/common/RichTextEditor';
 import TrainingVariableButtons from '../../../../components/trainings/TrainingVariableButtons';
+import OverlaySelector from '../../../../components/OverlaySelector';
 import { useToast } from '../../../../components/Toast';
 
 interface MessageTemplate {
@@ -13,6 +14,7 @@ interface MessageTemplate {
   name: string;
   subject: string;
   body_html: string;
+  screen_overlay_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,9 +28,10 @@ interface FormState {
   name: string;
   subject: string;
   body_html: string;
+  screen_overlay_id: string | null;
 }
 
-const EMPTY_FORM: FormState = { name: '', subject: '', body_html: '' };
+const EMPTY_FORM: FormState = { name: '', subject: '', body_html: '', screen_overlay_id: null };
 
 export default function MessageTemplatesTab() {
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
@@ -106,7 +109,12 @@ export default function MessageTemplatesTab() {
 
   const handleEdit = (t: MessageTemplate) => {
     setEditing(t);
-    setForm({ name: t.name, subject: t.subject, body_html: t.body_html });
+    setForm({
+      name: t.name,
+      subject: t.subject,
+      body_html: t.body_html,
+      screen_overlay_id: t.screen_overlay_id ?? null,
+    });
     setFormOpen(true);
   };
 
@@ -271,6 +279,11 @@ export default function MessageTemplatesTab() {
             </div>
           </div>
           <TrainingVariableButtons onInsert={insertVariable} />
+          <OverlaySelector
+            trainingScope
+            value={form.screen_overlay_id}
+            onChange={(id) => setForm((f) => ({ ...f, screen_overlay_id: id }))}
+          />
         </div>
         <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
           <button

@@ -35,9 +35,15 @@
 | `location_types.py` | Location type CRUD |
 | `holidays.py` | Holiday/blocked days management |
 | `policies.py` | Cancellation, refund, payment terms |
-| `email_settings.py` | Email template config for invoices/schedule notifications |
+| `email_settings.py` | Email template config for invoices/schedule notifications + Messaging Mode toggle (`/messaging-settings`) |
 | `portal_settings.py` | Public registration portal settings |
 | `registration_questions.py` | Portal registration form question CRUD |
+| `messaging.py` | Broadcasts (per-registration, per-placement, by-attendees) + attachment upload/download (PR #157, #161) |
+| `messaging_admin.py` | Broadcasts list (groups by `bulk_id`), attendee search for the Compose dialog |
+| `messaging_templates.py` | Training-only message template CRUD (filters `category='training'`, PR #160) |
+| `admin_threads.py` | Tenant-wide training thread inbox: list / detail / reply / archive / unarchive / read (PR #168, mirrors the conference Messaging tab) |
+| `news.py` | Tenant-wide training news CRUD + send to all attendees (PR #170) |
+| `screen_overlays.py` | Tenant-wide training screen overlay CRUD + image upload/serve (PR #169) |
 
 ## Core Services (`backend/app/core/`)
 
@@ -159,3 +165,64 @@ TrainingAttendee (central identity, email-based)
 - **Refund**: only on **direct cancel** of paid CC invoice (via `refund_training_payment`)
 - **No refund**: on replace or reassign — payment transfers to new invoice instead
 - **Deactivate**: old payment link deactivated on replace of unpaid CC invoice
+
+## Messaging architecture (PRs #150–#168)
+
+Training threads piggy-back on the same `message_threads` / `messages` / `message_participants` tables as conferences. The discriminator is `MessageThread.domain` ∈ `{conference, training}` plus `domain_entity_id` (the polymorphic anchor, points to a `TrainingRegistration` for training threads). Migration 213 added the columns; 214 made `conference_id` nullable so training threads can leave it NULL.
+
+### Broadcast pipeline (`backend/app/services/training_messaging/`)
+
+- `_core.py` — `_AnchoredAttendee`, `_PreparedRecipient`, dedup helper, `_emit_threads_for_attendees`, `_dispatch_broadcast_emails`, `_duplicate_attachments_per_message`. Dispatch branches on the tenant-wide **Messaging Mode**: `email_only` sends `send_direct_message_email` per recipient (full body); `in_app` sends `send_new_message_notification(domain="training", …)` with a portal link instead.
+- `broadcasts.py` — three broadcast surfaces (`broadcast_to_registration_attendees`, `broadcast_to_placement_attendees`, `broadcast_to_attendees_by_id`). All share the same fan-out shape: one thread per attendee, all sharing a `bulk_id`. Each anchors on the attendee's *own* registration via `domain_entity_id`. `_resolve_messaging_context` reads the per-tenant Messaging Mode + slug.
+
+### Admin Messages tab (PR #168)
+
+- `GET /trainings/messaging/threads` — paginated tenant-wide list. Filters: `archived`, `has_attachments`, `unread_only`, subject `search`. `unread_only` matches threads where the current admin has no participant row OR `last_read_at` is older than the latest message.
+- `GET /trainings/messaging/threads/{id}` — detail with messages + participants; `sender.is_me` flagged for the calling admin so the FE can style speech bubbles correctly.
+- `POST /trainings/messaging/threads/{id}/reply` — admin reply with optional attachments. Auto-adds the admin as a participant if they aren't one (broadcasts only attach the original sender).
+- `POST /trainings/messaging/threads/{id}/{archive,unarchive,read}` — toggle / mark.
+
+The admin tab reuses the cfp_portal helpers (`_resolve_senders`, `_fetch_message_attachments`, `_resolve_domain_entity_names`, `_link_attachments_to_message`) so the portal-side and admin-side response shapes can't drift.
+
+### Messaging Mode toggle (PR #167)
+
+Stored at `tenant.settings.training_messaging_settings.messaging_mode`. Whitelist `{in_app, email_only}`. Default is `email_only` to preserve historical training-broadcast behavior (full body in the recipient's inbox). Endpoint pair: `GET / PUT /trainings/messaging-settings`. Conferences use a per-conference setting at `conference.settings.messaging_mode`; trainings use tenant-wide because there's no per-training admin scope.
+
+### Email gating
+
+- Conference notifications gate on `Conference.settings.email_sending_enabled` via `_is_email_enabled_for_conference`.
+- Training notifications gate on `Tenant.settings.training_email_settings.email_sending_enabled` via `_is_email_enabled_for_training` (added in PR #163 alongside the notifier generalization).
+- `send_new_message_notification(domain="conference"|"training", …)` dispatches to the right gate.
+
+### Templates (PRs #155, #160)
+
+`message_templates` got a `category` discriminator in migration 215 (default `conference`). The trainings module only ever reads/writes `category='training'` rows (`/trainings/messaging/templates`). The conference admin endpoint stays unscoped for back-compat. **Known data caveat**: pre-#160 templates created from the trainings settings tab were tagged `conference` by the migration backfill — admins re-create them from Trainings → Settings → Message Templates to get the correct tag (PR #165 surfaces an empty-state hint pointing to that path).
+
+### Cross-domain UX rules (PRs #163, #164)
+
+- `_notify_other_participants` (cfp_portal helper) is domain-aware: admin-link composition picks `/modules/conferences/{id}` or `/modules/trainings`. Adds a `training_attendee` participant branch so portal-side replies on training threads now produce admin emails.
+- `SenderInfo.is_me` (PR #164) is set server-side against the union of the portal user's identities (applicant + every matching `training_attendee`). The portal `MessagesPage/ThreadDetailPane.tsx` reads `msg.sender.is_me` for self-side styling so cross-domain threads style consistently.
+
+## News articles (PR #170)
+
+`news_articles` got the same `domain` + nullable `conference_id` treatment in migration 217 (mirrors the screen-overlays pattern from migration 216). New router under `/api/v1/trainings/news`: GET list, POST create, GET / PUT / DELETE by id, POST `/{id}/send`. Tenant-scoped, `TenantAdminDep`-gated. The `send` endpoint emails published articles to every `TrainingRegistrationAttendee` in the tenant, deduped by email.
+
+The portal endpoint `/api/v1/portal/news` returns training-domain articles to applicants who have at least one matching `TrainingRegistrationAttendee` row in the tenant (matched by `email_hash`, same identity rule the unified inbox uses). Applicants without that match see only conference news.
+
+## Screen overlays (PR #169)
+
+`screen_overlays.conference_id` becomes nullable in migration 216; new `domain` discriminator (`conference` | `training`) with a paired CHECK constraint. Compound index `(tenant_id, domain, is_active, trigger_type)` for the portal lookup.
+
+New router `/api/v1/trainings/screen-overlays` (GET list, POST create, GET / PUT / DELETE by id, POST / GET / DELETE `/{id}/image`). Tenant-scoped, `TenantAdminDep`-gated.
+
+The frontend `OverlaySelector` (PR #171) accepts either `conferenceId` (existing) or `trainingScope` to fetch from the right endpoint, so admins can pick a training-domain overlay from the trainings News form, the trainings Compose dialog, and the trainings Message Templates form. The `screen_overlay_id` FK on `news_articles` and `message_threads` works for both domains since it points to `screen_overlays.id` regardless of overlay's `domain`.
+
+## Migration cheat sheet
+
+| # | What |
+|---|------|
+| 213 | `messaging` generic anchor — adds `domain` + `domain_entity_id` to `message_threads` |
+| 214 | `message_threads.conference_id` nullable (training threads NULL) |
+| 215 | `message_templates.category` discriminator (default `conference`, CHECK in/training) |
+| 216 | `screen_overlays.domain` + nullable `conference_id` + paired CHECK + index |
+| 217 | `news_articles.domain` + nullable `conference_id` + paired CHECK + index |

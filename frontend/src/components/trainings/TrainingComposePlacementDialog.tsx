@@ -11,6 +11,7 @@ import TrainingAttendeeSearchPicker, {
 import ComposeRecipientModeToggle, { type RecipientMode } from './ComposeRecipientModeToggle';
 import TrainingVariableButtons from './TrainingVariableButtons';
 import MessageFileAttach, { type StagedAttachment } from '../MessageFileAttach';
+import OverlaySelector from '../OverlaySelector';
 
 interface BroadcastResponse {
   bulk_id: string;
@@ -89,6 +90,7 @@ export default function TrainingComposePlacementDialog({
   // training context) rather than just ids.
   const [searchSelected, setSearchSelected] = useState<AttendeeSearchHit[]>([]);
   const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
+  const [screenOverlayId, setScreenOverlayId] = useState<string | null>(null);
   // Variable-pill insert needs to know which input the user touched
   // last; the buttons live outside both inputs, so we track focus
   // ourselves rather than relying on document.activeElement.
@@ -117,6 +119,7 @@ export default function TrainingComposePlacementDialog({
       }
       setSearchSelected([]);
       setAttachments([]);
+      setScreenOverlayId(null);
       setSubject('');
       setBodyHtml('');
       setSelectedTemplateId('');
@@ -193,6 +196,7 @@ export default function TrainingComposePlacementDialog({
             body_html: bodyHtml,
             attendee_ids: searchSelected.map((s) => s.attendee_id),
             attachment_ids: attachmentIds,
+            screen_overlay_id: screenOverlayId,
           }
         );
         return resp.data;
@@ -203,7 +207,13 @@ export default function TrainingComposePlacementDialog({
         body_html: string;
         attendee_ids?: string[];
         attachment_ids: string[];
-      } = { subject, body_html: bodyHtml, attachment_ids: attachmentIds };
+        screen_overlay_id: string | null;
+      } = {
+        subject,
+        body_html: bodyHtml,
+        attachment_ids: attachmentIds,
+        screen_overlay_id: screenOverlayId,
+      };
       if (recipientScope === 'specific') {
         payload.attendee_ids = Array.from(selectedAttendeeIds);
       }
@@ -414,6 +424,8 @@ export default function TrainingComposePlacementDialog({
             onAttachmentsChange={setAttachments}
           />
         </div>
+
+        <OverlaySelector trainingScope value={screenOverlayId} onChange={setScreenOverlayId} />
       </div>
 
       <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">

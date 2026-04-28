@@ -338,6 +338,7 @@ describe('TrainingComposePlacementDialog', () => {
         subject: 'Reminder for [Training Name]',
         body_html: '<p>Hi [First Name]</p>',
         attachment_ids: [],
+        screen_overlay_id: null,
       })
     );
     await waitFor(() => expect(onClose).toHaveBeenCalled());

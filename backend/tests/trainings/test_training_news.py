@@ -163,6 +163,46 @@ class TestTrainingNewsCRUD:
         assert get_resp.status_code == 404
 
     @pytest.mark.asyncio
+    async def test_create_with_training_overlay_persists_link(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tn_tenant: Tenant,
+        tn_admin: User,
+    ) -> None:
+        """A training-domain news article can attach a training-scope overlay
+        via ``screen_overlay_id`` (same FK conferences use)."""
+        from app.models.screen_overlay import OVERLAY_DOMAIN_TRAINING, ScreenOverlay
+
+        overlay = ScreenOverlay(
+            id=uuid.uuid4(),
+            tenant_id=tn_tenant.id,
+            conference_id=None,
+            domain=OVERLAY_DOMAIN_TRAINING,
+            trigger_type="always",
+            title="Welcome overlay",
+            animation_style="confetti",
+            duration_seconds=5,
+            is_active=True,
+            display_order=0,
+        )
+        db_session.add(overlay)
+        await db_session.commit()
+
+        resp = await client.post(
+            URL,
+            headers=auth_headers(_admin_token(tn_admin)),
+            json={
+                "title": "Article with overlay",
+                "body_html": "<p>x</p>",
+                "screen_overlay_id": str(overlay.id),
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert body["screen_overlay_id"] == str(overlay.id)
+
+    @pytest.mark.asyncio
     async def test_other_tenant_cannot_see(
         self,
         client: AsyncClient,

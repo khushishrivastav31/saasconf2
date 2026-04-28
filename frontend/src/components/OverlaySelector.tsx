@@ -3,7 +3,14 @@ import api from '../config/api';
 import type { ScreenOverlay } from '../types';
 
 interface OverlaySelectorProps {
-  conferenceId: string;
+  /** Conference-scoped picker: fetches from
+   *  ``/conferences/{conferenceId}/screen-overlays`` (the existing
+   *  conference admin path). Ignored when ``trainingScope`` is true. */
+  conferenceId?: string;
+  /** Training-scoped picker: fetches from
+   *  ``/trainings/screen-overlays`` (tenant-wide training overlays —
+   *  see migration 216). When true, ``conferenceId`` is ignored. */
+  trainingScope?: boolean;
   value: string | null | undefined;
   onChange: (id: string | null) => void;
   label?: string;
@@ -17,19 +24,27 @@ const triggerLabel: Record<string, string> = {
 
 export default function OverlaySelector({
   conferenceId,
+  trainingScope = false,
   value,
   onChange,
   label = 'Screen Overlay',
 }: OverlaySelectorProps) {
+  const path = trainingScope
+    ? '/trainings/screen-overlays'
+    : conferenceId
+      ? `/conferences/${conferenceId}/screen-overlays`
+      : '';
+  const queryKey = trainingScope
+    ? ['training-screen-overlays']
+    : ['conference-screen-overlays', conferenceId];
+
   const { data } = useQuery({
-    queryKey: ['conference-screen-overlays', conferenceId],
+    queryKey,
     queryFn: async () => {
-      const res = await api.get<{ items: ScreenOverlay[]; total: number }>(
-        `/conferences/${conferenceId}/screen-overlays`
-      );
+      const res = await api.get<{ items: ScreenOverlay[]; total: number }>(path);
       return res.data;
     },
-    enabled: !!conferenceId,
+    enabled: trainingScope || !!conferenceId,
   });
 
   const overlays = data?.items ?? [];

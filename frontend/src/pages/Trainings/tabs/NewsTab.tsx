@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import Modal from '../../../components/Modal';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import OverlaySelector from '../../../components/OverlaySelector';
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import RichTextDisplay from '../../../components/common/RichTextDisplay';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
@@ -15,9 +16,10 @@ import type { NewsArticle, NewsArticleListResponse } from '../../../types/news';
 interface FormState {
   title: string;
   body_html: string;
+  screen_overlay_id: string | null;
 }
 
-const EMPTY_FORM: FormState = { title: '', body_html: '' };
+const EMPTY_FORM: FormState = { title: '', body_html: '', screen_overlay_id: null };
 
 const API_BASE = '/trainings/news';
 const QUERY_KEY = ['training-news'];
@@ -125,7 +127,11 @@ export default function NewsTab() {
 
   function openEditModal(article: NewsArticle) {
     setEditingArticle(article);
-    setForm({ title: article.title, body_html: article.body_html });
+    setForm({
+      title: article.title,
+      body_html: article.body_html,
+      screen_overlay_id: article.screen_overlay_id ?? null,
+    });
     setError(null);
     setIsModalOpen(true);
   }
@@ -299,6 +305,11 @@ export default function NewsTab() {
               placeholder="Write the article body…"
             />
           </div>
+          <OverlaySelector
+            trainingScope
+            value={form.screen_overlay_id}
+            onChange={(id) => setForm((f) => ({ ...f, screen_overlay_id: id }))}
+          />
         </div>
         <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
           <button
