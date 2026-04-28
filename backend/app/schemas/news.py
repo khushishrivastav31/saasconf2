@@ -74,6 +74,26 @@ class NewsArticleSendResponse(BaseModel):
     emails_sent: int
 
 
+class TrainingNewsSendRequest(BaseModel):
+    """Filter the recipient pool for a training news send.
+
+    Recipients are always training attendees in the tenant. Filters
+    narrow that pool — when none are set, the article goes to every
+    training attendee (the default broadcast). Empty payload (``{}``)
+    is the same as no filters.
+
+    * ``placement_ids`` — only attendees registered on these placements.
+    * ``program_year_id`` — only attendees registered on placements in
+      this program year.
+    * ``registration_status`` — only attendees on registrations with
+      this status (e.g. ``paid``, ``pending``).
+    """
+
+    placement_ids: list[UUID] | None = None
+    program_year_id: UUID | None = None
+    registration_status: str | None = None
+
+
 # Portal schemas
 
 

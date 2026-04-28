@@ -27,7 +27,8 @@ from app.core.email import send_direct_message_email
 from app.core.exceptions import NotFoundError
 from app.core.security.pii_crypto import read_pii
 from app.models.news import NEWS_DOMAIN_TRAINING, NewsArticle
-from app.models.training_registration import TrainingRegistrationAttendee
+from app.models.training_program import ProgramYearTraining
+from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 from app.models.user import User
 from app.schemas.news import (
     NewsArticleCreate,
@@ -35,6 +36,7 @@ from app.schemas.news import (
     NewsArticleResponse,
     NewsArticleSendResponse,
     NewsArticleUpdate,
+    TrainingNewsSendRequest,
 )
 
 router = APIRouter(prefix="/news", tags=["training-news"])
@@ -187,25 +189,44 @@ async def send_training_article(
     article_id: UUID,
     current_user: TenantAdminDep,
     db: DbSessionDep,
+    filters: TrainingNewsSendRequest | None = None,
 ) -> NewsArticleSendResponse:
-    """Email a published training news article to every training attendee in the tenant.
+    """Email a published training news article to training attendees.
 
-    The conference equivalent supports filter combinations (paper status,
-    committee role, recipient list, …); for trainings we ship the basic
-    "broadcast to all training attendees" path. Refining recipient
-    selection (per-placement, per-program-year, per-status) is a
-    follow-up.
+    Default (no body) broadcasts to every training attendee in the
+    tenant. Optional filters narrow the pool:
+
+    * ``placement_ids`` — only attendees on these placements.
+    * ``program_year_id`` — only attendees on placements in this year.
+    * ``registration_status`` — only attendees on registrations with
+      this status (e.g. ``paid``, ``pending``).
+
+    Filters are AND'd together. The recipient pool is deduped by email.
     """
     tenant_id = current_user.require_tenant_id()
     article = await _load_training_article(db, tenant_id, article_id)
     if not article.is_published:
         raise NotFoundError("Only published articles can be sent")
 
-    attendee_result = await db.execute(
-        select(TrainingRegistrationAttendee).where(
-            TrainingRegistrationAttendee.tenant_id == tenant_id,
-        )
+    query = select(TrainingRegistrationAttendee).where(
+        TrainingRegistrationAttendee.tenant_id == tenant_id,
     )
+    if filters is not None and (filters.placement_ids or filters.program_year_id or filters.registration_status):
+        query = query.join(
+            TrainingRegistration,
+            TrainingRegistration.id == TrainingRegistrationAttendee.registration_id,
+        )
+        if filters.placement_ids:
+            query = query.where(TrainingRegistration.placement_id.in_(filters.placement_ids))
+        if filters.registration_status:
+            query = query.where(TrainingRegistration.status == filters.registration_status)
+        if filters.program_year_id:
+            query = query.join(
+                ProgramYearTraining,
+                ProgramYearTraining.id == TrainingRegistration.placement_id,
+            ).where(ProgramYearTraining.program_year_id == filters.program_year_id)
+
+    attendee_result = await db.execute(query)
     attendees = list(attendee_result.scalars().all())
 
     # De-duplicate by email so the same person registered for multiple

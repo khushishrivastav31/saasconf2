@@ -240,6 +240,123 @@ class TestTrainingNewsCRUD:
         assert resp.json()["total"] == 0
 
 
+async def _seed_two_placements(
+    db_session: AsyncSession,
+    tn_tenant: Tenant,
+) -> tuple[ProgramYearTraining, ProgramYearTraining, TrainingRegistration, TrainingRegistration]:
+    """Build two placements in different program years, one registration each.
+
+    Returns ``(placement_a, placement_b, registration_a, registration_b)``.
+    Used by the filter tests below to exercise per-placement / per-year /
+    per-status filtering against a tiny fixture.
+    """
+    training = Training(
+        id=uuid.uuid4(), tenant_id=tn_tenant.id, name="ITIL", slug=f"itil-{uuid.uuid4().hex[:6]}", duration=2
+    )
+    location = Location(id=uuid.uuid4(), tenant_id=tn_tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}")
+    year_a = 2030 + (uuid.uuid4().int % 50)
+    year_b = year_a + 1
+    py_a = TrainingProgramYear(id=uuid.uuid4(), tenant_id=tn_tenant.id, year=year_a)
+    py_b = TrainingProgramYear(id=uuid.uuid4(), tenant_id=tn_tenant.id, year=year_b)
+    db_session.add_all([training, location, py_a, py_b])
+    await db_session.flush()
+    placement_a = ProgramYearTraining(
+        id=uuid.uuid4(),
+        tenant_id=tn_tenant.id,
+        program_year_id=py_a.id,
+        training_id=training.id,
+        start_date=date(year_a, 5, 10),
+        placement_type="open",
+        location_id=location.id,
+        is_active=True,
+    )
+    placement_b = ProgramYearTraining(
+        id=uuid.uuid4(),
+        tenant_id=tn_tenant.id,
+        program_year_id=py_b.id,
+        training_id=training.id,
+        start_date=date(year_b, 5, 10),
+        placement_type="open",
+        location_id=location.id,
+        is_active=True,
+    )
+    db_session.add_all([placement_a, placement_b])
+    await db_session.flush()
+    reg_a = TrainingRegistration(
+        id=uuid.uuid4(),
+        tenant_id=tn_tenant.id,
+        placement_id=placement_a.id,
+        status="paid",
+        language="en",
+        company_name="Acme",
+        street="Main",
+        postal_code="1",
+        city="Berlin",
+        country="DE",
+        contact_first_name="C",
+        contact_last_name="C",
+        contact_email=f"a-{uuid.uuid4().hex[:6]}@x.test",
+        payment_method="bank_transfer",
+    )
+    reg_b = TrainingRegistration(
+        id=uuid.uuid4(),
+        tenant_id=tn_tenant.id,
+        placement_id=placement_b.id,
+        status="pending",
+        language="en",
+        company_name="Globex",
+        street="Side",
+        postal_code="1",
+        city="Berlin",
+        country="DE",
+        contact_first_name="C",
+        contact_last_name="C",
+        contact_email=f"b-{uuid.uuid4().hex[:6]}@x.test",
+        payment_method="bank_transfer",
+    )
+    db_session.add_all([reg_a, reg_b])
+    await db_session.flush()
+    db_session.add(
+        TrainingRegistrationAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tn_tenant.id,
+            registration_id=reg_a.id,
+            first_name="Alice",
+            last_name="A",
+            email="alice@example.com",
+            language="en",
+        )
+    )
+    db_session.add(
+        TrainingRegistrationAttendee(
+            id=uuid.uuid4(),
+            tenant_id=tn_tenant.id,
+            registration_id=reg_b.id,
+            first_name="Bob",
+            last_name="B",
+            email="bob@example.com",
+            language="en",
+        )
+    )
+    await db_session.commit()
+    return placement_a, placement_b, reg_a, reg_b
+
+
+async def _publish_news(client: AsyncClient, admin: User, title: str = "Big news") -> str:
+    created = await client.post(
+        URL,
+        headers=auth_headers(_admin_token(admin)),
+        json={"title": title, "body_html": "<p>x</p>"},
+    )
+    oid = created.json()["id"]
+    await client.put(
+        f"{URL}/{oid}",
+        headers=auth_headers(_admin_token(admin)),
+        json={"is_published": True},
+    )
+    return oid
+
+
 class TestTrainingNewsSend:
     @pytest.mark.asyncio
     async def test_send_only_works_when_published(
@@ -345,6 +462,88 @@ class TestTrainingNewsSend:
         # Two unique emails, not three (alice was duplicated).
         assert resp.json()["emails_sent"] == 2
         assert mock_send.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_send_filtered_by_placement_ids(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tn_tenant: Tenant,
+        tn_admin: User,
+    ) -> None:
+        """``placement_ids`` narrows the recipient pool to attendees on the
+        listed placements."""
+        placement_a, _placement_b, _reg_a, _reg_b = await _seed_two_placements(db_session, tn_tenant)
+        oid = await _publish_news(client, tn_admin)
+
+        with patch(
+            "app.api.v1.trainings.news.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ) as mock_send:
+            resp = await client.post(
+                f"{URL}/{oid}/send",
+                headers=auth_headers(_admin_token(tn_admin)),
+                json={"placement_ids": [str(placement_a.id)]},
+            )
+        assert resp.status_code == 200, resp.text
+        # Only Alice (placement A); Bob (placement B) is filtered out.
+        assert resp.json()["emails_sent"] == 1
+        assert mock_send.await_args.kwargs["email"] == "alice@example.com"
+
+    @pytest.mark.asyncio
+    async def test_send_filtered_by_program_year(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tn_tenant: Tenant,
+        tn_admin: User,
+    ) -> None:
+        """``program_year_id`` narrows the pool to attendees on placements
+        in that program year."""
+        placement_a, _placement_b, _reg_a, _reg_b = await _seed_two_placements(db_session, tn_tenant)
+        # Resolve the year-A program-year id from placement_a.
+        program_year_id = placement_a.program_year_id
+        oid = await _publish_news(client, tn_admin)
+
+        with patch(
+            "app.api.v1.trainings.news.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ) as mock_send:
+            resp = await client.post(
+                f"{URL}/{oid}/send",
+                headers=auth_headers(_admin_token(tn_admin)),
+                json={"program_year_id": str(program_year_id)},
+            )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["emails_sent"] == 1
+        assert mock_send.await_args.kwargs["email"] == "alice@example.com"
+
+    @pytest.mark.asyncio
+    async def test_send_filtered_by_registration_status(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tn_tenant: Tenant,
+        tn_admin: User,
+    ) -> None:
+        """``registration_status`` narrows the pool to attendees on
+        registrations matching that status."""
+        await _seed_two_placements(db_session, tn_tenant)  # reg_a is "paid", reg_b is "pending"
+        oid = await _publish_news(client, tn_admin)
+
+        with patch(
+            "app.api.v1.trainings.news.send_direct_message_email",
+            AsyncMock(return_value=True),
+        ) as mock_send:
+            resp = await client.post(
+                f"{URL}/{oid}/send",
+                headers=auth_headers(_admin_token(tn_admin)),
+                json={"registration_status": "paid"},
+            )
+        assert resp.status_code == 200, resp.text
+        # Only Alice (paid); Bob (pending) is filtered out.
+        assert resp.json()["emails_sent"] == 1
+        assert mock_send.await_args.kwargs["email"] == "alice@example.com"
 
 
 class TestTrainingNewsPortalAccess:

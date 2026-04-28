@@ -4904,13 +4904,17 @@ export type paths = {
     put?: never;
     /**
      * Send Training Article
-     * @description Email a published training news article to every training attendee in the tenant.
+     * @description Email a published training news article to training attendees.
      *
-     *     The conference equivalent supports filter combinations (paper status,
-     *     committee role, recipient list, …); for trainings we ship the basic
-     *     "broadcast to all training attendees" path. Refining recipient
-     *     selection (per-placement, per-program-year, per-status) is a
-     *     follow-up.
+     *     Default (no body) broadcasts to every training attendee in the
+     *     tenant. Optional filters narrow the pool:
+     *
+     *     * ``placement_ids`` — only attendees on these placements.
+     *     * ``program_year_id`` — only attendees on placements in this year.
+     *     * ``registration_status`` — only attendees on registrations with
+     *       this status (e.g. ``paid``, ``pending``).
+     *
+     *     Filters are AND'd together. The recipient pool is deduped by email.
      */
     post: operations['send_training_article_api_v1_trainings_news__article_id__send_post'];
     delete?: never;
@@ -27513,6 +27517,29 @@ export type components = {
       pages: number;
     };
     /**
+     * TrainingNewsSendRequest
+     * @description Filter the recipient pool for a training news send.
+     *
+     *     Recipients are always training attendees in the tenant. Filters
+     *     narrow that pool — when none are set, the article goes to every
+     *     training attendee (the default broadcast). Empty payload (``{}``)
+     *     is the same as no filters.
+     *
+     *     * ``placement_ids`` — only attendees registered on these placements.
+     *     * ``program_year_id`` — only attendees registered on placements in
+     *       this program year.
+     *     * ``registration_status`` — only attendees on registrations with
+     *       this status (e.g. ``paid``, ``pending``).
+     */
+    TrainingNewsSendRequest: {
+      /** Placement Ids */
+      placement_ids?: string[] | null;
+      /** Program Year Id */
+      program_year_id?: string | null;
+      /** Registration Status */
+      registration_status?: string | null;
+    };
+    /**
      * TrainingProgramYearCreate
      * @description Schema for creating a training program year.
      */
@@ -40173,7 +40200,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['TrainingNewsSendRequest'] | null;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {

@@ -12,6 +12,7 @@ import { useToast } from '../../../components/Toast';
 import { formatDateTime } from '../../../utils/formatDate';
 import { parseApiError } from '../../../utils/apiError';
 import type { NewsArticle, NewsArticleListResponse } from '../../../types/news';
+import SendTrainingNewsModal from './SendTrainingNewsModal';
 
 interface FormState {
   title: string;
@@ -95,24 +96,6 @@ export default function NewsTab() {
     onError: (err) => {
       setError(parseApiError(err));
       setDeleteTarget(null);
-    },
-  });
-
-  const sendMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const resp = await api.post<{ emails_sent: number }>(`${API_BASE}/${id}/send`);
-      return resp.data;
-    },
-    onSuccess: (resp) => {
-      setSendTarget(null);
-      showToast(
-        `Sent to ${resp.emails_sent} attendee${resp.emails_sent === 1 ? '' : 's'}`,
-        'success'
-      );
-    },
-    onError: (err) => {
-      setError(parseApiError(err));
-      setSendTarget(null);
     },
   });
 
@@ -353,13 +336,14 @@ export default function NewsTab() {
         onCancel={() => setPublishTarget(null)}
       />
 
-      <ConfirmDialog
-        open={!!sendTarget}
-        title="Send Article"
-        message={`Email "${sendTarget?.title}" to all training attendees in this tenant?`}
-        confirmLabel="Send"
-        onConfirm={() => sendTarget && sendMutation.mutate(sendTarget.id)}
-        onCancel={() => setSendTarget(null)}
+      <SendTrainingNewsModal
+        isOpen={!!sendTarget}
+        onClose={() => setSendTarget(null)}
+        articleId={sendTarget?.id ?? ''}
+        articleTitle={sendTarget?.title ?? ''}
+        onSent={(emailsSent) =>
+          showToast(`Sent to ${emailsSent} attendee${emailsSent === 1 ? '' : 's'}`, 'success')
+        }
       />
     </div>
   );
