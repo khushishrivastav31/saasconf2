@@ -93,7 +93,9 @@ export default function ConferenceLocationsTab({
   const { data: allLocations } = useQuery({
     queryKey: queryKeys.locations.allList,
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<Location>>(`/locations?page_size=100`);
+      const response = await api.get<PaginatedResponse<Location>>(
+        `/locations?page_size=100&domain=conference`
+      );
       return response.data;
     },
   });
@@ -134,7 +136,7 @@ export default function ConferenceLocationsTab({
 
   const createMutation = useMutation({
     mutationFn: async (data: LocationCreate) => {
-      const response = await api.post<Location>('/locations', data);
+      const response = await api.post<Location>('/locations?domain=conference', data);
       return response.data;
     },
     onSuccess: (newLocation) => {
@@ -167,7 +169,7 @@ export default function ConferenceLocationsTab({
 
   const locationUpdateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: LocationUpdateData }) => {
-      await api.put(`/locations/${id}`, data);
+      await api.put(`/locations/${id}?domain=conference`, data);
     },
     onSuccess: () => {
       setLinkError(null);
@@ -183,7 +185,7 @@ export default function ConferenceLocationsTab({
 
   const locationDeleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/locations/${id}?conference_id=${conference.id}`);
+      await api.delete(`/locations/${id}?conference_id=${conference.id}&domain=conference`);
     },
     onSuccess: () => {
       setLinkError(null);

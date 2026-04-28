@@ -75,7 +75,9 @@ export default function LocationsTab() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.locations.allList,
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<Location>>('/locations?page_size=100');
+      const response = await api.get<PaginatedResponse<Location>>(
+        '/locations?page_size=100&domain=training'
+      );
       return response.data;
     },
   });
@@ -98,7 +100,7 @@ export default function LocationsTab() {
 
   const createMutation = useMutation({
     mutationFn: async (payload: LocationCreate) => {
-      const response = await api.post<Location>('/locations', payload);
+      const response = await api.post<Location>('/locations?domain=training', payload);
       return response.data;
     },
     onSuccess: (newLocation) => {
@@ -129,7 +131,7 @@ export default function LocationsTab() {
 
   const locationUpdateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: LocationUpdateData }) => {
-      await api.put(`/locations/${id}`, data);
+      await api.put(`/locations/${id}?domain=training`, data);
     },
     onSuccess: () => {
       setError(null);
@@ -143,7 +145,7 @@ export default function LocationsTab() {
 
   const locationDeleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/locations/${id}`);
+      await api.delete(`/locations/${id}?domain=training`);
     },
     onSuccess: () => {
       setError(null);

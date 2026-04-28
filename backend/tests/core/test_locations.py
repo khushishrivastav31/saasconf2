@@ -344,3 +344,101 @@ async def test_unlink_location_from_conference(
     # Should only have conf2 now
     assert str(conference.id) not in get_resp.json()["conference_ids"]
     assert str(conf2.id) in get_resp.json()["conference_ids"]
+
+
+# ── Domain split (stage 2) ────────────────────────────────────────────
+
+
+async def test_trainings_delete_cannot_orphan_conference_location(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    tenant_admin_user: User,
+) -> None:
+    """The fix for the orphaning bug: DELETE with ``?domain=training``
+    must refuse to touch a ``domain='conference'`` row, even if the
+    caller is a tenant admin. Otherwise a tidy-up in the trainings
+    settings tab can cascade-strip a conference of its linked rooms."""
+    await _setup_locations_module(db_session, tenant)
+    await _setup_location_type(db_session, tenant, conference)
+    token = _make_token(tenant_admin_user, modules=["locations"])
+
+    # Create a conference-domain location and link it to the conference.
+    payload = _location_payload(conference.id)
+    create_resp = await client.post(
+        f"{BASE_URL}?domain=conference",
+        json=payload,
+        headers=auth_headers(token),
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    location_id = create_resp.json()["id"]
+    assert create_resp.json()["domain"] == "conference"
+
+    # Trainings UI tries to delete it (no conference_id, domain=training).
+    delete_resp = await client.delete(
+        f"{BASE_URL}/{location_id}?domain=training",
+        headers=auth_headers(token),
+    )
+    assert delete_resp.status_code == 404, delete_resp.text
+
+    # Row + link still there.
+    get_resp = await client.get(f"{BASE_URL}/{location_id}", headers=auth_headers(token))
+    assert get_resp.status_code == 200
+    assert str(conference.id) in get_resp.json()["conference_ids"]
+
+
+async def test_trainings_post_stamps_training_domain(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    tenant_admin_user: User,
+) -> None:
+    """POST ``?domain=training`` writes a training-domain row and
+    refuses any ``conference_id`` in the body."""
+    await _setup_locations_module(db_session, tenant)
+    await _setup_location_type(db_session, tenant, conference)
+    token = _make_token(tenant_admin_user, modules=["locations"])
+
+    # Mixing domain=training with a conference_id is rejected.
+    bad = await client.post(
+        f"{BASE_URL}?domain=training",
+        json=_location_payload(conference.id),
+        headers=auth_headers(token),
+    )
+    assert bad.status_code == 400, bad.text
+
+    # Same payload without conference_id succeeds and stamps the domain.
+    payload = _location_payload(conference.id)
+    payload.pop("conference_id", None)
+    good = await client.post(
+        f"{BASE_URL}?domain=training",
+        json=payload,
+        headers=auth_headers(token),
+    )
+    assert good.status_code == 201, good.text
+    assert good.json()["domain"] == "training"
+    assert good.json()["conference_ids"] == []
+
+
+async def test_default_domain_is_conference(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    tenant_admin_user: User,
+) -> None:
+    """Existing conference UI doesn't pass ``?domain=`` — the default
+    must remain ``conference`` so the rollout is non-breaking."""
+    await _setup_locations_module(db_session, tenant)
+    await _setup_location_type(db_session, tenant, conference)
+    token = _make_token(tenant_admin_user, modules=["locations"])
+
+    resp = await client.post(
+        BASE_URL,
+        json=_location_payload(conference.id),
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+    assert resp.json()["domain"] == "conference"

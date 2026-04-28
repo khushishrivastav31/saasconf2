@@ -5589,13 +5589,22 @@ export type paths = {
      * List Locations
      * @description List locations for the current tenant.
      *
-     *     Requires the 'locations' module.
+     *     Requires the 'locations' module. Pass ``domain='training'`` from the
+     *     trainings UI to see only training-domain rows; the conference UI
+     *     filters via ``conference_id`` (which implicitly only matches
+     *     ``domain='conference'`` rows because cross-domain rows aren't
+     *     linkable to a conference).
      */
     get: operations['list_locations_api_v1_locations_get'];
     put?: never;
     /**
      * Create Location
      * @description Create a new location.
+     *
+     *     Stamps the row with ``domain`` (defaults to ``conference`` for
+     *     backward-compat with the existing conference UI). Trainings UI must
+     *     pass ``?domain=training``. Cross-domain attempts (e.g. training
+     *     location with a ``conference_id``) are rejected.
      */
     post: operations['create_location_api_v1_locations_post'];
     delete?: never;
@@ -5661,6 +5670,10 @@ export type paths = {
     /**
      * Update Location
      * @description Update location details.
+     *
+     *     Pass ``?domain=training`` from the trainings UI; the conference UI
+     *     omits the param (or passes ``conference``). Mismatch returns 404 so
+     *     the trainings UI can never silently mutate a conference row.
      */
     put: operations['update_location_api_v1_locations__location_id__put'];
     post?: never;
@@ -5668,12 +5681,22 @@ export type paths = {
      * Delete Location
      * @description Delete or unlink a location.
      *
-     *     If conference_id is provided:
-     *     - If location is linked to multiple conferences, only unlinks from the specified conference
-     *     - If location is only linked to this conference, deletes the location entirely
+     *     Domain guard (added in stage 2 of the locations split):
+     *       * Pass ``?domain=training`` from the trainings UI — the endpoint
+     *         will 404 if the row is conference-domain. This is the fix for
+     *         the orphaning bug: trainings can never delete a conference row
+     *         and cascade-strip its conference links.
+     *       * Pass ``?domain=conference`` (or omit, for backward-compat) from
+     *         the conference UI.
      *
-     *     If conference_id is not provided:
-     *     - Deletes the location entirely (legacy behavior)
+     *     If ``conference_id`` is provided:
+     *       * If location is linked to multiple conferences, only unlinks
+     *         from the specified conference.
+     *       * If location is only linked to this conference, deletes the
+     *         location entirely.
+     *
+     *     If ``conference_id`` is not provided:
+     *       * Deletes the location entirely (legacy behaviour).
      */
     delete: operations['delete_location_api_v1_locations__location_id__delete'];
     options?: never;
@@ -19387,6 +19410,8 @@ export type components = {
       code: string | null;
       /** Location Type */
       location_type: string;
+      /** Domain */
+      domain: string;
       /** Description */
       description: string | null;
       /** Capacity */
@@ -19494,6 +19519,8 @@ export type components = {
       code: string | null;
       /** Location Type */
       location_type: string;
+      /** Domain */
+      domain: string;
       /** Description */
       description: string | null;
       /** Capacity */
@@ -41807,6 +41834,8 @@ export interface operations {
         search?: string | null;
         is_active?: boolean | null;
         conference_id?: string | null;
+        /** @description Filter by domain: 'conference' or 'training' */
+        domain?: string | null;
       };
       header?: {
         authorization?: string | null;
@@ -41838,7 +41867,10 @@ export interface operations {
   };
   create_location_api_v1_locations_post: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description Domain for the new row: 'conference' or 'training'. */
+        domain?: string;
+      };
       header?: {
         authorization?: string | null;
       };
@@ -41968,7 +42000,10 @@ export interface operations {
   };
   update_location_api_v1_locations__location_id__put: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description Caller's expected domain. Refuses to update a row whose actual domain doesn't match. */
+        domain?: string | null;
+      };
       header?: {
         authorization?: string | null;
       };
@@ -42008,6 +42043,8 @@ export interface operations {
       query?: {
         /** @description Conference to unlink from. If location is only in this conference, it will be deleted entirely. */
         conference_id?: string | null;
+        /** @description Caller's expected domain. Refuses to delete a row whose actual domain doesn't match. */
+        domain?: string | null;
       };
       header?: {
         authorization?: string | null;

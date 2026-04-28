@@ -136,6 +136,7 @@ def _build_location_response_assoc(loc: Location, conference_ids: list[UUID] | N
         name=loc.name,
         code=loc.code,
         location_type=loc.location_type,
+        domain=loc.domain,
         description=loc.description,
         capacity=loc.capacity,
         address_line1=loc.address_line1,

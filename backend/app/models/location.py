@@ -28,6 +28,15 @@ class LocationType(StrEnum):
     VIRTUAL = "virtual"  # Virtual/online location
 
 
+# Domain discriminator values (mirrors the same split used by
+# ``screen_overlays`` / ``news_articles`` — see migration 218). A
+# location belongs to exactly one domain; the conference UI and trainings
+# UI each manage their own pool to prevent cross-domain deletes from
+# orphaning the other side.
+LOCATION_DOMAIN_CONFERENCE = "conference"
+LOCATION_DOMAIN_TRAINING = "training"
+
+
 class Location(Base):
     """
     Location model for managing conference venues and rooms.
@@ -51,6 +60,10 @@ class Location(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     code: Mapped[str | None] = mapped_column(String(50), nullable=True)  # Short code like "ROOM-A1"
     location_type: Mapped[str] = mapped_column(String(20), nullable=False, default=LocationType.ROOM.value)
+    # See migration 218 / module docstring. New rows default to
+    # ``conference`` for backward-compat with existing API callers; the
+    # trainings-side endpoints stamp ``training`` explicitly.
+    domain: Mapped[str] = mapped_column(String(20), nullable=False, default=LOCATION_DOMAIN_CONFERENCE)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Capacity
@@ -122,6 +135,7 @@ class Location(Base):
         Index("idx_locations_parent", "parent_id"),
         Index("idx_locations_type", "tenant_id", "location_type"),
         Index("idx_locations_code", "tenant_id", "code"),
+        Index("ix_locations_tenant_domain_type", "tenant_id", "domain", "location_type"),
     )
 
     @property

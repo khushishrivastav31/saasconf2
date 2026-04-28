@@ -18,7 +18,7 @@ from app.core.search import unaccent_ilike
 from app.models.associations import ConferenceLocation
 from app.models.audit import AuditLog
 from app.models.conference import Conference
-from app.models.location import Location
+from app.models.location import LOCATION_DOMAIN_CONFERENCE, LOCATION_DOMAIN_TRAINING, Location
 from app.models.settings import TenantLocationType
 from app.schemas.location import (
     LocationCreate,
@@ -48,6 +48,7 @@ def build_location_response(
         name=location.name,
         code=location.code,
         location_type=location.location_type,
+        domain=location.domain,
         description=location.description,
         capacity=location.capacity,
         address_line1=location.address_line1,
@@ -107,11 +108,16 @@ async def list_locations(
     search: str | None = None,
     is_active: bool | None = None,
     conference_id: UUID | None = None,
+    domain: str | None = Query(None, description="Filter by domain: 'conference' or 'training'"),
 ) -> LocationListResponse:
     """
     List locations for the current tenant.
 
-    Requires the 'locations' module.
+    Requires the 'locations' module. Pass ``domain='training'`` from the
+    trainings UI to see only training-domain rows; the conference UI
+    filters via ``conference_id`` (which implicitly only matches
+    ``domain='conference'`` rows because cross-domain rows aren't
+    linkable to a conference).
     """
     query = select(Location).where(Location.tenant_id == current_user.tenant_id)
 
@@ -119,6 +125,9 @@ async def list_locations(
         query = query.join(ConferenceLocation, ConferenceLocation.location_id == Location.id).where(
             ConferenceLocation.conference_id == conference_id
         )
+
+    if domain is not None:
+        query = query.where(Location.domain == domain)
 
     if location_type:
         query = query.where(Location.location_type == location_type)
@@ -208,6 +217,7 @@ async def get_location_tree(
             name=location.name,
             code=location.code,
             location_type=location.location_type,
+            domain=location.domain,
             description=location.description,
             capacity=location.capacity,
             address_line1=location.address_line1,
@@ -298,8 +308,23 @@ async def create_location(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
+    domain: str = Query(
+        LOCATION_DOMAIN_CONFERENCE,
+        description="Domain for the new row: 'conference' or 'training'.",
+    ),
 ) -> LocationResponse:
-    """Create a new location."""
+    """Create a new location.
+
+    Stamps the row with ``domain`` (defaults to ``conference`` for
+    backward-compat with the existing conference UI). Trainings UI must
+    pass ``?domain=training``. Cross-domain attempts (e.g. training
+    location with a ``conference_id``) are rejected.
+    """
+    if domain not in (LOCATION_DOMAIN_CONFERENCE, LOCATION_DOMAIN_TRAINING):
+        raise ValidationError(f"Invalid domain '{domain}'. Must be 'conference' or 'training'.")
+
+    if domain == LOCATION_DOMAIN_TRAINING and location_data.conference_id is not None:
+        raise ValidationError("Training-domain locations cannot be linked to a conference at create time.")
 
     # Validate conference exists and belongs to tenant (if provided)
     if location_data.conference_id:
@@ -351,6 +376,7 @@ async def create_location(
         name=location_data.name,
         code=location_data.code,
         location_type=location_data.location_type,
+        domain=domain,
         description=location_data.description,
         capacity=location_data.capacity,
         address_line1=location_data.address_line1,
@@ -442,15 +468,25 @@ async def update_location(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
+    domain: str | None = Query(
+        None,
+        description="Caller's expected domain. Refuses to update a row whose actual domain doesn't match.",
+    ),
 ) -> LocationResponse:
-    """Update location details."""
+    """Update location details.
 
-    result = await db.execute(
-        select(Location).where(
-            Location.id == location_id,
-            Location.tenant_id == current_user.tenant_id,
-        )
+    Pass ``?domain=training`` from the trainings UI; the conference UI
+    omits the param (or passes ``conference``). Mismatch returns 404 so
+    the trainings UI can never silently mutate a conference row.
+    """
+
+    query = select(Location).where(
+        Location.id == location_id,
+        Location.tenant_id == current_user.tenant_id,
     )
+    if domain is not None:
+        query = query.where(Location.domain == domain)
+    result = await db.execute(query)
     location = result.scalar_one_or_none()
 
     if not location:
@@ -523,24 +559,39 @@ async def delete_location(
         None,
         description="Conference to unlink from. If location is only in this conference, it will be deleted entirely.",
     ),
+    domain: str | None = Query(
+        None,
+        description="Caller's expected domain. Refuses to delete a row whose actual domain doesn't match.",
+    ),
 ) -> dict:
     """
     Delete or unlink a location.
 
-    If conference_id is provided:
-    - If location is linked to multiple conferences, only unlinks from the specified conference
-    - If location is only linked to this conference, deletes the location entirely
+    Domain guard (added in stage 2 of the locations split):
+      * Pass ``?domain=training`` from the trainings UI — the endpoint
+        will 404 if the row is conference-domain. This is the fix for
+        the orphaning bug: trainings can never delete a conference row
+        and cascade-strip its conference links.
+      * Pass ``?domain=conference`` (or omit, for backward-compat) from
+        the conference UI.
 
-    If conference_id is not provided:
-    - Deletes the location entirely (legacy behavior)
+    If ``conference_id`` is provided:
+      * If location is linked to multiple conferences, only unlinks
+        from the specified conference.
+      * If location is only linked to this conference, deletes the
+        location entirely.
+
+    If ``conference_id`` is not provided:
+      * Deletes the location entirely (legacy behaviour).
     """
 
-    result = await db.execute(
-        select(Location).where(
-            Location.id == location_id,
-            Location.tenant_id == current_user.tenant_id,
-        )
+    query = select(Location).where(
+        Location.id == location_id,
+        Location.tenant_id == current_user.tenant_id,
     )
+    if domain is not None:
+        query = query.where(Location.domain == domain)
+    result = await db.execute(query)
     location = result.scalar_one_or_none()
 
     if not location:

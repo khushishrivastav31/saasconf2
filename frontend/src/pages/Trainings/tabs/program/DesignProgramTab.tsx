@@ -115,7 +115,7 @@ export default function DesignProgramTab({ year }: Props) {
     queryKey: ['locations-list'],
     queryFn: async () => {
       const res = await api.get<LocationListResponse>('/locations', {
-        params: { page_size: 100, is_active: true },
+        params: { page_size: 100, is_active: true, domain: 'training' },
       });
       return res.data;
     },

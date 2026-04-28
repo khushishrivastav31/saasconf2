@@ -204,6 +204,7 @@ class LocationResponse(BaseModel):
     name: str
     code: str | None
     location_type: str
+    domain: str
     description: str | None
     capacity: int | None
 

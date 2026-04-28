@@ -57,6 +57,11 @@ async def list_conference_locations(
         .join(ConferenceLocation, ConferenceLocation.location_id == Location.id)
         .where(ConferenceLocation.conference_id == conference_id)
         .where(Location.tenant_id == current_user.tenant_id)
+        # Defence-in-depth: cross-domain rows shouldn't be linkable in
+        # the first place (Stage 2 enforces it on the link endpoint),
+        # but pin the read side now so any pre-existing mixed link
+        # still doesn't leak training rows into the conference UI.
+        .where(Location.domain == "conference")
     )
 
     query = query.order_by(Location.created_at.desc())
