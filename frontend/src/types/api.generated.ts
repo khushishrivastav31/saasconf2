@@ -4661,6 +4661,135 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/messaging/threads': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Training Threads
+     * @description List every training thread in the tenant.
+     *
+     *     Same response shape as the per-conference admin list. Filters are
+     *     composable (archived, unread, has_attachments, subject search).
+     */
+    get: operations['list_training_threads_api_v1_trainings_messaging_threads_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/messaging/threads/{thread_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Training Thread
+     * @description Detail view for a single training thread (admin-side).
+     */
+    get: operations['get_training_thread_api_v1_trainings_messaging_threads__thread_id__get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/messaging/threads/{thread_id}/reply': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reply To Training Thread
+     * @description Admin reply on a training thread.
+     *
+     *     Adds the current admin as a participant if they aren't one already
+     *     (broadcasts only attach the original sender, not every tenant admin).
+     */
+    post: operations['reply_to_training_thread_api_v1_trainings_messaging_threads__thread_id__reply_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/messaging/threads/{thread_id}/archive': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Archive Training Thread
+     * @description Archive a training thread (tenant-wide for admins).
+     */
+    post: operations['archive_training_thread_api_v1_trainings_messaging_threads__thread_id__archive_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/messaging/threads/{thread_id}/unarchive': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Unarchive Training Thread
+     * @description Unarchive a training thread.
+     */
+    post: operations['unarchive_training_thread_api_v1_trainings_messaging_threads__thread_id__unarchive_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/messaging/threads/{thread_id}/read': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark Training Thread Read
+     * @description Mark a training thread as read for the current admin.
+     *
+     *     Adds the admin as a participant if missing (broadcasts only attach
+     *     the original sender, so other admins won't have a row yet).
+     */
+    post: operations['mark_training_thread_read_api_v1_trainings_messaging_threads__thread_id__read_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/messaging/templates': {
     parameters: {
       query?: never;
@@ -20834,6 +20963,11 @@ export type components = {
       email: string;
       /** Last Read At */
       last_read_at?: string | null;
+      /**
+       * Is Me
+       * @default false
+       */
+      is_me?: boolean;
     };
     /**
      * PatchOfferAttendeeExam
@@ -24636,6 +24770,13 @@ export type components = {
     /**
      * SenderInfo
      * @description Resolved participant info.
+     *
+     *     ``is_me`` is set by the portal thread-detail handler so the FE can
+     *     style speech bubbles correctly across domains. A portal user can
+     *     appear as ``applicant`` (CFP identity) or ``training_attendee`` (per-
+     *     registration identity); both shapes resolve to ``is_me=True`` for
+     *     the logged-in viewer. Defaults to ``False`` for sites/handlers that
+     *     don't bother setting it (e.g. admin views).
      */
     SenderInfo: {
       /**
@@ -24651,6 +24792,11 @@ export type components = {
       last_name: string;
       /** Email */
       email: string;
+      /**
+       * Is Me
+       * @default false
+       */
+      is_me?: boolean;
     };
     /**
      * ServiceProviderCreate
@@ -39305,6 +39451,219 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AttendeeSearchResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_training_threads_api_v1_trainings_messaging_threads_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+        archived?: boolean;
+        has_attachments?: boolean | null;
+        unread_only?: boolean | null;
+        search?: string | null;
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ThreadListResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_training_thread_api_v1_trainings_messaging_threads__thread_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        thread_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ThreadDetailResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  reply_to_training_thread_api_v1_trainings_messaging_threads__thread_id__reply_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        thread_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplyCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessageResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  archive_training_thread_api_v1_trainings_messaging_threads__thread_id__archive_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        thread_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  unarchive_training_thread_api_v1_trainings_messaging_threads__thread_id__unarchive_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        thread_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  mark_training_thread_read_api_v1_trainings_messaging_threads__thread_id__read_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        thread_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
         };
       };
       /** @description Validation Error */

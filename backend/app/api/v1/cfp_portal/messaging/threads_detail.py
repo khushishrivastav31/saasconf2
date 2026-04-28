@@ -96,6 +96,7 @@ async def get_portal_thread(
                     last_name=info.last_name,
                     email=info.email,
                     last_read_at=p.last_read_at,
+                    is_me=(p.participant_type, p.participant_id) in key_set,
                 )
             )
 
@@ -110,11 +111,16 @@ async def get_portal_thread(
     for m in sorted(visible_messages, key=lambda x: x.created_at):
         sender = info_map.get((m.sender_type, m.sender_id))
         if sender:
+            # Per-message ``is_me`` is computed against the portal user's
+            # union of identities (applicant + training-attendee) so
+            # cross-domain threads style consistently.
+            sender_is_me = (m.sender_type, m.sender_id) in key_set
+            sender_with_flag = sender.model_copy(update={"is_me": sender_is_me})
             messages.append(
                 MessageResponse(
                     id=m.id,
                     thread_id=m.thread_id,
-                    sender=sender,
+                    sender=sender_with_flag,
                     body_html=m.body_html,
                     attachments=attachment_map.get(m.id, []),
                     created_at=m.created_at,

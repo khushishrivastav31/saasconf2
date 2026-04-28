@@ -102,7 +102,11 @@ export default function ThreadDetailPane({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50 dark:bg-gray-900">
         {threadDetail.messages.map((msg) => {
-          const isMe = msg.sender.type === 'applicant' && msg.sender.id === applicantId;
+          // Backend marks ``is_me=true`` for any of the portal user's
+          // identities (applicant + training_attendee). Fall back to the
+          // legacy applicant-only check so older API responses still work.
+          const isMe =
+            msg.sender.is_me ?? (msg.sender.type === 'applicant' && msg.sender.id === applicantId);
           const readers = isMe ? getSeenInfo(msg.created_at) : [];
 
           return (

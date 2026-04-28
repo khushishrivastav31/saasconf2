@@ -468,10 +468,11 @@ export interface PortalPaperFormSchema {
 // Portal messaging types
 export interface PortalSenderInfo {
   id: string;
-  type: 'user' | 'applicant';
+  type: 'user' | 'applicant' | 'training_attendee';
   first_name: string;
   last_name: string;
   email: string;
+  is_me?: boolean;
 }
 
 export interface PortalMessageAttachmentInfo {

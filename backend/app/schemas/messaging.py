@@ -9,15 +9,24 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SenderInfo(BaseModel):
-    """Resolved participant info."""
+    """Resolved participant info.
+
+    ``is_me`` is set by the portal thread-detail handler so the FE can
+    style speech bubbles correctly across domains. A portal user can
+    appear as ``applicant`` (CFP identity) or ``training_attendee`` (per-
+    registration identity); both shapes resolve to ``is_me=True`` for
+    the logged-in viewer. Defaults to ``False`` for sites/handlers that
+    don't bother setting it (e.g. admin views).
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    type: str  # "user" or "applicant"
+    type: str  # "user" | "applicant" | "training_attendee"
     first_name: str
     last_name: str
     email: str
+    is_me: bool = False
 
 
 class MessageAttachmentInfo(BaseModel):
@@ -47,11 +56,12 @@ class ParticipantInfo(BaseModel):
     """Participant in a thread with read status."""
 
     id: UUID
-    type: str  # "user" or "applicant"
+    type: str  # "user" | "applicant" | "training_attendee"
     first_name: str
     last_name: str
     email: str
     last_read_at: datetime | None = None
+    is_me: bool = False
 
 
 # --- Thread list ---

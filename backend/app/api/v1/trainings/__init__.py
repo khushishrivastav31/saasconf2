@@ -1,5 +1,6 @@
 """Training management endpoints (package)."""
 
+from .admin_threads import router as admin_threads_router
 from .attendees import router as attendees_router
 from .certification_bodies import router as certification_bodies_router
 from .core import detail_router, router  # core has root-level routes (GET /, POST /)
@@ -71,6 +72,7 @@ router.include_router(messaging_placement_router)
 router.include_router(messaging_attendees_broadcast_router)
 router.include_router(messaging_attachments_router)
 router.include_router(messaging_admin_router)
+router.include_router(admin_threads_router)
 router.include_router(messaging_templates_router)
 router.include_router(invoices_router)
 router.include_router(invoice_operations_router)

@@ -28,10 +28,17 @@ logger = logging.getLogger(__name__)
 
 
 async def _resolve_senders(db, sender_pairs: set[tuple[str, UUID]]) -> dict[tuple[str, UUID], SenderInfo]:
-    """Batch-resolve sender info from (type, id) pairs."""
+    """Batch-resolve sender info from (type, id) pairs.
+
+    Handles all three participant identities the unified portal inbox
+    surfaces: ``user`` (admin), ``applicant`` (CFP identity), and
+    ``training_attendee`` (per-registration identity used by training
+    broadcasts).
+    """
     result_map: dict[tuple[str, UUID], SenderInfo] = {}
     user_ids = [pid for ptype, pid in sender_pairs if ptype == "user"]
     applicant_ids = [pid for ptype, pid in sender_pairs if ptype == "applicant"]
+    attendee_ids = [pid for ptype, pid in sender_pairs if ptype == PARTICIPANT_TYPE_TRAINING_ATTENDEE]
 
     if user_ids:
         result = await db.execute(select(User).where(User.id.in_(user_ids)))
@@ -53,6 +60,19 @@ async def _resolve_senders(db, sender_pairs: set[tuple[str, UUID]]) -> dict[tupl
                 first_name=applicant.first_name,
                 last_name=applicant.last_name,
                 email=applicant.email,
+            )
+
+    if attendee_ids:
+        result = await db.execute(
+            select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.id.in_(attendee_ids))
+        )
+        for attendee in result.scalars():
+            result_map[(PARTICIPANT_TYPE_TRAINING_ATTENDEE, attendee.id)] = SenderInfo(
+                id=attendee.id,
+                type=PARTICIPANT_TYPE_TRAINING_ATTENDEE,
+                first_name=attendee.first_name,
+                last_name=attendee.last_name,
+                email=attendee.email,
             )
 
     return result_map

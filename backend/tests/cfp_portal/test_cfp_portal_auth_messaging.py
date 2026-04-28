@@ -898,6 +898,18 @@ class TestPortalGetThread:
         assert data["subject"] == "Existing Thread"
         assert len(data["messages"]) >= 1
         assert len(data["participants"]) >= 2
+        # ``is_me`` is the contract the FE relies on for speech-bubble
+        # styling and read-receipt filtering. The applicant participant
+        # / sender is the logged-in user; admins are not.
+        for p in data["participants"]:
+            if p["type"] == "applicant" and p["id"] == str(verified_applicant.id):
+                assert p["is_me"] is True
+            else:
+                assert p["is_me"] is False
+        for m in data["messages"]:
+            sender = m["sender"]
+            expected = sender["type"] == "applicant" and sender["id"] == str(verified_applicant.id)
+            assert sender["is_me"] is expected
 
     @pytest.mark.asyncio
     async def test_get_thread_not_participant(
