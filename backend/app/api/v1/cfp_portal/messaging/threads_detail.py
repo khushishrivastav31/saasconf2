@@ -13,6 +13,8 @@ from app.core.html_sanitize import sanitize_html
 from app.models.conference import Conference
 from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.tenant import Tenant
+from app.models.training_program import ProgramYearTraining
+from app.models.training_registration import TrainingRegistration
 from app.models.user import User
 from app.schemas.messaging import (
     MessageResponse,
@@ -230,9 +232,11 @@ async def create_portal_thread(
         thread,
         "applicant",
         applicant_id,
-        conference.name,
-        tenant_slug,
-        data.conference_id,
+        context_name=conference.name,
+        tenant_slug=tenant_slug,
+        domain="conference",
+        domain_anchor_id=data.conference_id,
+        tenant_id=tenant_id,
     )
 
     return await get_portal_thread(thread.id, current_applicant, db)
@@ -307,26 +311,48 @@ async def reply_to_portal_thread(
     await db.commit()
     await db.refresh(message)
 
-    # Send email notifications. The notification helper is conference-bound
-    # (it expects ``conference_id`` and a conference name); for training
-    # threads we skip it for now — the recipients still get the new-message
-    # surface in the admin training inbox once that lands. Cross-domain
-    # notifications are tracked as a follow-up.
+    # Send email notifications. The notifier handles both conference and
+    # training threads — admin link target and email-enabled gate vary by
+    # domain. Resolve a context label for the email body (conference name
+    # for conference threads, training name for training threads).
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant_obj = tenant_result.scalar_one_or_none()
+    tenant_slug = tenant_obj.slug if tenant_obj else ""
+
+    context_name = ""
+    domain_anchor_id: UUID | None = None
     if thread.domain == "conference" and thread.conference_id is not None:
+        domain_anchor_id = thread.conference_id
         conf_result = await db.execute(select(Conference).where(Conference.id == thread.conference_id))
         conference = conf_result.scalar_one_or_none()
-        tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
-        tenant_obj = tenant_result.scalar_one_or_none()
-        tenant_slug = tenant_obj.slug if tenant_obj else ""
-        await _notify_other_participants(
+        context_name = conference.name if conference else ""
+    elif thread.domain == "training" and thread.domain_entity_id is not None:
+        name_map = await _resolve_domain_entity_names(
             db,
-            thread,
-            participant.participant_type,
-            participant.participant_id,
-            conference.name if conference else "",
-            tenant_slug,
-            thread.conference_id,
+            tenant_id=tenant_id,
+            domain_pairs={(thread.domain, thread.domain_entity_id)},
         )
+        context_name = name_map.get((thread.domain, thread.domain_entity_id), "")
+        # Anchor URL composition uses the training id (resolve via the
+        # registration's placement chain).
+        reg_result = await db.execute(
+            select(ProgramYearTraining.training_id)
+            .join(TrainingRegistration, TrainingRegistration.placement_id == ProgramYearTraining.id)
+            .where(TrainingRegistration.id == thread.domain_entity_id)
+        )
+        domain_anchor_id = reg_result.scalar_one_or_none()
+
+    await _notify_other_participants(
+        db,
+        thread,
+        participant.participant_type,
+        participant.participant_id,
+        context_name=context_name,
+        tenant_slug=tenant_slug,
+        domain=thread.domain,
+        domain_anchor_id=domain_anchor_id,
+        tenant_id=tenant_id,
+    )
 
     # Fetch attachments for this message
     attachment_map = await _fetch_message_attachments(db, [message.id])

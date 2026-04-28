@@ -340,14 +340,21 @@ async def _dispatch_broadcast_emails(
     sender_user_id: UUID,
     training_name: str,
     prepared: list[_PreparedRecipient],
+    messaging_mode: str = "email_only",
+    tenant_slug: str = "",
 ) -> None:
     """Fan out the per-recipient emails.
 
-    Uses ``send_direct_message_email`` (email-only path) since training
-    threads have no ``conference_id`` and the existing notification helper
-    is conference-bound. The ``conference_name`` slot in that helper is a
-    free-form context label — we pass the training name there. One email
-    failure must not poison the batch (tests exercise this).
+    Mirrors the per-conference Messaging Mode toggle:
+
+    * ``email_only`` (training default): full subject + body content goes
+      straight into the recipient's inbox via
+      ``send_direct_message_email``.
+    * ``in_app``: each recipient gets a notification email with a link
+      back to their portal thread; the actual content is read in-app.
+      Same shape as the conference notifier.
+
+    One email failure must not poison the batch (tests exercise this).
     """
     user_result = await db.execute(select(User).where(User.id == sender_user_id))
     sender_user = user_result.scalar_one_or_none()
@@ -356,6 +363,31 @@ async def _dispatch_broadcast_emails(
         sender_name = f"{sender_user.first_name or ''} {sender_user.last_name or ''}".strip() or (
             read_pii(sender_user, "email") or ""
         )
+
+    if messaging_mode == "in_app":
+        # Lazy imports keep the module-level dependency graph small and
+        # let test patches target ``app.services.training_messaging`` for
+        # the email_only path without breaking this branch.
+        from app.config import get_settings as _get_settings
+        from app.core.email import send_new_message_notification
+
+        portal_base = _get_settings().PORTAL_BASE_URL
+        for r in prepared:
+            try:
+                await send_new_message_notification(
+                    db,
+                    email=r.email,
+                    first_name=r.first_name,
+                    domain="training",
+                    tenant_id=tenant_id,
+                    conference_id=None,
+                    conference_name=training_name,
+                    message_subject=r.subject,
+                    messages_link=f"{portal_base}/{tenant_slug}/portal/messages/{r.thread_id}",
+                )
+            except Exception:
+                logger.exception("Training broadcast: failed to notify %s", r.email)
+        return
 
     for r in prepared:
         try:

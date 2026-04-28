@@ -38,6 +38,47 @@ async def test_update_email_settings(client: AsyncClient, tenant_admin_token):
 
 
 @pytest.mark.asyncio
+async def test_get_messaging_settings_default(client: AsyncClient, tenant_admin_token):
+    """GET returns ``email_only`` (the historical training-broadcast behavior) by default."""
+    resp = await client.get(
+        "/api/v1/trainings/messaging-settings",
+        headers={"Authorization": f"Bearer {tenant_admin_token}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["messaging_mode"] == "email_only"
+
+
+@pytest.mark.asyncio
+async def test_update_messaging_settings(client: AsyncClient, tenant_admin_token):
+    """PUT persists the chosen mode and round-trips on the next GET."""
+    resp = await client.put(
+        "/api/v1/trainings/messaging-settings",
+        headers={"Authorization": f"Bearer {tenant_admin_token}"},
+        json={"messaging_mode": "in_app"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["messaging_mode"] == "in_app"
+    # Round-trip.
+    resp2 = await client.get(
+        "/api/v1/trainings/messaging-settings",
+        headers={"Authorization": f"Bearer {tenant_admin_token}"},
+    )
+    assert resp2.json()["messaging_mode"] == "in_app"
+
+
+@pytest.mark.asyncio
+async def test_update_messaging_settings_rejects_unknown_mode(client: AsyncClient, tenant_admin_token):
+    """Unknown mode strings fail validation."""
+    resp = await client.put(
+        "/api/v1/trainings/messaging-settings",
+        headers={"Authorization": f"Bearer {tenant_admin_token}"},
+        json={"messaging_mode": "carrier_pigeon"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_get_templates_default(client: AsyncClient, tenant_admin_token):
     """GET returns every training template type with defaults."""
     from app.api.v1.trainings.email_settings import TRAINING_TEMPLATE_TYPES

@@ -340,6 +340,25 @@ async def _is_email_enabled_for_conference(db: AsyncSession, conference_id: UUID
     return settings.get("email_sending_enabled", True)
 
 
+async def _is_email_enabled_for_training(db: AsyncSession, tenant_id: UUID | None) -> bool:
+    """Check if email sending is enabled for training notifications in this tenant.
+
+    Mirrors the conference toggle but reads from
+    ``tenant.settings['training_email_settings']`` (per the trainings module's
+    Email Settings tab). Defaults to enabled when missing.
+    """
+    if tenant_id is None:
+        return True
+    from app.models.tenant import Tenant
+
+    result = await db.execute(select(Tenant.settings).where(Tenant.id == tenant_id))
+    settings = result.scalar_one_or_none()
+    if settings is None:
+        return True
+    training_settings = settings.get("training_email_settings", {}) or {}
+    return bool(training_settings.get("email_sending_enabled", True))
+
+
 async def send_verification_email(
     db: AsyncSession,
     *,
@@ -770,16 +789,32 @@ async def send_new_message_notification(
     *,
     email: str,
     first_name: str = "",
-    conference_id: UUID,
+    conference_id: UUID | None = None,
     tenant_id: UUID | None = None,
     conference_name: str = "",
     message_subject: str = "",
     messages_link: str = "",
+    domain: str = "conference",
 ) -> bool:
-    """Send a notification email about a new platform message."""
-    if not await _is_email_enabled_for_conference(db, conference_id):
-        logger.info(f"Email sending disabled for conference {conference_id}, skipping message notification to {email}")
-        return False
+    """Send a notification email about a new platform message.
+
+    ``domain`` selects the email-enabled gate: ``"conference"`` reads
+    ``Conference.settings.email_sending_enabled`` (existing behavior),
+    ``"training"`` reads
+    ``Tenant.settings.training_email_settings.email_sending_enabled``.
+    The ``conference_name`` slot doubles as the training name on the
+    training path so the rendered template stays a single source of truth.
+    """
+    if domain == "training":
+        if not await _is_email_enabled_for_training(db, tenant_id):
+            logger.info(f"Email sending disabled for training in tenant {tenant_id}, skipping notification to {email}")
+            return False
+    else:
+        if not await _is_email_enabled_for_conference(db, conference_id):
+            logger.info(
+                f"Email sending disabled for conference {conference_id}, skipping message notification to {email}"
+            )
+            return False
 
     context = build_new_message_context(
         first_name=first_name,

@@ -802,9 +802,7 @@ class TestPlacementBroadcast:
         # Pull all attachments tied to this broadcast's messages.
         from app.models.messaging import Message
 
-        msg_rows = (
-            (await db_session.execute(select(Message).where(Message.thread_id.in_(thread_ids)))).scalars().all()
-        )
+        msg_rows = (await db_session.execute(select(Message).where(Message.thread_id.in_(thread_ids)))).scalars().all()
         msg_ids = [m.id for m in msg_rows]
         att_rows = (
             (

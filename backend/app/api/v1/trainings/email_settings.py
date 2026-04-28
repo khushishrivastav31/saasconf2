@@ -21,6 +21,8 @@ router = APIRouter(tags=["training-email"])
 # ── Settings key in tenant.settings ──────────────────────────────
 
 SETTINGS_KEY = "training_email_settings"
+MESSAGING_SETTINGS_KEY = "training_messaging_settings"
+ALLOWED_MESSAGING_MODES = ("in_app", "email_only")
 TEMPLATES_KEY = "training_email_templates"
 
 # ── Training template types ──────────────────────────────────────
@@ -305,6 +307,59 @@ async def update_training_email_settings(
         "email_sending_enabled": existing.get("email_sending_enabled", True),
         "email_header_html": existing.get("email_header_html", ""),
         "email_footer_html": existing.get("email_footer_html", ""),
+    }
+
+
+# ── Messaging Settings (mode toggle) ────────────────────────────
+#
+# Mirrors the per-conference Messaging Mode toggle so the trainings
+# admin gets the same choice. Stored on
+# ``tenant.settings['training_messaging_settings']`` to keep it
+# orthogonal to the email-on/off + header/footer blob above. Defaults
+# to ``email_only`` because that's the historical training-broadcast
+# behavior (the full message body lands directly in the recipient's
+# inbox); admins can flip to ``in_app`` to send a notification with a
+# link to the portal thread instead — the same UX conferences offer.
+
+
+@router.get("/messaging-settings")
+async def get_training_messaging_settings(
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Get training messaging mode."""
+    tenant = await _get_tenant(db, current_user)
+    settings = (tenant.settings or {}).get(MESSAGING_SETTINGS_KEY, {})
+    return {
+        "messaging_mode": settings.get("messaging_mode", "email_only"),
+    }
+
+
+@router.put("/messaging-settings")
+async def update_training_messaging_settings(
+    data: dict,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Update training messaging mode."""
+    tenant = await _get_tenant(db, current_user)
+
+    if "messaging_mode" in data:
+        mode = str(data["messaging_mode"])
+        if mode not in ALLOWED_MESSAGING_MODES:
+            raise ValidationError(f"messaging_mode must be one of: {', '.join(ALLOWED_MESSAGING_MODES)}")
+        settings = tenant.settings or {}
+        existing = settings.get(MESSAGING_SETTINGS_KEY, {})
+        existing["messaging_mode"] = mode
+        settings[MESSAGING_SETTINGS_KEY] = existing
+        tenant.settings = settings
+        flag_modified(tenant, "settings")
+        await db.commit()
+        await db.refresh(tenant)
+
+    settings = (tenant.settings or {}).get(MESSAGING_SETTINGS_KEY, {})
+    return {
+        "messaging_mode": settings.get("messaging_mode", "email_only"),
     }
 
 

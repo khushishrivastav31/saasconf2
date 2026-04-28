@@ -723,6 +723,62 @@ class TestSendNewMessageNotification:
         assert context["Message Subject"] == "Review Update"
         assert context["Messages Link"] == "https://example.com/msg"
 
+    @pytest.mark.asyncio
+    async def test_training_domain_uses_tenant_gate(self):
+        """When ``domain='training'``, the email-enabled gate consults
+        ``training_email_settings`` on the tenant rather than the
+        conference settings — so a training thread reply notifies even
+        without a ``conference_id``."""
+        from app.core.email import send_new_message_notification
+
+        mock_db = AsyncMock()
+        tenant_id = uuid4()
+        rendered = RenderedEmail("s", "<p>h</p>", "t")
+
+        with (
+            patch("app.core.email._is_email_enabled_for_training", return_value=True) as mock_train_gate,
+            patch("app.core.email._is_email_enabled_for_conference") as mock_conf_gate,
+            patch("app.core.email.render_email", return_value=rendered),
+            patch("app.core.email.send_email", return_value=True) as mock_send,
+        ):
+            result = await send_new_message_notification(
+                mock_db,
+                email="attendee@example.com",
+                first_name="Carol",
+                conference_id=None,
+                tenant_id=tenant_id,
+                conference_name="PSM I Training",
+                message_subject="Pre-class materials",
+                messages_link="https://portal.example.com/foo/portal/messages/abc",
+                domain="training",
+            )
+
+        assert result is True
+        mock_train_gate.assert_awaited_once_with(mock_db, tenant_id)
+        mock_conf_gate.assert_not_called()
+        mock_send.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_training_domain_skips_when_tenant_setting_disabled(self):
+        """Tenant-wide training-email-disabled setting suppresses the send."""
+        from app.core.email import send_new_message_notification
+
+        mock_db = AsyncMock()
+
+        with patch("app.core.email._is_email_enabled_for_training", return_value=False):
+            result = await send_new_message_notification(
+                mock_db,
+                email="attendee@example.com",
+                first_name="Carol",
+                tenant_id=uuid4(),
+                conference_name="PSM I Training",
+                message_subject="Pre-class",
+                messages_link="https://example.com/m",
+                domain="training",
+            )
+
+        assert result is False
+
 
 # ---------------------------------------------------------------------------
 # _send_with_retry tests

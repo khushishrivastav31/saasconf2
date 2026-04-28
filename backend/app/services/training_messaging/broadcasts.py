@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.html_sanitize import sanitize_html
+from app.models.tenant import Tenant
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
@@ -38,6 +39,26 @@ from ._core import (
     _load_registration_with_context,
     _PreparedRecipient,
 )
+
+
+async def _resolve_messaging_context(db: AsyncSession, tenant_id: UUID) -> tuple[str, str]:
+    """Return ``(messaging_mode, tenant_slug)`` for the broadcast.
+
+    ``messaging_mode`` honors the per-tenant Trainings → Messaging
+    settings toggle (defaults to ``email_only``, the historical
+    behavior). ``tenant_slug`` is needed when in_app mode composes the
+    portal link.
+    """
+    result = await db.execute(select(Tenant.settings, Tenant.slug).where(Tenant.id == tenant_id))
+    row = result.one_or_none()
+    if row is None:
+        return "email_only", ""
+    settings, slug = row
+    msg_settings = (settings or {}).get("training_messaging_settings", {}) or {}
+    mode = msg_settings.get("messaging_mode", "email_only")
+    if mode not in ("in_app", "email_only"):
+        mode = "email_only"
+    return mode, slug or ""
 
 
 async def broadcast_to_registration_attendees(
@@ -95,12 +116,15 @@ async def broadcast_to_registration_attendees(
 
     await db.flush()
 
+    messaging_mode, tenant_slug = await _resolve_messaging_context(db, tenant_id)
     await _dispatch_broadcast_emails(
         db,
         tenant_id=tenant_id,
         sender_user_id=sender_user_id,
         training_name=training_name,
         prepared=prepared,
+        messaging_mode=messaging_mode,
+        tenant_slug=tenant_slug,
     )
 
     return bulk_id, prepared, skipped
@@ -211,12 +235,15 @@ async def broadcast_to_placement_attendees(
 
     await db.flush()
 
+    messaging_mode, tenant_slug = await _resolve_messaging_context(db, tenant_id)
     await _dispatch_broadcast_emails(
         db,
         tenant_id=tenant_id,
         sender_user_id=sender_user_id,
         training_name=training_name,
         prepared=prepared,
+        messaging_mode=messaging_mode,
+        tenant_slug=tenant_slug,
     )
 
     return bulk_id, prepared, skipped

@@ -72,12 +72,34 @@ async def _notify_other_participants(
     thread,
     sender_type: str,
     sender_id: UUID,
-    conference_name: str,
+    *,
+    context_name: str,
     tenant_slug: str,
-    conference_id: UUID,
+    domain: str,
+    domain_anchor_id: UUID | None,
+    tenant_id: UUID | None = None,
 ) -> None:
-    """Send email notifications to other participants."""
+    """Send email notifications to other participants on the thread.
+
+    Works for both conference and training threads. The admin link points
+    to the right module based on ``domain``; the portal link is unified.
+    For conference threads ``domain_anchor_id`` is the conference id (used
+    by the email-enabled gate); for training threads it is the training
+    id, used only for URL composition — the gate consults the tenant-wide
+    ``training_email_settings`` instead.
+    """
     from app.core.email import send_email_background, send_new_message_notification
+
+    settings = get_settings()
+    if domain == "training":
+        admin_link = f"{settings.FRONTEND_BASE_URL}/modules/trainings?section=messages&thread={thread.id}"
+    else:
+        admin_link = (
+            f"{settings.FRONTEND_BASE_URL}/modules/conferences/{domain_anchor_id}?section=messaging&thread={thread.id}"
+        )
+    portal_link = f"{settings.PORTAL_BASE_URL}/{tenant_slug}/portal/messages/{thread.id}"
+
+    conference_id_for_email = domain_anchor_id if domain == "conference" else None
 
     result = await db.execute(
         select(MessageParticipant).where(
@@ -91,42 +113,53 @@ async def _notify_other_participants(
             user = user_result.scalar_one_or_none()
             if not user or not user.message_notifications_enabled:
                 continue
-            settings = get_settings()
-            link = (
-                f"{settings.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
-            )
             send_email_background(
                 send_new_message_notification,
                 db,
                 email=read_pii(user, "email") or "",
                 first_name=user.first_name or "",
-                conference_id=conference_id,
-                conference_name=conference_name,
+                domain=domain,
+                tenant_id=tenant_id,
+                conference_id=conference_id_for_email,
+                conference_name=context_name,
                 message_subject=thread.subject,
-                messages_link=link,
+                messages_link=admin_link,
             )
         elif p.participant_type == "applicant":
             app_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == p.participant_id))
             applicant = app_result.scalar_one_or_none()
             if not applicant or not applicant.message_notifications_enabled:
                 continue
-            # NOTE preserved from the pre-split source: ``settings`` is bound
-            # in the ``user`` branch above and reused here. If a thread's
-            # participant iteration places an applicant before any admin,
-            # this NameErrors. Latent bug separate from this refactor —
-            # kept as-is so PR 2a stays a pure no-op move; fix in a
-            # follow-up.
-            portal_base = settings.PORTAL_BASE_URL  # type: ignore[possibly-undefined]
-            link = f"{portal_base}/{tenant_slug}/portal/messages/{thread.id}"
             send_email_background(
                 send_new_message_notification,
                 db,
                 email=applicant.email,
                 first_name=applicant.first_name,
-                conference_id=conference_id,
-                conference_name=conference_name,
+                domain=domain,
+                tenant_id=tenant_id,
+                conference_id=conference_id_for_email,
+                conference_name=context_name,
                 message_subject=thread.subject,
-                messages_link=link,
+                messages_link=portal_link,
+            )
+        elif p.participant_type == PARTICIPANT_TYPE_TRAINING_ATTENDEE:
+            att_result = await db.execute(
+                select(TrainingRegistrationAttendee).where(TrainingRegistrationAttendee.id == p.participant_id)
+            )
+            attendee = att_result.scalar_one_or_none()
+            if not attendee:
+                continue
+            send_email_background(
+                send_new_message_notification,
+                db,
+                email=attendee.email,
+                first_name=attendee.first_name,
+                domain=domain,
+                tenant_id=tenant_id,
+                conference_id=conference_id_for_email,
+                conference_name=context_name,
+                message_subject=thread.subject,
+                messages_link=portal_link,
             )
 
 

@@ -3505,6 +3505,30 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/messaging-settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Training Messaging Settings
+     * @description Get training messaging mode.
+     */
+    get: operations['get_training_messaging_settings_api_v1_trainings_messaging_settings_get'];
+    /**
+     * Update Training Messaging Settings
+     * @description Update training messaging mode.
+     */
+    put: operations['update_training_messaging_settings_api_v1_trainings_messaging_settings_put'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/email-templates': {
     parameters: {
       query?: never;
@@ -36422,6 +36446,78 @@ export interface operations {
     };
   };
   update_training_email_settings_api_v1_trainings_email_settings_put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          [key: string]: unknown;
+        };
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_training_messaging_settings_api_v1_trainings_messaging_settings_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_training_messaging_settings_api_v1_trainings_messaging_settings_put: {
     parameters: {
       query?: never;
       header?: {
