@@ -118,6 +118,18 @@ describe('TrainingComposePlacementDialog', () => {
     expect(psm).toBeInTheDocument();
   });
 
+  it('shows the Use template label + empty-state hint when no training templates exist', async () => {
+    renderDialog();
+    // Label is always rendered so the user discovers the feature even
+    // before they have any templates configured.
+    expect(await screen.findByText(/Use template/i)).toBeInTheDocument();
+    // No <select> for templates when the list is empty.
+    expect(screen.queryByRole('combobox', { name: /Use template/i })).not.toBeInTheDocument();
+    // Helper text points to where templates are created.
+    expect(screen.getByText(/No training templates yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trainings → Settings → Message Templates/i)).toBeInTheDocument();
+  });
+
   it('disables Send until placement, subject, and body are all populated', async () => {
     const user = userEvent.setup();
     renderDialog();

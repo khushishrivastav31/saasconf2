@@ -316,14 +316,14 @@ export default function TrainingComposePlacementDialog({
           />
         )}
 
-        {templates && templates.items.length > 0 && (
-          <div>
-            <label
-              htmlFor="training-compose-template"
-              className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Use template
-            </label>
+        <div>
+          <label
+            htmlFor="training-compose-template"
+            className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+          >
+            Use template
+          </label>
+          {templates && templates.items.length > 0 ? (
             <select
               id="training-compose-template"
               value={selectedTemplateId}
@@ -337,8 +337,13 @@ export default function TrainingComposePlacementDialog({
                 </option>
               ))}
             </select>
-          </div>
-        )}
+          ) : (
+            <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+              No training templates yet. Create them in{' '}
+              <span className="font-medium">Trainings → Settings → Message Templates</span>.
+            </p>
+          )}
+        </div>
 
         <div>
           <label
