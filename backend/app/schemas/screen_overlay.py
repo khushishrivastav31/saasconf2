@@ -64,13 +64,20 @@ class ScreenOverlayUpdate(BaseModel):
 
 
 class ScreenOverlayResponse(BaseModel):
-    """Screen overlay response schema."""
+    """Screen overlay response schema.
+
+    ``conference_id`` is null for training-domain overlays (tenant-wide
+    trainings overlays — see migration 216). ``domain`` carries the
+    discriminator (``conference`` | ``training``) so the FE can render
+    the right context label.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     tenant_id: UUID
-    conference_id: UUID
+    conference_id: UUID | None = None
+    domain: str = "conference"
     trigger_type: str
     title: str
     body_text: str | None = None
@@ -92,11 +99,17 @@ class ScreenOverlayListResponse(BaseModel):
 
 
 class PortalScreenOverlayResponse(BaseModel):
-    """Minimal overlay response for the portal."""
+    """Minimal overlay response for the portal.
+
+    ``conference_id`` and ``conference_name`` are nullable so the portal
+    can also surface tenant-wide training overlays (added with the
+    Trainings → Settings → Screen Overlays tab).
+    """
 
     id: UUID
-    conference_id: UUID
-    conference_name: str
+    conference_id: UUID | None = None
+    conference_name: str | None = None
+    domain: str = "conference"
     trigger_type: str
     title: str
     body_text: str | None = None

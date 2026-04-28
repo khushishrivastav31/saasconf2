@@ -4850,6 +4850,71 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/trainings/screen-overlays': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Training Overlays
+     * @description List tenant-wide training-domain overlays.
+     */
+    get: operations['list_training_overlays_api_v1_trainings_screen_overlays_get'];
+    put?: never;
+    /**
+     * Create Training Overlay
+     * @description Create a tenant-wide training overlay.
+     */
+    post: operations['create_training_overlay_api_v1_trainings_screen_overlays_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/screen-overlays/{overlay_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Training Overlay */
+    get: operations['get_training_overlay_api_v1_trainings_screen_overlays__overlay_id__get'];
+    /** Update Training Overlay */
+    put: operations['update_training_overlay_api_v1_trainings_screen_overlays__overlay_id__put'];
+    post?: never;
+    /** Delete Training Overlay */
+    delete: operations['delete_training_overlay_api_v1_trainings_screen_overlays__overlay_id__delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/screen-overlays/{overlay_id}/image': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Training Overlay Image
+     * @description Serve the overlay image (public endpoint, RLS-bypassed).
+     */
+    get: operations['get_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_get'];
+    put?: never;
+    /** Upload Training Overlay Image */
+    post: operations['upload_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_post'];
+    /** Delete Training Overlay Image */
+    delete: operations['delete_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/invoices': {
     parameters: {
       query?: never;
@@ -14916,6 +14981,11 @@ export type components = {
       /** File */
       file: string;
     };
+    /** Body_upload_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_post */
+    Body_upload_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_post: {
+      /** File */
+      file: string;
+    };
     /**
      * BookingMatrixResponse
      * @description Combined view of periods, options, and packages for the booking matrix UI.
@@ -22367,6 +22437,10 @@ export type components = {
     /**
      * PortalScreenOverlayResponse
      * @description Minimal overlay response for the portal.
+     *
+     *     ``conference_id`` and ``conference_name`` are nullable so the portal
+     *     can also surface tenant-wide training overlays (added with the
+     *     Trainings → Settings → Screen Overlays tab).
      */
     PortalScreenOverlayResponse: {
       /**
@@ -22374,13 +22448,15 @@ export type components = {
        * Format: uuid
        */
       id: string;
-      /**
-       * Conference Id
-       * Format: uuid
-       */
-      conference_id: string;
+      /** Conference Id */
+      conference_id?: string | null;
       /** Conference Name */
-      conference_name: string;
+      conference_name?: string | null;
+      /**
+       * Domain
+       * @default conference
+       */
+      domain?: string;
       /** Trigger Type */
       trigger_type: string;
       /** Title */
@@ -24688,6 +24764,11 @@ export type components = {
     /**
      * ScreenOverlayResponse
      * @description Screen overlay response schema.
+     *
+     *     ``conference_id`` is null for training-domain overlays (tenant-wide
+     *     trainings overlays — see migration 216). ``domain`` carries the
+     *     discriminator (``conference`` | ``training``) so the FE can render
+     *     the right context label.
      */
     ScreenOverlayResponse: {
       /**
@@ -24700,11 +24781,13 @@ export type components = {
        * Format: uuid
        */
       tenant_id: string;
+      /** Conference Id */
+      conference_id?: string | null;
       /**
-       * Conference Id
-       * Format: uuid
+       * Domain
+       * @default conference
        */
-      conference_id: string;
+      domain?: string;
       /** Trigger Type */
       trigger_type: string;
       /** Title */
@@ -39799,6 +39882,285 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_training_overlays_api_v1_trainings_screen_overlays_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScreenOverlayListResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_training_overlay_api_v1_trainings_screen_overlays_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ScreenOverlayCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScreenOverlayResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_training_overlay_api_v1_trainings_screen_overlays__overlay_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        overlay_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScreenOverlayResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_training_overlay_api_v1_trainings_screen_overlays__overlay_id__put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        overlay_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ScreenOverlayUpdate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScreenOverlayResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_training_overlay_api_v1_trainings_screen_overlays__overlay_id__delete: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        overlay_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        overlay_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  upload_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        overlay_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_upload_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_post'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_training_overlay_image_api_v1_trainings_screen_overlays__overlay_id__image_delete: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        overlay_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
       };
       /** @description Validation Error */
       422: {

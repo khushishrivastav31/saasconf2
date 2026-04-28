@@ -35,6 +35,7 @@ from .program_trainers import router as program_trainers_router
 from .programs import router as programs_router
 from .registration_questions import router as registration_questions_router
 from .registrations import router as registrations_router
+from .screen_overlays import router as screen_overlays_router
 from .syllabi import router as syllabi_router
 from .themes import router as themes_router
 from .trainers import router as trainers_router
@@ -74,6 +75,7 @@ router.include_router(messaging_attachments_router)
 router.include_router(messaging_admin_router)
 router.include_router(admin_threads_router)
 router.include_router(messaging_templates_router)
+router.include_router(screen_overlays_router)
 router.include_router(invoices_router)
 router.include_router(invoice_operations_router)
 router.include_router(invoice_replace_router)

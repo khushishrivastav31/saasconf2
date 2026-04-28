@@ -1,4 +1,5 @@
-"""Screen overlay model for conference login overlays."""
+"""Screen overlay model — supports both conference-scoped and tenant-wide
+training-scoped overlays via a ``domain`` discriminator (migration 216)."""
 
 import uuid
 from datetime import datetime
@@ -18,6 +19,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
+OVERLAY_DOMAIN_CONFERENCE = "conference"
+OVERLAY_DOMAIN_TRAINING = "training"
+OVERLAY_DOMAINS = (OVERLAY_DOMAIN_CONFERENCE, OVERLAY_DOMAIN_TRAINING)
+
 
 class ScreenOverlay(Base):
     __tablename__ = "screen_overlays"
@@ -28,11 +33,15 @@ class ScreenOverlay(Base):
         ForeignKey("tenants.id", ondelete="CASCADE"),
         nullable=False,
     )
-    conference_id: Mapped[uuid.UUID] = mapped_column(
+    # Conference-scoped overlays carry a conference_id; training-scoped
+    # ones leave it NULL (the row is tenant-wide for the trainings module).
+    # Migration 216 enforces the pairing via a CHECK constraint.
+    conference_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("conferences.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
+    domain: Mapped[str] = mapped_column(String(20), nullable=False, server_default=OVERLAY_DOMAIN_CONFERENCE)
     trigger_type: Mapped[str] = mapped_column(String(30), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     body_text: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -51,4 +60,5 @@ class ScreenOverlay(Base):
         Index("ix_screen_overlays_tenant_id", "tenant_id"),
         Index("ix_screen_overlays_tenant_conference", "tenant_id", "conference_id"),
         Index("ix_screen_overlays_active", "conference_id", "is_active", "trigger_type"),
+        Index("ix_screen_overlays_tenant_domain_active", "tenant_id", "domain", "is_active", "trigger_type"),
     )
