@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.associations import ConferenceLocation
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
+from app.models.program import ProgramTrack
 from app.models.settings import TenantLocationType
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -442,3 +443,56 @@ async def test_default_domain_is_conference(
     )
     assert resp.status_code == 201
     assert resp.json()["domain"] == "conference"
+
+
+# ── Dependency guard ──────────────────────────────────────────────────
+
+
+async def test_delete_refuses_when_track_still_references(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    tenant_admin_user: User,
+) -> None:
+    """Without the guard, the FK's ``ON DELETE SET NULL`` silently
+    nulls the track's ``location_id`` and the program grid loses the
+    room reference. Pin that the endpoint refuses with 409 instead,
+    naming the dependent count."""
+    await _setup_locations_module(db_session, tenant)
+    await _setup_location_type(db_session, tenant, conference)
+    token = _make_token(tenant_admin_user, modules=["locations"])
+
+    create_resp = await client.post(
+        BASE_URL,
+        json=_location_payload(conference.id),
+        headers=auth_headers(token),
+    )
+    assert create_resp.status_code == 201
+    location_id = uuid.UUID(create_resp.json()["id"])
+
+    # Wire a program track to the location.
+    db_session.add(
+        ProgramTrack(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            name="F2",
+            location_id=location_id,
+        )
+    )
+    await db_session.commit()
+
+    # Try to delete (no conference_id → "delete entirely" path).
+    delete_resp = await client.delete(
+        f"{BASE_URL}/{location_id}",
+        headers=auth_headers(token),
+    )
+    assert delete_resp.status_code == 409, delete_resp.text
+    body = delete_resp.json()
+    assert "still in use" in body["detail"].lower()
+    assert "1 program track" in body["detail"]
+
+    # Row is still there (refused, not partially-applied).
+    get_resp = await client.get(f"{BASE_URL}/{location_id}", headers=auth_headers(token))
+    assert get_resp.status_code == 200

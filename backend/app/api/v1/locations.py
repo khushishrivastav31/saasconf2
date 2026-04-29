@@ -12,14 +12,16 @@ from app.core.dependencies import (
     get_client_ip,
     require_module,
 )
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.associations import ConferenceLocation
 from app.models.audit import AuditLog
 from app.models.conference import Conference
 from app.models.location import LOCATION_DOMAIN_CONFERENCE, LOCATION_DOMAIN_TRAINING, Location
+from app.models.program import ProgramTrack
 from app.models.settings import TenantLocationType
+from app.models.training_program import ProgramYearTraining
 from app.schemas.location import (
     LocationCreate,
     LocationListResponse,
@@ -651,6 +653,35 @@ async def delete_location(
 
             await db.commit()
             return {"message": f"Location '{location_name}' unlinked from conference '{conference.name}'"}
+
+    # Dependency guard: refuse to delete if any program_tracks or
+    # training placements still reference this location. Both FKs are
+    # ``ON DELETE SET NULL`` — the cascade itself is silent — so without
+    # this check, deleting a location that's still in the program grid
+    # would leave a track / placement with ``location_id IS NULL`` and
+    # no audit trail beyond this endpoint's own log. That's exactly how
+    # the original orphan-bug produced ~30 NULL-ref rows on dev. This
+    # guard makes the delete refusable so the UI can show "this room
+    # is in use by N tracks / M placements; reassign first".
+    track_count_q = await db.execute(
+        select(func.count()).select_from(ProgramTrack).where(ProgramTrack.location_id == location_id)
+    )
+    track_count = track_count_q.scalar() or 0
+    placement_count_q = await db.execute(
+        select(func.count()).select_from(ProgramYearTraining).where(ProgramYearTraining.location_id == location_id)
+    )
+    placement_count = placement_count_q.scalar() or 0
+
+    if track_count > 0 or placement_count > 0:
+        parts = []
+        if track_count:
+            parts.append(f"{track_count} program track{'s' if track_count != 1 else ''}")
+        if placement_count:
+            parts.append(f"{placement_count} training placement{'s' if placement_count != 1 else ''}")
+        raise ConflictError(
+            f"Location '{location_name}' is still in use by {' and '.join(parts)}. "
+            "Reassign or remove those references before deleting."
+        )
 
     # Delete location entirely (either no conference_id, or this is the only conference)
     audit_log = AuditLog(
