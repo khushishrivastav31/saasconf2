@@ -25193,6 +25193,8 @@ export type components = {
        * @default true
        */
       is_active?: boolean;
+      /** User Role Id */
+      user_role_id?: string | null;
     };
     /**
      * SessionTypeListResponse
@@ -25238,6 +25240,8 @@ export type components = {
       max_attendees: number | null;
       /** Is Active */
       is_active: boolean;
+      /** User Role Id */
+      user_role_id: string | null;
       /**
        * Created At
        * Format: date-time
@@ -25268,6 +25272,8 @@ export type components = {
       max_attendees?: number | null;
       /** Is Active */
       is_active?: boolean | null;
+      /** User Role Id */
+      user_role_id?: string | null;
     };
     /**
      * SessionVolunteerTaskCreate

@@ -13,7 +13,8 @@ from app.core.html_sanitize import sanitize_html
 from app.core.security.pii_crypto import hash_email
 from app.models.audit import AuditLog
 from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper, CFPPaperCospeaker, PaperStatus
-from app.models.settings import UserRole, UserRoleAssignment
+from app.models.program import ProgramSession
+from app.models.settings import SessionType, UserRole, UserRoleAssignment
 from app.schemas.settings import (
     AssignableApplicantItem,
     AssignableApplicantListResponse,
@@ -176,6 +177,73 @@ async def _ensure_system_roles(
                         )
                     )
                 await db.flush()
+
+    # Backfill: per-session role assignments. The user-visible model
+    # is "speakers in a session with this user role appear in this
+    # list" — so we anchor on ``program_sessions`` (the actual
+    # placement on the program grid), not on accepted-paper status.
+    # A session has a user_role via its session_type's
+    # ``user_role_id`` (Settings → Session Types → "Speaker Role"
+    # dropdown); the session's paper supplies the main_speaker +
+    # co-speakers; both get the role assigned. Sessions whose
+    # session_type has ``user_role_id IS NULL`` are no-ops. Sessions
+    # without a paper_id contribute no speakers (no speaker source to
+    # assign yet — invited-keynote-style paths would need a separate
+    # per-session speaker table).
+    mapped_sessions = await db.execute(
+        select(
+            CFPPaper.id,
+            CFPPaper.main_speaker_id,
+            SessionType.user_role_id,
+        )
+        .join(ProgramSession, ProgramSession.paper_id == CFPPaper.id)
+        .join(SessionType, SessionType.id == ProgramSession.session_type_id)
+        .where(
+            ProgramSession.tenant_id == tenant_id,
+            ProgramSession.conference_id == conference_id,
+            SessionType.user_role_id.isnot(None),
+        )
+    )
+    # Group applicant IDs per role.
+    wanted: dict[UUID, set[UUID]] = {}
+    paper_ids_by_role: dict[UUID, set[UUID]] = {}
+    for paper_id, main_speaker_id, user_role_id in mapped_sessions.all():
+        bucket = wanted.setdefault(user_role_id, set())
+        paper_bucket = paper_ids_by_role.setdefault(user_role_id, set())
+        paper_bucket.add(paper_id)
+        if main_speaker_id is not None:
+            bucket.add(main_speaker_id)
+
+    # Add co-speakers per role.
+    for role_id, paper_ids in paper_ids_by_role.items():
+        if not paper_ids:
+            continue
+        cs_result = await db.execute(
+            select(CFPPaperCospeaker.applicant_id).where(
+                CFPPaperCospeaker.paper_id.in_(paper_ids),
+            )
+        )
+        wanted[role_id].update(cs_result.scalars().all())
+
+    for role_id, applicant_ids in wanted.items():
+        if not applicant_ids:
+            continue
+        existing_result = await db.execute(
+            select(UserRoleAssignment.applicant_id).where(
+                UserRoleAssignment.user_role_id == role_id,
+                UserRoleAssignment.applicant_id.in_(applicant_ids),
+            )
+        )
+        already = set(existing_result.scalars().all())
+        for applicant_id in applicant_ids - already:
+            db.add(
+                UserRoleAssignment(
+                    tenant_id=tenant_id,
+                    user_role_id=role_id,
+                    applicant_id=applicant_id,
+                )
+            )
+    await db.flush()
 
 
 async def _get_role_for_conference(

@@ -197,6 +197,7 @@ class SessionTypeCreate(BaseModel):
     separately_bookable: bool = False
     max_attendees: int | None = Field(None, gt=0)
     is_active: bool = True
+    user_role_id: UUID | None = None
 
 
 class SessionTypeUpdate(BaseModel):
@@ -209,6 +210,7 @@ class SessionTypeUpdate(BaseModel):
     separately_bookable: bool | None = None
     max_attendees: int | None = Field(None, gt=0)
     is_active: bool | None = None
+    user_role_id: UUID | None = None
 
 
 class SessionTypeResponse(BaseModel):
@@ -226,6 +228,7 @@ class SessionTypeResponse(BaseModel):
     separately_bookable: bool
     max_attendees: int | None
     is_active: bool
+    user_role_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

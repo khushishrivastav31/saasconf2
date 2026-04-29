@@ -280,6 +280,7 @@ export interface SessionType {
   separately_bookable: boolean;
   max_attendees: number | null;
   is_active: boolean;
+  user_role_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -292,6 +293,7 @@ export interface SessionTypeCreate {
   separately_bookable?: boolean;
   max_attendees?: number | null;
   is_active?: boolean;
+  user_role_id?: string | null;
 }
 
 export interface SessionTypeUpdate {
@@ -302,6 +304,7 @@ export interface SessionTypeUpdate {
   separately_bookable?: boolean;
   max_attendees?: number | null;
   is_active?: boolean;
+  user_role_id?: string | null;
 }
 
 // Pronoun Option types (tenant-scoped)
