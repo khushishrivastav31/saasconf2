@@ -580,31 +580,11 @@ class TestLocationAssociations:
         )
         assert resp.status_code == 400
 
-    async def test_unlink_location_multiple_conferences(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        second_conference: Conference,
-        linked_location: Location,
-    ) -> None:
-        """Can unlink a location when linked to multiple conferences."""
-        db_session.add(
-            ConferenceLocation(
-                conference_id=second_conference.id,
-                location_id=linked_location.id,
-            )
-        )
-        await db_session.commit()
-
-        resp = await client.delete(
-            f"{BASE_URL}/{conference.id}/locations/{linked_location.id}",
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 200
+    # The "unlink one of multiple conferences" path was removed by
+    # migration 220 (UNIQUE on conference_locations.location_id).
+    # Coverage of the now-DB-enforced 1-conference-per-location
+    # invariant lives in tests/core/test_locations.py
+    # (test_location_cannot_be_linked_to_two_conferences).
 
 
 # ═══════════════════════════════════════════════════════════════════════

@@ -5,7 +5,6 @@ import uuid
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.associations import ConferenceLocation
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
 from app.models.program import ProgramTrack
@@ -289,14 +288,19 @@ async def test_link_location_to_conference(
     assert str(conference.id) in get_resp.json()["conference_ids"]
 
 
-async def test_unlink_location_from_conference(
+async def test_location_cannot_be_linked_to_two_conferences(
     client: AsyncClient,
     db_session: AsyncSession,
     tenant: Tenant,
     conference: Conference,
     tenant_admin_user: User,
 ) -> None:
-    """Deleting a location with conference_id unlinks it when linked to multiple conferences."""
+    """Migration 220's UNIQUE constraint pins one-conference-per-location.
+    Attempting to link a location already linked to one conference to a
+    second conference must fail at the DB layer."""
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
     await _setup_locations_module(db_session, tenant)
     await _setup_location_type(db_session, tenant, conference)
     token = _make_token(tenant_admin_user, modules=["locations"])
@@ -305,7 +309,7 @@ async def test_unlink_location_from_conference(
     payload = _location_payload(conference.id)
     create_resp = await client.post(BASE_URL, json=payload, headers=auth_headers(token))
     assert create_resp.status_code == 201
-    location_id = create_resp.json()["id"]
+    location_id = uuid.UUID(create_resp.json()["id"])
 
     # Create a second conference
     conf2 = Conference(
@@ -317,34 +321,20 @@ async def test_unlink_location_from_conference(
     )
     db_session.add(conf2)
     await db_session.flush()
-    # Manually link the location to the second conference
-    db_session.add(
-        ConferenceLocation(
-            conference_id=conf2.id,
-            location_id=uuid.UUID(location_id),
-        )
-    )
-    await db_session.commit()
 
-    # Now delete with conference_id of the first conference -- should only unlink
-    response = await client.delete(
-        f"{BASE_URL}/{location_id}",
-        params={"conference_id": str(conference.id)},
-        headers=auth_headers(token),
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "unlinked" in data["message"].lower()
-
-    # Location should still exist (linked to conf2)
-    get_resp = await client.get(
-        f"{BASE_URL}/{location_id}",
-        headers=auth_headers(token),
-    )
-    assert get_resp.status_code == 200
-    # Should only have conf2 now
-    assert str(conference.id) not in get_resp.json()["conference_ids"]
-    assert str(conf2.id) in get_resp.json()["conference_ids"]
+    # Attempting to link the same location to the second conference must
+    # hit the UNIQUE index. Use a raw SAVEPOINT-scoped INSERT so the
+    # outer test session keeps its state on failure.
+    raised = False
+    try:
+        async with db_session.begin_nested():
+            await db_session.execute(
+                text("INSERT INTO conference_locations (id, conference_id, location_id) VALUES (:id, :cid, :lid)"),
+                {"id": uuid.uuid4(), "cid": conf2.id, "lid": location_id},
+            )
+    except IntegrityError:
+        raised = True
+    assert raised, "Expected UNIQUE violation on second conference_locations link"
 
 
 # ── Domain split (stage 2) ────────────────────────────────────────────

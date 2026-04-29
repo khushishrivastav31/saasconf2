@@ -1465,56 +1465,8 @@ class TestLocations:
         resp_stats = await client.get(f"{LOCATIONS_URL}/stats", headers=auth_headers(token))
         assert resp_stats.status_code == 403
 
-    # -- Unlink (multi-conference) --
-
-    @pytest.mark.asyncio
-    async def test_unlink_location_from_conference(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        tenant: Tenant,
-        conference: Conference,
-        tenant_admin_user: User,
-        locations_module: Module,
-        venue_location_type: TenantLocationType,
-    ) -> None:
-        """Delete with conference_id unlinks when location is in multiple conferences."""
-        token = _make_token(tenant_admin_user, modules=["locations"])
-
-        # Create location linked to first conference
-        payload = {
-            "name": "Multi-Conf Hall",
-            "location_type": "venue",
-            "conference_id": str(conference.id),
-        }
-        create_resp = await client.post(LOCATIONS_URL, json=payload, headers=auth_headers(token))
-        assert create_resp.status_code == 201
-        loc_id = create_resp.json()["id"]
-
-        # Create a second conference and manually link
-        conf2 = Conference(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            name="Second Conf",
-            abbreviation="SC2",
-            is_active=True,
-        )
-        db_session.add(conf2)
-        await db_session.flush()
-        db_session.add(ConferenceLocation(conference_id=conf2.id, location_id=uuid.UUID(loc_id)))
-        await db_session.commit()
-
-        # Unlink from first conference
-        resp = await client.delete(
-            f"{LOCATIONS_URL}/{loc_id}",
-            params={"conference_id": str(conference.id)},
-            headers=auth_headers(token),
-        )
-        assert resp.status_code == 200
-        assert "unlinked" in resp.json()["message"].lower()
-
-        # Location still accessible (linked to conf2)
-        get_resp = await client.get(f"{LOCATIONS_URL}/{loc_id}", headers=auth_headers(token))
-        assert get_resp.status_code == 200
-        assert str(conf2.id) in get_resp.json()["conference_ids"]
-        assert str(conference.id) not in get_resp.json()["conference_ids"]
+    # The "unlink one of multiple conferences" path was removed by
+    # migration 220 (UNIQUE on conference_locations.location_id).
+    # Coverage of the now-DB-enforced 1-conference-per-location
+    # invariant lives in tests/core/test_locations.py
+    # (test_location_cannot_be_linked_to_two_conferences).
