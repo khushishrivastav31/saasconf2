@@ -36,75 +36,41 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token, hash_password
 from app.models.location import Location
 from app.models.messaging import THREAD_DOMAIN_TRAINING, MessageThread
-from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining, TrainingProgramYear
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
-from app.models.user import User, UserRole
+from app.models.user import User
 from tests.conftest import auth_headers
-
-
-def _admin_token(user: User) -> str:
-    return create_access_token(
-        user_id=user.id,
-        tenant_id=user.tenant_id,
-        role=user.role,
-        modules=["trainings"],
-    )
+from tests.trainings.conftest import training_admin_token
 
 
 @pytest_asyncio.fixture
-async def pb_tenant(db_session: AsyncSession) -> Tenant:
-    t = Tenant(id=uuid.uuid4(), name="PB Tenant", slug=f"pb-{uuid.uuid4().hex[:8]}")
-    db_session.add(t)
-    await db_session.commit()
-    return t
-
-
-@pytest_asyncio.fixture
-async def pb_admin(db_session: AsyncSession, pb_tenant: Tenant) -> User:
-    mod = Module(id=uuid.uuid4(), name="Trainings", code="trainings", description="T", is_active=True)
-    db_session.add(mod)
-    await db_session.flush()
-    db_session.add(TenantModule(id=uuid.uuid4(), tenant_id=pb_tenant.id, module_id=mod.id, is_enabled=True))
-    u = User(
-        id=uuid.uuid4(),
-        tenant_id=pb_tenant.id,
-        email=f"pb-admin-{uuid.uuid4().hex[:8]}@example.com",
-        first_name="PB",
-        last_name="Admin",
-        role=UserRole.TENANT_ADMIN.value,
-        password_hash=hash_password("Password123!"),
-        is_active=True,
-    )
-    db_session.add(u)
-    await db_session.commit()
-    return u
-
-
-@pytest_asyncio.fixture
-async def pb_placement(db_session: AsyncSession, pb_tenant: Tenant) -> ProgramYearTraining:
+async def pb_placement(db_session: AsyncSession, training_tenant: Tenant) -> ProgramYearTraining:
+    """Minimal placement (training + program year + location + placement
+    row) anchored to ``training_tenant``. Year is randomized so tests
+    using this fixture don't collide on the per-tenant year-uniqueness
+    constraint when run in parallel."""
     tr = Training(
         id=uuid.uuid4(),
-        tenant_id=pb_tenant.id,
+        tenant_id=training_tenant.id,
         name="ITIL Foundation",
         slug=f"itil-{uuid.uuid4().hex[:6]}",
         duration=2,
     )
-    loc = Location(id=uuid.uuid4(), tenant_id=pb_tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}")
-    py = TrainingProgramYear(id=uuid.uuid4(), tenant_id=pb_tenant.id, year=2026)
+    loc = Location(id=uuid.uuid4(), tenant_id=training_tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}")
+    year = 2030 + (uuid.uuid4().int % 50)
+    py = TrainingProgramYear(id=uuid.uuid4(), tenant_id=training_tenant.id, year=year)
     db_session.add_all([tr, loc, py])
     await db_session.flush()
     p = ProgramYearTraining(
         id=uuid.uuid4(),
-        tenant_id=pb_tenant.id,
+        tenant_id=training_tenant.id,
         program_year_id=py.id,
         training_id=tr.id,
-        start_date=date(2026, 11, 10),
+        start_date=date(year, 11, 10),
         placement_type="open",
         location_id=loc.id,
         is_active=True,
@@ -166,14 +132,14 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         # Two registrations on the same placement, 2+1 = 3 attendees total.
         reg_a = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             company="Acme",
             attendees=[
@@ -183,7 +149,7 @@ class TestPlacementBroadcast:
         )
         reg_b = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             company="Globex",
             attendees=[("Carol", "K", "carol@example.com")],
@@ -199,7 +165,7 @@ class TestPlacementBroadcast:
                     "subject": "Reminder for [Training Name]",
                     "body_html": "<p>Hi [First Name] — booked by [Company Name].</p>",
                 },
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
 
         assert resp.status_code == 201, resp.text
@@ -238,21 +204,21 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         # Same email on two different registrations — should produce ONE
         # thread, with skipped_count = 1.
         await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[("Dup", "Person", "dup@example.com")],
         )
         await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[("Dup", "Person", "DUP@example.com")],
         )
@@ -264,7 +230,7 @@ class TestPlacementBroadcast:
             resp = await client.post(
                 _endpoint(pb_placement.id),
                 json={"subject": "Hi", "body_html": "<p>Hi</p>"},
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
         body = resp.json()
         assert body["sent_count"] == 1
@@ -274,12 +240,12 @@ class TestPlacementBroadcast:
     async def test_missing_placement_404(
         self,
         client: AsyncClient,
-        pb_admin: User,
+        training_admin: User,
     ) -> None:
         resp = await client.post(
             _endpoint(uuid.uuid4()),
             json={"subject": "x", "body_html": "<p>x</p>"},
-            headers=auth_headers(_admin_token(pb_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 404, resp.text
 
@@ -287,7 +253,7 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_admin: User,
+        training_admin: User,
     ) -> None:
         # Build a placement under a DIFFERENT tenant — my admin can't reach it.
         other = Tenant(id=uuid.uuid4(), name="Other", slug=f"o-{uuid.uuid4().hex[:8]}")
@@ -314,7 +280,7 @@ class TestPlacementBroadcast:
         resp = await client.post(
             _endpoint(other_placement.id),
             json={"subject": "x", "body_html": "<p>x</p>"},
-            headers=auth_headers(_admin_token(pb_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 404, resp.text
 
@@ -322,8 +288,8 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         """``attendee_ids`` lets the FE send to one attendee or any subset.
@@ -334,7 +300,7 @@ class TestPlacementBroadcast:
         """
         reg_a = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[
                 ("Alice", "L", "alice@example.com"),
@@ -343,7 +309,7 @@ class TestPlacementBroadcast:
         )
         reg_b = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[("Carol", "K", "carol@example.com")],
         )
@@ -380,7 +346,7 @@ class TestPlacementBroadcast:
                     "body_html": "<p>Hi</p>",
                     "attendee_ids": [str(alice.id), str(carol.id)],
                 },
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
 
         assert resp.status_code == 201, resp.text
@@ -399,15 +365,15 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         """The "Message this one attendee" entry point on the registrations
         view boils down to a single-element ``attendee_ids`` list."""
         reg = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[
                 ("Alice", "L", "alice@example.com"),
@@ -432,7 +398,7 @@ class TestPlacementBroadcast:
             resp = await client.post(
                 _endpoint(pb_placement.id),
                 json={"subject": "Hi", "body_html": "<p>Hi</p>", "attendee_ids": [str(bob.id)]},
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
         body = resp.json()
         assert body["sent_count"] == 1
@@ -442,8 +408,8 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         """Passing an EMPTY ``attendee_ids`` list = "explicitly no recipients".
@@ -454,7 +420,7 @@ class TestPlacementBroadcast:
         """
         await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[("Alice", "L", "alice@example.com")],
         )
@@ -465,7 +431,7 @@ class TestPlacementBroadcast:
             resp = await client.post(
                 _endpoint(pb_placement.id),
                 json={"subject": "Hi", "body_html": "<p>Hi</p>", "attendee_ids": []},
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
         assert resp.status_code == 201, resp.text
         assert resp.json()["sent_count"] == 0
@@ -475,8 +441,8 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         """``POST /trainings/messaging/broadcasts/by-attendees`` lets the
@@ -497,18 +463,20 @@ class TestPlacementBroadcast:
 
         tr2 = _Training(
             id=uuid.uuid4(),
-            tenant_id=pb_tenant.id,
+            tenant_id=training_tenant.id,
             name="PSM I",
             slug=f"psm-{uuid.uuid4().hex[:6]}",
             duration=2,
         )
-        loc2 = _Location(id=uuid.uuid4(), tenant_id=pb_tenant.id, name="Munich", code=f"MUC{uuid.uuid4().hex[:2]}")
-        py2 = _TPY(id=uuid.uuid4(), tenant_id=pb_tenant.id, year=2027)
+        loc2 = _Location(
+            id=uuid.uuid4(), tenant_id=training_tenant.id, name="Munich", code=f"MUC{uuid.uuid4().hex[:2]}"
+        )
+        py2 = _TPY(id=uuid.uuid4(), tenant_id=training_tenant.id, year=2027)
         db_session.add_all([tr2, loc2, py2])
         await db_session.flush()
         placement2 = _PYT(
             id=uuid.uuid4(),
-            tenant_id=pb_tenant.id,
+            tenant_id=training_tenant.id,
             program_year_id=py2.id,
             training_id=tr2.id,
             start_date=_date(2027, 1, 15),
@@ -522,13 +490,13 @@ class TestPlacementBroadcast:
         # One attendee on placement 1, one on placement 2.
         reg1 = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[("Alice", "L", "alice@example.com")],
         )
         reg2 = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             placement2,
             attendees=[("Bob", "B", "bob@example.com")],
         )
@@ -564,7 +532,7 @@ class TestPlacementBroadcast:
                     "subject": "Reminder for [Training Name]",
                     "body_html": "<p>Hi [First Name]</p>",
                 },
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
 
         assert resp.status_code == 201, resp.text
@@ -590,15 +558,15 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         """Stale / cross-tenant ids are silently excluded — no 404, no
         leak of the existence of other-tenant attendees."""
         reg = await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[("Alice", "L", "alice@example.com")],
         )
@@ -623,7 +591,7 @@ class TestPlacementBroadcast:
                     "subject": "Hi",
                     "body_html": "<p>Hi</p>",
                 },
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
         assert resp.status_code == 201
         # Only Alice was real; the bogus id silently dropped.
@@ -632,7 +600,7 @@ class TestPlacementBroadcast:
     async def test_upload_endpoint_creates_staged_attachment(
         self,
         client: AsyncClient,
-        pb_admin: User,
+        training_admin: User,
     ) -> None:
         """The admin uploads a file before clicking Send; the endpoint
         returns an Attachment row with a placeholder entity_id that the
@@ -642,7 +610,7 @@ class TestPlacementBroadcast:
         resp = await client.post(
             "/api/v1/trainings/messaging/upload",
             files={"file": ("agenda.txt", b"hello", "text/plain")},
-            headers=auth_headers(_admin_token(pb_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 201, resp.text
         body = resp.json()
@@ -655,7 +623,7 @@ class TestPlacementBroadcast:
     async def test_upload_rejects_oversize_file(
         self,
         client: AsyncClient,
-        pb_admin: User,
+        training_admin: User,
         monkeypatch: object,
     ) -> None:
         """Files over the configured ``MAX_UPLOAD_SIZE_MB`` get a 400.
@@ -672,7 +640,7 @@ class TestPlacementBroadcast:
             resp = await client.post(
                 "/api/v1/trainings/messaging/upload",
                 files={"file": ("any.txt", b"x", "text/plain")},
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
             assert resp.status_code == 400, resp.text
             assert "size exceeds" in resp.text.lower()
@@ -684,21 +652,21 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         from app.models.attachment import Attachment
 
         # My own attachment — admin can download.
         mine = Attachment(
-            tenant_id=pb_tenant.id,
+            tenant_id=training_tenant.id,
             entity_type="message",
             entity_id=uuid.uuid4(),
             filename="ours.txt",
             content_type="text/plain",
             file_size=4,
             file_data=b"ours",
-            uploaded_by=pb_admin.id,
+            uploaded_by=training_admin.id,
         )
         db_session.add(mine)
         # Other tenant's attachment — admin must NOT see.
@@ -722,14 +690,14 @@ class TestPlacementBroadcast:
         # Mine: 200 with the bytes.
         resp = await client.get(
             f"/api/v1/trainings/messaging/attachments/{mine.id}/download",
-            headers=auth_headers(_admin_token(pb_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 200, resp.text
         assert resp.content == b"ours"
         # Theirs: 404 (no leak — same response shape as if it never existed).
         resp = await client.get(
             f"/api/v1/trainings/messaging/attachments/{theirs.id}/download",
-            headers=auth_headers(_admin_token(pb_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 404, resp.text
 
@@ -737,8 +705,8 @@ class TestPlacementBroadcast:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        pb_tenant: Tenant,
-        pb_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         """An admin upload + broadcast must duplicate the attachment row per
@@ -749,7 +717,7 @@ class TestPlacementBroadcast:
         # 2 recipients on the placement.
         await _make_reg(
             db_session,
-            pb_tenant,
+            training_tenant,
             pb_placement,
             attendees=[
                 ("Alice", "L", "alice@example.com"),
@@ -758,14 +726,14 @@ class TestPlacementBroadcast:
         )
         # Pre-stage one attachment (the admin uploaded a file before clicking Send).
         staged = Attachment(
-            tenant_id=pb_tenant.id,
+            tenant_id=training_tenant.id,
             entity_type="message",
             entity_id=uuid.uuid4(),  # placeholder
             filename="agenda.pdf",
             content_type="application/pdf",
             file_size=1024,
             file_data=b"fake-pdf-bytes",
-            uploaded_by=pb_admin.id,
+            uploaded_by=training_admin.id,
         )
         db_session.add(staged)
         await db_session.commit()
@@ -782,7 +750,7 @@ class TestPlacementBroadcast:
                     "body_html": "<p>Hi</p>",
                     "attachment_ids": [str(staged.id)],
                 },
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
         assert resp.status_code == 201, resp.text
         body = resp.json()
@@ -826,7 +794,7 @@ class TestPlacementBroadcast:
     async def test_empty_placement_returns_zero_recipients(
         self,
         client: AsyncClient,
-        pb_admin: User,
+        training_admin: User,
         pb_placement: ProgramYearTraining,
     ) -> None:
         # No registrations under this placement — sent_count = 0, no threads.
@@ -837,7 +805,7 @@ class TestPlacementBroadcast:
             resp = await client.post(
                 _endpoint(pb_placement.id),
                 json={"subject": "x", "body_html": "<p>x</p>"},
-                headers=auth_headers(_admin_token(pb_admin)),
+                headers=auth_headers(training_admin_token(training_admin)),
             )
         assert resp.status_code == 201, resp.text
         assert resp.json()["sent_count"] == 0

@@ -38,7 +38,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token, hash_password
+from app.core.security import hash_password
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
 from app.models.location import Location
@@ -60,15 +60,12 @@ from app.services.training_messaging import (
     substitute_training_variables,
 )
 from tests.conftest import auth_headers
+from tests.trainings.conftest import training_admin_token
 
 
 def _admin_token(user: User) -> str:
-    return create_access_token(
-        user_id=user.id,
-        tenant_id=user.tenant_id,
-        role=user.role,
-        modules=["trainings", "cfp"],
-    )
+    """Trainings+CFP token (this file exercises both modules)."""
+    return training_admin_token(user, modules=("trainings", "cfp"))
 
 
 @pytest_asyncio.fixture
@@ -685,15 +682,9 @@ class TestBroadcastEdgeCases:
             tb_placement,
             attendees=[("Alice", "Liddell", "alice@example.com")],
         )
-        token = create_access_token(
-            user_id=tb_non_admin.id,
-            tenant_id=tb_non_admin.tenant_id,
-            role=tb_non_admin.role,
-            modules=["trainings"],
-        )
         resp = await client.post(
             f"/api/v1/trainings/registrations/{reg.id}/messages/broadcast",
             json={"subject": "Hi", "body_html": "<p>Hi</p>"},
-            headers=auth_headers(token),
+            headers=auth_headers(training_admin_token(tb_non_admin)),
         )
         assert resp.status_code == 403, resp.text

@@ -21,11 +21,10 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 from datetime import date
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token, hash_password
+from app.core.security import hash_password
 from app.models.location import Location
 from app.models.messaging import THREAD_DOMAIN_TRAINING, Message, MessageParticipant, MessageThread
 from app.models.module import Module, TenantModule
@@ -36,44 +35,7 @@ from app.models.training_registration import TrainingRegistration, TrainingRegis
 from app.models.user import User, UserRole
 from app.services.training_messaging import PARTICIPANT_TYPE_TRAINING_ATTENDEE
 from tests.conftest import auth_headers
-
-
-def _admin_token(user: User) -> str:
-    return create_access_token(
-        user_id=user.id,
-        tenant_id=user.tenant_id,
-        role=user.role,
-        modules=["trainings"],
-    )
-
-
-@pytest_asyncio.fixture
-async def at_tenant(db_session: AsyncSession) -> Tenant:
-    t = Tenant(id=uuid.uuid4(), name="AT Tenant", slug=f"at-{uuid.uuid4().hex[:8]}")
-    db_session.add(t)
-    await db_session.commit()
-    return t
-
-
-@pytest_asyncio.fixture
-async def at_admin(db_session: AsyncSession, at_tenant: Tenant) -> User:
-    mod = Module(id=uuid.uuid4(), name="Trainings", code="trainings", description="T", is_active=True)
-    db_session.add(mod)
-    await db_session.flush()
-    db_session.add(TenantModule(id=uuid.uuid4(), tenant_id=at_tenant.id, module_id=mod.id, is_enabled=True))
-    u = User(
-        id=uuid.uuid4(),
-        tenant_id=at_tenant.id,
-        email=f"at-admin-{uuid.uuid4().hex[:8]}@example.com",
-        first_name="AT",
-        last_name="Admin",
-        role=UserRole.TENANT_ADMIN.value,
-        password_hash=hash_password("Password123!"),
-        is_active=True,
-    )
-    db_session.add(u)
-    await db_session.commit()
-    return u
+from tests.trainings.conftest import training_admin_token
 
 
 async def _make_training_thread(
@@ -193,14 +155,14 @@ class TestAdminTrainingThreads:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        at_tenant: Tenant,
-        at_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ):
-        thread, _ = await _make_training_thread(db_session, at_tenant, at_admin)
+        thread, _ = await _make_training_thread(db_session, training_tenant, training_admin)
 
         resp = await client.get(
             "/api/v1/trainings/messaging/threads",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 200, resp.text
         data = resp.json()
@@ -213,14 +175,14 @@ class TestAdminTrainingThreads:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        at_tenant: Tenant,
-        at_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ):
-        thread, attendee = await _make_training_thread(db_session, at_tenant, at_admin)
+        thread, attendee = await _make_training_thread(db_session, training_tenant, training_admin)
 
         resp = await client.get(
             f"/api/v1/trainings/messaging/threads/{thread.id}",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 200, resp.text
         data = resp.json()
@@ -240,13 +202,13 @@ class TestAdminTrainingThreads:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        at_tenant: Tenant,
-        at_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ):
-        thread, _ = await _make_training_thread(db_session, at_tenant, at_admin)
+        thread, _ = await _make_training_thread(db_session, training_tenant, training_admin)
         resp = await client.post(
             f"/api/v1/trainings/messaging/threads/{thread.id}/reply",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
             json={"body_html": "<p>Thanks for the question!</p>"},
         )
         assert resp.status_code == 201, resp.text
@@ -257,7 +219,7 @@ class TestAdminTrainingThreads:
         # Detail now lists 2 messages.
         detail = await client.get(
             f"/api/v1/trainings/messaging/threads/{thread.id}",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert len(detail.json()["messages"]) == 2
 
@@ -266,39 +228,39 @@ class TestAdminTrainingThreads:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        at_tenant: Tenant,
-        at_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ):
-        thread, _ = await _make_training_thread(db_session, at_tenant, at_admin)
+        thread, _ = await _make_training_thread(db_session, training_tenant, training_admin)
         # Archive.
         resp = await client.post(
             f"/api/v1/trainings/messaging/threads/{thread.id}/archive",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 200
         # Default list (archived=False) excludes it.
         listing = await client.get(
             "/api/v1/trainings/messaging/threads",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         ids = {i["id"] for i in listing.json()["items"]}
         assert str(thread.id) not in ids
         # archived=true list includes it.
         archived = await client.get(
             "/api/v1/trainings/messaging/threads?archived=true",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         ids2 = {i["id"] for i in archived.json()["items"]}
         assert str(thread.id) in ids2
         # Unarchive restores it.
         resp = await client.post(
             f"/api/v1/trainings/messaging/threads/{thread.id}/unarchive",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 200
         listing2 = await client.get(
             "/api/v1/trainings/messaging/threads",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         ids3 = {i["id"] for i in listing2.json()["items"]}
         assert str(thread.id) in ids3
@@ -308,14 +270,14 @@ class TestAdminTrainingThreads:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        at_tenant: Tenant,
-        at_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ):
-        await _make_training_thread(db_session, at_tenant, at_admin, subject="Welcome aboard")
-        await _make_training_thread(db_session, at_tenant, at_admin, subject="Pre-class instructions")
+        await _make_training_thread(db_session, training_tenant, training_admin, subject="Welcome aboard")
+        await _make_training_thread(db_session, training_tenant, training_admin, subject="Pre-class instructions")
         resp = await client.get(
             "/api/v1/trainings/messaging/threads?search=Welcome",
-            headers=auth_headers(_admin_token(at_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 200
         subjects = [i["subject"] for i in resp.json()["items"]]
@@ -327,10 +289,10 @@ class TestAdminTrainingThreads:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        at_tenant: Tenant,
-        at_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ):
-        thread, _ = await _make_training_thread(db_session, at_tenant, at_admin)
+        thread, _ = await _make_training_thread(db_session, training_tenant, training_admin)
         # Different tenant + admin.
         other_tenant = Tenant(id=uuid.uuid4(), name="Other", slug=f"other-{uuid.uuid4().hex[:6]}")
         db_session.add(other_tenant)
@@ -355,13 +317,13 @@ class TestAdminTrainingThreads:
         # Other admin's list omits our thread.
         resp = await client.get(
             "/api/v1/trainings/messaging/threads",
-            headers=auth_headers(_admin_token(other_admin)),
+            headers=auth_headers(training_admin_token(other_admin)),
         )
         ids = {i["id"] for i in resp.json()["items"]}
         assert str(thread.id) not in ids
         # And direct detail GET 404s.
         detail = await client.get(
             f"/api/v1/trainings/messaging/threads/{thread.id}",
-            headers=auth_headers(_admin_token(other_admin)),
+            headers=auth_headers(training_admin_token(other_admin)),
         )
         assert detail.status_code == 404

@@ -16,7 +16,6 @@ What this file pins:
 """
 
 import os
-import uuid
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -26,82 +25,17 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
-import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token, hash_password
 from app.models.messaging import TEMPLATE_CATEGORY_CONFERENCE, TEMPLATE_CATEGORY_TRAINING, MessageTemplate
-from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.user import User
 from tests.conftest import auth_headers
+from tests.trainings.conftest import training_admin_token
 
 TEMPLATES_BASE = "/api/v1/trainings/messaging/templates"
-
-
-def _admin_token(user: User) -> str:
-    return create_access_token(
-        user_id=user.id,
-        tenant_id=user.tenant_id,
-        role=user.role,
-        modules=["trainings"],
-    )
-
-
-@pytest_asyncio.fixture
-async def tt_tenant(db_session: AsyncSession) -> Tenant:
-    t = Tenant(id=uuid.uuid4(), name="TT Tenant", slug=f"tt-{uuid.uuid4().hex[:8]}")
-    db_session.add(t)
-    await db_session.commit()
-    return t
-
-
-@pytest_asyncio.fixture
-async def tt_other_tenant(db_session: AsyncSession) -> Tenant:
-    t = Tenant(id=uuid.uuid4(), name="Other", slug=f"other-{uuid.uuid4().hex[:8]}")
-    db_session.add(t)
-    await db_session.commit()
-    return t
-
-
-@pytest_asyncio.fixture
-async def tt_admin(db_session: AsyncSession, tt_tenant: Tenant) -> User:
-    mod = Module(id=uuid.uuid4(), name="Trainings", code="trainings", description="T", is_active=True)
-    db_session.add(mod)
-    await db_session.flush()
-    db_session.add(TenantModule(id=uuid.uuid4(), tenant_id=tt_tenant.id, module_id=mod.id, is_enabled=True))
-    u = User(
-        id=uuid.uuid4(),
-        tenant_id=tt_tenant.id,
-        email=f"tt-admin-{uuid.uuid4().hex[:8]}@example.com",
-        first_name="TT",
-        last_name="Admin",
-        role=UserRole.TENANT_ADMIN.value,
-        password_hash=hash_password("Password123!"),
-        is_active=True,
-    )
-    db_session.add(u)
-    await db_session.commit()
-    return u
-
-
-@pytest_asyncio.fixture
-async def tt_non_admin(db_session: AsyncSession, tt_tenant: Tenant) -> User:
-    u = User(
-        id=uuid.uuid4(),
-        tenant_id=tt_tenant.id,
-        email=f"tt-user-{uuid.uuid4().hex[:8]}@example.com",
-        first_name="TT",
-        last_name="User",
-        role=UserRole.USER.value,
-        password_hash=hash_password("Password123!"),
-        is_active=True,
-    )
-    db_session.add(u)
-    await db_session.commit()
-    return u
 
 
 class TestList:
@@ -109,22 +43,22 @@ class TestList:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_tenant: Tenant,
-        tt_other_tenant: Tenant,
-        tt_admin: User,
+        training_tenant: Tenant,
+        training_other_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         # My training-category templates — these should appear.
         db_session.add_all(
             [
                 MessageTemplate(
-                    tenant_id=tt_tenant.id,
+                    tenant_id=training_tenant.id,
                     name="Welcome",
                     subject="Welcome to the training",
                     body_html="<p>Hi [First Name]</p>",
                     category=TEMPLATE_CATEGORY_TRAINING,
                 ),
                 MessageTemplate(
-                    tenant_id=tt_tenant.id,
+                    tenant_id=training_tenant.id,
                     name="Reminder",
                     subject="Reminder for [Training Name]",
                     body_html="<p>Reminder body</p>",
@@ -136,7 +70,7 @@ class TestList:
         # this is the bug PR 215 was specifically meant to fix.
         db_session.add(
             MessageTemplate(
-                tenant_id=tt_tenant.id,
+                tenant_id=training_tenant.id,
                 name="Working Group",
                 subject="conf subject",
                 body_html="<p>conf body</p>",
@@ -146,7 +80,7 @@ class TestList:
         # Another tenant — must NOT appear regardless of category.
         db_session.add(
             MessageTemplate(
-                tenant_id=tt_other_tenant.id,
+                tenant_id=training_other_tenant.id,
                 name="Other tenant template",
                 subject="x",
                 body_html="<p>x</p>",
@@ -155,7 +89,7 @@ class TestList:
         )
         await db_session.commit()
 
-        resp = await client.get(TEMPLATES_BASE, headers=auth_headers(_admin_token(tt_admin)))
+        resp = await client.get(TEMPLATES_BASE, headers=auth_headers(training_admin_token(training_admin)))
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["total"] == 2
@@ -165,16 +99,10 @@ class TestList:
     async def test_non_admin_returns_403(
         self,
         client: AsyncClient,
-        tt_non_admin: User,
-        tt_tenant: Tenant,
+        training_non_admin: User,
+        training_tenant: Tenant,
     ) -> None:
-        token = create_access_token(
-            user_id=tt_non_admin.id,
-            tenant_id=tt_non_admin.tenant_id,
-            role=tt_non_admin.role,
-            modules=["trainings"],
-        )
-        resp = await client.get(TEMPLATES_BASE, headers=auth_headers(token))
+        resp = await client.get(TEMPLATES_BASE, headers=auth_headers(training_admin_token(training_non_admin)))
         assert resp.status_code == 403, resp.text
 
 
@@ -182,7 +110,7 @@ class TestCreate:
     async def test_creates_template_then_appears_in_list(
         self,
         client: AsyncClient,
-        tt_admin: User,
+        training_admin: User,
     ) -> None:
         resp = await client.post(
             TEMPLATES_BASE,
@@ -191,26 +119,26 @@ class TestCreate:
                 "subject": "Reminder",
                 "body_html": "<p>Hi [First Name]</p>",
             },
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 201, resp.text
         body = resp.json()
         assert body["name"] == "Reminder for [Training Name]"
         assert body["subject"] == "Reminder"
 
-        listed = await client.get(TEMPLATES_BASE, headers=auth_headers(_admin_token(tt_admin)))
+        listed = await client.get(TEMPLATES_BASE, headers=auth_headers(training_admin_token(training_admin)))
         assert listed.json()["total"] == 1
 
     async def test_duplicate_name_400(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_tenant: Tenant,
-        tt_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         db_session.add(
             MessageTemplate(
-                tenant_id=tt_tenant.id,
+                tenant_id=training_tenant.id,
                 name="Reminder",
                 subject="x",
                 body_html="<p>x</p>",
@@ -226,7 +154,7 @@ class TestCreate:
                 "subject": "Different subject",
                 "body_html": "<p>Different body</p>",
             },
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 400, resp.text
         assert "already exists" in resp.text
@@ -235,7 +163,7 @@ class TestCreate:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_admin: User,
+        training_admin: User,
     ) -> None:
         """The training endpoint must always stamp ``category='training'`` —
         otherwise the new row would default to conference and disappear from
@@ -247,11 +175,11 @@ class TestCreate:
                 "subject": "Day of [Training Name]",
                 "body_html": "<p>Body</p>",
             },
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 201, resp.text
         # Round-trip: GET it back; if category=conference it'd be filtered out.
-        listed = await client.get(TEMPLATES_BASE, headers=auth_headers(_admin_token(tt_admin)))
+        listed = await client.get(TEMPLATES_BASE, headers=auth_headers(training_admin_token(training_admin)))
         assert listed.json()["total"] == 1
         # And the row in the DB has the right category.
         row = (
@@ -265,11 +193,11 @@ class TestUpdate:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_tenant: Tenant,
-        tt_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         t = MessageTemplate(
-            tenant_id=tt_tenant.id,
+            tenant_id=training_tenant.id,
             name="Reminder",
             subject="Old subject",
             body_html="<p>Old body</p>",
@@ -282,7 +210,7 @@ class TestUpdate:
         resp = await client.put(
             f"{TEMPLATES_BASE}/{t.id}",
             json={"subject": "New subject", "body_html": "<p>New body</p>"},
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -295,14 +223,22 @@ class TestUpdate:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_tenant: Tenant,
-        tt_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         a = MessageTemplate(
-            tenant_id=tt_tenant.id, name="A", subject="x", body_html="<p>x</p>", category=TEMPLATE_CATEGORY_TRAINING
+            tenant_id=training_tenant.id,
+            name="A",
+            subject="x",
+            body_html="<p>x</p>",
+            category=TEMPLATE_CATEGORY_TRAINING,
         )
         b = MessageTemplate(
-            tenant_id=tt_tenant.id, name="B", subject="y", body_html="<p>y</p>", category=TEMPLATE_CATEGORY_TRAINING
+            tenant_id=training_tenant.id,
+            name="B",
+            subject="y",
+            body_html="<p>y</p>",
+            category=TEMPLATE_CATEGORY_TRAINING,
         )
         db_session.add_all([a, b])
         await db_session.commit()
@@ -311,7 +247,7 @@ class TestUpdate:
         resp = await client.put(
             f"{TEMPLATES_BASE}/{a.id}",
             json={"name": "B"},
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 400, resp.text
 
@@ -319,13 +255,13 @@ class TestUpdate:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_tenant: Tenant,
-        tt_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         """A conference-category row in the same tenant must be invisible to
         the training-side update endpoint — 404, not silent rewrite."""
         cf = MessageTemplate(
-            tenant_id=tt_tenant.id,
+            tenant_id=training_tenant.id,
             name="Working Group",
             subject="conf",
             body_html="<p>conf</p>",
@@ -338,7 +274,7 @@ class TestUpdate:
         resp = await client.put(
             f"{TEMPLATES_BASE}/{cf.id}",
             json={"subject": "Hijacked"},
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 404, resp.text
 
@@ -346,12 +282,12 @@ class TestUpdate:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_other_tenant: Tenant,
-        tt_admin: User,
+        training_other_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         # Template lives in another tenant; my admin token can't see it.
         t = MessageTemplate(
-            tenant_id=tt_other_tenant.id,
+            tenant_id=training_other_tenant.id,
             name="Other",
             subject="x",
             body_html="<p>x</p>",
@@ -364,7 +300,7 @@ class TestUpdate:
         resp = await client.put(
             f"{TEMPLATES_BASE}/{t.id}",
             json={"subject": "Hostile edit"},
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 404, resp.text
 
@@ -374,11 +310,11 @@ class TestDelete:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_tenant: Tenant,
-        tt_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         t = MessageTemplate(
-            tenant_id=tt_tenant.id,
+            tenant_id=training_tenant.id,
             name="To delete",
             subject="x",
             body_html="<p>x</p>",
@@ -390,7 +326,7 @@ class TestDelete:
 
         resp = await client.delete(
             f"{TEMPLATES_BASE}/{t.id}",
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 204, resp.text
 
@@ -402,13 +338,13 @@ class TestDelete:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        tt_tenant: Tenant,
-        tt_admin: User,
+        training_tenant: Tenant,
+        training_admin: User,
     ) -> None:
         """Same protection as update — a conference-category row in this
         tenant is opaque to the training-side delete endpoint."""
         cf = MessageTemplate(
-            tenant_id=tt_tenant.id,
+            tenant_id=training_tenant.id,
             name="Working Group",
             subject="conf",
             body_html="<p>conf</p>",
@@ -420,7 +356,7 @@ class TestDelete:
 
         resp = await client.delete(
             f"{TEMPLATES_BASE}/{cf.id}",
-            headers=auth_headers(_admin_token(tt_admin)),
+            headers=auth_headers(training_admin_token(training_admin)),
         )
         assert resp.status_code == 404, resp.text
         # Row is still there.
