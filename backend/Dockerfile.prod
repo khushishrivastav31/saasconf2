@@ -1,5 +1,5 @@
-# python:3.12.10-slim
-FROM python:3.12.10-slim@sha256:97983fa8cc88343512862c62307159a82261c3528dc025f79e5a3f7af43e50b4 AS builder
+# python:3.12.13-slim
+FROM python:3.12.13-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS builder
 
 WORKDIR /app
 
@@ -20,8 +20,8 @@ RUN python -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Production image
-# python:3.12.10-slim
-FROM python:3.12.10-slim@sha256:97983fa8cc88343512862c62307159a82261c3528dc025f79e5a3f7af43e50b4
+# python:3.12.13-slim
+FROM python:3.12.13-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3
 
 WORKDIR /app
 

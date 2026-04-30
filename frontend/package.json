@@ -36,9 +36,10 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ],
-    "// overrides": "Force-resolve transitive deps that have known vulnerabilities. d3-color@<3.1.0 has GHSA-36jr-mh4h-2g58 (ReDoS, HIGH). Pulled via react-simple-maps's older d3-* tree; the recharts branch already uses 3.1.0. The override pins the safe version everywhere.",
+    "// overrides": "Force-resolve transitive deps that have known vulnerabilities. d3-color@<3.1.0 has GHSA-36jr-mh4h-2g58 (ReDoS, HIGH). dompurify@<3.3.2 has 8 moderate mXSS/XSS advisories (GHSA-h8r8-wccr-v5f2 et al.); monaco-editor exact-pins 3.2.7 so we have to override.",
     "overrides": {
-      "d3-color": ">=3.1.0"
+      "d3-color": ">=3.1.0",
+      "dompurify": ">=3.3.2"
     }
   },
   "dependencies": {
@@ -97,7 +98,6 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/dompurify": "^3.2.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.0.1",

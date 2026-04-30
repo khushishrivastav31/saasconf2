@@ -1,4 +1,4 @@
-FROM node:22.14.0-alpine
+FROM node:22.22.2-alpine
 
 # Pin pnpm via npm — same version as package.json's ``packageManager`` field
 # and the CI workflow. Bumping in one place means bumping in all three.

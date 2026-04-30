@@ -125,7 +125,7 @@ services:
   # Nginx Reverse Proxy with SSL
   nginx:
     # nginx:1.27-alpine
-    image: nginx:1.27-alpine@sha256:62223d644fa234c3a1cc785ee14242ec47a77364226f1c811d2f669f96dc2ac8
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     container_name: saasconf_nginx_staging
     restart: unless-stopped
     ports:
