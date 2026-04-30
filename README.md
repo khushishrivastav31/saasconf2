@@ -132,12 +132,12 @@ The API documentation is available at [http://localhost:8000/docs](http://localh
 
 ### Frontend
 
-Requires **Node.js 20+**.
+Requires **Node.js 22+** and **pnpm 10+** (install via `npm install -g pnpm@10` or [Corepack](https://nodejs.org/api/corepack.html)).
 
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 The frontend dev server starts on [http://localhost:3000](http://localhost:3000) and proxies API requests to `VITE_API_URL` (defaults to `http://localhost:8000`).
@@ -156,15 +156,15 @@ pytest
 
 ```bash
 cd frontend
-npm test
+pnpm test
 ```
 
 ### End-to-end tests
 
 ```bash
 cd frontend
-npx playwright install
-npx playwright test
+pnpm exec playwright install
+pnpm exec playwright test
 ```
 
 ## Project Structure

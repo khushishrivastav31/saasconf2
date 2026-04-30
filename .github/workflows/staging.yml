@@ -298,16 +298,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
         working-directory: frontend
@@ -318,15 +323,15 @@ jobs:
         # call sites. Must stay ≤ current count; lower as files are split
         # and ``watch()`` calls migrate to ``useWatch({ control, name })``.
         # See frontend/eslint.config.js comment + audit step 38.
-        run: npx eslint src/ --max-warnings 106
+        run: pnpm exec eslint src/ --max-warnings 106
 
       - name: Type check
         working-directory: frontend
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: Run tests with coverage
         working-directory: frontend
-        run: npm run test:coverage -- --run --reporter=verbose
+        run: pnpm run test:coverage -- --run --reporter=verbose
 
       - name: Upload frontend coverage report
         uses: actions/upload-artifact@v7
@@ -340,7 +345,7 @@ jobs:
         working-directory: frontend
         env:
           VITE_API_URL: https://api.staging.sonrisa.ventures
-        run: npm run build
+        run: pnpm run build
 
       - name: Check bundle size
         working-directory: frontend
@@ -392,16 +397,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install frontend deps
         working-directory: frontend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Assert api.generated.ts matches backend schema
         working-directory: frontend
@@ -411,7 +421,7 @@ jobs:
           # the script only invokes app.openapi(), never opens a connection.
           JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
           SUPER_ADMIN_PASSWORD: TestPassword123!
-        run: npm run gen:api:check
+        run: pnpm run gen:api:check
 
   # ─────────────────────────────────────────────────────────────
   # Dependency Security Audit (always runs — fast)
@@ -435,16 +445,23 @@ jobs:
           pip install pip-audit
           pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539  # pygments 2.19.2 — no fix available yet
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      # No `cache: 'pnpm'` here: this job runs `pnpm audit` only — it never
+      # calls `pnpm install`, so the pnpm store stays empty and setup-node's
+      # post-job cache save fails with "Path Validation Error" (which marks
+      # the whole job as failed). The audit doesn't need a cache anyway.
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
-      - name: Audit npm dependencies
+      - name: Audit dependencies
         working-directory: frontend
-        run: npm audit --audit-level=critical
+        run: pnpm audit --audit-level=critical
 
       - name: Scan for vulnerabilities in Dockerfiles
         uses: aquasecurity/trivy-action@v0.36.0
@@ -749,20 +766,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         working-directory: frontend
-        run: npx playwright install chromium
+        run: pnpm exec playwright install chromium
 
       - name: Create auth storage directory
         working-directory: frontend
