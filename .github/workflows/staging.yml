@@ -803,6 +803,10 @@ jobs:
           E2E_API_URL: https://api.staging.sonrisa.ventures
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          # Used by the seed to grant the E2E portal user a CFP committee
+          # membership so the role-gated News/Messages sidebar entries are
+          # visible during the E2E suite (see PR #182's role gating).
+          E2E_PORTAL_EMAIL: ${{ secrets.E2E_PORTAL_EMAIL }}
         run: npx tsx e2e/seed/setup-staging-data.ts
 
       - name: Run E2E tests

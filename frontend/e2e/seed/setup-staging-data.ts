@@ -547,6 +547,38 @@ async function main() {
     log("No CFP found, skipping paper creation.");
   }
 
+  // 17. Make the E2E portal user a CFP committee member of this conference.
+  //
+  // After PR #182 the portal sidebar's News/Messages section is gated on
+  // ``has_any_role`` — i.e. the user has at least one of: training
+  // attendee, conference attendee, paper, committee membership. The
+  // ``seed_e2e_portal_user`` Python seed only creates the PortalUser +
+  // CFPApplicant pair; without a role the E2E user sees Profile +
+  // Privacy and nothing else. Granting them a Program Committee
+  // membership here unblocks the E2E News tests (and is realistic —
+  // the test user routinely needs to navigate Messages / News in
+  // suites that exercise communication flows).
+  const e2ePortalEmail = process.env.E2E_PORTAL_EMAIL;
+  if (e2ePortalEmail) {
+    log(`Granting committee membership to E2E portal user ${e2ePortalEmail}...`);
+    const apps = await api<{ items: Array<{ id: string; email: string }> }>(
+      "GET",
+      `/cfp/applicants?search=${encodeURIComponent(e2ePortalEmail)}`,
+    );
+    const e2eApplicant = apps.items.find((a) => a.email.toLowerCase() === e2ePortalEmail.toLowerCase());
+    if (e2eApplicant) {
+      const result = await apiSafe("POST", "/cfp/committee-members", {
+        conference_id: conferenceId,
+        applicant_id: e2eApplicant.id,
+      });
+      log(result ? "  Committee membership created." : "  Already a committee member (skipped).");
+    } else {
+      log(`  Applicant not found for ${e2ePortalEmail} — Python seed may not have run yet.`);
+    }
+  } else {
+    log("No E2E_PORTAL_EMAIL set; skipping committee-membership grant.");
+  }
+
   // ─── Output for CI ─────────────────────────────────────────────────────
   log("=== SEED COMPLETE ===");
   log(`Conference ID: ${conferenceId}`);
