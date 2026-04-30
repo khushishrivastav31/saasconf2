@@ -365,7 +365,7 @@ export default function FinancialReportingTab({ conference }: Props) {
           <BarChart data={revCostData} margin={{ left: 10, right: 30 }}>
             <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
             <YAxis tickFormatter={(v) => fmt(v)} tick={{ fontSize: 11, fill: '#6b7280' }} />
-            <Tooltip formatter={(v: number) => [fmt(v), '']} contentStyle={{ fontSize: 12 }} />
+            <Tooltip formatter={(v) => [fmt(Number(v) || 0), '']} contentStyle={{ fontSize: 12 }} />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>
               {revCostData.map((entry, index) => (
                 <Cell key={index} fill={entry.fill} />
@@ -401,8 +401,8 @@ export default function FinancialReportingTab({ conference }: Props) {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
                 <YAxis tickFormatter={(v) => fmt(v)} tick={{ fontSize: 11, fill: '#6b7280' }} />
                 <Tooltip
-                  formatter={(v: number, name: string) => [
-                    fmt(v),
+                  formatter={(v, name) => [
+                    fmt(Number(v) || 0),
                     name === 'planned' ? 'Planned' : 'Actual',
                   ]}
                   contentStyle={{ fontSize: 12 }}
