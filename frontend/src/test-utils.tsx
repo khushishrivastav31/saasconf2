@@ -107,6 +107,11 @@ export const mockPortalMe: PortalMe = {
   cfp_applicant_id: 'applicant-1',
   training_attendee_id: null,
   training_attendee_status: null,
+  is_conference_attendee: false,
+  is_committee_member: false,
+  has_papers: true,
+  has_invoices: false,
+  has_any_role: true,
 };
 
 /**

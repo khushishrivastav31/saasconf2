@@ -319,13 +319,22 @@ async def get_portal_profile(
 
     The unified frontend layout treats this as the single source of truth for
     "who am I" — hence the flattened profile fields (theme, address, bio) that
-    the old cfp-only ``/portal/me`` used to return. The ``has_*_account`` flags
-    tell the UI which tabs to surface; the flattened ids let callers deep-link
-    into conference- or training-specific detail endpoints.
+    the old cfp-only ``/portal/me`` used to return.
+
+    Role flags drive the portal sidebar's per-section visibility — see the
+    role matrix in ``.claude/plans``. Each flag is a single SQL ``EXISTS``
+    so the response stays fast even for users with many relationships.
     """
     user = await _get_current_portal_user(request, db)
 
+    from sqlalchemy import exists
+
+    from app.core.security.pii_crypto import hash_email
+    from app.models.cfp import CFPCommitteeMember
     from app.models.cfp_applicants import CFPApplicant
+    from app.models.cfp_papers import CFPPaper, CFPPaperCospeaker, CospeakerInvitationStatus
+    from app.models.invoice import Invoice
+    from app.models.registration import Registration, RegistrationStatus
     from app.models.training_attendee import TrainingAttendee
 
     ta_result = await db.execute(select(TrainingAttendee).where(TrainingAttendee.portal_user_id == user.id))
@@ -333,6 +342,74 @@ async def get_portal_profile(
 
     cfp_result = await db.execute(select(CFPApplicant).where(CFPApplicant.portal_user_id == user.id))
     cfp_applicant = cfp_result.scalar_one_or_none()
+
+    # Per-role EXISTS queries. CFP-side flags require a CFPApplicant (the
+    # row that owns the papers / committee assignment / invoices). The
+    # conference-attendee flag matches against the PortalUser's email so a
+    # training-only user who's also been registered for a conference still
+    # gets the role.
+    is_committee_member = False
+    has_papers = False
+    has_invoices = False
+    if cfp_applicant is not None:
+        is_committee_member = bool(
+            await db.scalar(
+                select(
+                    exists().where(
+                        CFPCommitteeMember.applicant_id == cfp_applicant.id,
+                        CFPCommitteeMember.tenant_id == cfp_applicant.tenant_id,
+                    )
+                )
+            )
+        )
+        has_papers = bool(
+            await db.scalar(
+                select(
+                    exists().where(
+                        CFPPaper.main_speaker_id == cfp_applicant.id,
+                    )
+                )
+            )
+        ) or bool(
+            await db.scalar(
+                select(
+                    exists().where(
+                        CFPPaperCospeaker.applicant_id == cfp_applicant.id,
+                        CFPPaperCospeaker.invitation_status == CospeakerInvitationStatus.ACCEPTED.value,
+                    )
+                )
+            )
+        )
+        has_invoices = bool(
+            await db.scalar(
+                select(
+                    exists().where(
+                        Invoice.tenant_id == cfp_applicant.tenant_id,
+                        Invoice.recipient_source_id == cfp_applicant.id,
+                        Invoice.recipient_source_type.in_(["speaker", "committee"]),
+                        Invoice.status.in_(["sent", "paid", "overdue"]),
+                        Invoice.is_active.is_(True),
+                    )
+                )
+            )
+        )
+
+    user_email = (read_pii(user, "email") or "").lower()
+    is_conference_attendee = False
+    if user_email:
+        is_conference_attendee = bool(
+            await db.scalar(
+                select(
+                    exists().where(
+                        Registration.tenant_id == user.tenant_id,
+                        Registration.email_hash == hash_email(user_email),
+                        Registration.status != RegistrationStatus.CANCELLED.value,
+                    )
+                )
+            )
+        )
+
+    has_any_role = bool(training_attendee is not None or is_conference_attendee or has_papers or is_committee_member)
 
     return {
         "id": str(user.id),
@@ -360,6 +437,12 @@ async def get_portal_profile(
         "training_attendee_id": str(training_attendee.id) if training_attendee else None,
         "training_attendee_status": training_attendee.status if training_attendee else None,
         "cfp_applicant_id": str(cfp_applicant.id) if cfp_applicant else None,
+        # Role flags — drive sidebar / route-guard visibility.
+        "is_conference_attendee": is_conference_attendee,
+        "is_committee_member": is_committee_member,
+        "has_papers": has_papers,
+        "has_invoices": has_invoices,
+        "has_any_role": has_any_role,
     }
 
 

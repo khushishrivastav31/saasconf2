@@ -10,11 +10,7 @@ import ThemeToggle from '../../components/ThemeToggle';
 const ScreenOverlayDisplay = lazy(() => import('../../components/portal/ScreenOverlayDisplay'));
 import RegistrationQuestionnaire from '../../components/portal/RegistrationQuestionnaire';
 import PolicyLinks from '../PublicRegistration/components/PolicyLinks';
-import type {
-  PortalConferenceSummary,
-  PortalTenant,
-  PortalCommitteeMembershipListResponse,
-} from '../../types/portal';
+import type { PortalConferenceSummary, PortalTenant } from '../../types/portal';
 
 function DocumentIcon() {
   return (
@@ -247,30 +243,15 @@ function PortalLayout() {
   });
   const pendingAssignments = pendingData?.pending_count ?? 0;
 
-  // Committee membership check
-  const { data: committeeMemberships } = useQuery({
-    queryKey: ['portal-committee-memberships'],
-    queryFn: async () => {
-      const res = await portalApi.get<PortalCommitteeMembershipListResponse>(
-        '/portal/me/committee-memberships'
-      );
-      return res.data;
-    },
-    enabled: !!applicant,
-  });
-  const isCommitteeMember = (committeeMemberships?.items.length ?? 0) > 0;
-
-  // Invoice check (for sidebar visibility)
-  const { data: invoiceData } = useQuery({
-    queryKey: ['portal-invoices'],
-    queryFn: async () => {
-      const res = await portalApi.get('/portal/invoices');
-      return res.data as { items: unknown[]; total: number };
-    },
-    enabled: !!applicant,
-    staleTime: 60000,
-  });
-  const hasInvoices = (invoiceData?.total ?? 0) > 0;
+  // Role flags now come from /portal/unified/me (PR #182). The previous
+  // committee-membership and invoice probes are gone — the unified
+  // payload exposes ``is_committee_member`` / ``has_invoices`` /
+  // ``has_papers`` / ``has_any_role`` directly. Sidebar gates and the
+  // empty-state landing read from these flags.
+  const isCommitteeMember = portalMe?.is_committee_member ?? false;
+  const hasInvoices = portalMe?.has_invoices ?? false;
+  const hasPapers = portalMe?.has_papers ?? false;
+  const hasAnyRole = portalMe?.has_any_role ?? false;
 
   // Backend returns ``{items: [...]}`` (see backend/app/core/portal_training_listing.py).
   // Enabled for any logged-in portal user — training-only users (no
@@ -378,29 +359,35 @@ function PortalLayout() {
   };
   type NavSection = { label: string; items: NavItem[] };
 
-  // Show Papers section if user has a CFP applicant record AND any
-  // conference exposes a CFP (or they're allowed to submit out-of-timeframe).
-  // Training-only users have no ``applicant``, so this evaluates false.
-  const hasCfpAccess =
+  // Papers section visibility — split into "My Papers" (only if the
+  // user actually has papers or accepted cospeaker invitations) and
+  // "Submit Paper" (open-CFP gate, lets a brand-new applicant start
+  // submitting). Co-speaker Invitations always shows when there's an
+  // applicant record because pending invitations may exist that the
+  // user hasn't responded to yet (and thus don't yet count toward
+  // ``has_papers``).
+  const canSubmitPaper =
     !!applicant &&
     ((conferences ?? []).some((c) => c.cfps.length > 0) || applicant.allow_out_of_timeframe);
+  const showPapersSection = !!applicant && (hasPapers || canSubmitPaper);
+  const papersItems: NavItem[] = [];
+  if (hasPapers) {
+    papersItems.push({ name: 'My Papers', href: `${basePath}/dashboard`, icon: DocumentIcon });
+  }
+  if (canSubmitPaper) {
+    papersItems.push({ name: 'Submit Paper', href: `${basePath}/papers/new`, icon: PlusIcon });
+  }
+  if (applicant) {
+    papersItems.push({
+      name: 'Co-Speaker Invitations',
+      href: `${basePath}/invitations`,
+      icon: MailIcon,
+    });
+  }
 
   const navSections: NavSection[] = [
-    ...(hasCfpAccess
-      ? [
-          {
-            label: 'Papers',
-            items: [
-              { name: 'My Papers', href: `${basePath}/dashboard`, icon: DocumentIcon },
-              { name: 'Submit Paper', href: `${basePath}/papers/new`, icon: PlusIcon },
-              {
-                name: 'Co-Speaker Invitations',
-                href: `${basePath}/invitations`,
-                icon: MailIcon,
-              },
-            ],
-          },
-        ]
+    ...(showPapersSection && papersItems.length > 0
+      ? [{ label: 'Papers', items: papersItems }]
       : []),
     ...(isCommitteeMember
       ? [
@@ -467,10 +454,14 @@ function PortalLayout() {
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(href + '/');
 
-  // Conferences relevant to the user (has CFPs, is registered, or is a speaker)
-  const relevantConferences = (conferences ?? []).filter(
-    (c) => c.cfps.length > 0 || c.is_registered || c.is_speaker
-  );
+  // Conferences relevant to the user — only those where they have an
+  // actual relationship (registered or speaker). The previous "any
+  // open CFP" branch is gone: open CFPs are discoverable from the
+  // public conference site, not the personal portal sidebar. A brand
+  // new applicant who hasn't submitted yet still gets the global
+  // "Submit Paper" entry under the Papers section above; they don't
+  // need a per-conference Info link to find it.
+  const relevantConferences = (conferences ?? []).filter((c) => c.is_registered || c.is_speaker);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -557,58 +548,64 @@ function PortalLayout() {
         </div>
         <div className="flex-1 overflow-y-auto">
           <nav className={`mt-4 ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
-            {/* Communication (News & Messages) — first section */}
-            <div>
-              {!sidebarCollapsed && (
-                <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                  Communication
-                </p>
-              )}
-              <div className="space-y-0.5">
-                <Link
-                  to={newsItem.href}
-                  onClick={closeMobileSidebar}
-                  title={sidebarCollapsed ? newsItem.name : undefined}
-                  className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
-                    sidebarCollapsed ? 'justify-center px-2' : 'px-3'
-                  } ${
-                    isActive(newsItem.href)
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  <newsItem.icon />
-                  {!sidebarCollapsed && <span className="ml-3">{newsItem.name}</span>}
-                </Link>
-                <Link
-                  to={messagesItem.href}
-                  onClick={closeMobileSidebar}
-                  title={sidebarCollapsed ? messagesItem.name : undefined}
-                  className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
-                    sidebarCollapsed ? 'justify-center px-2' : 'px-3'
-                  } ${
-                    isActive(messagesItem.href)
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  <messagesItem.icon />
-                  {!sidebarCollapsed && (
-                    <span className="ml-3 flex-1 flex items-center justify-between">
-                      {messagesItem.name}
-                      {(messagesItem.badge ?? 0) > 0 && (
-                        <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-                          {messagesItem.badge}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {sidebarCollapsed && (messagesItem.badge ?? 0) > 0 && (
-                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
-                  )}
-                </Link>
+            {/* Communication (News & Messages) — visible only to users
+                with at least one actual role. Without this gate a
+                brand-new logged-in user with no papers / committee
+                seat / registration / training would still see Messages
+                and News in the sidebar. */}
+            {hasAnyRole && (
+              <div>
+                {!sidebarCollapsed && (
+                  <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                    Communication
+                  </p>
+                )}
+                <div className="space-y-0.5">
+                  <Link
+                    to={newsItem.href}
+                    onClick={closeMobileSidebar}
+                    title={sidebarCollapsed ? newsItem.name : undefined}
+                    className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
+                      sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                    } ${
+                      isActive(newsItem.href)
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    }`}
+                  >
+                    <newsItem.icon />
+                    {!sidebarCollapsed && <span className="ml-3">{newsItem.name}</span>}
+                  </Link>
+                  <Link
+                    to={messagesItem.href}
+                    onClick={closeMobileSidebar}
+                    title={sidebarCollapsed ? messagesItem.name : undefined}
+                    className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
+                      sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                    } ${
+                      isActive(messagesItem.href)
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    }`}
+                  >
+                    <messagesItem.icon />
+                    {!sidebarCollapsed && (
+                      <span className="ml-3 flex-1 flex items-center justify-between">
+                        {messagesItem.name}
+                        {(messagesItem.badge ?? 0) > 0 && (
+                          <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                            {messagesItem.badge}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {sidebarCollapsed && (messagesItem.badge ?? 0) > 0 && (
+                      <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
+                    )}
+                  </Link>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Grouped sections */}
             {navSections.map((section) => (

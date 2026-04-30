@@ -74,6 +74,14 @@ export interface PortalMe {
   cfp_applicant_id: string | null;
   training_attendee_id: string | null;
   training_attendee_status: string | null;
+  // Role flags (added in #182). Drive the portal sidebar's per-section
+  // visibility and route guards. ``has_any_role`` is the convenience
+  // aggregate the empty-state landing reads.
+  is_conference_attendee: boolean;
+  is_committee_member: boolean;
+  has_papers: boolean;
+  has_invoices: boolean;
+  has_any_role: boolean;
 }
 
 export interface ApplicantProfileUpdate {

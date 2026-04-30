@@ -11961,9 +11961,11 @@ export type paths = {
      *
      *     The unified frontend layout treats this as the single source of truth for
      *     "who am I" — hence the flattened profile fields (theme, address, bio) that
-     *     the old cfp-only ``/portal/me`` used to return. The ``has_*_account`` flags
-     *     tell the UI which tabs to surface; the flattened ids let callers deep-link
-     *     into conference- or training-specific detail endpoints.
+     *     the old cfp-only ``/portal/me`` used to return.
+     *
+     *     Role flags drive the portal sidebar's per-section visibility — see the
+     *     role matrix in ``.claude/plans``. Each flag is a single SQL ``EXISTS``
+     *     so the response stays fast even for users with many relationships.
      */
     get: operations['get_portal_profile_api_v1_portal_unified_me_get'];
     put?: never;
