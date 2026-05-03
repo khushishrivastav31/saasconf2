@@ -92,6 +92,13 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN: str = "10/minute"
     RATE_LIMIT_API: str = "100/minute"
 
+    # Bot protection on the three public registration endpoints (conference,
+    # training, CFP applicant signup). One site/secret pair per project on the
+    # reCAPTCHA Admin Console — leave empty in dev/test to skip validation.
+    # Frontend uses VITE_RECAPTCHA_SITE_KEY (the public half).
+    RECAPTCHA_SECRET_KEY: str = ""
+    RECAPTCHA_SCORE_THRESHOLD: float = 0.5
+
     # Super Admin (initial setup)
     SUPER_ADMIN_EMAIL: str = "admin@saasconf.com"
     SUPER_ADMIN_PASSWORD: str  # No default — MUST be set via environment variable

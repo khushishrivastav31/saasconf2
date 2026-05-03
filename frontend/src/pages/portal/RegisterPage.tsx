@@ -1,10 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
+import { GoogleReCaptchaProvider, useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import { usePortalBasePath } from '../../hooks/usePortalBasePath';
 import { parseApiError } from '../../utils/apiError';
 import portalApi from '../../config/portalApi';
+import { RECAPTCHA_ENABLED, RECAPTCHA_SITE_KEY } from '../../utils/recaptcha';
 import ConferenceLogo from '../../components/ConferenceLogo';
 import ThemeToggle from '../../components/ThemeToggle';
 import { validateEmail } from '../../utils/validators';
@@ -14,6 +16,7 @@ import type { AlumniCheckResponse } from '../../types/alumni';
 
 function RegisterPage() {
   const { register } = useApplicantAuth();
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const basePath = usePortalBasePath();
   const { companySlug } = useParams<{ companySlug: string }>();
   const [searchParams] = useSearchParams();
@@ -29,6 +32,11 @@ function RegisterPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alumniInfo, setAlumniInfo] = useState<AlumniCheckResponse | null>(null);
+  // Bot-protection signals — honeypot is a hidden input bots tend to fill;
+  // form_start is captured at first render so the backend can reject
+  // submissions that complete in < 5 seconds.
+  const [honeypotField, setHoneypotField] = useState('');
+  const formStartRef = useRef<number>(Date.now() / 1000);
 
   // Fetch tenant info (for logo display)
   const { data: tenantData } = useQuery({
@@ -93,11 +101,16 @@ function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      const recaptcha_token =
+        RECAPTCHA_ENABLED && executeRecaptcha ? await executeRecaptcha('cfp_register') : undefined;
       const message = await register({
         email,
         password,
         first_name: firstName,
         last_name: lastName,
+        recaptcha_token,
+        honeypot_field: honeypotField,
+        form_start_timestamp: formStartRef.current,
       });
       setSuccessMessage(message);
     } catch (err: unknown) {
@@ -187,6 +200,18 @@ function RegisterPage() {
               {error}
             </div>
           )}
+
+          {/* Honeypot — hidden from real users, attractive to bots */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            value={honeypotField}
+            onChange={(e) => setHoneypotField(e.target.value)}
+            style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }}
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -297,4 +322,19 @@ function RegisterPage() {
   );
 }
 
-export default RegisterPage;
+// Wrap with reCAPTCHA provider so `useGoogleReCaptcha` resolves; bypass when
+// the site key is unset (dev/test) — the form's `executeRecaptcha` call also
+// short-circuits in that case via RECAPTCHA_ENABLED.
+export default function RegisterPageWithRecaptcha() {
+  if (!RECAPTCHA_ENABLED) {
+    return <RegisterPage />;
+  }
+  return (
+    <GoogleReCaptchaProvider
+      reCaptchaKey={RECAPTCHA_SITE_KEY}
+      scriptProps={{ async: true, defer: true, appendTo: 'head' }}
+    >
+      <RegisterPage />
+    </GoogleReCaptchaProvider>
+  );
+}

@@ -6,6 +6,8 @@
  */
 import { useEffect } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router';
+import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import { RECAPTCHA_ENABLED, RECAPTCHA_SITE_KEY } from '../../utils/recaptcha';
 import { usePortalLanguage } from './hooks/usePortalLanguage';
 import { usePortalTexts } from './hooks/usePortalTexts';
 import TrainingSearch from './TrainingSearch';
@@ -73,5 +75,15 @@ function TrainingPortal() {
 }
 
 export default function PublicTrainingPortalPage() {
-  return <TrainingPortal />;
+  if (!RECAPTCHA_ENABLED) {
+    return <TrainingPortal />;
+  }
+  return (
+    <GoogleReCaptchaProvider
+      reCaptchaKey={RECAPTCHA_SITE_KEY}
+      scriptProps={{ async: true, defer: true, appendTo: 'head' }}
+    >
+      <TrainingPortal />
+    </GoogleReCaptchaProvider>
+  );
 }

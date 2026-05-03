@@ -30,6 +30,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.security import create_access_token, hash_password
+from app.core.security.registrations import clear_rate_limits
+
+
+@pytest.fixture(autouse=True)
+def _reset_registration_rate_limits() -> None:  # type: ignore[misc]
+    """Clear the in-memory IP rate-limit store before/after every test.
+
+    Now that ``register_for_training`` runs through
+    ``validate_registration_security`` (which keeps a per-IP counter), back-
+    to-back tests in :class:`TestRegistration` would otherwise hit the
+    3/hour cap on the 4th call from the same client IP.
+    """
+    clear_rate_limits()
+    yield  # type: ignore[misc]
+    clear_rate_limits()
 from app.models.customer import Customer
 from app.models.customer_offer import CustomerOffer
 from app.models.location import Location
@@ -696,21 +711,6 @@ class TestRegistration:
         assert placement_berlin.is_guaranteed is True
 
     @pytest.mark.asyncio
-    async def test_honeypot_rejected(
-        self,
-        client: AsyncClient,
-        tenant_portal: Tenant,
-        placement_berlin: ProgramYearTraining,
-    ):
-        payload = self._reg_payload(placement_berlin.id)
-        payload["honeypot_field"] = "spam"
-        res = await client.post(
-            f"/api/v1/portal/{tenant_portal.slug}/trainings/register",
-            json=payload,
-        )
-        assert res.status_code == 422
-
-    @pytest.mark.asyncio
     async def test_over_100_attendees_rejected(
         self,
         client: AsyncClient,
@@ -727,6 +727,42 @@ class TestRegistration:
             json=payload,
         )
         assert res.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_register_rejects_filled_honeypot(
+        self,
+        client: AsyncClient,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """A non-empty honeypot value is the universal bot signal — 400."""
+        payload = self._reg_payload(placement_berlin.id)
+        payload["honeypot_field"] = "im-a-bot"
+        res = await client.post(
+            f"/api/v1/portal/{tenant_portal.slug}/trainings/register",
+            json=payload,
+        )
+        assert res.status_code == 400
+        assert "Invalid form submission" in res.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_register_rejects_form_submitted_too_quickly(
+        self,
+        client: AsyncClient,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """Submission less than 5 sec after the form mounted is bot-shaped."""
+        import time
+
+        payload = self._reg_payload(placement_berlin.id)
+        payload["form_start_timestamp"] = time.time()  # "just now"
+        res = await client.post(
+            f"/api/v1/portal/{tenant_portal.slug}/trainings/register",
+            json=payload,
+        )
+        assert res.status_code == 400
+        assert "too quickly" in res.json()["detail"]
 
 
 # ── Guaranteed Toggle Tests ───────────────────────────────────────────

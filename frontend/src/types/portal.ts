@@ -10,6 +10,10 @@ export interface ApplicantRegisterRequest {
   password: string;
   first_name: string;
   last_name: string;
+  // Bot-protection signals (same shape as conference + training reg)
+  recaptcha_token?: string;
+  honeypot_field?: string;
+  form_start_timestamp?: number;
 }
 
 export interface ApplicantTokenResponse {

@@ -23,12 +23,15 @@ async def validate_recaptcha(token: str, secret_key: str, threshold: float = 0.5
     Raises:
         HTTPException: If validation fails or score is below threshold
     """
+    if not secret_key:
+        # No global secret configured (dev/test) — captcha disabled. Skip
+        # validation entirely; the missing-token check below should not fire
+        # since callers can't be expected to send a token if the system
+        # is configured as unprotected.
+        return
+
     if not token:
         raise HTTPException(status_code=400, detail="reCAPTCHA token required")
-
-    if not secret_key:
-        # In development/testing, allow if no secret configured
-        return
 
     try:
         async with httpx.AsyncClient() as client:

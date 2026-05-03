@@ -14,11 +14,12 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.dependencies import DbSessionDep
 from app.core.exceptions import ValidationError
 from app.core.invoice_auto_generation import create_invoice_for_registrations
-from app.core.recaptcha import validate_recaptcha
-from app.core.registration_security import validate_registration_security
+from app.core.security.recaptcha import validate_recaptcha
+from app.core.security.registrations import validate_registration_security
 from app.core.stripe_helper import create_payment_intent
 from app.core.user_auto_creation import create_user_for_registration
 from app.models.booking import BookingOption
@@ -522,12 +523,19 @@ async def create_public_registration(
     # Set RLS context for multi-tenant isolation
     await db.execute(text("SET app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
 
-    # Security validations
-    recaptcha_settings = conference.settings.get("recaptcha", {})
-    if recaptcha_settings.get("enabled") and data.recaptcha_token:
-        secret_key = recaptcha_settings.get("secret_key", "")
-        threshold = recaptcha_settings.get("score_threshold", 0.5)
-        await validate_recaptcha(data.recaptcha_token, secret_key, threshold)
+    # Security validations.
+    # reCAPTCHA secret/threshold come from a single global config — one key
+    # pair per project on the reCAPTCHA Admin Console. A per-conference
+    # ``score_threshold`` override is still honoured for tuning; the secret
+    # itself was always intended to be global. ``validate_recaptcha`` no-ops
+    # when the secret is empty (dev/test).
+    settings = get_settings()
+    threshold = conference.settings.get("recaptcha", {}).get("score_threshold") if conference.settings else None
+    await validate_recaptcha(
+        data.recaptcha_token or "",
+        settings.RECAPTCHA_SECRET_KEY,
+        threshold if threshold is not None else settings.RECAPTCHA_SCORE_THRESHOLD,
+    )
 
     await validate_registration_security(
         request=request,

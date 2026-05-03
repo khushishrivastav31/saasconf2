@@ -16,6 +16,12 @@ class ApplicantRegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
     first_name: str = Field(..., min_length=1, max_length=255)
     last_name: str = Field(default="", max_length=255)
+    # Public-form bot-protection signals — same shape used by the conference
+    # and training registration schemas. Optional so dev/test (no
+    # RECAPTCHA_SECRET_KEY) keeps working; the endpoint enforces presence.
+    recaptcha_token: str | None = None
+    honeypot_field: str | None = None
+    form_start_timestamp: float | None = None
 
     @field_validator("password")
     @classmethod

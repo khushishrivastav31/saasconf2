@@ -22,6 +22,8 @@ from app.core.exceptions import AuthenticationError, NotFoundError
 from app.core.rate_limiter import limiter
 from app.core.security import hash_password, hash_token, verify_password
 from app.core.security.pii_crypto import hash_email
+from app.core.security.recaptcha import validate_recaptcha
+from app.core.security.registrations import validate_registration_security
 from app.core.utils import utcnow
 from app.db.session import set_rls_context
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
@@ -102,6 +104,24 @@ async def register_applicant(
 ) -> dict:
     """Register a new applicant."""
     tenant = await _resolve_tenant(db, tenant_slug)
+
+    # Bot protection — same shape used on the conference + training
+    # registration endpoints. ``validate_recaptcha`` no-ops when the global
+    # secret is empty (dev/test); ``validate_registration_security`` covers
+    # honeypot + form-time-trap + disposable-email + secondary in-memory
+    # IP rate limit on top of the slowapi decorator above.
+    settings = get_settings()
+    await validate_recaptcha(
+        data.recaptcha_token or "",
+        settings.RECAPTCHA_SECRET_KEY,
+        settings.RECAPTCHA_SCORE_THRESHOLD,
+    )
+    await validate_registration_security(
+        request=request,
+        billing_email=data.email,
+        honeypot_field=data.honeypot_field,
+        form_start_timestamp=data.form_start_timestamp,
+    )
 
     # Set RLS context
     await set_rls_context(db, tenant_id=str(tenant.id), is_super_admin=False)

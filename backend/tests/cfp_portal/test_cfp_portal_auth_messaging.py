@@ -34,6 +34,20 @@ from app.core.applicant_security import (
     generate_email_verification_token,
 )
 from app.core.security import hash_password
+from app.core.security.registrations import clear_rate_limits
+
+
+@pytest.fixture(autouse=True)
+def _reset_registration_rate_limits() -> None:  # type: ignore[misc]
+    """Clear the in-memory IP rate-limit store before/after every test.
+
+    ``register_applicant`` runs through ``validate_registration_security``
+    which keeps a per-IP counter; back-to-back test calls from the same
+    client IP would otherwise hit the 3/hour cap.
+    """
+    clear_rate_limits()
+    yield  # type: ignore[misc]
+    clear_rate_limits()
 from app.models.applicant_token import ApplicantPasswordReset
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
@@ -326,6 +340,48 @@ class TestPortalRegistration:
             },
         )
         assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_register_rejects_filled_honeypot(
+        self,
+        client: AsyncClient,
+        tenant: Tenant,
+    ):
+        """A non-empty honeypot value is the universal bot signal — 400."""
+        response = await client.post(
+            f"{PORTAL_BASE}/{tenant.slug}/register",
+            json={
+                "email": f"hp-{uuid.uuid4().hex[:8]}@example.com",
+                "password": "StrongPass1!",
+                "first_name": "Honey",
+                "last_name": "Pot",
+                "honeypot_field": "im-a-bot",
+            },
+        )
+        assert response.status_code == 400
+        assert "Invalid form submission" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_register_rejects_form_submitted_too_quickly(
+        self,
+        client: AsyncClient,
+        tenant: Tenant,
+    ):
+        """Submission less than 5 sec after the form mounted is bot-shaped."""
+        import time
+
+        response = await client.post(
+            f"{PORTAL_BASE}/{tenant.slug}/register",
+            json={
+                "email": f"fast-{uuid.uuid4().hex[:8]}@example.com",
+                "password": "StrongPass1!",
+                "first_name": "Quick",
+                "last_name": "Bot",
+                "form_start_timestamp": time.time(),  # "just now"
+            },
+        )
+        assert response.status_code == 400
+        assert "too quickly" in response.json()["detail"]
 
 
 class TestPortalLogin:

@@ -15,7 +15,11 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import joinedload
 
+from app.config import get_settings
 from app.core.dependencies import DbSessionDep
+from app.core.rate_limiter import limiter
+from app.core.security.recaptcha import validate_recaptcha
+from app.core.security.registrations import validate_registration_security
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining, TrainingProgramYear
 from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
@@ -62,6 +66,7 @@ class TrainingRegistrationRequest(BaseModel):
 
 
 @router.post("/{tenant_slug}/trainings/register")
+@limiter.limit("3/hour")
 async def register_for_training(
     request: Request,
     tenant_slug: str,
@@ -74,6 +79,23 @@ async def register_for_training(
     placement exists, is public (open/hybrid), and is in the future.
     """
     tenant = await resolve_tenant(db, tenant_slug)
+
+    # Bot protection — same defense in depth used on conference registration:
+    # reCAPTCHA v3 (no-ops if RECAPTCHA_SECRET_KEY is empty), then honeypot,
+    # form-time-trap, disposable-email blocklist, and an in-memory IP rate
+    # limit (the slowapi decorator above is the Redis-backed primary).
+    settings = get_settings()
+    await validate_recaptcha(
+        data.recaptcha_token or "",
+        settings.RECAPTCHA_SECRET_KEY,
+        settings.RECAPTCHA_SCORE_THRESHOLD,
+    )
+    await validate_registration_security(
+        request=request,
+        billing_email=data.billing.contact_email,
+        honeypot_field=data.honeypot_field,
+        form_start_timestamp=data.form_start_timestamp,
+    )
 
     # Check registration period
     portal_settings = (tenant.settings or {}).get("training_portal", {})

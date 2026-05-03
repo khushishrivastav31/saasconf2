@@ -26,6 +26,20 @@ from app.core.applicant_security import (
 )
 from app.core.security import hash_password
 from app.core.security.pii_crypto import hash_email
+from app.core.security.registrations import clear_rate_limits
+
+
+@pytest.fixture(autouse=True)
+def _reset_registration_rate_limits() -> None:  # type: ignore[misc]
+    """Clear the in-memory IP rate-limit store before/after every test.
+
+    ``register_applicant`` runs through ``validate_registration_security``
+    which keeps a per-IP counter; back-to-back test calls from the same
+    client IP would otherwise hit the 3/hour cap.
+    """
+    clear_rate_limits()
+    yield  # type: ignore[misc]
+    clear_rate_limits()
 from app.core.utils import utcnow
 from app.models.applicant_token import (
     ApplicantEmailVerification,

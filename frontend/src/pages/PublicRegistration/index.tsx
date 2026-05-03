@@ -6,15 +6,12 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate, Routes, Route, useLocation } from 'react-router';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import { RECAPTCHA_ENABLED, RECAPTCHA_SITE_KEY } from '../../utils/recaptcha';
 import { usePortalCSS } from './hooks/usePortalCSS';
 import { useConferencePublic } from './hooks/useConferencePublic';
 import SinglePageForm from './SinglePageForm';
 import PaymentStep from './Step5_Payment';
 import ConfirmationStep from './Step6_Confirmation';
-
-// reCAPTCHA site key (public key, safe to expose)
-const RECAPTCHA_SITE_KEY =
-  import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // Test key for development
 
 function RegistrationPortal() {
   const { tenantSlug, conferenceSlug } = useParams<{
@@ -116,8 +113,13 @@ function RegistrationPortal() {
   );
 }
 
-// Export with reCAPTCHA provider wrapper
+// Export with reCAPTCHA provider wrapper. When the site key is unset
+// (dev/test), skip the provider entirely — `useRecaptcha` no-ops in that
+// case, and the backend's `validate_recaptcha` no-ops without a secret too.
 export default function PublicRegistrationPage() {
+  if (!RECAPTCHA_ENABLED) {
+    return <RegistrationPortal />;
+  }
   return (
     <GoogleReCaptchaProvider
       reCaptchaKey={RECAPTCHA_SITE_KEY}

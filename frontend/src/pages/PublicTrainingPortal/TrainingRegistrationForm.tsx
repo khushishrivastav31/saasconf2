@@ -4,11 +4,13 @@
  * Single-page form for registering attendees to a training.
  * Follows the same pattern as conference SinglePageForm.
  */
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import publicApi from '../../config/publicApi';
 import { COUNTRY_OPTIONS } from '../../config/countries';
+import { RECAPTCHA_ENABLED } from '../../utils/recaptcha';
 import VatNumberInput from '../../components/common/VatNumberInput';
 import type { PublicTraining } from './TrainingSearch';
 import type { VatConfig } from './hooks/usePortalTexts';
@@ -97,6 +99,12 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
   const [bulkText, setBulkText] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bot-protection signals — honeypot is rendered as a hidden input below;
+  // form_start is captured at first render so the backend can reject
+  // submissions that complete in < 5 seconds.
+  const [honeypotField, setHoneypotField] = useState('');
+  const formStartRef = useRef<number>(Date.now() / 1000);
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
   // Fetch training detail
   const { data: training, isLoading } = useQuery<PublicTraining>({
@@ -266,7 +274,11 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
 
   // Register (called after payment confirmation for credit card, or directly for bank transfer)
   const doRegister = useCallback(
-    (intentId?: string | null) => {
+    async (intentId?: string | null) => {
+      const recaptcha_token =
+        RECAPTCHA_ENABLED && executeRecaptcha
+          ? await executeRecaptcha('training_register')
+          : undefined;
       registerMutation.mutate({
         placement_id: placementId,
         billing: {
@@ -286,11 +298,21 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           extra_time: a.exam_mode !== 'none' ? a.extra_time : false,
         })),
         language: lang,
-        honeypot_field: '',
-        form_start_timestamp: Date.now() / 1000,
+        recaptcha_token,
+        honeypot_field: honeypotField,
+        form_start_timestamp: formStartRef.current,
       });
     },
-    [attendees, billing, placementId, registerMutation, lang, hasExam]
+    [
+      attendees,
+      billing,
+      placementId,
+      registerMutation,
+      lang,
+      hasExam,
+      executeRecaptcha,
+      honeypotField,
+    ]
   );
 
   // Stripe payment success → create registration with payment_intent_id
@@ -799,6 +821,18 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
               </div>
             </div>
           </div>
+
+          {/* Honeypot — hidden from real users, attractive to bots */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            value={honeypotField}
+            onChange={(e) => setHoneypotField(e.target.value)}
+            style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }}
+          />
 
           {/* Terms */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
