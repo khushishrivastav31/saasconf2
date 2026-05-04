@@ -11,7 +11,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -22,6 +22,7 @@ from app.core.security.recaptcha import validate_recaptcha
 from app.core.security.registrations import validate_registration_security
 from app.core.stripe_helper import create_payment_intent
 from app.core.user_auto_creation import create_user_for_registration
+from app.db.session import set_rls_context
 from app.models.booking import BookingOption
 from app.models.cfp import CFPApplicant, CFPPaper
 from app.models.conference import Conference
@@ -520,8 +521,12 @@ async def create_public_registration(
         except (ValueError, TypeError):
             pass  # Ignore invalid dates
 
-    # Set RLS context for multi-tenant isolation
-    await db.execute(text("SET app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
+    # Set RLS context for multi-tenant isolation. Uses set_config() rather
+    # than ``SET app.current_tenant_id = $1`` because Postgres rejects
+    # parameterised SET statements (asyncpg sends a $1 placeholder which
+    # the parser refuses), so the raw form blew up under any client driver
+    # that parameterises by default.
+    await set_rls_context(db, tenant_id=str(tenant_id))
 
     # Security validations.
     # reCAPTCHA secret/threshold come from a single global config — one key

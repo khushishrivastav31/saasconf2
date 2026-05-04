@@ -764,6 +764,63 @@ class TestRegistration:
         assert res.status_code == 400
         assert "too quickly" in res.json()["detail"]
 
+    @pytest.mark.asyncio
+    async def test_register_rate_limit_429_after_three_per_hour(
+        self,
+        client: AsyncClient,
+        tenant_portal: Tenant,
+        placement_berlin: ProgramYearTraining,
+    ):
+        """The IP-based 3/hour limit kicks in on the 4th submission.
+
+        ``validate_registration_security`` is the first thing the endpoint
+        runs (after tenant resolution) and increments a per-IP counter on
+        every successful pass. The autouse ``_reset_registration_rate_limits``
+        fixture clears the store at the start of each test, so the first
+        three calls here always succeed and the fourth always trips the
+        limit — independent of how many other tests in the suite have
+        already hit the endpoint.
+        """
+        # First three registrations succeed (counter increments to 3)
+        for i in range(3):
+            payload = self._reg_payload(
+                placement_berlin.id,
+                attendees=[
+                    {
+                        "first_name": f"Rate{i}",
+                        "last_name": "Test",
+                        "email": f"rate-limit-{i}@example.de",
+                        "exam_mode": "none",
+                    }
+                ],
+            )
+            payload["billing"]["contact_email"] = f"rate-limit-{i}@example.de"
+            res = await client.post(
+                f"/api/v1/portal/{tenant_portal.slug}/trainings/register",
+                json=payload,
+            )
+            assert res.status_code == 200, f"call {i + 1} expected 200, got {res.status_code}: {res.text}"
+
+        # Fourth call from the same IP should be rate-limited
+        payload = self._reg_payload(
+            placement_berlin.id,
+            attendees=[
+                {
+                    "first_name": "Rate4",
+                    "last_name": "Test",
+                    "email": "rate-limit-4@example.de",
+                    "exam_mode": "none",
+                }
+            ],
+        )
+        payload["billing"]["contact_email"] = "rate-limit-4@example.de"
+        res = await client.post(
+            f"/api/v1/portal/{tenant_portal.slug}/trainings/register",
+            json=payload,
+        )
+        assert res.status_code == 429
+        assert "Rate limit exceeded" in res.json()["detail"]
+
 
 # ── Guaranteed Toggle Tests ───────────────────────────────────────────
 

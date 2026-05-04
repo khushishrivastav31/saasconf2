@@ -383,6 +383,46 @@ class TestPortalRegistration:
         assert response.status_code == 400
         assert "too quickly" in response.json()["detail"]
 
+    @pytest.mark.asyncio
+    async def test_register_rate_limit_429_after_three_per_hour(
+        self,
+        client: AsyncClient,
+        tenant: Tenant,
+    ):
+        """The IP-based 3/hour limit kicks in on the 4th submission.
+
+        Each successful pass through ``validate_registration_security``
+        increments a per-IP counter; the autouse fixture clears the store
+        between tests so this assertion is independent of test ordering.
+        """
+        # First three registrations succeed (each with a unique email)
+        for i in range(3):
+            response = await client.post(
+                f"{PORTAL_BASE}/{tenant.slug}/register",
+                json={
+                    "email": f"rl{i}-{uuid.uuid4().hex[:8]}@example.com",
+                    "password": "StrongPass1!",
+                    "first_name": f"RL{i}",
+                    "last_name": "Test",
+                },
+            )
+            assert response.status_code == 200, (
+                f"call {i + 1} expected 200, got {response.status_code}: {response.text}"
+            )
+
+        # Fourth call from the same IP should be rate-limited
+        response = await client.post(
+            f"{PORTAL_BASE}/{tenant.slug}/register",
+            json={
+                "email": f"rl4-{uuid.uuid4().hex[:8]}@example.com",
+                "password": "StrongPass1!",
+                "first_name": "RL4",
+                "last_name": "Test",
+            },
+        )
+        assert response.status_code == 429
+        assert "Rate limit exceeded" in response.json()["detail"]
+
 
 class TestPortalLogin:
     """Tests for POST /portal/{tenant_slug}/login."""
