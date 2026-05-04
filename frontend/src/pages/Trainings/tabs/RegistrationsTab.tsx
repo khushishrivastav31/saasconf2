@@ -10,6 +10,7 @@ import { useSearchParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
+import BulkCancelDialog from '../../../components/trainings/BulkCancelDialog';
 import type { OfferAttendeeItem } from './OfferAttendeeRow';
 import type { Registration, ExamLanguage } from './RegistrationRow';
 import { buildGroups, type Placement } from './registrationGroups';
@@ -30,6 +31,7 @@ export default function RegistrationsTab() {
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedRegId, setExpandedRegId] = useState<string | null>(null);
+  const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
 
   const params = useMemo(() => {
     const p: Record<string, string> = { page: String(page), per_page: '100' };
@@ -172,7 +174,26 @@ export default function RegistrationsTab() {
             </span>
           )}
         </h2>
+        <button
+          type="button"
+          onClick={() => setBulkCancelOpen(true)}
+          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+          title="Filter and bulk-cancel many registrations at once (each gets a credit note)"
+        >
+          Cancel many…
+        </button>
       </div>
+      <BulkCancelDialog
+        open={bulkCancelOpen}
+        onClose={() => setBulkCancelOpen(false)}
+        onCompleted={(result) => {
+          showToast(
+            `Cancelled ${result.cancelled} registration${result.cancelled === 1 ? '' : 's'} (${result.credit_notes_created} credit notes, ${result.emails_sent} emails)`,
+            'success'
+          );
+          queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+        }}
+      />
 
       <div className="flex flex-nowrap items-center gap-2 mb-4">
         <input

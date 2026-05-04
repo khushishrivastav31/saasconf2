@@ -58,7 +58,17 @@ export const trainingOperationsCategory: HandbookCategory = {
 </ul>
 <strong>Filters:</strong> Search by name/email/company/training, filter by status, date range. Pagination for large datasets.
 <br/><br/>
-<strong>Attendee actions:</strong> Expand a registration row to see attendees. Edit exam mode, exam language, and extra time per attendee. Park attendees to the parking lot.`,
+<strong>Attendee actions:</strong> Expand a registration row to see attendees. Edit exam mode, exam language, and extra time per attendee. Park attendees to the parking lot.
+<br/><br/>
+<strong>Cancel many at once:</strong> If a batch of bot or script registrations slipped past the public-portal protections (reCAPTCHA / honeypot / time-trap / IP rate-limit, see <em>Recent Platform Changes</em> in the Appendix), use the <strong>Cancel many…</strong> button at the top of the Registrations tab. This opens a three-step dialog:
+<ol class="list-decimal list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Filter:</strong> narrow the registrations to cancel — by date range, originating IP (captured at registration time), billing-email pattern (e.g. <code>%@spam.com</code>), or payment status. A reason field (≥ 10 chars) is required and is recorded on every credit note + audit log row.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Preview:</strong> a read-only summary — total count, total credit-note value, top originating IPs and billing emails, and the matching rows with a checkbox per row. All rows are ticked by default; untick any you want to spare from the cancel.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Confirm:</strong> type the displayed count (which reflects only the ticked rows) to enable the final button — defends against fat-finger clicks. On submit, each ticked row is treated exactly like a single cancel — original invoice flipped to cancelled, credit note generated and emailed to the billing contact, Stripe payment links deactivated, refunds initiated for paid credit-card invoices.</li>
+</ol>
+Re-running the same filter cancels zero rows (already-cancelled rows are excluded by default), so accidental re-clicks are safe. The conference-registration counterpart uses the same dialog and ships in a follow-up.
+<br/><br/>
+<strong>About the originating IP — GDPR retention.</strong> The IP captured at registration time is held for the briefest window the law allows: it's used to detect fraud while a registration is still pending, and is automatically deleted the moment the row reaches a terminal state — either <strong>paid</strong> (no abuse possible past payment) or <strong>cancelled</strong> (row is already being cleaned up). There is no time-based retention; we delete on transition. After that point the row stays in the system without the IP for the rest of its life. This means the IP filter above only matches recent, still-pending registrations — which is exactly when an admin needs the bulk-cancel anyway.`,
           }}
         />
       ),

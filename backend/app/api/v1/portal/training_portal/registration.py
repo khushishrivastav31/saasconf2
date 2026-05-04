@@ -256,6 +256,7 @@ async def register_for_training(
         vat_amount=vat_amount,
         total=total,
         currency=currency,
+        originating_ip=request.client.host if request.client else None,
     )
     db.add(registration)
 

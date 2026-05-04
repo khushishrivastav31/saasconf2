@@ -219,6 +219,12 @@ class Registration(Base):
         nullable=True,
     )
 
+    # Originating IP address of the public registration request. Populated
+    # by the public-portal endpoint from ``request.client.host``; admin /
+    # backfill flows leave it NULL. Used by the bulk-cancel filter to scope
+    # cleanup to a known bot burst.
+    originating_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

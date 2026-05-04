@@ -166,6 +166,22 @@ TrainingAttendee (central identity, email-based)
 - **No refund**: on replace or reassign — payment transfers to new invoice instead
 - **Deactivate**: old payment link deactivated on replace of unpaid CC invoice
 
+### Bulk-cancel-with-credit-note
+For mass cleanup of bot/script registrations that slipped past the bot-protection layers (PR #189). Two endpoints under `/api/v1/trainings/registrations/`:
+- `POST .../bulk-cancel/preview` — read-only dry run that returns total + top-N IP/email groupings + the matching rows. Capped at `MAX_BULK_CANCEL = 500`; returns `truncated: true` when the filter matches more.
+- `POST .../bulk-cancel/confirm` — applies the cancellation. Each match flows through the same primitives as the single-cancel path (`build_credit_note`, `generate_training_invoice_number`, `send_training_invoice_email`, `deactivate_training_payment_link`, `refund_training_payment`), so the resulting ledger is indistinguishable from N independent single-cancels. Refuses with HTTP 400 when over the cap.
+
+Filter fields: `created_after` / `created_before`, `originating_ip` (captured on registration via `request.client.host` since PR #193, indexed), `placement_ids`, `billing_email_pattern` (Postgres ILIKE), `payment_status`, `reason` (10–500 chars, recorded on the audit log + credit-note notes), and an optional `registration_ids` subset (drives per-row checkbox deselection in the preview UI — the filter remains the safety net). The default filter excludes already-cancelled rows so re-running is idempotent.
+
+Mutations commit in one transaction; emails + Stripe refunds + payment-link deactivations run after commit on a best-effort basis (errors surface in `result.errors[]` per registration; the cancel itself is durable). Conference-registration counterpart is a planned follow-up — same dialog component will drive it once the conference orchestrator lands.
+
+### `originating_ip` retention rule (GDPR data minimization)
+The `Registration.originating_ip` and `TrainingRegistration.originating_ip` columns are GDPR personal data. Lawful basis: legitimate interest under Art. 6(1)(f) for fraud / abuse prevention (Recital 49). Retention is **purpose-bound, not time-bound** — the IP is automatically nulled the moment the row enters a terminal status (`paid` or `cancelled`).
+
+Implementation: a SQLAlchemy `before_flush` listener at [app/db/listeners/originating_ip_retention.py](backend/app/db/listeners/originating_ip_retention.py) inspects every dirty + new instance of `Registration` / `TrainingRegistration` and zeroes the IP when `status in ('paid', 'cancelled')`. Idempotent (a row with `originating_ip=None` is a no-op). One central enforcement point covers every transition path — public-portal endpoints, mark-paid endpoints, Stripe webhooks, single-cancel, bulk-cancel — without each call site needing to remember the rule.
+
+In practice the IP exists only for the brief window between form submission and either payment confirmation or cancellation. After that the row carries `NULL` for the rest of its lifetime in the DB.
+
 ## Messaging architecture (PRs #150–#168)
 
 Training threads piggy-back on the same `message_threads` / `messages` / `message_participants` tables as conferences. The discriminator is `MessageThread.domain` ∈ `{conference, training}` plus `domain_entity_id` (the polymorphic anchor, points to a `TrainingRegistration` for training threads). Migration 213 added the columns; 214 made `conference_id` nullable so training threads can leave it NULL.

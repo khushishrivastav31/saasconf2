@@ -600,6 +600,11 @@ async def create_public_registration(
     registrations: list[Registration] = []
     responses: list[RegistrationResponse] = []
 
+    # Captured once per request — the bulk-cancel filter scopes "all the
+    # bot's submissions" by this single value, so the same source IP is
+    # written onto every registration in this multi-attendee submission.
+    originating_ip = request.client.host if request.client else None
+
     for att in data.attendees:
         reg = Registration(
             tenant_id=tenant_id,
@@ -617,6 +622,7 @@ async def create_public_registration(
             registration_mode=RegistrationMode.PORTAL.value,
             status=RegistrationStatus.REGISTERED_PENDING_INVOICE.value,
             notes=att.notes,
+            originating_ip=originating_ip,
             # No created_by for public registrations
         )
         db.add(reg)

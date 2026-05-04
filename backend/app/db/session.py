@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import get_settings
 
+# Side-effect import: registers SQLAlchemy event listeners (e.g. the
+# originating-ip retention rule) before any session opens.
+from app.db import listeners  # noqa: F401
+
 settings = get_settings()
 
 # SSL configuration for production database connections

@@ -83,6 +83,15 @@ Token-based password reset. OWASP-compliant.
 - **Refresh tokens**: Store SHA256 hash in DB, return raw token to client once
 - **Logging**: Never log passwords, tokens, or PII
 
+## IP-address retention (GDPR Art. 5(1)(c) + (e))
+The public registration tables capture the originating IP for fraud / abuse detection (lawful basis: legitimate interest, Recital 49). Retention is **purpose-bound, not time-bound**:
+
+- `Registration.originating_ip` and `TrainingRegistration.originating_ip` are nulled the moment the row's `status` enters a terminal value (`paid` or `cancelled`).
+- Enforcement: SQLAlchemy `before_flush` listener at `app/db/listeners/originating_ip_retention.py`. Centralized so call sites don't have to remember the rule.
+- Both columns are listed in `PORTAL_EXPORT_FIELDS` (`app/core/gdpr/lookups.py`) so DSAR exports surface them while the data is still present.
+
+If you add a new column that holds an IP, MAC address, device fingerprint, or similar quasi-identifier on a public-facing table, follow the same shape: capture it for the operational purpose only, and add a transition rule that clears it once the purpose ends. Don't introduce time-based retention crons unless the data has no associated state machine.
+
 ## CSRF & CORS
 - CORS origins whitelisted in `CORS_ORIGINS` env var — never `allow_origins=["*"]` with credentials
 - Origin validation middleware rejects state-changing requests from unknown origins

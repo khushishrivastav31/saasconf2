@@ -312,6 +312,7 @@ PORTAL_EXPORT_FIELDS: dict[str, frozenset[str]] = {
             "phone",
             "registration_mode",
             "status",
+            "originating_ip",
             "created_at",
         }
     ),
@@ -370,6 +371,7 @@ PORTAL_EXPORT_FIELDS: dict[str, frozenset[str]] = {
             "vat_amount",
             "total",
             "currency",
+            "originating_ip",
             "created_at",
         }
     ),

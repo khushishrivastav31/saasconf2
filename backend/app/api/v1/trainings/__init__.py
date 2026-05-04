@@ -2,6 +2,7 @@
 
 from .admin_threads import router as admin_threads_router
 from .attendees import router as attendees_router
+from .bulk_cancel import router as bulk_cancel_router
 from .certification_bodies import router as certification_bodies_router
 from .core import detail_router, router  # core has root-level routes (GET /, POST /)
 from .customers import router as customers_router
@@ -69,6 +70,9 @@ router.include_router(offer_invoicing_router)
 router.include_router(offer_templates_router)
 router.include_router(portal_settings_router)
 router.include_router(registrations_router)
+# Bulk-cancel sits at /registrations/bulk-cancel/* — included separately
+# so the file stays focused on the bulk flow + its tests.
+router.include_router(bulk_cancel_router)
 router.include_router(messaging_router)
 router.include_router(messaging_placement_router)
 router.include_router(messaging_attendees_broadcast_router)

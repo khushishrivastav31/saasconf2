@@ -4483,6 +4483,46 @@ export type paths = {
     patch: operations['update_registration_attendee_api_v1_trainings_registrations__registration_id__attendees__attendee_id__patch'];
     trace?: never;
   };
+  '/api/v1/trainings/registrations/bulk-cancel/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Preview Bulk Cancel
+     * @description Read-only: return the rows that would be cancelled by the given filter.
+     */
+    post: operations['preview_bulk_cancel_api_v1_trainings_registrations_bulk_cancel_preview_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/trainings/registrations/bulk-cancel/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Confirm Bulk Cancel
+     * @description Cancel each matching registration, generating one credit note per.
+     */
+    post: operations['confirm_bulk_cancel_api_v1_trainings_registrations_bulk_cancel_confirm_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/trainings/registrations/{registration_id}/messages/broadcast': {
     parameters: {
       query?: never;
@@ -15779,6 +15819,29 @@ export type components = {
       notes?: string | null;
     };
     /**
+     * BulkCancelError
+     * @description Per-row error from the confirm path (e.g. failed Stripe refund).
+     */
+    BulkCancelError: {
+      /**
+       * Registration Id
+       * Format: uuid
+       */
+      registration_id: string;
+      /** Error */
+      error: string;
+    };
+    /**
+     * BulkCancelGroupCount
+     * @description One row of a 'top N' grouping in the preview response.
+     */
+    BulkCancelGroupCount: {
+      /** Key */
+      key: string;
+      /** Count */
+      count: number;
+    };
+    /**
      * BulkDiscountCodeCreate
      * @description Bulk discount code generation request.
      */
@@ -23978,6 +24041,157 @@ export type components = {
     RefreshRequest: {
       /** Refresh Token */
       refresh_token: string;
+    };
+    /**
+     * RegistrationBulkCancelFilter
+     * @description Filter for selecting registrations to bulk-cancel.
+     *
+     *     All fields are AND-combined; each ``None``/empty field is a wildcard.
+     *     The endpoint ALWAYS additionally constrains by tenant + the
+     *     surface-specific scope (conference_id for conference reg, tenant for
+     *     training).
+     */
+    RegistrationBulkCancelFilter: {
+      /**
+       * Created After
+       * @description Only registrations created at or after this UTC datetime.
+       */
+      created_after?: string | null;
+      /**
+       * Created Before
+       * @description Only registrations created at or before this UTC datetime.
+       */
+      created_before?: string | null;
+      /**
+       * Originating Ip
+       * @description Exact-match on the IP captured at registration creation time. Existing rows from before the originating_ip column was added are NULL and will not match.
+       */
+      originating_ip?: string | null;
+      /**
+       * Booking Option Ids
+       * @description Conference reg only: limit to registrations for these booking options. Ignored on the training endpoint.
+       */
+      booking_option_ids?: string[] | null;
+      /**
+       * Placement Ids
+       * @description Training reg only: limit to registrations for these training placements. Ignored on the conference endpoint.
+       */
+      placement_ids?: string[] | null;
+      /**
+       * Billing Email Pattern
+       * @description Postgres ILIKE pattern against the billing contact email, e.g. ``%@spam.com`` to match any throwaway from spam.com. Anchored patterns (no leading ``%``) match by prefix.
+       */
+      billing_email_pattern?: string | null;
+      /**
+       * Payment Status
+       * @description ``unpaid`` matches registrations whose linked invoice is not yet marked paid; ``paid`` is its inverse; ``any`` skips the filter.
+       * @default any
+       * @enum {string}
+       */
+      payment_status?: 'any' | 'unpaid' | 'paid';
+      /**
+       * Reason
+       * @description Human-readable reason for the bulk cancellation. Recorded on the audit log, on each per-registration history row, and appended to each generated credit note's notes field.
+       */
+      reason: string;
+      /**
+       * Registration Ids
+       * @description Optional explicit ID subset, used by the preview's per-row checkboxes. When set, the endpoint cancels ONLY rows that are both in this list AND in the filter result — the filter is still applied as a safety net, so an admin cannot trick the endpoint into cancelling a row outside the previewed scope. Leave NULL to cancel every matching row (the default before per-row deselection was added).
+       */
+      registration_ids?: string[] | null;
+    };
+    /**
+     * RegistrationBulkCancelPreview
+     * @description Read-only preview of which rows the filter currently matches.
+     */
+    RegistrationBulkCancelPreview: {
+      /**
+       * Total
+       * @description Total matching rows. May exceed MAX_BULK_CANCEL — confirm will reject in that case and the admin must narrow the filter.
+       */
+      total: number;
+      /**
+       * Truncated
+       * @description True if total > MAX_BULK_CANCEL. The ``items`` list is still populated up to MAX_BULK_CANCEL so the admin can see what would be cancelled if they narrowed.
+       */
+      truncated: boolean;
+      /**
+       * Total Credit Note Value
+       * @description Sum of the original invoice totals (positive number; the credit notes will be the negation of this).
+       */
+      total_credit_note_value: string;
+      /**
+       * By Originating Ip
+       * @description Top 10 groups by originating IP, descending count.
+       */
+      by_originating_ip?: components['schemas']['BulkCancelGroupCount'][];
+      /**
+       * By Billing Email
+       * @description Top 10 groups by billing email, descending count.
+       */
+      by_billing_email?: components['schemas']['BulkCancelGroupCount'][];
+      /**
+       * Items
+       * @description Per-row preview, capped at MAX_BULK_CANCEL.
+       */
+      items?: components['schemas']['RegistrationBulkCancelPreviewItem'][];
+    };
+    /**
+     * RegistrationBulkCancelPreviewItem
+     * @description A single registration row surfaced in the preview list.
+     */
+    RegistrationBulkCancelPreviewItem: {
+      /**
+       * Registration Id
+       * Format: uuid
+       */
+      registration_id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Billing Email */
+      billing_email: string;
+      /** Originating Ip */
+      originating_ip: string | null;
+      /** Invoice Total */
+      invoice_total: string;
+      /** Invoice Status */
+      invoice_status: string | null;
+      /** Label */
+      label: string;
+    };
+    /**
+     * RegistrationBulkCancelResult
+     * @description Response from the confirm endpoint.
+     */
+    RegistrationBulkCancelResult: {
+      /**
+       * Cancelled
+       * @description Registrations whose status flipped to cancelled.
+       */
+      cancelled: number;
+      /**
+       * Credit Notes Created
+       * @description New credit-note invoice rows persisted.
+       */
+      credit_notes_created: number;
+      /**
+       * Emails Sent
+       * @description Credit-note emails dispatched (best-effort).
+       */
+      emails_sent: number;
+      /**
+       * Refunds Initiated
+       * @description Stripe refunds requested (best-effort).
+       */
+      refunds_initiated: number;
+      /**
+       * Errors
+       * @description Best-effort side-effect failures. The cancellation itself is always durable — these only signal that an email or refund didn't go through and may need manual follow-up.
+       */
+      errors?: components['schemas']['BulkCancelError'][];
     };
     /**
      * RegistrationItemCreate
@@ -39456,6 +39670,76 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  preview_bulk_cancel_api_v1_trainings_registrations_bulk_cancel_preview_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrationBulkCancelFilter'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RegistrationBulkCancelPreview'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  confirm_bulk_cancel_api_v1_trainings_registrations_bulk_cancel_confirm_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrationBulkCancelFilter'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RegistrationBulkCancelResult'];
         };
       };
       /** @description Validation Error */
