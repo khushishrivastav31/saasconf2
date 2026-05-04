@@ -49,5 +49,21 @@ export const trainingAppendixCategory: HandbookCategory = {
         />
       ),
     },
+    {
+      id: 't-recent-changes',
+      title: 'Recent Platform Changes',
+      categoryId: 'category-t-appendix',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">For the full developer-focused log of recent platform changes (bot protection, infrastructure, scheduled maintenance routines), see <strong>Recent Platform Changes</strong> in the Conference handbook's Appendix. Highlights that affect the training module specifically:</p>
+
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Public training registration is now bot-protected <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">(2026-05-03)</span></h4>
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Action required</strong> — set <code>RECAPTCHA_SECRET_KEY</code> and <code>VITE_RECAPTCHA_SITE_KEY</code> on each environment for the protection to engage. Get keys from <a href="https://www.google.com/recaptcha/admin" class="text-primary-600 hover:underline">https://www.google.com/recaptcha/admin</a>.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">The public training registration form (<code>/{tenant}/trainings/register</code>) was previously unprotected — registrations could be flooded by a script. It now shares the same defense in depth as the conference and CFP-applicant forms: reCAPTCHA v3, hidden honeypot input, 5-second form-time-trap, disposable-email blocklist, and a Redis-backed IP rate-limit (<code>3/hour</code>). The submitter sees the same form; bot signals are rejected with <code>HTTP 400</code>, rate-limited bursts with <code>HTTP 429</code>.</p>`,
+          }}
+        />
+      ),
+    },
   ],
 };

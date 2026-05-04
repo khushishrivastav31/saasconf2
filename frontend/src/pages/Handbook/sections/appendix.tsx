@@ -42,5 +42,39 @@ export const appendixCategory: HandbookCategory = {
         />
       ),
     },
+    {
+      id: 'recent-changes',
+      title: 'Recent Platform Changes',
+      categoryId: 'category-appendix',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">A developer-focused log of platform-level changes over the last few days. Operator-relevant items are flagged with <strong>Action required</strong>; the rest are infrastructure/tooling notes that explain behaviour you might notice but don't need to act on.</p>
+
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Bot protection on public registration forms <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">(2026-05-03)</span></h4>
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Action required</strong> — set <code>RECAPTCHA_SECRET_KEY</code> (backend) and <code>VITE_RECAPTCHA_SITE_KEY</code> (frontend build) on each environment. Get keys from <a href="https://www.google.com/recaptcha/admin" class="text-primary-600 hover:underline">https://www.google.com/recaptcha/admin</a> (reCAPTCHA v3 — one site/secret pair powers all three portals).</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">Conference registration, training registration, and CFP applicant signup now share the same defense in depth: reCAPTCHA v3 score, hidden honeypot input, 5-second form-time-trap, disposable-email blocklist, and a Redis-backed IP rate-limit (<code>3/hour</code> for conf + training reg, <code>5/minute</code> for CFP signup). Until the keys are configured, the system runs without captcha — the other layers are still active.</p>
+
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Portal sidebar role gating <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">(2026-04-30)</span></h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">The unified portal sidebar now only shows menu sections that match the user's actual roles. Users with no role flags see a minimal navigation. Existing CFP committee members and training portal users keep full access automatically.</p>
+
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Infrastructure &amp; tooling <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">(2026-04-30)</span></h4>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Frontend now uses pnpm 10</strong> (was npm). All <code>npm install</code> / <code>npm run X</code> commands locally become <code>pnpm install</code> / <code>pnpm X</code>. The Docker images, CI workflow, and Husky hooks are aligned. The shared dep store cuts install time considerably.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Security overrides on transitive dependencies</strong>: <code>d3-color ≥ 3.1.0</code> (ReDoS, was already in place) and <code>dompurify ≥ 3.3.2</code> (8 moderate mXSS/XSS advisories in <code>monaco-editor</code>'s exact-pinned 3.2.7). <code>pnpm audit</code> now reports zero known vulnerabilities at any severity.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Container base images bumped</strong>: node 22.14.0 → 22.22.2-alpine, python 3.12.10 → 3.12.13-slim, plus a refreshed nginx 1.27-alpine SHA digest (Dockerfile.prod and the staging compose file).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Vite pinned to 7.x</strong>: Vite 8's Rolldown bundler has a regression that crashes chart pages in dev with <code>TypeError: InternMap is not a constructor</code>. Production builds (rollup) are unaffected, so CI and staging stay green; only local <code>pnpm dev</code> chart pages were broken. Pinned <code>vite</code>, <code>@vitejs/plugin-react</code>, <code>vitest</code>, and <code>@vitest/coverage-v8</code> to the last esbuild-only line. A scheduled quarterly check auto-opens a PR to re-bump once Rolldown ships the fix.</li>
+</ul>
+
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Scheduled maintenance routines</h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">Two automated agents now run on a cron and open PRs only when their conditions are met (no empty-PR noise):</p>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Monthly</strong> (1st of every month) — checks whether <code>eslint-plugin-react-hooks v8</code> has shipped on npm with a peer range that includes our <code>eslint@10</code>. If yes, opens a PR to drop the <code>strict-peer-dependencies=false</code> escape hatch in <code>frontend/.npmrc</code>.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Quarterly</strong> (1st of Jan/Apr/Jul/Oct) — inspects Vite 8's optimizeDeps bundle for the InternMap lazy-init wrapper. If gone, re-bumps Vite + recharts together; otherwise exits silently.</li>
+</ul>`,
+          }}
+        />
+      ),
+    },
   ],
 };
