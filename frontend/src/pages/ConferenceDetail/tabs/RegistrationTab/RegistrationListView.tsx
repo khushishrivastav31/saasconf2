@@ -20,6 +20,7 @@ interface RegistrationListViewProps {
   onPageChange: (page: number) => void;
   onSelectRegistration: (id: string) => void;
   onShowCreate: () => void;
+  onShowBulkCancel?: () => void;
 }
 
 export default function RegistrationListView({
@@ -37,6 +38,7 @@ export default function RegistrationListView({
   onPageChange,
   onSelectRegistration,
   onShowCreate,
+  onShowBulkCancel,
 }: RegistrationListViewProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -75,12 +77,23 @@ export default function RegistrationListView({
           </select>
         </div>
         {isAdmin && (
-          <button
-            onClick={onShowCreate}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
-          >
-            + New Registration
-          </button>
+          <div className="flex items-center gap-2">
+            {onShowBulkCancel && (
+              <button
+                onClick={onShowBulkCancel}
+                className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                title="Filter and bulk-cancel many registrations at once (each gets a credit note)"
+              >
+                Cancel many…
+              </button>
+            )}
+            <button
+              onClick={onShowCreate}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
+            >
+              + New Registration
+            </button>
+          </div>
         )}
       </div>
 

@@ -118,7 +118,10 @@ export const registrationFinanceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">Attendees (3.4): Populated from paid registrations</li>
 <li class="text-gray-700 dark:text-gray-300">Alumni (3.6): Auto-created from paid registrations</li>
 <li class="text-gray-700 dark:text-gray-300">Booking Options (5.1): Determines pricing and available options</li>
-</ul>`,
+</ul>
+<strong>Cancel many at once:</strong> If a batch of bot or script registrations slipped past the public-portal protections, use the <strong>Cancel many&hellip;</strong> button at the top of the Registrations tab. Three-step dialog: filter (date range, originating IP, payment status, reason) &rarr; preview with per-row checkboxes (untick to spare) &rarr; typed-count confirmation. Each ticked row's invoice is flipped to cancelled, a credit note is generated and emailed to the billing contact, Stripe payment links are deactivated, and refunds are initiated for paid credit-card invoices. A multi-attendee submission produces ONE credit note for the bundled invoice (not per attendee).
+<br/><br/>
+<em>Heads-up:</em> the email-pattern filter is unavailable on the conference surface (the email is PII-encrypted at rest). Filter by IP and/or time window instead. The originating IP is auto-deleted once a registration is paid or cancelled (GDPR data minimization), so the IP filter only matches recent, still-pending rows &mdash; which is exactly when an admin needs the bulk-cancel anyway.`,
           }}
         />
       ),

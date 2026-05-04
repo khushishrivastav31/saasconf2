@@ -10761,6 +10761,46 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/conferences/{conference_id}/registrations/bulk-cancel/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Preview Bulk Cancel
+     * @description Read-only: return the rows that would be cancelled by this filter.
+     */
+    post: operations['preview_bulk_cancel_api_v1_conferences__conference_id__registrations_bulk_cancel_preview_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/conferences/{conference_id}/registrations/bulk-cancel/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Confirm Bulk Cancel
+     * @description Cancel each matching invoice, generating one credit note per.
+     */
+    post: operations['confirm_bulk_cancel_api_v1_conferences__conference_id__registrations_bulk_cancel_confirm_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/conferences/{conference_id}/registration-question-answers': {
     parameters: {
       query?: never;
@@ -54499,6 +54539,80 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  preview_bulk_cancel_api_v1_conferences__conference_id__registrations_bulk_cancel_preview_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        conference_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrationBulkCancelFilter'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RegistrationBulkCancelPreview'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  confirm_bulk_cancel_api_v1_conferences__conference_id__registrations_bulk_cancel_confirm_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        conference_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrationBulkCancelFilter'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RegistrationBulkCancelResult'];
         };
       };
       /** @description Validation Error */

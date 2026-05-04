@@ -26,9 +26,22 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCompleted?: (result: Result) => void;
+  /**
+   * API endpoints to call. Defaults to the training surface, but the
+   * conference surface plugs in its own URLs (with the conference id
+   * baked in) without forking the dialog.
+   */
+  previewUrl?: string;
+  confirmUrl?: string;
 }
 
-export default function BulkCancelDialog({ open, onClose, onCompleted }: Props) {
+export default function BulkCancelDialog({
+  open,
+  onClose,
+  onCompleted,
+  previewUrl = '/trainings/registrations/bulk-cancel/preview',
+  confirmUrl = '/trainings/registrations/bulk-cancel/confirm',
+}: Props) {
   const [step, setStep] = useState<Step>('filter');
   const [createdAfter, setCreatedAfter] = useState('');
   const [createdBefore, setCreatedBefore] = useState('');
@@ -90,10 +103,7 @@ export default function BulkCancelDialog({ open, onClose, onCompleted }: Props) 
     }
     setLoading(true);
     try {
-      const res = await api.post<Preview>(
-        '/trainings/registrations/bulk-cancel/preview',
-        buildFilter()
-      );
+      const res = await api.post<Preview>(previewUrl, buildFilter());
       setPreview(res.data);
       // Default: all rows ticked. Admin unticks any they want to spare.
       setSelectedIds(new Set((res.data.items ?? []).map((it) => it.registration_id)));
@@ -110,10 +120,7 @@ export default function BulkCancelDialog({ open, onClose, onCompleted }: Props) 
     setError(null);
     setLoading(true);
     try {
-      const res = await api.post<Result>(
-        '/trainings/registrations/bulk-cancel/confirm',
-        buildFilter({ withIds: true })
-      );
+      const res = await api.post<Result>(confirmUrl, buildFilter({ withIds: true }));
       setResult(res.data);
       setStep('done');
       onCompleted?.(res.data);

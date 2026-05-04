@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Conference, Registration } from '../../../../types';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import ReplaceAttendeeModal from '../../../../components/modals/ReplaceAttendeeModal';
+import BulkCancelDialog from '../../../../components/trainings/BulkCancelDialog';
 import { useRegistrationQueries } from './hooks/useRegistrationQueries';
 import { useRegistrationMutations } from './hooks/useRegistrationMutations';
 import { useCreateFormState } from './hooks/useCreateFormState';
@@ -27,9 +29,11 @@ export default function RegistrationTab({
   const [page, setPage] = useState(1);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showBulkCancel, setShowBulkCancel] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<Registration | null>(null);
+  const queryClient = useQueryClient();
 
   // ---- Queries ----
   const { data, isLoading, options, periods, invoiceMap } = useRegistrationQueries(
@@ -200,6 +204,20 @@ export default function RegistrationTab({
           setShowCreate(true);
           setError(null);
           setSuccess(null);
+        }}
+        onShowBulkCancel={isAdmin ? () => setShowBulkCancel(true) : undefined}
+      />
+
+      <BulkCancelDialog
+        open={showBulkCancel}
+        onClose={() => setShowBulkCancel(false)}
+        previewUrl={`/conferences/${conference.id}/registrations/bulk-cancel/preview`}
+        confirmUrl={`/conferences/${conference.id}/registrations/bulk-cancel/confirm`}
+        onCompleted={(result) => {
+          setSuccess(
+            `Cancelled ${result.cancelled} registration${result.cancelled === 1 ? '' : 's'} (${result.credit_notes_created} credit notes, ${result.emails_sent} emails)`
+          );
+          queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
         }}
       />
 

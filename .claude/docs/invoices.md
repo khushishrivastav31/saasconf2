@@ -36,6 +36,15 @@ deleted  ↓   cancelled (with credit note)
 - **Cancelled invoices**: Immutable, linked to credit note via `related_invoice_id`
 - **Credit notes**: Auto-generated on cancel, status always `sent`, cannot be deleted
 
+### Bulk-cancel-with-credit-note (conference + training)
+For mass cleanup of bot/script registrations after the fact. Two parallel surfaces:
+- **Conference**: `POST /api/v1/conferences/{conference_id}/registrations/bulk-cancel/{preview,confirm}` — orchestrator at `app/api/v1/registrations/bulk_cancel.py`. Reuses `cancel_registrations_for_invoice`, `create_credit_note_for_invoice`, `generate_cancellation_number`, `deactivate_payment_link_for_invoice`, `refund_payment`, `send_invoice_email`. Deduplicates by `billing_profile_id` (a multi-attendee submission produces ONE credit note for the bundled invoice, not N).
+- **Training**: `POST /api/v1/trainings/registrations/bulk-cancel/{preview,confirm}` — orchestrator at `app/api/v1/trainings/bulk_cancel.py`. Reuses the per-attendee cancel path's primitives (`build_credit_note`, `generate_training_invoice_number`, etc.). One credit note per matching `TrainingRegistration` (training reg's 1:1 reg-to-invoice shape).
+
+Both endpoints share `app/schemas/bulk_cancel.py` (`RegistrationBulkCancelFilter` + preview/result types) and the same frontend dialog (`frontend/src/components/trainings/BulkCancelDialog.tsx`, parameterized via `previewUrl` + `confirmUrl` props). Cap is `MAX_BULK_CANCEL = 500` per call; the filter enforces it on the unrestricted match count so a forged `registration_ids` subset can't sidestep it. `TenantAdminDep` gates both — conference admins are NOT permitted (consistent with single-cancel).
+
+Conference-side caveat: `billing_email_pattern` is unsupported and returns 400, because `BillingProfile.contact_email` is PII-encrypted at rest and ILIKE can't be evaluated in SQL. Use `originating_ip` + time window instead.
+
 ---
 
 ## Core Modules
