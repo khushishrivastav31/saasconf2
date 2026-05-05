@@ -970,6 +970,30 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/users/{user_id}/unlock-login': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Unlock User Login
+     * @description Clear the brute-force login lockout (failed-attempt counter) for a user.
+     *
+     *     After 5 failed logins within 15 minutes the account is locked. This
+     *     lets a tenant admin (or super admin) lift the lock for a colleague
+     *     who fat-fingered their password.
+     */
+    post: operations['unlock_user_login_api_v1_users__user_id__unlock_login_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/users/{user_id}/resend-invite': {
     parameters: {
       query?: never;
@@ -31600,6 +31624,41 @@ export interface operations {
         /** @description Permanently delete user (super admin only) */
         permanent?: boolean;
       };
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  unlock_user_login_api_v1_users__user_id__unlock_login_post: {
+    parameters: {
+      query?: never;
       header?: {
         authorization?: string | null;
       };

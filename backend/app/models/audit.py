@@ -83,6 +83,7 @@ class AuditAction:
     USER_PASSWORD_RESET_REQUESTED = "user.password_reset_requested"
     USER_PASSWORD_RESET_COMPLETED = "user.password_reset_completed"
     USER_PASSWORD_CHANGED = "user.password_changed"
+    USER_UNLOCK_LOGIN = "user.unlock_login"
 
     # MFA
     MFA_ENABLED = "user.mfa_enabled"

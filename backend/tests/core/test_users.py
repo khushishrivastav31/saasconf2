@@ -2,6 +2,7 @@
 
 import uuid
 
+import pytest
 from httpx import AsyncClient
 
 from app.models.tenant import Tenant
@@ -215,6 +216,89 @@ async def test_create_user_without_password(
     assert data["is_active"] is True
     assert "id" in data
     assert data["last_login"] is None
+
+
+# ── Unlock login (clear failed-attempt counter) ─────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_unlock_login_no_attempts(
+    client: AsyncClient,
+    tenant: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Unlocking a user with no failed attempts is a no-op that reports was_locked=false."""
+    create_resp = await client.post(
+        BASE_URL,
+        json={**USER_PAYLOAD, "email": f"nolock-{uuid.uuid4().hex[:8]}@example.com"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    user_id = create_resp.json()["id"]
+
+    response = await client.post(
+        f"{BASE_URL}/{user_id}/unlock-login",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["was_locked"] is False
+    assert body["attempts_cleared"] == 0
+
+
+@pytest.mark.asyncio
+async def test_unlock_login_clears_lockout(
+    client: AsyncClient,
+    tenant: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Recording 5+ failed logins locks the account; unlock clears it."""
+    from app.core.security.token_blacklist import (
+        is_account_locked,
+        record_failed_login,
+    )
+    from app.core.security.token_blacklist import _redis as _redis_check  # type: ignore[attr-defined]
+
+    if _redis_check is None:
+        pytest.skip("Redis not available")
+
+    email = f"lockme-{uuid.uuid4().hex[:8]}@example.com"
+    create_resp = await client.post(
+        BASE_URL,
+        json={**USER_PAYLOAD, "email": email, "password": "StrongPass1"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    user_id = create_resp.json()["id"]
+
+    for _ in range(5):
+        await record_failed_login(email)
+    assert await is_account_locked(email) is True
+
+    response = await client.post(
+        f"{BASE_URL}/{user_id}/unlock-login",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["was_locked"] is True
+    assert body["attempts_cleared"] == 5
+    assert await is_account_locked(email) is False
+
+
+@pytest.mark.asyncio
+async def test_unlock_login_forbidden_for_non_admin(
+    client: AsyncClient,
+    tenant: Tenant,
+    regular_user: User,
+    regular_user_token: str,
+) -> None:
+    """Regular users can't unlock other users."""
+    response = await client.post(
+        f"{BASE_URL}/{regular_user.id}/unlock-login",
+        headers=auth_headers(regular_user_token),
+    )
+    assert response.status_code == 403
 
 
 # ── Resend invite ────────────────────────────────────────────────────────

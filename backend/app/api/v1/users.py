@@ -18,6 +18,11 @@ from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.security import hash_password
 from app.core.security.pii_crypto import hash_email, read_pii
+from app.core.security.token_blacklist import (
+    MAX_LOGIN_ATTEMPTS,
+    clear_failed_logins,
+    get_failed_login_count,
+)
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.settings import PronounOption
@@ -465,6 +470,58 @@ async def deactivate_tenant_user(
     await db.commit()
 
     return {"message": f"User '{read_pii(user, 'email')}' has been deactivated"}
+
+
+@router.post("/{user_id}/unlock-login")
+async def unlock_user_login(
+    user_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """Clear the brute-force login lockout (failed-attempt counter) for a user.
+
+    After 5 failed logins within 15 minutes the account is locked. This
+    lets a tenant admin (or super admin) lift the lock for a colleague
+    who fat-fingered their password.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    if not current_user.is_super_admin and user.tenant_id != current_user.tenant_id:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    email = read_pii(user, "email") or ""
+    attempts_before = await get_failed_login_count(email) if email else 0
+    was_locked = attempts_before >= MAX_LOGIN_ATTEMPTS
+    if email:
+        await clear_failed_logins(email)
+
+    audit_log = AuditLog(
+        tenant_id=user.tenant_id,
+        user_id=current_user.user_id,
+        action=AuditAction.USER_UNLOCK_LOGIN,
+        resource_type="user",
+        resource_id=user.id,
+        details={"email": email, "attempts_cleared": attempts_before, "was_locked": was_locked},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+    await db.commit()
+
+    return {
+        "message": (
+            f"Cleared {attempts_before} failed login attempt(s) for '{email}'"
+            if attempts_before > 0
+            else f"No failed login attempts on record for '{email}'"
+        ),
+        "attempts_cleared": attempts_before,
+        "was_locked": was_locked,
+    }
 
 
 @router.post("/{user_id}/resend-invite")

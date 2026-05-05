@@ -109,3 +109,15 @@ async def is_account_locked(email: str) -> bool:
     except Exception:
         logger.warning("Redis error checking lockout for %s", email, exc_info=True)
         return False
+
+
+async def get_failed_login_count(email: str) -> int:
+    """Return the current failed-login counter for *email* (0 if none)."""
+    if not _redis:
+        return 0
+    try:
+        attempts = await _redis.get(f"login_attempts:{email.lower()}")
+        return int(attempts) if attempts is not None else 0
+    except Exception:
+        logger.warning("Redis error reading attempts for %s", email, exc_info=True)
+        return 0

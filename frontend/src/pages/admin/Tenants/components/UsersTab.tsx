@@ -26,6 +26,7 @@ export default function UsersTab({
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
   const [removeTarget, setRemoveTarget] = useState<TenantUser | null>(null);
+  const [unlockToast, setUnlockToast] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['tenant-users', tenantId],
@@ -45,6 +46,25 @@ export default function UsersTab({
     },
   });
 
+  const unlockMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.post<{
+        message: string;
+        was_locked: boolean;
+        attempts_cleared: number;
+      }>(`/users/${userId}/unlock-login`);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setUnlockToast(data.message);
+      window.setTimeout(() => setUnlockToast(null), 4000);
+    },
+    onError: (err) => {
+      setUnlockToast(parseApiError(err));
+      window.setTimeout(() => setUnlockToast(null), 4000);
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -55,6 +75,11 @@ export default function UsersTab({
 
   return (
     <div>
+      {unlockToast && (
+        <div className="mb-3 px-3 py-2 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200">
+          {unlockToast}
+        </div>
+      )}
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Users</h4>
         <button
@@ -155,6 +180,26 @@ export default function UsersTab({
                             strokeLinejoin="round"
                             strokeWidth={2}
                             d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => unlockMutation.mutate(user.id)}
+                        disabled={unlockMutation.isPending}
+                        className="text-gray-400 hover:text-amber-500 p-1 rounded transition-colors disabled:opacity-50"
+                        title="Reset failed-login counter (unlock account)"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
                           />
                         </svg>
                       </button>
