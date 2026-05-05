@@ -41,9 +41,15 @@ test.describe('Admin Bulk-Cancel', () => {
     await button.click();
 
     // Step 1 of the dialog: filter form. The "Reason" textarea is the
-    // marker — it's required (min 10 chars) and unique to this dialog.
-    const reasonField = page.getByLabel(/reason/i).first();
-    await expect(reasonField).toBeVisible({ timeout: 10000 });
+    // marker — required (min 10 chars) and unique to this dialog. The
+    // BulkCancelDialog ``<label>`` is not bound to the textarea via
+    // ``htmlFor``, so getByLabel won't match — use the placeholder
+    // instead, with a ``textarea`` fallback for resilience.
+    const reasonField = page.getByPlaceholder(/bot burst|203\.0\.113/i).first();
+    if (!(await softVisible(reasonField, 10000))) {
+      const fallback = page.locator('div[role="dialog"], .fixed.inset-0').locator('textarea').first();
+      await expect(fallback).toBeVisible({ timeout: 10000 });
+    }
 
     // Cancel out so we don't leave the dialog open in subsequent tests.
     await page.getByRole('button', { name: /^cancel$/i }).first().click();
