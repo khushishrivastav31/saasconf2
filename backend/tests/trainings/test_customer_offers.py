@@ -578,3 +578,178 @@ async def test_cannot_assign_already_assigned(
         headers=auth_headers(token),
     )
     assert resp2.status_code == 422 or resp2.status_code == 400
+
+
+# ── Invoiced amount + numbers (Offer Management dashboard) ────────────────
+
+
+def _make_invoice(
+    *,
+    tenant_id: uuid.UUID,
+    offer_id: uuid.UUID,
+    number: str,
+    total: str,
+    template_type: str = "bank_transfer",
+    status: str = "sent",
+):
+    """Construct a TrainingInvoice with the minimum required NOT NULL fields."""
+    from decimal import Decimal as _Decimal
+
+    from app.models.training_invoice import TrainingInvoice
+
+    return TrainingInvoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        offer_id=offer_id,
+        invoice_number=number,
+        template_type=template_type,
+        status=status,
+        issue_date=date.today(),
+        recipient_name="Acme",
+        recipient_email="billing@acme.test",
+        line_items=[{"description": "Course", "quantity": 1, "unit_price": total, "total": total}],
+        subtotal=_Decimal(total),
+        total=_Decimal(total),
+        currency="EUR",
+    )
+
+
+@pytest.mark.asyncio
+async def test_offer_response_carries_invoice_numbers_and_total(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    admin_o: User,
+    tenant_o: Tenant,
+    customer_o: Customer,
+    inhouse_placement: ProgramYearTraining,
+) -> None:
+    """List + single-get expose invoice_numbers + invoiced_total for accounting visibility."""
+    token = _make_token(admin_o)
+    create_resp = await client.post(
+        BASE,
+        json={
+            "customer_id": str(customer_o.id),
+            "placement_ids": [str(inhouse_placement.id)],
+        },
+        headers=auth_headers(token),
+    )
+    assert create_resp.status_code == 201
+    offer_id = uuid.UUID(create_resp.json()["id"])
+
+    db_session.add(_make_invoice(tenant_id=tenant_o.id, offer_id=offer_id, number="TR-OFF-100", total="1500"))
+    db_session.add(_make_invoice(tenant_id=tenant_o.id, offer_id=offer_id, number="TR-OFF-101", total="500"))
+    await db_session.commit()
+
+    list_resp = await client.get(BASE, headers=auth_headers(token))
+    assert list_resp.status_code == 200
+    item = list_resp.json()["items"][0]
+    assert item["invoice_count"] == 2
+    assert sorted(item["invoice_numbers"]) == ["TR-OFF-100", "TR-OFF-101"]
+    assert len(item["invoice_ids"]) == 2
+    assert float(item["invoiced_total"]) == 2000.0
+
+    get_resp = await client.get(f"{BASE}/{offer_id}", headers=auth_headers(token))
+    assert get_resp.status_code == 200
+    detail = get_resp.json()
+    assert detail["invoice_count"] == 2
+    assert sorted(detail["invoice_numbers"]) == ["TR-OFF-100", "TR-OFF-101"]
+    assert float(detail["invoiced_total"]) == 2000.0
+
+
+@pytest.mark.asyncio
+async def test_offer_invoiced_excludes_cancelled_and_credit_notes(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    admin_o: User,
+    tenant_o: Tenant,
+    customer_o: Customer,
+    inhouse_placement: ProgramYearTraining,
+) -> None:
+    """Cancelled invoices and credit notes do not contribute to invoiced_total."""
+    token = _make_token(admin_o)
+    create_resp = await client.post(
+        BASE,
+        json={
+            "customer_id": str(customer_o.id),
+            "placement_ids": [str(inhouse_placement.id)],
+        },
+        headers=auth_headers(token),
+    )
+    offer_id = uuid.UUID(create_resp.json()["id"])
+
+    db_session.add(_make_invoice(tenant_id=tenant_o.id, offer_id=offer_id, number="TR-A", total="1000"))
+    db_session.add(
+        _make_invoice(tenant_id=tenant_o.id, offer_id=offer_id, number="TR-B-CANCELLED", total="800", status="cancelled")
+    )
+    db_session.add(
+        _make_invoice(
+            tenant_id=tenant_o.id, offer_id=offer_id, number="TR-C-CREDIT", total="-500", template_type="credit_note"
+        )
+    )
+    await db_session.commit()
+
+    list_resp = await client.get(BASE, headers=auth_headers(token))
+    item = list_resp.json()["items"][0]
+    assert item["invoice_numbers"] == ["TR-A"]
+    assert float(item["invoiced_total"]) == 1000.0
+    # invoice_count on the response counts only active invoices (matches the totals)
+    assert item["invoice_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_offer_stats_invoiced_per_status_and_total(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    admin_o: User,
+    tenant_o: Tenant,
+    customer_o: Customer,
+    inhouse_placement: ProgramYearTraining,
+    hybrid_placement: ProgramYearTraining,
+) -> None:
+    """The /offers/stats endpoint reports invoiced totals per offer status + grand total."""
+    token = _make_token(admin_o)
+
+    # Offer 1 (will be accepted, 1 invoice for 5000)
+    o1 = await client.post(
+        BASE,
+        json={
+            "customer_id": str(customer_o.id),
+            "placement_ids": [str(inhouse_placement.id)],
+            "training_price": "5000",
+        },
+        headers=auth_headers(token),
+    )
+    o1_id = uuid.UUID(o1.json()["id"])
+    await client.put(
+        f"{BASE}/{o1_id}",
+        json={"status": "accepted"},
+        headers=auth_headers(token),
+    )
+
+    # Offer 2 (draft, no invoice) — uses hybrid_placement so it doesn't collide with inhouse
+    await client.post(
+        BASE,
+        json={
+            "customer_id": str(customer_o.id),
+            "placement_ids": [str(hybrid_placement.id)],
+            "training_price": "2000",
+        },
+        headers=auth_headers(token),
+    )
+
+    db_session.add(_make_invoice(tenant_id=tenant_o.id, offer_id=o1_id, number="TR-S-1", total="5000"))
+    # Cancelled invoice on the same accepted offer — must NOT count
+    db_session.add(
+        _make_invoice(
+            tenant_id=tenant_o.id, offer_id=o1_id, number="TR-S-2-CANCELLED", total="999", status="cancelled"
+        )
+    )
+    await db_session.commit()
+
+    resp = await client.get(f"{BASE}/stats", headers=auth_headers(admin_o.id and _make_token(admin_o)))
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["by_status"]["accepted"]["invoiced"] == 5000.0
+    assert data["by_status"]["draft"]["invoiced"] == 0.0
+    assert data["total_invoiced"] == 5000.0

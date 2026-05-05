@@ -3902,12 +3902,18 @@ export type paths = {
     };
     /**
      * Offer Stats
-     * @description Aggregated offer counts + training/certification totals, grouped by status.
+     * @description Aggregated offer counts + training/certification + invoiced totals, grouped by status.
      *
      *     Split from ``list_offers`` so the management dashboard can render the
      *     stat cards without materialising every offer row — at a few thousand
      *     offers the old ``limit=500 + sum-in-JS`` pattern either truncated the
      *     stats silently or froze the browser.
+     *
+     *     The ``invoiced`` figure per bucket is the sum of ``TrainingInvoice.total``
+     *     for invoices whose ``offer_id`` references an offer in that status,
+     *     excluding credit notes (``template_type == "credit_note"``) and cancelled
+     *     invoices (``status == "cancelled"``). Drafts count toward the bucket so
+     *     accepted-but-not-yet-sent invoices still surface as "we plan to bill".
      */
     get: operations['offer_stats_api_v1_trainings_offers_stats_get'];
     put?: never;
@@ -17599,6 +17605,15 @@ export type components = {
        * @default 0
        */
       invoice_count?: number;
+      /** Invoice Numbers */
+      invoice_numbers?: string[];
+      /** Invoice Ids */
+      invoice_ids?: string[];
+      /**
+       * Invoiced Total
+       * @default 0
+       */
+      invoiced_total?: string;
       /**
        * Created At
        * Format: date-time

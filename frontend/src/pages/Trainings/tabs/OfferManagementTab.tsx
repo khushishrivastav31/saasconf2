@@ -9,6 +9,7 @@ import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
 import { parseApiError } from '../../../utils/apiError';
 import type { CustomerOffer } from '../../../types/training';
+import { OfferRow } from './OfferManagementTabRow';
 
 const STATUS_OPTIONS = ['draft', 'sent', 'accepted', 'rejected'] as const;
 const STATUS_COLORS: Record<string, string> = {
@@ -18,75 +19,12 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-function formatPrice(val: number | null, currency: string): string {
-  if (val == null) return '—';
-  return `${val.toLocaleString('de-DE', { minimumFractionDigits: 2 })} ${currency}`;
-}
-
-const OfferRow = React.memo(function OfferRow({
-  offer,
-  onStatusChange,
-  onClick,
-  isUpdating,
-}: {
-  offer: CustomerOffer;
-  onStatusChange: (offerId: string, status: string) => void;
-  onClick: (offer: CustomerOffer) => void;
-  isUpdating: boolean;
-}) {
-  return (
-    <tr
-      className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
-      onClick={() => onClick(offer)}
-    >
-      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-        {offer.offer_number}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{offer.customer_name}</td>
-      <td className="px-4 py-3">
-        <select
-          value={offer.status}
-          onChange={(e) => onStatusChange(offer.id, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          disabled={isUpdating}
-          className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${STATUS_COLORS[offer.status] || STATUS_COLORS.draft}`}
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-center">
-        {offer.placements.length}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-right">
-        {formatPrice(offer.training_price, offer.currency)}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-right">
-        {formatPrice(offer.certification_price, offer.currency)}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-        {formatDate(offer.created_at)}
-      </td>
-    </tr>
-  );
-});
-
 interface OfferStats {
-  by_status: Record<string, { count: number; training: number; cert: number }>;
+  by_status: Record<string, { count: number; training: number; cert: number; invoiced: number }>;
   total_offers: number;
   total_training: number;
   total_cert: number;
+  total_invoiced: number;
 }
 
 interface OfferListResponse {
@@ -125,6 +63,13 @@ export default function OfferManagementTab() {
         offerId: offer.id,
         tab: 'offers',
       });
+    },
+    [setSearchParams]
+  );
+
+  const handleInvoiceClick = useCallback(
+    (invoiceId: string) => {
+      setSearchParams({ section: 'invoices', invoiceId });
     },
     [setSearchParams]
   );
@@ -209,7 +154,7 @@ export default function OfferManagementTab() {
       {totalOffers > 0 && stats && (
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           {STATUS_OPTIONS.map((s) => {
-            const d = stats.by_status[s] ?? { count: 0, training: 0, cert: 0 };
+            const d = stats.by_status[s] ?? { count: 0, training: 0, cert: 0, invoiced: 0 };
             return (
               <div
                 key={s}
@@ -251,6 +196,16 @@ export default function OfferManagementTab() {
                       €
                     </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Invoiced</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {(d.invoiced ?? 0).toLocaleString('de-DE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{' '}
+                      €
+                    </span>
+                  </div>
                 </div>
               </div>
             );
@@ -280,6 +235,16 @@ export default function OfferManagementTab() {
                 <span>Certification Revenue</span>
                 <span className="font-medium text-gray-700 dark:text-gray-300">
                   {stats.total_cert.toLocaleString('de-DE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  €
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Invoiced</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {(stats.total_invoiced ?? 0).toLocaleString('de-DE', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
@@ -376,6 +341,12 @@ export default function OfferManagementTab() {
                   Cert. Price
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                  Invoices
+                </th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                  Invoiced
+                </th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
                   Created
                 </th>
               </tr>
@@ -387,6 +358,7 @@ export default function OfferManagementTab() {
                   offer={offer}
                   onStatusChange={handleStatusChange}
                   onClick={handleOfferClick}
+                  onInvoiceClick={handleInvoiceClick}
                   isUpdating={updateStatusMutation.isPending}
                 />
               ))}

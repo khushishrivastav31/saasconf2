@@ -75,6 +75,12 @@ class CustomerOfferResponse(BaseModel):
     # to delete offers with linked invoices (financial records must not be
     # orphaned). See app/api/v1/trainings/offers.py::delete_offer.
     invoice_count: int = 0
+    # Active (non-cancelled, non-credit-note) invoice numbers and the sum of
+    # their totals. Powers the Offer Management dashboard's INVOICES column
+    # and the per-status "Invoiced" subline on the stat cards.
+    invoice_numbers: list[str] = Field(default_factory=list)
+    invoice_ids: list[UUID] = Field(default_factory=list)
+    invoiced_total: Decimal = Decimal(0)
     created_at: datetime
     updated_at: datetime
 

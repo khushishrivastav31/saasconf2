@@ -537,6 +537,9 @@ export interface CustomerOffer {
   placements: OfferPlacementInfo[];
   attendee_count: number;
   invoice_count: number;
+  invoice_numbers: string[];
+  invoice_ids: string[];
+  invoiced_total: number;
   created_at: string;
   updated_at: string;
 }

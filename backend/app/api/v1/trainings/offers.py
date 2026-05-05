@@ -1,6 +1,7 @@
 """Customer offer endpoints for training proposals."""
 
 import logging
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
@@ -41,6 +42,9 @@ def _offer_to_response(
     placements: list[ProgramYearTraining],
     attendee_count: int = 0,
     invoice_count: int = 0,
+    invoice_numbers: list[str] | None = None,
+    invoice_ids: list[UUID] | None = None,
+    invoiced_total: float = 0.0,
 ) -> CustomerOfferResponse:
     """Build a CustomerOfferResponse from an offer and its placements."""
     placement_infos = []
@@ -74,6 +78,9 @@ def _offer_to_response(
         placements=placement_infos,
         attendee_count=attendee_count,
         invoice_count=invoice_count,
+        invoice_numbers=invoice_numbers or [],
+        invoice_ids=invoice_ids or [],
+        invoiced_total=Decimal(str(invoiced_total)),
         created_at=offer.created_at,
         updated_at=offer.updated_at,
     )
@@ -90,12 +97,43 @@ async def _count_offer_invoices(db: DbSessionDep, offer_id: UUID) -> int:
 
     Used to drive the "Delete Offer" UX: the backend refuses to delete an
     offer with any linked invoice (see delete_offer below), so the UI
-    disables the button when this count is > 0.
+    disables the button when this count is > 0. This counts ALL invoices
+    (including credit notes / cancelled) since the delete-block applies to
+    any record that would orphan financial history.
     """
     from app.models.training_invoice import TrainingInvoice
 
     result = await db.execute(select(func.count()).where(TrainingInvoice.offer_id == offer_id))
     return result.scalar() or 0
+
+
+async def _load_offer_invoice_info(db: DbSessionDep, offer_id: UUID) -> tuple[int, list[str], list[UUID], float]:
+    """Return (count, numbers, ids, summed_total) of active invoices on an offer.
+
+    Excludes credit notes and cancelled invoices — the same filter the list
+    endpoint and stats use, so single-offer responses agree with the
+    dashboard. Drafts are included.
+    """
+    from app.models.training_invoice import TrainingInvoice
+
+    result = await db.execute(
+        select(
+            TrainingInvoice.id,
+            TrainingInvoice.invoice_number,
+            TrainingInvoice.total,
+        )
+        .where(
+            TrainingInvoice.offer_id == offer_id,
+            TrainingInvoice.template_type != "credit_note",
+            TrainingInvoice.status != "cancelled",
+        )
+        .order_by(TrainingInvoice.invoice_number)
+    )
+    rows = result.all()
+    numbers = [r[1] for r in rows if r[1]]
+    ids = [r[0] for r in rows]
+    total = float(sum(float(r[2] or 0) for r in rows))
+    return len(rows), numbers, ids, total
 
 
 async def _load_offer_placements(db: DbSessionDep, offer_id: UUID, tenant_id: UUID) -> list[ProgramYearTraining]:
@@ -224,13 +262,21 @@ async def offer_stats(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> dict:
-    """Aggregated offer counts + training/certification totals, grouped by status.
+    """Aggregated offer counts + training/certification + invoiced totals, grouped by status.
 
     Split from ``list_offers`` so the management dashboard can render the
     stat cards without materialising every offer row — at a few thousand
     offers the old ``limit=500 + sum-in-JS`` pattern either truncated the
     stats silently or froze the browser.
+
+    The ``invoiced`` figure per bucket is the sum of ``TrainingInvoice.total``
+    for invoices whose ``offer_id`` references an offer in that status,
+    excluding credit notes (``template_type == "credit_note"``) and cancelled
+    invoices (``status == "cancelled"``). Drafts count toward the bucket so
+    accepted-but-not-yet-sent invoices still surface as "we plan to bill".
     """
+    from app.models.training_invoice import TrainingInvoice
+
     tenant_filter = _tenant_filter(current_user)
 
     result = await db.execute(
@@ -249,17 +295,48 @@ async def offer_stats(
     total_training = 0.0
     total_cert = 0.0
     for status, count, training, cert in result.all():
-        bucket = {"count": count, "training": float(training or 0), "cert": float(cert or 0)}
+        bucket = {
+            "count": count,
+            "training": float(training or 0),
+            "cert": float(cert or 0),
+            "invoiced": 0.0,
+        }
         by_status[status or "draft"] = bucket
         total_count += count
         total_training += bucket["training"]
         total_cert += bucket["cert"]
+
+    invoice_result = await db.execute(
+        select(
+            CustomerOffer.status,
+            func.coalesce(func.sum(TrainingInvoice.total), 0).label("invoiced_total"),
+        )
+        .join(TrainingInvoice, TrainingInvoice.offer_id == CustomerOffer.id)
+        .where(
+            tenant_filter,
+            TrainingInvoice.template_type != "credit_note",
+            TrainingInvoice.status != "cancelled",
+        )
+        .group_by(CustomerOffer.status)
+    )
+    total_invoiced = 0.0
+    for status, invoiced in invoice_result.all():
+        key = status or "draft"
+        amount = float(invoiced or 0)
+        if key not in by_status:
+            # Defensive: an invoice can outlive its offer's status flip in
+            # weird ordering; surface the amount as a synthetic empty bucket
+            # rather than dropping it from the grand total.
+            by_status[key] = {"count": 0, "training": 0.0, "cert": 0.0, "invoiced": 0.0}
+        by_status[key]["invoiced"] = amount
+        total_invoiced += amount
 
     return {
         "by_status": by_status,
         "total_offers": total_count,
         "total_training": total_training,
         "total_cert": total_cert,
+        "total_invoiced": total_invoiced,
     }
 
 
@@ -292,11 +369,14 @@ async def list_offers(
     result = await db.execute(items_q)
     offers = list(result.scalars().unique().all())
 
-    # Batch-load placements, attendee counts, and invoice counts to avoid N+1 queries
+    # Batch-load placements, attendee counts, and invoice info to avoid N+1 queries
     offer_ids = [o.id for o in offers]
     placements_by_offer: dict[UUID, list[ProgramYearTraining]] = {oid: [] for oid in offer_ids}
     attendee_counts: dict[UUID, int] = {oid: 0 for oid in offer_ids}
     invoice_counts: dict[UUID, int] = {oid: 0 for oid in offer_ids}
+    invoice_numbers_by_offer: dict[UUID, list[str]] = {oid: [] for oid in offer_ids}
+    invoice_ids_by_offer: dict[UUID, list[UUID]] = {oid: [] for oid in offer_ids}
+    invoiced_totals: dict[UUID, float] = {oid: 0.0 for oid in offer_ids}
 
     if offer_ids:
         from app.models.training_invoice import TrainingInvoice
@@ -325,15 +405,34 @@ async def list_offers(
         for oid, cnt in ac_result.all():
             attendee_counts[oid] = cnt
 
-        # Batch invoice counts
-        ic_result = await db.execute(
-            select(TrainingInvoice.offer_id, func.count())
-            .where(TrainingInvoice.offer_id.in_(offer_ids))
-            .group_by(TrainingInvoice.offer_id)
+        # Batch invoice numbers + totals.
+        # Excludes credit notes (template_type) and cancelled invoices (status)
+        # so the dashboard reflects active gross billing — the figure that
+        # accounting actually wants to see next to the offer's accepted price.
+        # Drafts are included (the invoice exists; whether it has been sent
+        # is a separate signal).
+        inv_result = await db.execute(
+            select(
+                TrainingInvoice.offer_id,
+                TrainingInvoice.id,
+                TrainingInvoice.invoice_number,
+                TrainingInvoice.total,
+            )
+            .where(
+                TrainingInvoice.offer_id.in_(offer_ids),
+                TrainingInvoice.template_type != "credit_note",
+                TrainingInvoice.status != "cancelled",
+            )
+            .order_by(TrainingInvoice.invoice_number)
         )
-        for oid, cnt in ic_result.all():
-            if oid is not None:
-                invoice_counts[oid] = cnt
+        for oid, inv_id, number, total in inv_result.all():
+            if oid is None:
+                continue
+            invoice_counts[oid] = invoice_counts.get(oid, 0) + 1
+            if number:
+                invoice_numbers_by_offer[oid].append(number)
+            invoice_ids_by_offer[oid].append(inv_id)
+            invoiced_totals[oid] += float(total or 0)
 
     items = [
         _offer_to_response(
@@ -341,6 +440,9 @@ async def list_offers(
             placements_by_offer.get(offer.id, []),
             attendee_counts.get(offer.id, 0),
             invoice_counts.get(offer.id, 0),
+            invoice_numbers_by_offer.get(offer.id, []),
+            invoice_ids_by_offer.get(offer.id, []),
+            invoiced_totals.get(offer.id, 0.0),
         )
         for offer in offers
     ]
@@ -366,8 +468,8 @@ async def get_offer(
 
     placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    ic = await _count_offer_invoices(db, offer.id)
-    return _offer_to_response(offer, placements, ac, ic)
+    ic, inv_numbers, inv_ids, inv_total = await _load_offer_invoice_info(db, offer.id)
+    return _offer_to_response(offer, placements, ac, ic, inv_numbers, inv_ids, inv_total)
 
 
 @router.post("", response_model=CustomerOfferResponse, status_code=201)
@@ -453,8 +555,8 @@ async def create_offer(
     offer = result.scalar_one()
     loaded_placements = await _load_offer_placements(db, offer.id, tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    ic = await _count_offer_invoices(db, offer.id)
-    return _offer_to_response(offer, loaded_placements, ac, ic)
+    ic, inv_numbers, inv_ids, inv_total = await _load_offer_invoice_info(db, offer.id)
+    return _offer_to_response(offer, loaded_placements, ac, ic, inv_numbers, inv_ids, inv_total)
 
 
 @router.put("/{offer_id}", response_model=CustomerOfferResponse)
@@ -498,8 +600,8 @@ async def update_offer(
 
     placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    ic = await _count_offer_invoices(db, offer.id)
-    return _offer_to_response(offer, placements, ac, ic)
+    ic, inv_numbers, inv_ids, inv_total = await _load_offer_invoice_info(db, offer.id)
+    return _offer_to_response(offer, placements, ac, ic, inv_numbers, inv_ids, inv_total)
 
 
 @router.post("/{offer_id}/placements", response_model=CustomerOfferResponse)
@@ -551,8 +653,8 @@ async def add_placements(
 
     loaded_placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
     ac = await _count_offer_attendees(db, offer.id)
-    ic = await _count_offer_invoices(db, offer.id)
-    return _offer_to_response(offer, loaded_placements, ac, ic)
+    ic, inv_numbers, inv_ids, inv_total = await _load_offer_invoice_info(db, offer.id)
+    return _offer_to_response(offer, loaded_placements, ac, ic, inv_numbers, inv_ids, inv_total)
 
 
 @router.delete("/{offer_id}/placements/{placement_id}")

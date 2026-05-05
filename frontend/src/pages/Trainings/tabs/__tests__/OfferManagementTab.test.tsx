@@ -22,13 +22,14 @@ const mockApi = vi.mocked(api);
 
 const mockStats = {
   by_status: {
-    draft: { count: 1, training: 5000, cert: 1500 },
-    sent: { count: 1, training: 3000, cert: 800 },
-    accepted: { count: 1, training: 10000, cert: 3000 },
+    draft: { count: 1, training: 5000, cert: 1500, invoiced: 0 },
+    sent: { count: 1, training: 3000, cert: 800, invoiced: 0 },
+    accepted: { count: 1, training: 10000, cert: 3000, invoiced: 13000 },
   },
   total_offers: 3,
   total_training: 18000,
   total_cert: 5300,
+  total_invoiced: 13000,
 };
 
 /** Route the `api.get` mock per URL so the component can call `/offers/stats`
@@ -64,6 +65,10 @@ const mockOffers = [
     notes: null,
     placements: [{ id: 'p1', training_name: 'Scrum' }],
     attendee_count: 3,
+    invoice_count: 0,
+    invoice_numbers: [],
+    invoice_ids: [],
+    invoiced_total: 0,
     created_at: '2026-03-01T10:00:00Z',
     updated_at: '2026-03-01T10:00:00Z',
   },
@@ -86,6 +91,10 @@ const mockOffers = [
       { id: 'p3', training_name: 'SAFe' },
     ],
     attendee_count: 5,
+    invoice_count: 0,
+    invoice_numbers: [],
+    invoice_ids: [],
+    invoiced_total: 0,
     created_at: '2026-03-10T10:00:00Z',
     updated_at: '2026-03-10T10:00:00Z',
   },
@@ -105,6 +114,10 @@ const mockOffers = [
     notes: null,
     placements: [],
     attendee_count: 0,
+    invoice_count: 2,
+    invoice_numbers: ['INV-2026-0042', 'INV-2026-0043'],
+    invoice_ids: ['inv-42', 'inv-43'],
+    invoiced_total: 13000,
     created_at: '2026-03-15T10:00:00Z',
     updated_at: '2026-03-15T10:00:00Z',
   },
@@ -141,7 +154,13 @@ describe('OfferManagementTab', () => {
   it('shows empty state when no offers', async () => {
     mockGetByUrl({
       offers: { items: [], total: 0 },
-      stats: { by_status: {}, total_offers: 0, total_training: 0, total_cert: 0 },
+      stats: {
+        by_status: {},
+        total_offers: 0,
+        total_training: 0,
+        total_cert: 0,
+        total_invoiced: 0,
+      },
     });
     renderWithProviders(<OfferManagementTab />);
     await waitFor(() => {
@@ -164,6 +183,9 @@ describe('OfferManagementTab', () => {
     expect(screen.getByText('Trainings')).toBeInTheDocument();
     expect(screen.getByText('Training Price')).toBeInTheDocument();
     expect(screen.getByText('Cert. Price')).toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    // "Invoiced" appears on each stat card AND in the table header — match all.
+    expect(screen.getAllByText('Invoiced').length).toBeGreaterThan(0);
     expect(screen.getByText('Created')).toBeInTheDocument();
   });
 
@@ -293,5 +315,54 @@ describe('OfferManagementTab', () => {
     await waitFor(() => {
       expect(mockApi.get).toHaveBeenCalledWith('/trainings/offers/stats');
     });
+  });
+
+  it('renders the per-status "Invoiced" subline on stat cards', async () => {
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
+    renderWithProviders(<OfferManagementTab />);
+    await waitFor(() => {
+      expect(screen.getByText('OFF-001')).toBeInTheDocument();
+    });
+    // Each card shows "Invoiced" as a sub-line label. The accepted card carries
+    // a non-zero amount; draft/sent show 0,00 €. Multiple labels exist (one per
+    // card + one in the table header), so we match all.
+    const invoicedLabels = await screen.findAllByText('Invoiced');
+    expect(invoicedLabels.length).toBeGreaterThanOrEqual(4); // 4 status cards + total + table header
+    // The accepted card's invoiced amount + the TOTAL card's grand-invoiced
+    // both render 13.000,00 € (and the row's INVOICED column does too) —
+    // match all rather than disambiguating by parent.
+    expect(screen.getAllByText('13.000,00 €').length).toBeGreaterThan(0);
+  });
+
+  it('renders an invoice number link with +N marker for multi-invoice offers', async () => {
+    const user = userEvent.setup();
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
+    renderWithProviders(<OfferManagementTab />);
+    await waitFor(() => {
+      expect(screen.getByText('OFF-003')).toBeInTheDocument();
+    });
+    // OFF-003 is the offer with 2 invoices in the mock data; it should render
+    // INV-2026-0042 with a "+1" extra marker.
+    const invoiceLink = screen.getByRole('button', { name: /INV-2026-0042/ });
+    expect(invoiceLink).toBeInTheDocument();
+    expect(invoiceLink.textContent).toContain('+1');
+    // Click navigates by setting URL params (we don't assert on URL — just
+    // that clicking the invoice link doesn't trigger the row's offer click,
+    // which would fire an additional setSearchParams call. Verify by ensuring
+    // no exception on click.)
+    await user.click(invoiceLink);
+  });
+
+  it('shows em-dash in invoice columns when offer has no active invoices', async () => {
+    mockGetByUrl({ offers: { items: mockOffers, total: mockOffers.length } });
+    renderWithProviders(<OfferManagementTab />);
+    await waitFor(() => {
+      expect(screen.getByText('OFF-001')).toBeInTheDocument();
+    });
+    // OFF-001 and OFF-002 have no invoices — their INVOICES + INVOICED cells
+    // render an em-dash. There will be multiple em-dashes (2 rows × 2 cells +
+    // possibly null prices), so just confirm at least 4 are present.
+    const dashes = screen.getAllByText('—');
+    expect(dashes.length).toBeGreaterThanOrEqual(4);
   });
 });
