@@ -2,6 +2,7 @@
 
 import uuid
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -288,6 +289,13 @@ async def test_link_location_to_conference(
     assert str(conference.id) in get_resp.json()["conference_ids"]
 
 
+@pytest.mark.legacy_truncate
+# Marked legacy_truncate: this test uses an explicit ``async with
+# db_session.begin_nested()`` to wrap an INSERT expected to raise
+# IntegrityError. Under savepoint-isolation mode, the conftest auto-restart
+# listener fires when that user-managed savepoint ends and tries to start a
+# new one while the user's context manager is still in cleanup — causing
+# "Can't operate on closed transaction inside context manager". Opting out.
 async def test_location_cannot_be_linked_to_two_conferences(
     client: AsyncClient,
     db_session: AsyncSession,

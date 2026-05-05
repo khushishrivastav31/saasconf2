@@ -619,6 +619,12 @@ class TestMerge:
 
 
 class TestHistoryEndpoint:
+    @pytest.mark.legacy_truncate
+    # Marked legacy_truncate: asserts ordering between two events emitted
+    # microseconds apart. Under savepoint isolation (no fsync between
+    # inserts) both events end up with identical ``created_at`` and the
+    # secondary sort flips — pre-existing latent flake, surfaced by the
+    # speedup. The TRUNCATE+commit path leaves ~1ms gap that disambiguates.
     @pytest.mark.asyncio
     async def test_history_returns_events_newest_first(
         self,

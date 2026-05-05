@@ -1,21 +1,36 @@
 """Shared test fixtures for the SaaSConf backend test suite.
 
-Uses a real PostgreSQL test database (saasconf_test) with per-test
-table truncation for isolation.  Seed data is committed so the ASGI
-client (which uses its own DB session) can see it.
+Uses a real PostgreSQL test database (saasconf_test). Per-test isolation
+runs in **savepoint mode by default**: one outer transaction is opened
+on a shared connection at fixture setup, both ``db_session`` and the
+ASGI client's ``get_db`` override yield sessions bound to that same
+connection (via a ContextVar), and teardown rolls the outer transaction
+back so every change evaporates without touching disk.
+
+A nested SAVEPOINT is opened around the test work, and an
+``after_transaction_end`` listener restarts the savepoint whenever
+in-test code commits — so seeds, single-cancel orchestrators, and other
+``await db.commit()`` call sites still behave as if they committed,
+without ending the outer transaction.
+
+For tests that genuinely need TRUNCATE-style cross-transaction visibility
+(e.g. exercising commit/rollback semantics directly), opt out with::
+
+    @pytest.mark.legacy_truncate
 """
 
 import asyncio
 import os
 import uuid
 from collections.abc import AsyncGenerator
+from contextvars import ContextVar
 from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import event, text
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 # ── Override settings BEFORE importing any app code ──────────────────────
@@ -111,6 +126,33 @@ TestSessionLocal = async_sessionmaker(
 RLS_BYPASS = text("SELECT set_config('app.is_super_admin', 'true', true)")
 
 
+# ── Savepoint-isolation plumbing ─────────────────────────────────────────
+#
+# When a test opts into savepoint isolation (the default), ``db_session``
+# stashes the test's connection in this ContextVar so the ASGI client's
+# ``get_db`` override can bind its session to the same connection. Both
+# parties see each other's changes within the outer transaction; rollback
+# at teardown wipes the slate clean without TRUNCATE.
+
+_test_connection: ContextVar[AsyncConnection | None] = ContextVar("_test_connection", default=None)
+
+
+def _install_savepoint_restart(session: AsyncSession) -> None:
+    """Restart the SAVEPOINT after every commit on this session.
+
+    SQLAlchemy fires ``after_transaction_end`` when a transaction (top-level
+    or savepoint) ends. We only re-open a savepoint when the just-ended
+    transaction was the savepoint we control — its parent is the outer
+    transaction (``not transaction._parent.nested``).
+    """
+    sync_session = session.sync_session
+
+    @event.listens_for(sync_session, "after_transaction_end")
+    def _restart(sess, transaction):
+        if transaction.nested and not transaction._parent.nested:
+            sess.begin_nested()
+
+
 # ── Database lifecycle fixtures ──────────────────────────────────────────
 
 
@@ -172,26 +214,87 @@ def setup_database():
     asyncio.run(_drop_tables())
 
 
-@pytest_asyncio.fixture()
-async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
-    """Provide a database session for seeding test data.
-
-    Data must be *committed* (not just flushed) so the ASGI client — which
-    gets its own independent session — can see it.  All tables are truncated
-    after each test for isolation.
-    """
-    # Truncate every table BEFORE the test for full isolation.
-    # Running cleanup at the start (not end) avoids fixture teardown ordering
-    # issues where a new test's fixtures are created before the previous
-    # test's db_session cleanup runs (causing FK violations).
+async def _truncate_all_tables() -> None:
+    """Wipe every table — only used by the legacy_truncate opt-out path."""
     async with test_engine.begin() as conn:
         await conn.execute(RLS_BYPASS)
         table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.tables.values())
         if table_names:
             await conn.execute(text(f"TRUNCATE TABLE {table_names} CASCADE"))
 
-    session = TestSessionLocal()
-    await session.execute(RLS_BYPASS)
+
+@pytest_asyncio.fixture()
+async def _savepoint_connection(setup_database, request) -> AsyncGenerator[AsyncConnection | None, None]:
+    """Open one connection + outer transaction shared by every fixture in this test.
+
+    Both ``db_session`` and ``client`` depend on this fixture, so the
+    connection exists for the test even when only one of them is requested.
+    The connection is published via ``_test_connection`` ContextVar so the
+    ASGI ``get_db`` override binds its session to the same outer transaction.
+
+    Returns ``None`` and skips the connection setup when the test carries
+    the ``legacy_truncate`` marker — the legacy path manages its own DB
+    session lifetime via TRUNCATE+commit.
+    """
+    if request.node.get_closest_marker("legacy_truncate"):
+        await _truncate_all_tables()
+        try:
+            yield None
+        finally:
+            # Truncate after as well so the rows committed by this legacy
+            # test don't leak forward into the next (savepoint-mode) test
+            # — the savepoint outer transaction would happily see them as
+            # pre-existing data.
+            await _truncate_all_tables()
+        return
+
+    async with test_engine.connect() as connection:
+        outer_tx = await connection.begin()
+        # RLS bypass is set on the connection so every session bound to it
+        # inherits the GUC for the duration of the outer transaction.
+        await connection.execute(RLS_BYPASS)
+        token = _test_connection.set(connection)
+        try:
+            yield connection
+        finally:
+            _test_connection.reset(token)
+            await outer_tx.rollback()
+
+
+@pytest_asyncio.fixture()
+async def db_session(_savepoint_connection) -> AsyncGenerator[AsyncSession, None]:
+    """Provide a database session for seeding test data.
+
+    Default: SAVEPOINT-per-test isolation. Binds to the shared connection
+    opened by ``_savepoint_connection``; in-test ``await session.commit()``
+    calls are auto-restarted as savepoints so the outer transaction stays
+    open until rollback at teardown.
+
+    Opt-out via ``@pytest.mark.legacy_truncate`` for tests that exercise
+    commit/rollback semantics directly or need cross-transaction
+    visibility that savepoints can't simulate.
+    """
+    if _savepoint_connection is None:
+        # legacy_truncate path
+        session = TestSessionLocal()
+        await session.execute(RLS_BYPASS)
+        try:
+            yield session
+        finally:
+            await session.close()
+        return
+
+    bound_sessionmaker = async_sessionmaker(
+        bind=_savepoint_connection,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+    session = bound_sessionmaker()
+    _install_savepoint_restart(session)
     try:
         yield session
     finally:
@@ -202,17 +305,34 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest_asyncio.fixture()
-async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
+async def client(_savepoint_connection) -> AsyncGenerator[AsyncClient, None]:
     """Provide an httpx AsyncClient wired to the FastAPI app using the test DB.
 
-    Each ASGI request gets its own session from TestSessionLocal, so there is
-    no asyncpg "another operation in progress" conflict with db_session.
+    Depends on ``_savepoint_connection`` so the savepoint mechanism is
+    armed even when the test does not also request ``db_session`` —
+    otherwise the ASGI handler's audit/event writes would land on a fresh
+    connection outside any outer transaction and leak into the next test.
     """
 
     async def _override_get_db():
-        async with TestSessionLocal() as session:
-            await session.execute(RLS_BYPASS)
-            yield session
+        connection = _test_connection.get()
+        if connection is not None:
+            bound_sessionmaker = async_sessionmaker(
+                bind=connection,
+                class_=AsyncSession,
+                expire_on_commit=False,
+                autocommit=False,
+                autoflush=False,
+                join_transaction_mode="create_savepoint",
+            )
+            async with bound_sessionmaker() as session:
+                _install_savepoint_restart(session)
+                yield session
+        else:
+            # legacy_truncate path
+            async with TestSessionLocal() as session:
+                await session.execute(RLS_BYPASS)
+                yield session
 
     app.dependency_overrides[get_db] = _override_get_db
 

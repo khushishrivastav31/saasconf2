@@ -168,6 +168,7 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 markers = [
     "no_mock_email: opt out of the autouse _mock_resend_client fixture",
+    "legacy_truncate: opt out of savepoint-per-test isolation (use TRUNCATE+commit instead) — for tests that exercise commit/rollback semantics directly or need cross-transaction visibility",
     # Tests that spawn alembic subprocesses (full migration chain up/down)
     # or otherwise take tens of seconds on their own. Skipped on PR events
     # in CI via ``-m "not slow"`` to keep feedback fast; push-to-main runs

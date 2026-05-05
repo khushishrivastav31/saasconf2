@@ -33,6 +33,7 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
+import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -409,6 +410,7 @@ class TestUnifiedInboxDetail:
         assert body["domain_entity_id"] == str(reg.id)
         assert body["domain_entity_name"] == "ITIL Foundation"
 
+    @pytest.mark.legacy_truncate
     async def test_reply_on_training_thread_uses_training_attendee_sender(
         self,
         client: AsyncClient,
@@ -417,6 +419,12 @@ class TestUnifiedInboxDetail:
         ui_applicant: CFPApplicant,
         ui_placement: ProgramYearTraining,
     ) -> None:
+        # Marked legacy_truncate: this test seeds a TrainingRegistrationAttendee
+        # via flush() and then expects the HTTP-handler's lookup to find it
+        # via email_hash. Under savepoint isolation, the auth dep
+        # (current_applicant.applicant.email) has a quirk that resolves the
+        # email differently than under TRUNCATE+commit; rather than reshape
+        # the test for one outlier, opt out and keep the asserted behaviour.
         thread, _reg, attendee = await _create_training_thread_for_email(
             db_session, ui_tenant, ui_placement, ui_applicant.email
         )
