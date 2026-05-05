@@ -150,13 +150,15 @@ The staging CI/CD workflow requires these repository secrets (Settings → Secre
 - HTML coverage reports uploaded as artifacts (14-day retention)
 
 ## Testing (`backend/tests/`)
-- Uses real PostgreSQL test database (`saasconf_test`) with per-test table truncation
+- Uses real PostgreSQL test database (`saasconf_test`) with **SAVEPOINT-per-test isolation** (PR #202): one outer transaction + connection is shared by `db_session` and the ASGI client's `get_db` override (via `_savepoint_connection` fixture + `_test_connection` ContextVar); teardown rolls the outer transaction back so changes evaporate without touching disk. Suite: ~25min → ~4min locally, 29:37 → 13:06 in CI.
+- Opt-out: `@pytest.mark.legacy_truncate` reverts a single test to TRUNCATE+commit isolation. Use only when (a) the test uses an explicit user-managed `db_session.begin_nested()` (conflicts with the auto-restart listener), or (b) the test asserts ordering between events emitted with no fsync gap (latent-flake risk). Three tests are currently marked.
 - `conftest.py` sets env overrides **before** importing app code
 - `NullPool` engine avoids asyncpg loop errors
-- RLS bypass: `set_config('app.is_super_admin', 'true', true)`
+- RLS bypass: `set_config('app.is_super_admin', 'true', true)` — applied once on the outer transaction; sessions inherit it for the whole test
+- `join_transaction_mode="create_savepoint"` on the bound sessionmaker + an `after_transaction_end` listener restarts the savepoint after every in-test `await session.commit()`, so seeds and orchestrators that commit mid-test still behave correctly
 - Redis explicitly initialized/closed in `client` fixture
 - Rate limiting disabled globally via `RATELIMIT_ENABLED=false`
-- 2480+ backend tests, all passing
+- 3198 backend tests, all passing
 
 ## Secret Rotation
 
