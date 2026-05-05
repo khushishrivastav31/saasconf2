@@ -64,4 +64,39 @@ describe('CustomerTimelineCard', () => {
     renderCard('pu-1');
     await waitFor(() => expect(screen.getByText(/No history recorded yet/i)).toBeInTheDocument());
   });
+
+  it('renders a conference-registration event with domain badge + meta lines', async () => {
+    // Locks the unified-portal phase-2 wiring: conference registrations
+    // emitted by app/api/v1/registrations/core.py are matched on the portal
+    // user via subject_email_hash and surface in the timeline alongside
+    // training and CFP events.
+    const registrationEvent = {
+      id: 'evt-2',
+      event_type: 'registration.registered',
+      domain: 'registration',
+      notes: null,
+      meta: {
+        registration_id: 'reg-99',
+        conference_name: 'PyCon DE 2026',
+        booking_option_name: 'Day 1 Pass',
+        company_name: 'Trendig GmbH',
+      },
+      created_by_id: null,
+      created_by_email: null,
+      created_at: '2026-04-15T10:00:00Z',
+    };
+    mockApi.get.mockResolvedValueOnce({
+      data: { items: [registrationEvent], total: 1 },
+    });
+    renderCard('pu-77');
+
+    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/portal-users/pu-77/history'));
+    // Domain pill + event label
+    await waitFor(() => expect(screen.getByText('Registration')).toBeInTheDocument());
+    expect(screen.getByText('Registered (conference)')).toBeInTheDocument();
+    // Meta lines (HistoryPanel.buildMetaLines for domain="registration")
+    expect(screen.getByText(/Conference: PyCon DE 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Booking: Day 1 Pass/)).toBeInTheDocument();
+    expect(screen.getByText(/Company: Trendig GmbH/)).toBeInTheDocument();
+  });
 });
