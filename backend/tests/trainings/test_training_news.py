@@ -23,6 +23,7 @@ from datetime import date
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import create_applicant_access_token
@@ -215,7 +216,16 @@ async def _seed_two_placements(
         id=uuid.uuid4(), tenant_id=training_tenant.id, name="ITIL", slug=f"itil-{uuid.uuid4().hex[:6]}", duration=2
     )
     location = Location(id=uuid.uuid4(), tenant_id=training_tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}")
-    year_a = 2030 + (uuid.uuid4().int % 50)
+    # max+1 to guarantee uniqueness within this tenant; the previous random
+    # pattern flaked ~2% under birthday paradox when called multiple times.
+    _max_year = (
+        await db_session.execute(
+            select(func.coalesce(func.max(TrainingProgramYear.year), 2029)).where(
+                TrainingProgramYear.tenant_id == training_tenant.id
+            )
+        )
+    ).scalar_one()
+    year_a = _max_year + 1
     year_b = year_a + 1
     py_a = TrainingProgramYear(id=uuid.uuid4(), tenant_id=training_tenant.id, year=year_a)
     py_b = TrainingProgramYear(id=uuid.uuid4(), tenant_id=training_tenant.id, year=year_b)
@@ -351,7 +361,15 @@ class TestTrainingNewsSend:
         location = Location(
             id=uuid.uuid4(), tenant_id=training_tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}"
         )
-        year = 2030 + (uuid.uuid4().int % 50)
+        # max+1 keeps the year unique per tenant + within Python's date() range.
+        _max_year = (
+            await db_session.execute(
+                select(func.coalesce(func.max(TrainingProgramYear.year), 2029)).where(
+                    TrainingProgramYear.tenant_id == training_tenant.id
+                )
+            )
+        ).scalar_one()
+        year = _max_year + 1
         program_year = TrainingProgramYear(id=uuid.uuid4(), tenant_id=training_tenant.id, year=year)
         db_session.add_all([training, location, program_year])
         await db_session.flush()
@@ -541,7 +559,15 @@ class TestTrainingNewsPortalAccess:
         location = Location(
             id=uuid.uuid4(), tenant_id=training_tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}"
         )
-        year = 2030 + (uuid.uuid4().int % 50)
+        # max+1 keeps the year unique per tenant + within Python's date() range.
+        _max_year = (
+            await db_session.execute(
+                select(func.coalesce(func.max(TrainingProgramYear.year), 2029)).where(
+                    TrainingProgramYear.tenant_id == training_tenant.id
+                )
+            )
+        ).scalar_one()
+        year = _max_year + 1
         program_year = TrainingProgramYear(id=uuid.uuid4(), tenant_id=training_tenant.id, year=year)
         db_session.add_all([training, location, program_year])
         await db_session.flush()

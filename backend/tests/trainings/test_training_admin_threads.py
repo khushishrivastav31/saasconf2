@@ -22,6 +22,7 @@ from datetime import date
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
@@ -58,8 +59,18 @@ async def _make_training_thread(
         duration=2,
     )
     location = Location(id=uuid.uuid4(), tenant_id=tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}")
-    # Year must be unique per tenant — derive a fresh one each call.
-    year = 2030 + (uuid.uuid4().int % 50)
+    # Year must be unique per tenant. Pick max+1 from existing rows so
+    # multiple calls in the same test never collide. Bounded by Python's
+    # ``date()`` year range (1..9999), so a counter is safer than the
+    # previous ``2030 + uuid % 50`` pattern (2% flake every 2 calls).
+    max_year = (
+        await db.execute(
+            select(func.coalesce(func.max(TrainingProgramYear.year), 2029)).where(
+                TrainingProgramYear.tenant_id == tenant.id
+            )
+        )
+    ).scalar_one()
+    year = max_year + 1
     program_year = TrainingProgramYear(id=uuid.uuid4(), tenant_id=tenant.id, year=year)
     db.add_all([training, location, program_year])
     await db.flush()

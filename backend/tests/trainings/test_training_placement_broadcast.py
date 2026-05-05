@@ -33,7 +33,7 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
 import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.location import Location
@@ -61,7 +61,15 @@ async def pb_placement(db_session: AsyncSession, training_tenant: Tenant) -> Pro
         duration=2,
     )
     loc = Location(id=uuid.uuid4(), tenant_id=training_tenant.id, name="Berlin", code=f"BER{uuid.uuid4().hex[:2]}")
-    year = 2030 + (uuid.uuid4().int % 50)
+    # max+1 keeps year unique per tenant + within Python's date() range.
+    _max_year = (
+        await db_session.execute(
+            select(func.coalesce(func.max(TrainingProgramYear.year), 2029)).where(
+                TrainingProgramYear.tenant_id == training_tenant.id
+            )
+        )
+    ).scalar_one()
+    year = _max_year + 1
     py = TrainingProgramYear(id=uuid.uuid4(), tenant_id=training_tenant.id, year=year)
     db_session.add_all([tr, loc, py])
     await db_session.flush()
