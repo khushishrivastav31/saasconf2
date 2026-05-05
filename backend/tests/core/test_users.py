@@ -254,11 +254,11 @@ async def test_unlock_login_clears_lockout(
     tenant_admin_token: str,
 ) -> None:
     """Recording 5+ failed logins locks the account; unlock clears it."""
+    from app.core.security.token_blacklist import _redis as _redis_check  # type: ignore[attr-defined]
     from app.core.security.token_blacklist import (
         is_account_locked,
         record_failed_login,
     )
-    from app.core.security.token_blacklist import _redis as _redis_check  # type: ignore[attr-defined]
 
     if _redis_check is None:
         pytest.skip("Redis not available")
@@ -299,6 +299,109 @@ async def test_unlock_login_forbidden_for_non_admin(
         headers=auth_headers(regular_user_token),
     )
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_unlock_login_writes_audit_log_with_details(
+    client: AsyncClient,
+    db_session,
+    tenant: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """The unlock endpoint writes a USER_UNLOCK_LOGIN audit-log row carrying
+    attempts_cleared + was_locked in details, so the audit trail can answer
+    "which admin lifted which lock and when"."""
+    from sqlalchemy import select
+
+    from app.core.security.token_blacklist import (
+        _redis as _redis_check,  # type: ignore[attr-defined]
+    )
+    from app.core.security.token_blacklist import (
+        record_failed_login,
+    )
+    from app.models.audit import AuditAction, AuditLog
+
+    if _redis_check is None:
+        pytest.skip("Redis not available")
+
+    email = f"audited-{uuid.uuid4().hex[:8]}@example.com"
+    create_resp = await client.post(
+        BASE_URL,
+        json={**USER_PAYLOAD, "email": email, "password": "StrongPass1"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    user_id = create_resp.json()["id"]
+
+    for _ in range(5):
+        await record_failed_login(email)
+
+    response = await client.post(
+        f"{BASE_URL}/{user_id}/unlock-login",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+
+    rows = (
+        (
+            await db_session.execute(
+                select(AuditLog).where(
+                    AuditLog.action == AuditAction.USER_UNLOCK_LOGIN,
+                    AuditLog.resource_id == uuid.UUID(user_id),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    audit = rows[0]
+    assert audit.tenant_id == tenant_admin_user.tenant_id
+    assert audit.user_id == tenant_admin_user.id
+    assert audit.details["attempts_cleared"] == 5
+    assert audit.details["was_locked"] is True
+    assert audit.details["email"] == email
+
+
+@pytest.mark.asyncio
+async def test_unlock_login_cross_tenant_returns_404(
+    client: AsyncClient,
+    db_session,
+    tenant: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """A tenant admin cannot unlock a user from another tenant — the API
+    returns 404 (not 403) so the caller can't probe for cross-tenant user IDs."""
+    from app.core.security import hash_password
+
+    other_tenant = Tenant(
+        id=uuid.uuid4(),
+        name="Other Tenant",
+        slug=f"other-{uuid.uuid4().hex[:8]}",
+        is_active=True,
+    )
+    db_session.add(other_tenant)
+    await db_session.flush()
+
+    other_user = User(
+        id=uuid.uuid4(),
+        tenant_id=other_tenant.id,
+        email=f"victim-{uuid.uuid4().hex[:8]}@other.test",
+        password_hash=hash_password("Password123!"),
+        first_name="Cross",
+        last_name="Tenant",
+        role="user",
+        is_active=True,
+    )
+    db_session.add(other_user)
+    await db_session.commit()
+
+    response = await client.post(
+        f"{BASE_URL}/{other_user.id}/unlock-login",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 404
 
 
 # ── Resend invite ────────────────────────────────────────────────────────

@@ -87,4 +87,26 @@ describe('admin Tenants UsersTab — unlock', () => {
       expect(screen.getByText(/No failed login attempts on record/i)).toBeInTheDocument()
     );
   });
+
+  it('shows the parsed error message in the toast when the unlock endpoint fails', async () => {
+    // Simulate a 500 with a server-detail field — parseApiError extracts it.
+    mockApi.post.mockRejectedValue({
+      response: {
+        status: 500,
+        data: { detail: 'Redis is unavailable; cannot lift the lockout' },
+      },
+    });
+
+    renderWithProviders(
+      <UsersTab tenantId="tenant-1" onAddUser={vi.fn()} onSuperUserChange={vi.fn()} />
+    );
+
+    await waitFor(() => expect(screen.getByText('admin2@trendig.com')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByTitle(/Reset failed-login counter/i));
+
+    // The mutation's onError path runs parseApiError(err) and surfaces it as
+    // a toast — verifies the failure path that previously had no test.
+    await waitFor(() => expect(screen.getByText(/Redis is unavailable/i)).toBeInTheDocument());
+  });
 });
