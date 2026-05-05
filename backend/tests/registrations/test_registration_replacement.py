@@ -202,52 +202,6 @@ async def test_simple_replacement_no_additional_items(
 
 
 @pytest.mark.asyncio
-async def test_replacement_with_additional_items(
-    client: AsyncClient,
-    tenant_with_reg_module: Tenant,
-    tenant_admin_user: User,
-    reg_admin_token: str,
-    conference: Conference,
-    main_booking_option: BookingOption,
-    db_session: AsyncSession,
-) -> None:
-    """Scenario B: Replace attendee with additional items, creates new invoice."""
-    # Create registration
-    create_response = await client.post(
-        f"/api/v1/conferences/{conference.id}/registrations",
-        json={
-            "billing": {
-                "company_name": "Test Company",
-                "street": "123 Main St",
-                "postal_code": "12345",
-                "city": "TestCity",
-                "country": "DE",
-                "contact_first_name": "Jane",
-                "contact_last_name": "Smith",
-                "contact_phone": "+1234567890",
-                "contact_email": "jane@example.com",
-                "payment_method": "bank_transfer",
-            },
-            "attendees": [
-                {
-                    "first_name": "Alice",
-                    "last_name": "Original",
-                    "email": "alice@example.com",
-                    "booking_option_id": str(main_booking_option.id),
-                }
-            ],
-        },
-        headers=auth_headers(reg_admin_token),
-    )
-    assert create_response.status_code == 201
-    _old_reg_id = create_response.json()["registrations"][0]["id"]
-
-    # This test requires an additional booking option to add as an additional item
-    # For now, skip until we have proper fixture setup
-    pytest.skip("Requires additional booking option fixture for additional items")
-
-
-@pytest.mark.asyncio
 async def test_cannot_replace_cancelled_registration(
     client: AsyncClient,
     tenant_with_reg_module: Tenant,

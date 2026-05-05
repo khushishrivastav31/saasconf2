@@ -13,8 +13,11 @@ settings = get_settings()
 
 
 @pytest.mark.skip(
-    reason="Requires PostgreSQL stored procedures (run_data_retention_cleanup) "
-    "which are only available in production/staging environments"
+    reason="Requires PostgreSQL stored procedures (run_data_retention_cleanup) defined in "
+    "deploy/staging/postgres-init/ — only loaded in staging/prod. The procedure body is "
+    "exercised end-to-end by the cleanup-cron service in the staging deploy job, so the "
+    "production rate-limit guarantee is verified by integration there. Local unit-coverage "
+    "for the endpoint's auth + rate-limit middleware is in test_ops_auth.py."
 )
 @pytest.mark.asyncio
 async def test_data_retention_endpoint_rate_limited(client: AsyncClient) -> None:
@@ -47,8 +50,11 @@ async def test_data_retention_endpoint_rate_limited(client: AsyncClient) -> None
 
 
 @pytest.mark.skip(
-    reason="Requires PostgreSQL stored procedures (run_send_deadline_reminders) "
-    "which are only available in production/staging environments"
+    reason="Requires PostgreSQL stored procedures (run_send_deadline_reminders) defined in "
+    "deploy/staging/postgres-init/ — only loaded in staging/prod. The procedure body is "
+    "exercised end-to-end by the deadline-cron service in the staging deploy job, so the "
+    "production rate-limit guarantee is verified by integration there. Local unit-coverage "
+    "for the endpoint's auth + rate-limit middleware is in test_ops_auth.py."
 )
 @pytest.mark.asyncio
 async def test_deadline_reminders_endpoint_rate_limited(client: AsyncClient) -> None:

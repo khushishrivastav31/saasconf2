@@ -143,24 +143,6 @@ async def test_generate_zugferd_xml_with_tax_info(sample_invoice, sample_confere
     assert xml_bytes is not None
 
 
-@pytest.mark.asyncio
-@pytest.mark.skip(reason="Bank info is optional in simplified XML implementation")
-async def test_generate_zugferd_xml_with_bank_info(sample_invoice, sample_conference, db_session):
-    """Test XML generation includes IBAN/BIC when available."""
-    # Bank info is optional for ZUGFeRD compliance
-    # Current implementation generates basic CII XML without payment details
-    pass
-
-
-@pytest.mark.asyncio
-@pytest.mark.skip(reason="Bank info is optional in simplified XML implementation")
-async def test_generate_zugferd_xml_fallback_legacy_bank_fields(sample_invoice, sample_conference, db_session):
-    """Test XML generation uses legacy bank fields when bank_accounts not present."""
-    # Bank info is optional for ZUGFeRD compliance
-    # Current implementation generates basic CII XML without payment details
-    pass
-
-
 # --- Validation Tests ---
 
 
@@ -275,48 +257,6 @@ def test_validate_zugferd_settings_disabled_no_validation():
     assert errors == []
 
 
-@pytest.mark.skip(reason="seller_vat_id is now auto-determined from company settings")
-def test_validate_zugferd_settings_missing_seller_vat_id():
-    """Test settings validation fails when seller_vat_id missing."""
-    # seller_vat_id is now auto-determined, no manual validation needed
-    pass
-
-
-@pytest.mark.skip(reason="Profile is now always EN16931 (auto-determined)")
-def test_validate_zugferd_settings_invalid_profile():
-    """Test settings validation fails for invalid profile."""
-    # Profile is now always EN16931, no validation needed
-    pass
-
-
-@pytest.mark.skip(reason="Profile is now always EN16931 (auto-determined)")
-def test_validate_zugferd_settings_valid_profiles():
-    """Test settings validation passes for all valid profiles."""
-    # Profile is now always EN16931, no validation needed
-    pass
-
-
-@pytest.mark.skip(reason="Tax category is now auto-determined from VAT decision table")
-def test_validate_zugferd_settings_invalid_tax_category():
-    """Test settings validation warns for invalid tax category code."""
-    # Tax category is now auto-determined, no manual validation needed
-    pass
-
-
-@pytest.mark.skip(reason="Payment means is now auto-determined from invoice template_type")
-def test_validate_zugferd_settings_uncommon_payment_means():
-    """Test settings validation warns for uncommon payment means code."""
-    # Payment means is now auto-determined, no manual validation needed
-    pass
-
-
-@pytest.mark.skip(reason="Payment terms is now always '30' (auto-determined)")
-def test_validate_zugferd_settings_non_numeric_payment_terms():
-    """Test settings validation warns for non-numeric payment terms."""
-    # Payment terms is now always "30", no validation needed
-    pass
-
-
 # --- PDF Validation Tests ---
 
 
@@ -339,22 +279,6 @@ async def test_validate_zugferd_pdf_standard_pdf():
 
 
 # --- Edge Cases ---
-
-
-@pytest.mark.asyncio
-@pytest.mark.skip(reason="Profile is now always EN16931 (auto-determined)")
-async def test_generate_zugferd_xml_with_minimal_profile(sample_invoice, sample_conference, db_session):
-    """Test XML generation with MINIMUM profile."""
-    # Profile is now always EN16931, this test is no longer applicable
-    pass
-
-
-@pytest.mark.asyncio
-@pytest.mark.skip(reason="Profile is now always EN16931 (auto-determined)")
-async def test_generate_zugferd_xml_with_extended_profile(sample_invoice, sample_conference, db_session):
-    """Test XML generation with EXTENDED profile."""
-    # Profile is now always EN16931, this test is no longer applicable
-    pass
 
 
 @pytest.mark.asyncio
