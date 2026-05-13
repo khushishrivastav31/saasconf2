@@ -4,13 +4,34 @@ import api from '../../config/api';
 import Modal from '../../components/Modal';
 import { parseApiError } from '../../utils/apiError';
 import { validateEmail } from '../../utils/validators';
+import { useAuth } from '../../hooks/useAuth';
 import type { TenantRole, TenantUserCreate, PaginatedResponse, Conference } from '../../types';
+
+// Per-scope role rows we may render on the invite form. Each is gated by
+// the matching module being enabled on the inviter's tenant (see filter
+// below) so we don't offer a Trainings role on a tenant that hasn't
+// activated the Trainings module — Brandon's QA 0.5.1.6.
+const SCOPE_OPTIONS = [
+  { scope: 'conferences' as const, label: 'Conferences', module: 'conferences' },
+  { scope: 'trainings' as const, label: 'Trainings', module: 'trainings' },
+  { scope: 'accounting' as const, label: 'Accounting', module: 'accounting' },
+] as const;
 
 export default function AddMemberModal({
   onClose,
 }: {
   onClose: (created?: boolean, memberName?: string) => void;
 }) {
+  const { user: currentUser } = useAuth();
+  // Only super admins (SaaS-level) and tenant super users can grant the
+  // ``scope=all, level=super_user`` role. Hiding the toggle for everyone
+  // else mirrors the backend guard at app/api/v1/users.py:665-669 and
+  // closes QA finding 0.5.1.5.
+  const canGrantSuperUser =
+    currentUser?.role === 'super_admin' || currentUser?.is_tenant_super_user === true;
+  const availableScopes = SCOPE_OPTIONS.filter(
+    (s) => currentUser?.role === 'super_admin' || (currentUser?.modules || []).includes(s.module)
+  );
   const [formData, setFormData] = useState<TenantUserCreate>({
     email: '',
     first_name: '',
@@ -187,39 +208,35 @@ export default function AddMemberModal({
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Roles</h4>
 
-                {/* Super User toggle */}
-                <div className="flex items-center justify-between mb-2 py-1 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
-                  <div>
-                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                      Super User
-                    </span>
-                    <p className="text-xs text-purple-500 dark:text-purple-400">
-                      Full access to everything
-                    </p>
+                {/* Super User toggle — hidden for inviters who can't grant it. */}
+                {canGrantSuperUser && (
+                  <div className="flex items-center justify-between mb-2 py-1 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                    <div>
+                      <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                        Super User
+                      </span>
+                      <p className="text-xs text-purple-500 dark:text-purple-400">
+                        Full access to everything
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSuperUserToggle}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                        isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSuperUser ? 'translate-x-4' : 'translate-x-0'}`}
+                      />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleSuperUserToggle}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                      isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSuperUser ? 'translate-x-4' : 'translate-x-0'}`}
-                    />
-                  </button>
-                </div>
+                )}
 
                 {/* Per-scope roles (only shown when not Super User) */}
                 {!isSuperUser && (
                   <div className="space-y-1.5">
-                    {(
-                      [
-                        { scope: 'conferences' as const, label: 'Conferences' },
-                        { scope: 'trainings' as const, label: 'Trainings' },
-                        { scope: 'accounting' as const, label: 'Accounting' },
-                      ] as const
-                    ).map(({ scope, label }) => {
+                    {availableScopes.map(({ scope, label }) => {
                       const current = tenantRoles.find((r) => r.scope === scope);
                       return (
                         <div

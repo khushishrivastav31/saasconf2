@@ -12,8 +12,18 @@ import type { GlobalUnreadCountResponse } from '../../types/messaging';
 const baseNavigation = [{ name: 'Welcome', href: '/dashboard', icon: HomeIcon }];
 
 const handbookLinks = [
-  { name: 'Conference Handbook', href: '/handbook/conferences', icon: BookIcon, moduleCode: 'conferences' },
-  { name: 'Training Handbook', href: '/handbook/trainings', icon: BookIcon, moduleCode: 'trainings' },
+  {
+    name: 'Conference Handbook',
+    href: '/handbook/conferences',
+    icon: BookIcon,
+    moduleCode: 'conferences',
+  },
+  {
+    name: 'Training Handbook',
+    href: '/handbook/trainings',
+    icon: BookIcon,
+    moduleCode: 'trainings',
+  },
 ];
 
 const adminNavigation = [
@@ -327,8 +337,7 @@ export default function AdminLayout() {
               })}
               {handbookLinks
                 .filter(
-                  (h) =>
-                    user?.role === 'super_admin' || user?.modules?.includes(h.moduleCode),
+                  (h) => user?.role === 'super_admin' || user?.modules?.includes(h.moduleCode)
                 )
                 .map((item) => {
                   const isActive =
@@ -356,9 +365,13 @@ export default function AdminLayout() {
                 })}
             </div>
 
-            {/* Module Navigation */}
+            {/* Module Navigation — filtered by tenant-enabled modules so an
+                admin on a conferences-only tenant doesn't see the Trainings
+                sidebar link (QA 0.5.1.3). Super admins see everything. */}
             {(() => {
-              const availableModules = moduleNavigation;
+              const availableModules = moduleNavigation.filter(
+                (m) => user?.role === 'super_admin' || user?.modules?.includes(m.moduleCode)
+              );
               if (availableModules.length === 0) return null;
               return (
                 <div className="mt-8">

@@ -4,6 +4,7 @@ import api from '../../../../config/api';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import Modal from '../../../../components/Modal';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
+import { useAuth } from '../../../../hooks/useAuth';
 import { validateEmail } from '../../../../utils/validators';
 import { parseApiError } from '../../../../utils/apiError';
 import type {
@@ -13,6 +14,16 @@ import type {
   TenantUserUpdate,
   PaginatedResponse,
 } from '../../../../types';
+
+// Per-scope role rows we may render. Each is gated by the matching
+// tenant module being enabled — closes Brandon's QA 0.5.1.6 so an
+// admin on a conferences-only tenant doesn't see Trainings/Accounting
+// role toggles.
+const SCOPE_OPTIONS = [
+  { scope: 'conferences' as const, label: 'Conferences', module: 'conferences' },
+  { scope: 'trainings' as const, label: 'Trainings', module: 'trainings' },
+  { scope: 'accounting' as const, label: 'Accounting', module: 'accounting' },
+] as const;
 
 export default function UsersTab({
   tenantId,
@@ -275,6 +286,7 @@ function EditUserModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [formData, setFormData] = useState<TenantUserUpdate>({
     email: user.email,
     first_name: user.first_name ?? '',
@@ -291,6 +303,16 @@ function EditUserModal({
   // Tenant roles state
   const [tenantRoles, setTenantRoles] = useState<TenantRole[]>(user.tenant_roles || []);
   const isSuperUser = tenantRoles.some((r) => r.scope === 'all' && r.level === 'super_user');
+
+  // Only super_admins (SaaS-level) and tenant super_users can grant/revoke
+  // the ``scope=all, level=super_user`` role — mirrors the backend guard at
+  // app/api/v1/users.py:665-669 (QA 0.5.1.5). Scope rows are similarly
+  // filtered to tenant-enabled modules (QA 0.5.1.6).
+  const canGrantSuperUser =
+    currentUser?.role === 'super_admin' || currentUser?.is_tenant_super_user === true;
+  const availableScopes = SCOPE_OPTIONS.filter(
+    (s) => currentUser?.role === 'super_admin' || (currentUser?.modules || []).includes(s.module)
+  );
 
   useEffect(() => {
     setTenantRoles(user.tenant_roles || []);
@@ -468,42 +490,46 @@ function EditUserModal({
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
           <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Roles</h4>
 
-          {/* Super User toggle */}
-          <div className="flex items-center justify-between mb-2 py-1.5 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
-            <div>
-              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                Super User
-              </span>
-              <p className="text-xs text-purple-500 dark:text-purple-400">
-                Full access + Stripe keys, deletion
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSuperUserToggle}
-              disabled={saveRolesMutation.isPending}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 ${
-                isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  isSuperUser ? 'translate-x-5' : 'translate-x-0'
+          {/* Super User toggle — hidden when the current user can't grant it.
+              If the target is already a super user but we can't change that,
+              show a read-only indicator so admins know why no toggle is shown. */}
+          {canGrantSuperUser ? (
+            <div className="flex items-center justify-between mb-2 py-1.5 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+              <div>
+                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                  Super User
+                </span>
+                <p className="text-xs text-purple-500 dark:text-purple-400">
+                  Full access + Stripe keys, deletion
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSuperUserToggle}
+                disabled={saveRolesMutation.isPending}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
-              />
-            </button>
-          </div>
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    isSuperUser ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          ) : (
+            isSuperUser && (
+              <div className="mb-2 py-1.5 px-2 bg-purple-50 dark:bg-purple-900/20 rounded text-sm text-purple-700 dark:text-purple-300">
+                This user is a Super User. Only Super Users can change this.
+              </div>
+            )
+          )}
 
           {/* Per-scope roles */}
           {!isSuperUser && (
             <div className="space-y-1.5">
-              {(
-                [
-                  { scope: 'conferences' as const, label: 'Conferences' },
-                  { scope: 'trainings' as const, label: 'Trainings' },
-                  { scope: 'accounting' as const, label: 'Accounting' },
-                ] as const
-              ).map(({ scope, label }) => {
+              {availableScopes.map(({ scope, label }) => {
                 const current = tenantRoles.find((r) => r.scope === scope);
                 return (
                   <div

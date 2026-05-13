@@ -336,6 +336,16 @@ async def update_tenant_user(
     if not current_user.is_super_admin and user.tenant_id != current_user.tenant_id:
         raise NotFoundError(f"User with ID '{user_id}' not found")
 
+    # Cannot modify your own profile via this endpoint. The role + is_active
+    # fields here feed back into the requester's own permission checks
+    # (``current_user.is_tenant_admin`` falls back to ``user.role ==
+    # TENANT_ADMIN`` if no tenant_roles are set), so allowing self-edit
+    # would let a user demote themselves into an admin-equivalent or
+    # deactivate their own account by accident. Profile self-service
+    # belongs in a separate ``/me`` endpoint with a narrower payload.
+    if user.id == current_user.user_id:
+        raise ValidationError("Cannot modify your own user record via the admin endpoint")
+
     # Cannot change role to super_admin
     if user_data.role == UserRole.SUPER_ADMIN.value:
         raise AuthorizationError("Cannot promote user to super admin")

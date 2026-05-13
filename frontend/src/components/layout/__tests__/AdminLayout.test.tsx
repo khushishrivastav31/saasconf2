@@ -140,7 +140,7 @@ describe('AdminLayout', () => {
       expect(screen.getByRole('link', { name: /conferences/i })).toBeInTheDocument();
     });
 
-    it('shows module navigation regardless of module assignment', () => {
+    it('hides module link when the tenant has no modules (QA 0.5.1.3)', () => {
       mockUser = {
         ...mockUser!,
         modules: [],
@@ -148,7 +148,33 @@ describe('AdminLayout', () => {
 
       renderWithProviders();
 
-      expect(screen.getByRole('link', { name: /conferences/i })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^conferences$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^trainings$/i })).not.toBeInTheDocument();
+    });
+
+    it('hides Trainings link on a conferences-only tenant (QA 0.5.1.3)', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: ['conferences'],
+      };
+
+      renderWithProviders();
+
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^trainings$/i })).not.toBeInTheDocument();
+    });
+
+    it('shows all module links for super_admin regardless of modules', () => {
+      mockUser = {
+        ...mockUser!,
+        role: 'super_admin',
+        modules: [],
+      };
+
+      renderWithProviders();
+
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^trainings$/i })).toBeInTheDocument();
     });
 
     it('shows Team link for tenant_admin users', () => {
@@ -196,17 +222,6 @@ describe('AdminLayout', () => {
 
       expect(screen.queryByRole('link', { name: /companies/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /audit logs/i })).not.toBeInTheDocument();
-    });
-
-    it('all users see module navigation regardless of module assignment', () => {
-      mockUser = {
-        ...mockUser!,
-        modules: [],
-      };
-
-      renderWithProviders();
-
-      expect(screen.getByRole('link', { name: /conferences/i })).toBeInTheDocument();
     });
   });
 

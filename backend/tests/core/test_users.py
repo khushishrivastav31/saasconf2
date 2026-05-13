@@ -132,6 +132,27 @@ async def test_update_user(
     assert data["email"] == USER_PAYLOAD["email"]
 
 
+async def test_update_user_self_edit_rejected(
+    client: AsyncClient,
+    tenant: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Admins cannot modify their own record via the admin endpoint (QA 0.5.1.8).
+
+    The role + is_active fields feed back into the requester's own permission
+    checks, so self-edit through this endpoint is a footgun (could lock the
+    admin out of their own tenant or quietly demote them).
+    """
+    response = await client.put(
+        f"{BASE_URL}/{tenant_admin_user.id}",
+        json={"first_name": "SelfEdit"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 400
+    assert "own" in response.json()["detail"].lower()
+
+
 # ── Deactivate user ───────────────────────────────────────────────────
 
 
