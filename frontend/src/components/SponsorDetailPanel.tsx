@@ -203,6 +203,12 @@ export default function SponsorDetailPanel({
                 </option>
               ))}
             </select>
+            {sponsorPackages.length === 0 && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                No packages yet. Create them in the Settings tab under{' '}
+                <span className="font-medium">Sponsor Packages</span>.
+              </p>
+            )}
           </div>
           <div className="flex items-end">
             <label className="inline-flex items-center gap-2">

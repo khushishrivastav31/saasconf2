@@ -184,14 +184,32 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
       screen_overlay_id?: string | null;
     }) => {
       const resp = await api.post(`${basePath}/bulk-send`, data);
-      return resp.data;
+      return resp.data as { threads_created: number; emails_sent: number };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.messaging.threads(conferenceId),
       });
       setShowBulkCompose(false);
-      showToast(`Sent to ${data.threads_created} recipients`, 'success');
+      // QA 6.1.1/6.1.3: surface both counts. Previously we only reported
+      // ``threads_created`` so users couldn't tell when emails silently
+      // failed to send (e.g. Resend key missing in dev, or SMTP_HOST not
+      // pointing at MailHog). Reporting both makes the "nothing arrived"
+      // case obvious — a 0/0 result tells the admin the send didn't
+      // actually fan out anywhere.
+      const threads = data.threads_created ?? 0;
+      const emails = data.emails_sent ?? 0;
+      if (threads === 0 && emails === 0) {
+        showToast(
+          'No recipients matched — nothing was sent. Check the filter or your email provider configuration.',
+          'warning'
+        );
+      } else {
+        const parts: string[] = [];
+        if (threads > 0) parts.push(`${threads} thread${threads === 1 ? '' : 's'}`);
+        if (emails > 0) parts.push(`${emails} email${emails === 1 ? '' : 's'}`);
+        showToast(`Sent: ${parts.join(' + ')}`, 'success');
+      }
     },
     onError: (error) => {
       showToast(parseApiError(error, 'Failed to send bulk message'), 'error');

@@ -350,6 +350,15 @@ function ConferenceSponsorsTab({
                       </option>
                     ))}
                   </select>
+                  {/* QA 4.1.4: tell admins where to create packages when the
+                      list is empty. Sub-tab navigation in Settings is local
+                      state, so we point the user rather than deep-link. */}
+                  {(sponsorPackagesData?.items?.length ?? 0) === 0 && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      No packages yet. Create them in the Settings tab under{' '}
+                      <span className="font-medium">Sponsor Packages</span>.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <label className="inline-flex items-center gap-2">
