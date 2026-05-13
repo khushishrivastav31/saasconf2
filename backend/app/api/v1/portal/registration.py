@@ -96,8 +96,12 @@ async def resolve_tenant_and_conference(
             detail=f"Conference '{conference_slug}' not found",
         )
 
-    # Check if public registration is enabled
-    portal_settings = conference.settings.get("public_registration_portal", {})
+    # Check if public registration is enabled. ``conference.settings`` is
+    # nullable; a brand-new conference whose settings have not been touched
+    # yet has ``settings = NULL``, which would have raised
+    # ``AttributeError: 'NoneType' object has no attribute 'get'`` before
+    # the registration page even reached its first await (QA 1.4.2.4).
+    portal_settings = (conference.settings or {}).get("public_registration_portal", {})
     if not portal_settings.get("enabled"):
         raise HTTPException(
             status_code=403,

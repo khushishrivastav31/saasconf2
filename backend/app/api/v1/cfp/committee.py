@@ -264,8 +264,21 @@ async def create_committee_member(
             )
 
     await db.commit()
-    await db.refresh(member)
-    await db.refresh(applicant)
+
+    # Re-fetch with eager-loaded relationships so the response builder
+    # (which reads ``member.applicant`` and ``member.topics``) doesn't
+    # trigger a lazy SELECT — that would explode with
+    # ``MissingGreenlet: greenlet_spawn has not been called`` under
+    # async (Brandon's QA 3.1.2).
+    reloaded = await db.execute(
+        select(CFPCommitteeMember)
+        .where(CFPCommitteeMember.id == member.id)
+        .options(
+            selectinload(CFPCommitteeMember.applicant),
+            selectinload(CFPCommitteeMember.topics),
+        )
+    )
+    member = reloaded.scalar_one()
 
     return _build_committee_member_response(member, picture_url=None)
 
@@ -320,7 +333,17 @@ async def update_committee_member(
         member.expertise_areas = update_data.pop("expertise_areas")
 
     await db.commit()
-    await db.refresh(member)
+
+    # Same eager-load pattern as the POST handler — see QA 3.1.2.
+    reloaded = await db.execute(
+        select(CFPCommitteeMember)
+        .where(CFPCommitteeMember.id == member.id)
+        .options(
+            selectinload(CFPCommitteeMember.applicant),
+            selectinload(CFPCommitteeMember.topics),
+        )
+    )
+    member = reloaded.scalar_one()
 
     picture_url = await _get_applicant_picture_url(db, member.applicant_id, current_user.tenant_id)
 

@@ -289,12 +289,24 @@ async def saasconf_error_handler(request: Request, exc: SaaSConfException) -> JS
 
 @app.exception_handler(Exception)
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Catch-all for unhandled exceptions, ensuring CORS headers are present."""
+    """Catch-all for unhandled exceptions, ensuring CORS headers are present.
+
+    Always logs with ``exc_info=True`` so the full Python traceback ends up in
+    the structured log record. Previously only ``str(exc)`` was emitted, which
+    meant a ``KeyError('booking_options')`` from deep in the registration portal
+    showed up in logs with no file/line info — Brandon's QA called this out as
+    a debugging blocker (registration portal 1.4.2.4, ZUGFeRD 1.4.5, committee
+    member 3.1.2 all logged only the message, not the stack).
+    """
     import logging
-    import traceback
 
     logger = logging.getLogger("saasconf")
-    logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc)
+    logger.error(
+        "Unhandled exception on %s %s",
+        request.method,
+        request.url.path,
+        exc_info=exc,
+    )
     # Sentry captures this automatically via its FastAPI integration,
     # but our catch-all handler prevents propagation, so capture explicitly
     if settings.SENTRY_DSN:
@@ -302,8 +314,9 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
 
         sentry_sdk.capture_exception(exc)
     if settings.DEBUG:
-        traceback.print_exc()
-        # Return actual error details in debug mode to help diagnose issues
+        # Return actual error details in debug mode to help diagnose issues.
+        # The traceback is already in the log record above (exc_info=exc), so
+        # we don't print to stderr a second time — keeps the dev log tidy.
         return _cors_response(
             request,
             500,
