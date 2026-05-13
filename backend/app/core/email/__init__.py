@@ -815,13 +815,24 @@ async def send_direct_message_email(
     Unlike send_new_message_notification which sends a notification with a link,
     this sends the actual message content directly.
     The reply_to address is typically the conference's contact email.
+
+    ``body_html`` is rich content authored in-app (e.g. news article body)
+    and must NOT be HTML-escaped during placeholder substitution — that
+    was Brandon's QA 6.2.1 where recipients saw ``<p>article 1</p>`` as
+    text. We sanitize it through ``nh3`` first as defense-in-depth, then
+    pass ``Message Content`` in ``raw_html_keys`` so the template
+    renderer leaves the tags intact.
     """
+    from app.core.html_sanitize import sanitize_html
+
+    safe_body_html = sanitize_html(body_html) if body_html else ""
+
     context = build_direct_message_context(
         first_name=first_name,
         conference_name=conference_name,
         sender_name=sender_name,
         message_subject=subject,
-        message_content=body_html,
+        message_content=safe_body_html,
     )
 
     rendered = await render_email(
@@ -830,6 +841,7 @@ async def send_direct_message_email(
         context,
         conference_id=conference_id,
         tenant_id=tenant_id,
+        raw_html_keys={"Message Content"},
     )
 
     return await send_email(

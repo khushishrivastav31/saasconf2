@@ -471,6 +471,30 @@ class TestReplacePlaceholdersXSS:
         assert "&#x27;" in result or "'" in result  # html.escape with quote=False
         assert 'onclick="alert(1)' not in result
 
+    def test_raw_html_keys_skip_escape(self):
+        """Keys listed in raw_html_keys keep their HTML intact (QA 6.2.1).
+
+        The news direct-message email injects the article body via
+        ``Message Content``; that key holds already-sanitized HTML that
+        must render as a paragraph, not literal ``<p>...</p>`` text.
+        Other keys still get escaped so they can't smuggle XSS.
+        """
+        text = "[First Name]: [Message Content]"
+        result = replace_placeholders(
+            text,
+            {
+                "First Name": "<script>alert(1)</script>",
+                "Message Content": "<p>article 1</p>",
+            },
+            is_html=True,
+            raw_html_keys={"Message Content"},
+        )
+        # Article body kept as HTML
+        assert "<p>article 1</p>" in result
+        # Other user-supplied key still escaped
+        assert "<script>" not in result
+        assert "&lt;script&gt;" in result
+
 
 class TestSendCospeakerInvitationEmail:
     """Tests for send_cospeaker_invitation_email with template rendering."""

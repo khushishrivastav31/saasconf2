@@ -25,7 +25,13 @@ class RenderedEmail:
         self.body_text = body_text
 
 
-def replace_placeholders(text: str, context: dict[str, str], *, is_html: bool = False) -> str:
+def replace_placeholders(
+    text: str,
+    context: dict[str, str],
+    *,
+    is_html: bool = False,
+    raw_html_keys: set[str] | None = None,
+) -> str:
     """Replace all placeholders in text with values from context.
 
     Args:
@@ -33,10 +39,19 @@ def replace_placeholders(text: str, context: dict[str, str], *, is_html: bool = 
         context: Mapping of placeholder names to values.
         is_html: When True, context values are HTML-escaped before insertion
                  to prevent XSS via user-supplied data (e.g. paper titles).
+        raw_html_keys: Optional set of context keys whose values are
+                 already-trusted HTML and must NOT be escaped (e.g. the
+                 news article body in the direct-message template).
+                 Ignored when ``is_html=False`` since no escaping happens
+                 either way. Caller is responsible for ensuring such
+                 values were sanitized upstream (``nh3`` etc.). Closes
+                 Brandon's QA 6.2.1, where news emails showed
+                 ``<p>article 1</p>`` as literal text.
     """
+    raw_keys = raw_html_keys or set()
     result = text
     for key, value in context.items():
-        safe_value = html_escape(value) if is_html else value
+        safe_value = html_escape(value) if is_html and key not in raw_keys else value
         # Support both [Key] and [key] formats
         result = result.replace(f"[{key}]", safe_value)
     return result
@@ -147,6 +162,7 @@ async def render_email(
     context: dict[str, str],
     conference_id: UUID | None = None,
     tenant_id: UUID | None = None,
+    raw_html_keys: set[str] | None = None,
 ) -> RenderedEmail:
     """
     Render an email by fetching template and replacing placeholders.
@@ -157,6 +173,10 @@ async def render_email(
         context: Dict of placeholder values (e.g., {'First Name': 'John', 'Conference Name': 'PyCon'})
         conference_id: Optional conference ID for conference-specific templates
         tenant_id: Optional tenant ID for tenant-level templates
+        raw_html_keys: Optional set of context keys whose values are
+            already-trusted HTML (skip escape). Used by the direct-message
+            path so the article body isn't HTML-escaped into garbage —
+            see ``replace_placeholders`` docstring.
 
     Returns:
         RenderedEmail with subject, body_html, and body_text
@@ -164,14 +184,18 @@ async def render_email(
     subject, body_html, body_text = await get_template(db, template_type, conference_id, tenant_id)
 
     rendered_subject = replace_placeholders(subject, context)
-    rendered_html = replace_placeholders(body_html, context, is_html=True)
+    rendered_html = replace_placeholders(body_html, context, is_html=True, raw_html_keys=raw_html_keys)
     rendered_text = replace_placeholders(body_text, context) if body_text else None
 
     # Wrap with conference-level email header/footer (replace placeholders in them too)
     header_html, footer_html = await _get_email_header_footer(db, conference_id)
     if header_html or footer_html:
-        rendered_header = replace_placeholders(header_html, context, is_html=True) if header_html else ""
-        rendered_footer = replace_placeholders(footer_html, context, is_html=True) if footer_html else ""
+        rendered_header = (
+            replace_placeholders(header_html, context, is_html=True, raw_html_keys=raw_html_keys) if header_html else ""
+        )
+        rendered_footer = (
+            replace_placeholders(footer_html, context, is_html=True, raw_html_keys=raw_html_keys) if footer_html else ""
+        )
         rendered_html = _wrap_with_header_footer(rendered_html, rendered_header, rendered_footer)
 
     return RenderedEmail(rendered_subject, rendered_html, rendered_text)

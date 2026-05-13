@@ -36,6 +36,23 @@ describe('formatDate', () => {
     const result = formatDate('not-a-date', 'en');
     expect(result).toBeTruthy();
   });
+
+  it('treats YYYY-MM-DD as a calendar date, not midnight UTC (QA 1.1.1)', () => {
+    // ``new Date("2026-11-20")`` is parsed as midnight UTC, which in any
+    // negative-offset zone (America/*) renders as Nov 19. The helper must
+    // pin the displayed day to 20 regardless of viewer timezone.
+    const result = formatDate('2026-11-20', 'en');
+    expect(result).toContain('Nov');
+    expect(result).toContain('20');
+    expect(result).toContain('2026');
+    expect(result).not.toContain('19');
+  });
+
+  it('preserves day-of-month for the German locale on date-only input', () => {
+    const result = formatDate('2026-11-20', 'de');
+    expect(result).toContain('20');
+    expect(result).toContain('2026');
+  });
 });
 
 describe('formatDateTime', () => {
