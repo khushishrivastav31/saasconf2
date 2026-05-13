@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import api from '../../../../config/api';
 import { useToast } from '../../../../components/Toast';
+import { useMyCompanyAccountingEmail } from '../../../../hooks/useMyCompanyAccountingEmail';
 
 import type { TrainingInvoice } from './types';
 import { formatDate, formatAmount, StatusBadge, TypeBadge } from './formatters';
@@ -57,6 +58,8 @@ function buildRows(items: TrainingInvoice[]): ListRow[] {
 export default function InvoicesTab() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  // QA 4.1.5: warn before the admin clicks Send if accounting_email isn't set.
+  const accountingEmail = useMyCompanyAccountingEmail();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -258,6 +261,17 @@ export default function InvoicesTab() {
   // ── List view ────────────────────────────────────────────────────────────
   return (
     <div>
+      {!accountingEmail.isLoading && !accountingEmail.isConfigured && (
+        <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <span className="font-medium">Accounting email not configured.</span> Sending invoices or
+          credit notes will fail. Set it on{' '}
+          <a href="/my-company" className="underline font-medium hover:no-underline">
+            My Company
+          </a>{' '}
+          before sending.
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Training Invoices

@@ -10,6 +10,7 @@ import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
 import { useSelection } from '../../SelectionContext';
 import { useToast } from '../../../../components/Toast';
+import { useMyCompanyAccountingEmail } from '../../../../hooks/useMyCompanyAccountingEmail';
 import { useInvoiceFilters } from './useInvoiceFilters';
 import { useInvoiceMutations } from './useInvoiceMutations';
 import { useInvoiceCreateForm } from './useInvoiceCreateForm';
@@ -28,6 +29,10 @@ export default function ConferenceInvoicesTab({
 }) {
   const { selectedInvoiceId, setSelectedInvoiceId } = useSelection();
   const { showToast } = useToast();
+  // QA 4.1.5: warn before the admin clicks Send if the tenant's
+  // accounting_email isn't configured — the backend currently 422s with
+  // "Set Accounting Email on My Company..." and nothing primes the user.
+  const accountingEmail = useMyCompanyAccountingEmail();
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
@@ -283,6 +288,17 @@ export default function ConferenceInvoicesTab({
           </div>
 
           <ErrorBanner message={error} />
+
+          {!accountingEmail.isLoading && !accountingEmail.isConfigured && (
+            <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+              <span className="font-medium">Accounting email not configured.</span> Sending invoices
+              or credit notes will fail. Set it on{' '}
+              <a href="/my-company" className="underline font-medium hover:no-underline">
+                My Company
+              </a>{' '}
+              before sending.
+            </div>
+          )}
 
           {!isAdding && (
             <InvoiceSearchFilters
