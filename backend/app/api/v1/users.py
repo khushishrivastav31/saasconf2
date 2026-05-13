@@ -29,7 +29,7 @@ from app.models.settings import PronounOption
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.models.user_password_reset import UserPasswordReset
-from app.models.user_tenant_role import UserTenantRole
+from app.models.user_tenant_role import TenantRoleLevel, UserTenantRole
 from app.schemas.user import (
     BulkTenantRoleAssignment,
     TenantRoleResponse,
@@ -707,9 +707,15 @@ async def set_user_tenant_roles(
             )
         )
 
-    # Sync User.role for backward compat:
-    # If user has any admin+ role → tenant_admin; otherwise → user
-    if data.roles:
+    # Sync ``User.role`` for backward compat. The legacy ``role`` column is
+    # still consulted by ``is_tenant_admin``, so we must only promote to
+    # ``TENANT_ADMIN`` when the user actually holds an admin-or-higher
+    # scoped role. Previously this promoted *any* tenant_role (including
+    # ``level=member``), which silently turned every Conferences-Member
+    # invite into a tenant-admin and bypassed every write guard
+    # (Brandon's QA 0.5.1.2 and 0.5.1.7).
+    has_admin_role = any(r.level in (TenantRoleLevel.ADMIN.value, TenantRoleLevel.SUPER_USER.value) for r in data.roles)
+    if has_admin_role:
         user.role = UserRole.TENANT_ADMIN.value
     else:
         user.role = UserRole.USER.value

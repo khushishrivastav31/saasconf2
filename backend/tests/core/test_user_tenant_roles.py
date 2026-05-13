@@ -143,6 +143,87 @@ async def test_set_tenant_roles_clear_all(
     assert resp.json() == []
 
 
+async def test_set_tenant_roles_member_only_does_not_promote_to_tenant_admin(
+    client: AsyncClient,
+    regular_user: User,
+    tenant_admin_token: str,
+    db_session: AsyncSession,
+) -> None:
+    """Assigning only member-level roles must keep User.role = 'user' (QA 0.5.1.2).
+
+    Previously, ``set_tenant_roles`` promoted *any* non-empty role list to
+    ``role = tenant_admin``, which then made ``is_tenant_admin`` return
+    True and let Conferences-Member users edit conferences + settings.
+    The bar for legacy tenant-admin should be admin-or-super_user level.
+    """
+    resp = await client.put(
+        f"{BASE_URL}/{regular_user.id}/tenant-roles",
+        json={"roles": [{"scope": "conferences", "level": "member"}]},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert resp.status_code == 200
+
+    await db_session.refresh(regular_user)
+    assert regular_user.role == "user"
+
+
+async def test_set_tenant_roles_admin_promotes_to_tenant_admin(
+    client: AsyncClient,
+    regular_user: User,
+    tenant_admin_token: str,
+    db_session: AsyncSession,
+) -> None:
+    """Assigning at least one admin-level role promotes User.role to 'tenant_admin'."""
+    resp = await client.put(
+        f"{BASE_URL}/{regular_user.id}/tenant-roles",
+        json={
+            "roles": [
+                {"scope": "conferences", "level": "admin"},
+                {"scope": "trainings", "level": "member"},
+            ]
+        },
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert resp.status_code == 200
+
+    await db_session.refresh(regular_user)
+    assert regular_user.role == "tenant_admin"
+
+
+async def test_set_tenant_roles_downgrade_admin_to_member_demotes_user_role(
+    client: AsyncClient,
+    regular_user: User,
+    tenant_admin_token: str,
+    db_session: AsyncSession,
+) -> None:
+    """Replacing all admin roles with member-only roles must demote User.role to 'user'.
+
+    Closes the JWT-stale-after-fix concern: even if a user was previously
+    promoted to tenant_admin, downgrading their roles to member-only now
+    flips the legacy role column back so that ``is_tenant_admin`` returns
+    False on the next login.
+    """
+    # First make them a conferences admin (User.role becomes tenant_admin).
+    resp = await client.put(
+        f"{BASE_URL}/{regular_user.id}/tenant-roles",
+        json={"roles": [{"scope": "conferences", "level": "admin"}]},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert resp.status_code == 200
+    await db_session.refresh(regular_user)
+    assert regular_user.role == "tenant_admin"
+
+    # Now downgrade them to member-only.
+    resp = await client.put(
+        f"{BASE_URL}/{regular_user.id}/tenant-roles",
+        json={"roles": [{"scope": "conferences", "level": "member"}]},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert resp.status_code == 200
+    await db_session.refresh(regular_user)
+    assert regular_user.role == "user"
+
+
 async def test_set_tenant_roles_invalid_scope(
     client: AsyncClient,
     regular_user: User,
