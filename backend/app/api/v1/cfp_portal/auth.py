@@ -174,6 +174,14 @@ async def register_applicant(
             applicant_last_name=data.last_name,
             activity_type=ApplicantActivityType.EMAIL_VERIFIED,
         )
+        # Mirror the production verify-email path: create the linked
+        # PortalUser so the unified login (``/portal/{slug}/unified/login``)
+        # finds the freshly-verified user. Without this, only the legacy
+        # CFP login auto-heals; new-frontend users hit "Invalid email or
+        # password" against the unified endpoint.
+        from app.core.portal_linkage import ensure_portal_user_for_applicant
+
+        await ensure_portal_user_for_applicant(db, applicant)
         await db.commit()
         return {"message": "Registration successful. Email auto-verified (debug mode). You can now log in."}
 
@@ -258,6 +266,17 @@ async def verify_email(
         applicant_last_name=applicant.last_name,
         activity_type=ApplicantActivityType.EMAIL_VERIFIED,
     )
+
+    # Create the linked PortalUser now that the applicant has confirmed
+    # their email. The unified portal login (``/portal/{slug}/unified/login``)
+    # authenticates against ``portal_users`` — without this row, freshly
+    # verified self-registered users get "Invalid email or password" on
+    # the new frontend. The legacy ``/portal/{slug}/login`` had an
+    # auto-heal but the unified endpoint did not.
+    from app.core.portal_linkage import ensure_portal_user_for_applicant
+
+    await ensure_portal_user_for_applicant(db, applicant)
+
     await db.commit()
 
     return {"message": "Email verified successfully. You can now log in."}

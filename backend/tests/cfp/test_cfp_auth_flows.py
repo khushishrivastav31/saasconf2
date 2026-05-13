@@ -40,6 +40,8 @@ def _reset_registration_rate_limits() -> None:  # type: ignore[misc]
     clear_rate_limits()
     yield  # type: ignore[misc]
     clear_rate_limits()
+
+
 from app.core.utils import utcnow
 from app.models.applicant_token import (
     ApplicantEmailVerification,
@@ -343,6 +345,103 @@ class TestLogin:
         )
         # Either 403 (admin redirect) or 401 (email mismatch on tenant slug) is acceptable
         assert resp.status_code in (401, 403)
+
+    async def test_self_registered_user_can_log_in_via_unified_endpoint(
+        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant
+    ) -> None:
+        """Reproduce Brandon's QA finding 2.1.4–2.1.8: a user who registers
+        via the CFP portal endpoint MUST be able to log back in via the
+        unified portal login (``/portal/{slug}/unified/login``). The
+        unified login authenticates against ``portal_users`` — the
+        applicant row alone is not enough.
+
+        Before the fix, ``register_applicant`` created the ``CFPApplicant``
+        but no linked ``PortalUser``, so the unified login returned
+        ``Invalid email or password``. The fix wires
+        ``ensure_portal_user_for_applicant`` into the verification handler
+        (and the DEBUG auto-verify branch of register).
+        """
+        from unittest.mock import patch
+
+        from app.config import Settings
+
+        debug_settings = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            DEBUG=True,
+        )
+        email = f"self-reg-unified-{uuid.uuid4().hex[:8]}@example.com"
+        register_payload = {
+            "email": email,
+            "password": VALID_PASSWORD,
+            "first_name": "Self",
+            "last_name": "Registered",
+        }
+        with patch("app.api.v1.cfp_portal.auth.get_settings", return_value=debug_settings):
+            register_resp = await client.post(
+                f"/api/v1/portal/{tenant.slug}/register",
+                json=register_payload,
+            )
+        assert register_resp.status_code in (200, 201), register_resp.text
+
+        # Hit the unified portal login — this is what the new frontend uses.
+        login_resp = await client.post(
+            f"/api/v1/portal/{tenant.slug}/unified/login",
+            json={"email": email, "password": VALID_PASSWORD},
+        )
+        assert login_resp.status_code == 200, login_resp.text
+        body = login_resp.json()
+        assert body.get("access_token")
+        assert body.get("refresh_token")
+
+    async def test_verified_user_can_log_in_via_unified_endpoint(
+        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant
+    ) -> None:
+        """Production path (DEBUG=False): register → verify email → unified
+        login. The verify-email handler must create the linked PortalUser
+        so the verified user can log in via the unified endpoint.
+        """
+        email = f"verify-then-login-{uuid.uuid4().hex[:8]}@example.com"
+        register_resp = await client.post(
+            f"/api/v1/portal/{tenant.slug}/register",
+            json={
+                "email": email,
+                "password": VALID_PASSWORD,
+                "first_name": "Verify",
+                "last_name": "Then",
+            },
+        )
+        assert register_resp.status_code in (200, 201), register_resp.text
+
+        # The raw token isn't recoverable from the email log, so generate a
+        # new one and replace the row's hash to hit /verify-email
+        # deterministically.
+        applicant_result = await db_session.execute(
+            select(CFPApplicant).where(CFPApplicant.email_hash == hash_email(email))
+        )
+        applicant = applicant_result.scalar_one_or_none()
+        assert applicant is not None, "register should have created the applicant"
+        raw_token, token_hash = generate_email_verification_token()
+        existing = await db_session.execute(
+            select(ApplicantEmailVerification).where(ApplicantEmailVerification.applicant_id == applicant.id)
+        )
+        for v in existing.scalars().all():
+            v.token_hash = token_hash
+            v.used_at = None
+        await db_session.commit()
+
+        verify_resp = await client.post(
+            f"/api/v1/portal/{tenant.slug}/verify-email",
+            json={"token": raw_token},
+        )
+        assert verify_resp.status_code == 200, verify_resp.text
+
+        login_resp = await client.post(
+            f"/api/v1/portal/{tenant.slug}/unified/login",
+            json={"email": email, "password": VALID_PASSWORD},
+        )
+        assert login_resp.status_code == 200, login_resp.text
+        assert login_resp.json().get("access_token")
 
 
 # ---------------------------------------------------------------------------
