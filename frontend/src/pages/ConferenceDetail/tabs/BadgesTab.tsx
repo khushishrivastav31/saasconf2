@@ -186,6 +186,13 @@ export default function BadgesTab({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Badges</h2>
       </div>
+      {/* QA 1.4.5.6: badge *design* lives in Settings → Badge Designer.
+          This page only generates PDFs using the saved design. Point new
+          admins there so they don't go hunting for a layout editor. */}
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Generate badge PDFs using the layout configured in the Settings tab under{' '}
+        <span className="font-medium">Badge Designer</span>.
+      </p>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
