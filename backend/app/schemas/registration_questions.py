@@ -20,7 +20,7 @@ class RegistrationQuestion(BaseModel):
 
     id: str = Field(..., description="UUID string identifying the question")
     text: str = Field(..., min_length=1, max_length=1000)
-    type: Literal["checkbox", "text", "radio", "dropdown"]
+    type: Literal["checkbox", "text", "textarea", "radio", "dropdown"]
     required: bool = False
     help_text: str = ""
     options: list[str] = Field(default_factory=list, description="Options for radio/dropdown-type questions")
@@ -63,7 +63,7 @@ class PendingQuestion(BaseModel):
 
     id: str
     text: str
-    type: Literal["checkbox", "text", "radio", "dropdown"]
+    type: Literal["checkbox", "text", "textarea", "radio", "dropdown"]
     required: bool
     help_text: str = ""
     options: list[str] = []

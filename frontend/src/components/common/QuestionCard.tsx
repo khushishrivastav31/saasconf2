@@ -133,6 +133,7 @@ export default function QuestionCard({
             className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-sm dark:bg-gray-800 dark:text-gray-100"
           >
             <option value="text">Text Field</option>
+            <option value="textarea">Textarea</option>
             <option value="checkbox">Checkbox</option>
             <option value="radio">Radio Buttons</option>
             <option value="dropdown">Dropdown</option>

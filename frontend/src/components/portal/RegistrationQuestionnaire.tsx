@@ -16,7 +16,7 @@ import { stripHtml } from '../../utils/richText';
 interface PendingQuestion {
   id: string;
   text: string;
-  type: 'checkbox' | 'text' | 'radio' | 'dropdown';
+  type: 'checkbox' | 'text' | 'textarea' | 'radio' | 'dropdown';
   required: boolean;
   help_text?: string;
   options: string[];
@@ -96,7 +96,7 @@ export default function RegistrationQuestionnaire({
           const val = answers[q.id];
           if (q.type === 'checkbox' && val !== 'true') {
             errors[q.id] = 'This field is required';
-          } else if (q.type === 'text' && !val.trim()) {
+          } else if ((q.type === 'text' || q.type === 'textarea') && !val.trim()) {
             errors[q.id] = 'This field is required';
           } else if ((q.type === 'radio' || q.type === 'dropdown') && !val) {
             errors[q.id] = 'Please select an option';
@@ -199,6 +199,23 @@ export default function RegistrationQuestionnaire({
                   </div>
                   <input
                     type="text"
+                    value={answers[q.id]}
+                    onChange={(e) => updateAnswer(q.id, e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                  />
+                </div>
+              ) : q.type === 'textarea' ? (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <RichTextDisplay
+                      content={q.text}
+                      className="inline [&_p]:inline"
+                      fallback={q.text}
+                    />
+                    {q.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </div>
+                  <textarea
+                    rows={4}
                     value={answers[q.id]}
                     onChange={(e) => updateAnswer(q.id, e.target.value)}
                     className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"

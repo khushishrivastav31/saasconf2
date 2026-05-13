@@ -91,6 +91,35 @@ async def test_create_form_field(
     assert "created_at" in data
 
 
+async def test_create_form_field_invalid_field_key_human_readable_error(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """An invalid field_key must return Brandon's QA 1.4.3.1 readable message.
+
+    Pre-fix this surfaced the raw Pydantic pattern error
+    ``String should match pattern '^[a-z][a-z0-9_]*$'`` which non-technical
+    conference admins couldn't decode.
+    """
+    bad_payload = {**FIELD_PAYLOAD, "field_key": "1_bad_start"}
+    response = await client.post(
+        _fields_url(conference.id),
+        json=bad_payload,
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 422
+    body = response.json()
+    # FastAPI structures validation errors under ``detail``; the human
+    # message is in the ``msg`` field of one of the entries.
+    messages = [err.get("msg", "") for err in body.get("detail", [])]
+    combined = " ".join(messages)
+    assert "lowercase letter" in combined
+    assert "abstract_text" in combined  # the example we surface to admins
+
+
 # ── Update form field ─────────────────────────────────────────────────
 
 

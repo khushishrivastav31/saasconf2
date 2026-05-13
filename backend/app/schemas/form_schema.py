@@ -1,10 +1,32 @@
 """Schemas for paper form builder: form schemas and custom fields."""
 
+import re
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# Field-key / slug rule: lower-snake_case, must start with a letter.
+# Centralised so the validator and the human-readable error stay aligned.
+_FIELD_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+_FIELD_KEY_ERROR = (
+    "Field ID must start with a lowercase letter and contain only "
+    "lowercase letters, numbers, or underscores (e.g. `abstract_text`)."
+)
+
+
+def _validate_field_key(value: str | None) -> str | None:
+    """Reject field IDs that don't match the slug rule with a friendly
+    message — Brandon's QA 1.4.3.1 said the raw Pydantic pattern error
+    (``String should match pattern '^[a-z][a-z0-9_]*$'``) was unusable
+    for non-technical conference admins."""
+    if value is None:
+        return value
+    if not _FIELD_KEY_PATTERN.match(value):
+        raise ValueError(_FIELD_KEY_ERROR)
+    return value
+
 
 # --- Enums ---
 
@@ -64,7 +86,7 @@ class BuiltinFieldConfig(BaseModel):
 class PaperFormFieldCreate(BaseModel):
     """Schema for creating a custom paper form field."""
 
-    field_key: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-z][a-z0-9_]*$")
+    field_key: str = Field(..., min_length=1, max_length=100)
     field_type: FieldType
     label: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
@@ -76,11 +98,13 @@ class PaperFormFieldCreate(BaseModel):
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = Field(None, description="Required for dropdown/checkbox_group")
 
+    _validate_field_key = field_validator("field_key")(_validate_field_key)
+
 
 class PaperFormFieldUpdate(BaseModel):
     """Schema for updating a custom paper form field."""
 
-    field_key: str | None = Field(None, min_length=1, max_length=100, pattern=r"^[a-z][a-z0-9_]*$")
+    field_key: str | None = Field(None, min_length=1, max_length=100)
     field_type: FieldType | None = None
     label: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
@@ -91,6 +115,8 @@ class PaperFormFieldUpdate(BaseModel):
     is_required: bool | None = None
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = None
+
+    _validate_field_key = field_validator("field_key")(_validate_field_key)
 
 
 class PaperFormFieldResponse(BaseModel):
@@ -249,7 +275,7 @@ class PaperFormVariantSummary(BaseModel):
 class VariantFieldCreate(BaseModel):
     """Schema for creating a variant field."""
 
-    field_key: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-z][a-z0-9_]*$")
+    field_key: str = Field(..., min_length=1, max_length=100)
     field_type: FieldType
     label: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
@@ -261,11 +287,13 @@ class VariantFieldCreate(BaseModel):
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = Field(None, description="Required for dropdown/checkbox_group")
 
+    _validate_field_key = field_validator("field_key")(_validate_field_key)
+
 
 class VariantFieldUpdate(BaseModel):
     """Schema for updating a variant field."""
 
-    field_key: str | None = Field(None, min_length=1, max_length=100, pattern=r"^[a-z][a-z0-9_]*$")
+    field_key: str | None = Field(None, min_length=1, max_length=100)
     field_type: FieldType | None = None
     label: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
@@ -276,6 +304,8 @@ class VariantFieldUpdate(BaseModel):
     is_required: bool | None = None
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = None
+
+    _validate_field_key = field_validator("field_key")(_validate_field_key)
 
 
 class VariantFieldReorderRequest(BaseModel):

@@ -7,7 +7,7 @@ import { stripHtml } from '../../utils/richText';
 export interface RegistrationQuestion {
   id: string;
   text: string;
-  type: 'checkbox' | 'text' | 'radio' | 'dropdown';
+  type: 'checkbox' | 'text' | 'textarea' | 'radio' | 'dropdown';
   required: boolean;
   help_text: string;
   options: string[];

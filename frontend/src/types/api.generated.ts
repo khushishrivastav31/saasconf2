@@ -21476,7 +21476,7 @@ export type components = {
        * Type
        * @enum {string}
        */
-      type: 'checkbox' | 'text' | 'radio' | 'dropdown';
+      type: 'checkbox' | 'text' | 'textarea' | 'radio' | 'dropdown';
       /** Required */
       required: boolean;
       /**
@@ -24361,7 +24361,7 @@ export type components = {
        * Type
        * @enum {string}
        */
-      type: 'checkbox' | 'text' | 'radio' | 'dropdown';
+      type: 'checkbox' | 'text' | 'textarea' | 'radio' | 'dropdown';
       /**
        * Required
        * @default false

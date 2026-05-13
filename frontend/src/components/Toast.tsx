@@ -75,7 +75,7 @@ function ToastMessage({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: 
         flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg max-w-md w-full
         ${s.bg} ${s.border} ${s.text}
         transition-all duration-300 ease-in-out
-        ${isExiting ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}
+        ${isExiting ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'}
       `}
     >
       {/* Icon */}
@@ -160,9 +160,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Toast container - bottom-right on desktop, bottom-center on mobile */}
+      {/* Toast container — top-right on desktop, top-banner on mobile.
+          Brandon's QA 1.4.4.1 standardised the platform on top-right. */}
       {toasts.length > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-200 flex flex-col items-end gap-2 pointer-events-none">
+        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-200 flex flex-col items-end gap-2 pointer-events-none">
           {toasts.map((toast) => (
             <div key={toast.id} className="pointer-events-auto w-full sm:w-auto">
               <ToastMessage toast={toast} onDismiss={dismissToast} />

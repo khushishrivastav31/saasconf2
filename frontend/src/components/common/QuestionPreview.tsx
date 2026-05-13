@@ -116,6 +116,23 @@ export default function QuestionPreview({ questions, policies, entityName }: Que
                     className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                   />
                 </div>
+              ) : q.type === 'textarea' ? (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <RichTextDisplay
+                      content={q.text || 'Untitled question'}
+                      className="inline [&_p]:inline"
+                      fallback="Untitled question"
+                    />
+                    {q.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={demoAnswers[q.id] || ''}
+                    onChange={(e) => updateDemo(q.id, e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                  />
+                </div>
               ) : q.type === 'radio' ? (
                 <div>
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
