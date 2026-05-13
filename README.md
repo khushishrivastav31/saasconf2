@@ -101,46 +101,72 @@ The fastest way to get SaaSConf running is with Docker Compose.
 
 ## Development Setup
 
-For local development without Docker, run the backend and frontend separately.
+For local development without Docker, use the provided `make` targets. This is the recommended approach for day-to-day development.
 
-### Backend
+### Prerequisites
 
-Requires **Python 3.12+**, a running **PostgreSQL 15** instance, and **Redis 7**.
+Before running `make init`, make sure the following are installed and running:
 
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+| Requirement | Install |
+|-------------|---------|
+| Python 3.12+ via **pyenv** | [github.com/pyenv/pyenv](https://github.com/pyenv/pyenv) |
+| **pnpm 10+** | `npm install -g pnpm@10` |
+| **PostgreSQL 15** on `:5432` | `brew install postgresql@15 && brew services start postgresql@15` |
+| **Redis 7** on `:6379` | `brew install redis && brew services start redis` |
 
-Set the required environment variables (see `.env.example`) or create a `.env` file in the project root.
-
-Run database migrations:
+### First-time setup
 
 ```bash
-alembic upgrade head
+make init
 ```
 
-Start the development server:
+This single command:
+1. Installs Python 3.12 via pyenv if missing
+2. Creates the Python virtualenv and installs backend dependencies
+3. Installs frontend dependencies with pnpm
+4. Copies `backend/.env.example` → `backend/.env` (if not already present)
+5. Generates a `PII_ENCRYPTION_KEY` in `backend/.env` automatically
+6. Creates the PostgreSQL role and database from the values in `backend/.env`
+7. Runs all Alembic migrations
+8. Seeds the database (super admin, modules, currencies)
+
+> After setup, review `backend/.env` and update `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, and any other values for your environment.
+
+### Starting the dev servers
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+make dev-up
 ```
 
-The API documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs) when `DEBUG=true`.
+Starts the FastAPI backend (port 8000) and React frontend (port 3000) concurrently. Press `Ctrl+C` to stop both.
 
-### Frontend
+| Service | URL |
+|---------|-----|
+| Frontend | [http://localhost:3000](http://localhost:3000) |
+| Backend API | [http://localhost:8000](http://localhost:8000) |
+| API docs (Swagger) | [http://localhost:8000/docs](http://localhost:8000/docs) |
 
-Requires **Node.js 22+** and **pnpm 10+** (install via `npm install -g pnpm@10` or [Corepack](https://nodejs.org/api/corepack.html)).
+Sign in with the credentials set in `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` in `backend/.env`.
+
+### Reset the database
+
+To wipe and rebuild the local database from scratch:
 
 ```bash
-cd frontend
-pnpm install
-pnpm dev
+make db-reset-native
 ```
 
-The frontend dev server starts on [http://localhost:3000](http://localhost:3000) and proxies API requests to `VITE_API_URL` (defaults to `http://localhost:8000`).
+This drops the database, recreates it, re-runs all migrations, and re-seeds. You will be prompted to confirm before any data is destroyed.
+
+### Other useful targets
+
+```bash
+make help          # List all available targets
+make migrate       # Run pending Alembic migrations
+make test          # Run backend + frontend tests
+make lint          # Lint backend + frontend
+make typecheck     # Type-check backend + frontend
+```
 
 ## Testing
 

@@ -219,6 +219,44 @@ async def _get_tenant_email_settings(db: AsyncSession, tenant_id: UUID | None) -
     return _TenantEmailSettings(api_key, from_email, from_name)
 
 
+async def _send_via_smtp(
+    *,
+    to: str,
+    subject: str,
+    html: str,
+    text: str | None,
+    from_email: str,
+    from_name: str,
+    settings: Any,
+) -> bool:
+    """Send email via SMTP (MailHog in dev). Never raises."""
+    import email.mime.multipart
+    import email.mime.text
+
+    import aiosmtplib
+
+    msg = email.mime.multipart.MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{from_name} <{from_email}>"
+    msg["To"] = to
+    if text:
+        msg.attach(email.mime.text.MIMEText(text, "plain"))
+    msg.attach(email.mime.text.MIMEText(html, "html"))
+
+    try:
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.SMTP_HOST,
+            port=settings.SMTP_PORT,
+            use_tls=settings.SMTP_USE_TLS,
+        )
+        logger.info(f"Email sent via SMTP to {to}: {subject}")
+        return True
+    except Exception as e:
+        logger.error(f"SMTP send failed to {to}: {e}")
+        return False
+
+
 async def send_email(
     to: str,
     subject: str,
@@ -264,6 +302,29 @@ async def send_email(
             tenant_from_name = ts.from_name
 
     settings = get_settings()
+
+    # SMTP override is a dev-only escape hatch (MailHog locally). In prod or
+    # staging it would silently divert real email away from Resend — refuse
+    # to use it there even if the env var leaks through.
+    if settings.SMTP_HOST:
+        env = settings.SENTRY_ENVIRONMENT.lower()
+        if env in ("production", "staging"):
+            logger.error(
+                "SMTP_HOST is set in %s — refusing to route mail through SMTP. "
+                "Unset SMTP_HOST or remove it from the environment.",
+                env,
+            )
+            return False
+        return await _send_via_smtp(
+            to=to,
+            subject=subject,
+            html=html,
+            text=text,
+            from_email=from_email or settings.RESEND_FROM_EMAIL,
+            from_name=tenant_from_name or settings.RESEND_FROM_NAME,
+            settings=settings,
+        )
+
     resend = _get_resend(api_key=tenant_api_key)
 
     if resend is None:

@@ -115,6 +115,11 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "noreply@sonrisa.ventures"
     RESEND_FROM_NAME: str = "SaaSConf"
 
+    # Email (SMTP — dev only, e.g. MailHog). Takes priority over Resend when set.
+    SMTP_HOST: str = ""  # e.g. localhost
+    SMTP_PORT: int = 1025  # MailHog default
+    SMTP_USE_TLS: bool = False  # False for MailHog, True for real SMTP
+
     # Portal URL — used for email verification, password reset, and other portal links
     PORTAL_BASE_URL: str = "http://localhost:3002"
 

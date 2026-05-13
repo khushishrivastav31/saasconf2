@@ -167,6 +167,37 @@ class TestSendEmail:
         assert result is False
 
     @pytest.mark.asyncio
+    async def test_smtp_route_refused_in_production(self, caplog):
+        """SMTP_HOST is a dev-only escape hatch — production must refuse it.
+
+        Even if SMTP_HOST somehow leaks into a prod environment, the send_email
+        path must not silently divert mail to SMTP. Returns False and logs an
+        ERROR so the misconfiguration is visible.
+        """
+        import logging
+
+        from app.config import Settings
+
+        prod_settings = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SENTRY_ENVIRONMENT="production",
+            SMTP_HOST="evil.example.com",
+        )
+        with (
+            patch("app.core.email.get_settings", return_value=prod_settings),
+            caplog.at_level(logging.ERROR),
+        ):
+            result = await send_email(
+                to="user@example.com",
+                subject="Should not be sent via SMTP",
+                html="<p>x</p>",
+                text="x",
+            )
+        assert result is False
+        assert "SMTP_HOST is set in production" in caplog.text
+
+    @pytest.mark.asyncio
     async def test_send_email_success_with_resend(self):
         """Successfully sends email via Resend."""
         mock_resend = MagicMock()
@@ -176,6 +207,10 @@ class TestSendEmail:
             patch("app.core.email._get_resend", return_value=mock_resend),
             patch("app.core.email.get_settings") as mock_settings,
         ):
+            # SMTP_HOST="" forces the Resend branch — without this, a bare
+            # MagicMock would return a truthy attribute and trip the new
+            # SMTP escape hatch added in PR #211.
+            mock_settings.return_value.SMTP_HOST = ""
             mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
             mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
 
@@ -202,6 +237,7 @@ class TestSendEmail:
             patch("app.core.email._get_resend", return_value=mock_resend),
             patch("app.core.email.get_settings") as mock_settings,
         ):
+            mock_settings.return_value.SMTP_HOST = ""
             mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
             mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
 
