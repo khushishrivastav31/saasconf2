@@ -9,9 +9,10 @@ from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError
 from app.core.security.pii_crypto import hash_email
 from app.models.associations import ConferenceCFP
-from app.models.cfp import CFPCommitteeMember, CFPPaper
+from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper
 from app.models.conference import Conference
 from app.models.news import NEWS_DOMAIN_CONFERENCE, NEWS_DOMAIN_TRAINING, NewsArticle
+from app.models.registration import Registration
 from app.models.training_registration import TrainingRegistrationAttendee
 from app.schemas.news import PortalNewsArticle, PortalNewsListResponse
 
@@ -23,7 +24,13 @@ async def _get_accessible_conference_ids(applicant_id: UUID, db, tenant_id: UUID
 
     An applicant has access to a conference if they:
       a) submitted a paper to a CFP linked to that conference, OR
-      b) are a committee member for that conference.
+      b) are a committee member for that conference, OR
+      c) hold a non-cancelled registration on that conference (matched
+         by ``email_hash`` on the applicant's email — the same identity
+         rule the unified portal uses to merge registrations into a
+         portal user). Closes Brandon's QA 6.2.2, where a registrant
+         (attendee) saw nothing in the portal news feed because only
+         papers + committee memberships were checked.
     """
     # (a) Conferences via papers: applicant -> paper -> cfp -> conference_cfp -> conference
     paper_conf_q = (
@@ -35,8 +42,22 @@ async def _get_accessible_conference_ids(applicant_id: UUID, db, tenant_id: UUID
     # (b) Conferences via committee membership
     committee_conf_q = select(CFPCommitteeMember.conference_id).where(CFPCommitteeMember.applicant_id == applicant_id)
 
-    # Union both sets
-    combined = union_all(paper_conf_q, committee_conf_q).subquery()
+    # (c) Conferences via active registrations matched on email_hash.
+    # The applicant's email is encrypted at rest, so we fetch the hash
+    # directly rather than reading the plaintext through ``read_pii``.
+    email_hash_row = await db.execute(select(CFPApplicant.email_hash).where(CFPApplicant.id == applicant_id))
+    applicant_email_hash = email_hash_row.scalar_one_or_none()
+    queries = [paper_conf_q, committee_conf_q]
+    if applicant_email_hash:
+        registration_conf_q = select(Registration.conference_id).where(
+            Registration.tenant_id == tenant_id,
+            Registration.email_hash == applicant_email_hash,
+            Registration.status != "cancelled",
+        )
+        queries.append(registration_conf_q)
+
+    # Union all sets
+    combined = union_all(*queries).subquery()
     result = await db.execute(select(combined.c.conference_id).distinct())
     return list(result.scalars().all())
 

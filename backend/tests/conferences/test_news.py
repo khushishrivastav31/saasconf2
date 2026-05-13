@@ -757,6 +757,134 @@ class TestPortalListNews:
         assert data["items"] == []
         assert data["total"] == 0
 
+    async def test_portal_list_news_includes_registered_attendee(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_with_cfp: Tenant,
+        conference: Conference,
+        applicant: CFPApplicant,
+        published_article: NewsArticle,
+    ) -> None:
+        """A registered attendee (no paper, no committee) sees the conference's news.
+
+        Brandon's QA 6.2.2 reported that news articles weren't visible on
+        the portal because access was gated on submitted papers / committee
+        memberships only. The fix unions in registrations matched by
+        ``email_hash`` so attendees see the feed too.
+        """
+        from app.core.security.pii_crypto import hash_email
+        from app.models.booking import BookingOption
+        from app.models.registration import BillingProfile, Registration, RegistrationStatus
+
+        # Seed a billing profile + booking option so we can attach a real Registration.
+        billing = BillingProfile(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            conference_id=conference.id,
+            street="1 Test St",
+            postal_code="10115",
+            city="Berlin",
+            country="DE",
+            contact_first_name=applicant.first_name,
+            contact_last_name=applicant.last_name,
+        )
+        booking = BookingOption(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            conference_id=conference.id,
+            name="Full Pass",
+        )
+        db_session.add_all([billing, booking])
+        await db_session.flush()
+
+        applicant_email = applicant.email or ""
+        registration = Registration(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            conference_id=conference.id,
+            billing_profile_id=billing.id,
+            booking_option_id=booking.id,
+            first_name=applicant.first_name,
+            last_name=applicant.last_name,
+            email=applicant_email,
+            email_hash=hash_email(applicant_email),
+            status=RegistrationStatus.REGISTERED_PENDING_INVOICE,
+        )
+        db_session.add(registration)
+        await db_session.commit()
+
+        token = create_applicant_access_token(applicant.id, tenant_with_cfp.id)
+        url = "/api/v1/portal/news"
+        response = await client.get(url, headers=auth_headers(token))
+
+        assert response.status_code == 200
+        data = response.json()
+        ids = {item["id"] for item in data["items"]}
+        assert str(published_article.id) in ids, "registered attendee should see the conference news"
+
+    async def test_portal_list_news_excludes_cancelled_registration(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_with_cfp: Tenant,
+        conference: Conference,
+        applicant: CFPApplicant,
+        published_article: NewsArticle,
+    ) -> None:
+        """A cancelled registration must NOT grant news access.
+
+        Locks the ``status != 'cancelled'`` filter so a refunded attendee
+        stops seeing conference news after their registration is voided.
+        """
+        from app.core.security.pii_crypto import hash_email
+        from app.models.booking import BookingOption
+        from app.models.registration import BillingProfile, Registration, RegistrationStatus
+
+        billing = BillingProfile(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            conference_id=conference.id,
+            street="1 Test St",
+            postal_code="10115",
+            city="Berlin",
+            country="DE",
+            contact_first_name=applicant.first_name,
+            contact_last_name=applicant.last_name,
+        )
+        booking = BookingOption(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            conference_id=conference.id,
+            name="Full Pass",
+        )
+        db_session.add_all([billing, booking])
+        await db_session.flush()
+
+        applicant_email = applicant.email or ""
+        cancelled_reg = Registration(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            conference_id=conference.id,
+            billing_profile_id=billing.id,
+            booking_option_id=booking.id,
+            first_name=applicant.first_name,
+            last_name=applicant.last_name,
+            email=applicant_email,
+            email_hash=hash_email(applicant_email),
+            status=RegistrationStatus.CANCELLED,
+        )
+        db_session.add(cancelled_reg)
+        await db_session.commit()
+
+        token = create_applicant_access_token(applicant.id, tenant_with_cfp.id)
+        url = "/api/v1/portal/news"
+        response = await client.get(url, headers=auth_headers(token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"] == [], "cancelled-only attendee must not see the feed"
+
 
 class TestPortalGetArticle:
     """GET /portal/news/{article_id}"""
