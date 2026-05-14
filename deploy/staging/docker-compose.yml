@@ -1,8 +1,8 @@
 services:
   # PostgreSQL Database
   db:
-    # postgres:16.8-alpine
-    image: postgres:16.8-alpine@sha256:b0193ab17e40d8292932955de12d15f065ac9520ac382f6e661a52068e4c27b1
+    # postgres:16.13-alpine
+    image: postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
     container_name: saasconf_db_staging
     restart: unless-stopped
     environment:
@@ -29,8 +29,8 @@ services:
 
   # Redis for token blacklist and caching
   redis:
-    # redis:7.4-alpine
-    image: redis:7.4-alpine@sha256:4bfd9eca23339865dc14fe75f6d9ae643f714924623978dd2798f1a673b08f43
+    # redis:7.4.9-alpine
+    image: redis:7.4.9-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: saasconf_redis_staging
     restart: unless-stopped
     command: redis-server --appendonly yes --appendfsync everysec
