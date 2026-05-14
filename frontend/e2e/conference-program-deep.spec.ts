@@ -59,7 +59,7 @@ test.describe('Conference Program Deep Tests', () => {
 
       const addTrack = page.getByRole('button', { name: /add track|new track/i });
       const hasAddTrack = await softVisible(addTrack, 3000);
-      const hasAddSession = await softVisible(page.getByRole('button', { name: /add session/i }), 3000);
+      await softVisible(page.getByRole('button', { name: /add session/i }), 3000);
 
       // At least one action button should be visible when viewing a day
       expect(typeof hasAddTrack).toBe('boolean');

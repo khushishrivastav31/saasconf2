@@ -49,7 +49,6 @@ test.describe('Invoice VAT Validation - Required Scenario', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // VAT field should have red asterisk
-    const vatLabel = page.getByText(/VAT Number/).first();
     const asterisk = page.locator('span[aria-label="required"]').first();
 
     await expect(asterisk).toBeVisible();
@@ -160,7 +159,7 @@ test.describe('Invoice VAT Validation - Dynamic Detection', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Initially no company name = B2C = optional
-    let recommendedLabel = page.getByText(/recommended for b2b/i).first();
+    const recommendedLabel = page.getByText(/recommended for b2b/i).first();
     await expect(recommendedLabel).not.toBeVisible().catch(() => true);
 
     // Add company name = B2B = required (for virtual EU)
@@ -184,7 +183,7 @@ test.describe('Invoice VAT Validation - Dynamic Detection', () => {
     await page.getByLabel(/^country/i).first().selectOption('US');
     await page.waitForLoadState('domcontentloaded');
 
-    let asterisk = page.locator('span[aria-label="required"]').first();
+    const asterisk = page.locator('span[aria-label="required"]').first();
     await expect(asterisk).not.toBeVisible().catch(() => true);
 
     // Change to EU country (required)

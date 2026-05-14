@@ -42,7 +42,7 @@ test.describe('Portal Profile Deep Tests', () => {
     // Check for extended profile fields
     const hasAffiliation = await softVisible(page.getByLabel(/affiliation|organization|company/i), 5000);
     const hasBio = await softVisible(page.getByLabel(/bio|about/i), 3000);
-    const hasPhone = await softVisible(page.getByLabel(/phone/i), 3000);
+    await softVisible(page.getByLabel(/phone/i), 3000);
 
     // At least one extended field should exist
     expect(typeof hasAffiliation === 'boolean' && typeof hasBio === 'boolean').toBeTruthy();
@@ -79,7 +79,7 @@ test.describe('Portal Messages Deep Tests', () => {
     const hasMessages = await softVisible(page.locator('[class*="border-b"]').first(), 5000);
     if (hasMessages) {
       // Messages should show date or subject text
-      const hasDate = await softVisible(page.getByText(/\d{1,2}[\/.-]\d{1,2}/i).first(), 3000);
+      const hasDate = await softVisible(page.getByText(/\d{1,2}[/.-]\d{1,2}/i).first(), 3000);
       expect(typeof hasDate).toBe('boolean');
     }
   });

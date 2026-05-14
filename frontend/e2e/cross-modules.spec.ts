@@ -33,11 +33,8 @@ test.describe('Cross-Conference Module Pages', () => {
     // The page should load without errors. CFP module may not be enabled,
     // in which case it redirects. Just verify no crash occurred.
     const currentUrl = page.url();
-    const hasCfpContent = await softVisible(
-      page.getByText(/call for papers|cfp|paper|no.*cfp/i).first(),
-      5000,
-    );
-    const hasAnyContent = await softVisible(page.locator('main, [role="main"], h1, h2').first(), 3000);
+    await softVisible(page.getByText(/call for papers|cfp|paper|no.*cfp/i).first(), 5000);
+    await softVisible(page.locator('main, [role="main"], h1, h2').first(), 3000);
 
     // Page loaded (either CFP content, redirect, or any rendered page)
     expect(currentUrl).toBeTruthy();

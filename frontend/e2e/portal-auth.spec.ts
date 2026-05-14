@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 import { PortalLoginPage } from './pages/portal-login.page';
 
 import { softVisible } from './helpers/navigation';
-const tenantSlug = process.env.E2E_TENANT_SLUG || 'demo';
 
 test.describe('Portal Authentication', () => {
   test('should show portal login page with fields', async ({ page }) => {
