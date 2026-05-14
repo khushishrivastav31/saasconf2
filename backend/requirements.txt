@@ -1,4 +1,4 @@
-aiosmtplib==3.0.2
+aiosmtplib==5.1.0
 alembic==1.18.4
 annotated-doc==0.0.4
 annotated-types==0.7.0
@@ -75,7 +75,7 @@ python-stdnum==2.2
 PyYAML==6.0.3
 redis==7.4.0
 requests==2.34.1
-resend==2.30.0
+resend==2.30.1
 rsa==4.9.1
 rstr==3.2.2
 ruff==0.15.12
