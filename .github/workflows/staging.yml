@@ -135,8 +135,10 @@ jobs:
 
       - name: Lint with Ruff
         working-directory: backend
+        # ``ruff`` is already pinned in requirements.txt and installed above.
+        # Do not re-pin it here — a lower pin would silently downgrade the
+        # CI linter relative to local dev and let style/lint errors merge.
         run: |
-          pip install ruff==0.15.5
           ruff check app/
           ruff format --check app/
 
@@ -152,8 +154,10 @@ jobs:
 
       - name: Type check with mypy
         working-directory: backend
+        # ``mypy`` is already pinned in requirements.txt and installed above.
+        # Do not re-pin it here — a lower pin would silently downgrade the
+        # CI type-checker relative to local dev and let new type errors merge.
         run: |
-          pip install mypy==1.19.1
           mypy app/ --config-file=pyproject.toml
 
       - name: Run tests
