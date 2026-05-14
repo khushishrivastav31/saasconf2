@@ -166,6 +166,22 @@ asyncio.run(seed_database())
 
 The seed script is idempotent - it skips items that already exist.
 
+## PostgreSQL major version upgrades
+
+A new Postgres major (e.g. 16 → 17) is **not** an in-place upgrade — the on-disk format changes between majors, so the new image refuses to start against the old volume and the deploy step ends with the `db` container `unhealthy`. The `backend` container then sits in `dependency failed`, the deploy is rolled back, and the staging site stays on the previous release.
+
+When that happens, on the staging host:
+
+```bash
+cd /opt/saasconf/app/deploy/staging
+bash upgrade-pg17.sh   # adjust filename per target major
+docker compose up -d   # restart the rest of the stack against PG17
+```
+
+The script (`upgrade-pg17.sh` for the 16 → 17 cycle, `upgrade-pg16.sh` for 15 → 16, etc.) does the safe sequence: `pg_dump` the old container, `docker compose down`, remove the `postgres_data` volume, `docker compose up -d db` to start fresh on the new major, then `psql` the dump back in. A timestamped gzipped dump is left under `/opt/saasconf/backups/` for rollback. Allow ~1 minute per 100 MB of data.
+
+Always run the script **before** re-deploying — the GitHub Actions deploy will keep failing as long as the volume is on the old major.
+
 ## Architecture
 
 ```
