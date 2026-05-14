@@ -4,7 +4,7 @@ FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a6
 
 # Pin pnpm via npm — same version as package.json's ``packageManager`` field
 # and the CI workflow. Bumping in one place means bumping in all three.
-RUN npm install -g pnpm@10.33.2
+RUN npm install -g pnpm@11.1.1
 
 WORKDIR /app
 
@@ -12,7 +12,13 @@ WORKDIR /app
 # previous ``--legacy-peer-deps`` workaround moved into ``.npmrc`` as
 # pnpm's ``strict-peer-dependencies=false`` (same effect, scoped to this
 # project rather than a global npm flag).
-COPY package.json pnpm-lock.yaml .npmrc ./
+#
+# ``pnpm-workspace.yaml`` is required for pnpm 11+ to pick up the
+# ``overrides`` block (CVE-pinning d3-color + dompurify). Without it
+# here, the frozen install fails with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH
+# because the lockfile records overrides the build wouldn't otherwise
+# see.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build

@@ -2,15 +2,16 @@ FROM node:24.15.0-alpine
 
 # Pin pnpm via npm — same version as package.json's ``packageManager`` field
 # and the CI workflow. Bumping in one place means bumping in all three.
-RUN npm install -g pnpm@10.33.2
+RUN npm install -g pnpm@11.1.1
 
 WORKDIR /app
 
 # Install dependencies. ``--frozen-lockfile`` matches CI behaviour: refuses
 # to update ``pnpm-lock.yaml`` if package.json has drifted, so a missing
 # rebuild surfaces as a build failure instead of silently shipping a
-# different dependency graph.
-COPY package.json pnpm-lock.yaml .npmrc ./
+# different dependency graph. ``pnpm-workspace.yaml`` carries the
+# pnpm 11 canonical overrides + allowBuilds config.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
