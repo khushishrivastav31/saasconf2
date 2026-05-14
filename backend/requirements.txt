@@ -75,12 +75,12 @@ python-stdnum==2.2
 PyYAML==6.0.3
 redis==7.4.0
 requests==2.33.1
-resend==2.29.0
+resend==2.30.0
 rsa==4.9.1
 rstr==3.2.2
 ruff==0.15.12
 schwifty==2026.3.0
-sentry-sdk==2.58.0
+sentry-sdk==2.59.0
 six==1.17.0
 slowapi==0.1.9
 sniffio==1.3.1
