@@ -258,7 +258,7 @@ export default function RevenueTrackingTab({ conference }: Props) {
                   tick={{ fontSize: 11, fill: '#6b7280' }}
                 />
                 <Tooltip
-                  formatter={(v: number) => [fmt(v), 'Revenue']}
+                  formatter={(v) => [fmt(Number(v ?? 0)), 'Revenue']}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Bar dataKey="revenue" fill={BAR_COLOR} radius={[0, 4, 4, 0]} />
@@ -280,7 +280,7 @@ export default function RevenueTrackingTab({ conference }: Props) {
                     cy="50%"
                     outerRadius={80}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
                     {pieData.map((_entry, index) => (
@@ -288,7 +288,7 @@ export default function RevenueTrackingTab({ conference }: Props) {
                     ))}
                   </Pie>
                   <Legend />
-                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Tooltip formatter={(v) => fmt(Number(v ?? 0))} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
