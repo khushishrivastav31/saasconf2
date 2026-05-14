@@ -18,11 +18,16 @@ export async function softVisible(locator: Locator, timeout = 5000): Promise<boo
 
 /**
  * Wait for the loading spinner to disappear.
+ *
+ * Some pages render multiple `.animate-spin` elements (e.g. a section spinner
+ * plus a button spinner), so we wait for the count to reach zero rather than
+ * asserting a single locator is hidden — the latter trips Playwright's strict
+ * mode when more than one match exists.
  */
 export async function waitForLoadingToFinish(page: Page, timeout = 15000) {
   const spinner = page.locator('.animate-spin');
-  if (await softVisible(spinner, 2000)) {
-    await expect(spinner).toBeHidden({ timeout });
+  if (await softVisible(spinner.first(), 2000)) {
+    await expect(spinner).toHaveCount(0, { timeout });
   }
 }
 
