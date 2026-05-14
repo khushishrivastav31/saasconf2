@@ -147,7 +147,7 @@ services:
 
   # Nightly data retention cleanup (expired tokens, old audit logs)
   cleanup-cron:
-    image: curlimages/curl:8.17.0
+    image: curlimages/curl:8.20.0
     container_name: saasconf_cleanup_cron
     restart: unless-stopped
     depends_on:
@@ -165,7 +165,7 @@ services:
 
   # Hourly deadline reminder emails
   deadline-cron:
-    image: curlimages/curl:8.17.0
+    image: curlimages/curl:8.20.0
     container_name: saasconf_deadline_cron
     restart: unless-stopped
     depends_on:
@@ -183,7 +183,7 @@ services:
 
   # Daily payment reminder emails (overdue invoices)
   payment-reminder-cron:
-    image: curlimages/curl:8.17.0
+    image: curlimages/curl:8.20.0
     container_name: saasconf_payment_reminder_cron
     restart: unless-stopped
     depends_on:
