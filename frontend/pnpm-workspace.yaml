@@ -1,16 +1,20 @@
-# pnpm 11+ approval list for postinstall build scripts. Mirrors the
-# legacy ``package.json#pnpm.onlyBuiltDependencies`` allowlist —
-# adding a package here lets its install scripts run. Every other dep's
-# postinstall is blocked, blunting supply-chain attacks.
+# pnpm 11+ approval list for postinstall build scripts. Adding a package
+# here lets its install scripts run; every other dep's postinstall is
+# blocked, blunting supply-chain attacks.
 allowBuilds:
   esbuild: true
 
-# pnpm 11+ canonical location for force-resolving transitive deps.
-# Mirrors the legacy ``package.json#pnpm.overrides``. Without this
-# duplication, pnpm 11 only applies the package.json overrides to
-# top-level resolutions, leaving stale CVE-vulnerable copies (e.g.
-# d3-color@2.0.0 reachable via recharts → victory-vendor → d3-scale)
-# in the lockfile alongside the patched 3.x.
+# Force-resolve transitive deps with known vulnerabilities.
+#   d3-color@<3.1.0 — GHSA-36jr-mh4h-2g58 (ReDoS, HIGH). Reachable via
+#     recharts → victory-vendor → d3-scale.
+#   dompurify@<3.3.2 — eight moderate mXSS/XSS advisories
+#     (GHSA-h8r8-wccr-v5f2 et al.). monaco-editor pins to 3.2.7, hence
+#     the override.
+#
+# Canonical location is pnpm-workspace.yaml under pnpm 11. Do NOT also
+# add ``pnpm.overrides`` in package.json — pnpm 11 reads both and the
+# duplicate trips ``ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`` on
+# ``pnpm install --frozen-lockfile``.
 overrides:
   d3-color: '>=3.1.0'
   dompurify: '>=3.3.2'
