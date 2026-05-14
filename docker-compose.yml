@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   db:
-    image: postgres:16.13-alpine
+    image: postgres:17.9-alpine
     container_name: saasconf_db
     environment:
       POSTGRES_USER: saasconf
