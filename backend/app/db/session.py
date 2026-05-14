@@ -39,7 +39,7 @@ async_session_maker = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """Dependency for getting database sessions."""
     async with async_session_maker() as session:
         try:
@@ -49,9 +49,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 @asynccontextmanager
-async def get_db_with_rls(
-    tenant_id: str | None = None, is_super_admin: bool = False
-) -> AsyncGenerator[AsyncSession, None]:
+async def get_db_with_rls(tenant_id: str | None = None, is_super_admin: bool = False) -> AsyncGenerator[AsyncSession]:
     """
     Get a database session with RLS context set.
 
