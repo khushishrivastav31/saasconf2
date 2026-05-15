@@ -2,6 +2,27 @@ import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import * as Sentry from '@sentry/react';
 
+// Matches the error.message strings emitted when a dynamic ``import()``
+// can't fetch its chunk — typically because a deploy invalidated the
+// content-hashed asset filename our index.html points at.
+// Chrome / Safari emit the first form; Firefox emits the second; the
+// last two cover historical bundler output.
+const CHUNK_LOAD_PATTERNS: readonly RegExp[] = [
+  /Failed to fetch dynamically imported module/i,
+  /error loading dynamically imported module/i,
+  /Loading chunk \d+ failed/i,
+  /ChunkLoadError/i,
+];
+
+export function isChunkLoadError(error: Error): boolean {
+  return CHUNK_LOAD_PATTERNS.some((re) => re.test(error.message));
+}
+
+// One-shot guard. Stored in sessionStorage so a refresh clears it; a
+// failed reload after we already tried once falls through to the normal
+// error UI instead of looping.
+export const CHUNK_RELOAD_FLAG = 'saasconf:chunk-reload';
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -23,6 +44,18 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+
+    if (isChunkLoadError(error)) {
+      try {
+        if (!sessionStorage.getItem(CHUNK_RELOAD_FLAG)) {
+          sessionStorage.setItem(CHUNK_RELOAD_FLAG, String(Date.now()));
+          window.location.reload();
+        }
+      } catch {
+        // sessionStorage can throw in privacy mode / iframes — fall
+        // through to the normal error UI rather than crashing.
+      }
+    }
   }
 
   render(): ReactNode {

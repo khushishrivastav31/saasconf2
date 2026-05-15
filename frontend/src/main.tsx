@@ -7,7 +7,17 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/Toast';
+import { CHUNK_RELOAD_FLAG } from './components/common/ErrorBoundary';
 import './index.css';
+
+// Boot reached this line, so the current bundle is loading cleanly.
+// Clear the one-shot chunk-reload guard so a future post-deploy stale
+// chunk can trigger an auto-reload again.
+try {
+  sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+} catch {
+  // sessionStorage may be unavailable in privacy mode / iframes; ignore.
+}
 
 // Initialize Sentry (no-ops when DSN is empty)
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
