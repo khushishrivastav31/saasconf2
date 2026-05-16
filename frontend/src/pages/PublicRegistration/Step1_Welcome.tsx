@@ -41,7 +41,7 @@ export default function WelcomeStep({ conference, onNext }: WelcomeStepProps) {
         <h2 className="portal-subheading">Registration Options</h2>
 
         <div className="space-y-4">
-          {conference.booking_options.map((option) => (
+          {(conference.booking_options ?? []).map((option) => (
             <div
               key={option.id}
               className="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800"

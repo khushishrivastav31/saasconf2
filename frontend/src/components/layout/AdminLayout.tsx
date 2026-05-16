@@ -370,7 +370,14 @@ export default function AdminLayout() {
                 sidebar link (QA 0.5.1.3). Super admins see everything. */}
             {(() => {
               const availableModules = moduleNavigation.filter(
-                (m) => user?.role === 'super_admin' || user?.modules?.includes(m.moduleCode)
+                (m) =>
+                  user?.role === 'super_admin' ||
+                  user?.role === 'tenant_admin' ||
+                  (user?.modules?.includes(m.moduleCode) &&
+                    (user?.is_tenant_super_user ||
+                      user?.tenant_roles?.some(
+                        (r) => r.scope === 'all' || r.scope === m.moduleCode
+                      )))
               );
               if (availableModules.length === 0) return null;
               return (

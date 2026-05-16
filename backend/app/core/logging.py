@@ -98,9 +98,12 @@ def setup_logging(*, debug: bool = False, level: str = "INFO") -> None:
     handler.addFilter(SensitiveFieldFilter())
     root.addHandler(handler)
 
-    # Quiet noisy loggers
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    # Quiet noisy loggers — disable propagation so uvicorn's reload-added
+    # root handlers can't re-enable them at a lower level.
+    for noisy in ("uvicorn.access", "sqlalchemy.engine", "sqlalchemy.engine.Engine"):
+        lg = logging.getLogger(noisy)
+        lg.setLevel(logging.WARNING)
+        lg.propagate = False
 
 
 def get_security_logger() -> logging.Logger:

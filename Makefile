@@ -26,6 +26,10 @@ init: ## First-time project setup (deps, hooks, migrations)
 		cp backend/.env.example backend/.env; \
 		echo "📄 Created backend/.env from .env.example — review it before starting."; \
 	fi
+	@if [ ! -f frontend/.env ]; then \
+		cp frontend/.env.example frontend/.env; \
+		echo "📄 Created frontend/.env from .env.example."; \
+	fi
 	@echo "Setting up database..."
 	@sh scripts/setup-db.sh
 	@if grep -q "^PII_ENCRYPTION_KEY=$$" backend/.env; then \

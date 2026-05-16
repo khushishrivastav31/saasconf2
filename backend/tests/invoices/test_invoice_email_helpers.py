@@ -96,6 +96,31 @@ class TestBuildPdfAttachment:
         decoded = base64.b64decode(result["content"])
         assert decoded == raw
 
+    def test_detached_invoice_skips_zugferd(self) -> None:
+        """Detached invoice raises on .conference access — must not crash and must skip ZUGFeRD."""
+        from app.core.invoice_email import build_pdf_attachment
+
+        invoice = MagicMock()
+        invoice.invoice_number = "INV-2026-999"
+        invoice.template_type = "invoice"
+        type(invoice).conference = property(lambda self: (_ for _ in ()).throw(Exception("DetachedInstanceError")))
+
+        result = build_pdf_attachment(b"pdf", invoice)
+
+        assert result["filename"] == "invoice_INV-2026-999.pdf"
+
+    def test_explicit_conference_overrides_invoice_conference(self) -> None:
+        """Pre-loaded conference param is used instead of invoice.conference."""
+        from app.core.invoice_email import build_pdf_attachment
+
+        invoice = _make_invoice(invoice_number="INV-2026-010", zugferd_enabled=False)
+        conference = MagicMock()
+        conference.settings = {"zugferd_settings": {"enabled": True}}
+
+        result = build_pdf_attachment(b"pdf", invoice, conference)
+
+        assert result["filename"] == "zugferd_invoice_INV-2026-010.pdf"
+
 
 # ---------------------------------------------------------------------------
 # build_invoice_email_html

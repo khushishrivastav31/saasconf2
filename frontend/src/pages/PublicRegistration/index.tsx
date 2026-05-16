@@ -67,6 +67,23 @@ function RegistrationPortal() {
 
   const registrationResponse = location.state?.registrationResponse;
 
+  // No booking options configured yet — show a coming-soon placeholder
+  // instead of an empty/broken form. A visitor has nothing to register for.
+  if (!conference.booking_options?.length) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-10 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+            {conference.name}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Registration is not open yet. Check back soon!
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Routes>
       <Route

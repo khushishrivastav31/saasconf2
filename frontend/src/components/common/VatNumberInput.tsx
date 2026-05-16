@@ -99,7 +99,7 @@ function StatusIcon({ status }: { status: VatStatus }) {
 
 function getInputClasses(status: VatStatus): string {
   const base =
-    'mt-1 block w-full rounded-md shadow-sm focus:outline-none sm:text-sm dark:bg-gray-800 dark:text-gray-100';
+    'mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none text-sm dark:bg-gray-800 dark:text-gray-100';
   switch (status) {
     case 'valid':
       return `${base} border-green-500 focus:border-green-500 focus:ring-green-500`;

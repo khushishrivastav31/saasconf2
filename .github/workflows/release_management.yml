@@ -1,0 +1,197 @@
+name: Release Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Release action to run'
+        required: true
+        type: choice
+        options:
+          - create_rc
+          - promote_production
+      version:
+        description: 'Release version, for example v1.0.0'
+        required: true
+        type: string
+      rc_number:
+        description: 'Optional RC number. Leave empty to create the next RC.'
+        required: false
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  release:
+    name: Release Management
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create release ref
+        env:
+          ACTION: ${{ inputs.action }}
+          VERSION: ${{ inputs.version }}
+          RC_NUMBER: ${{ inputs.rc_number }}
+        run: |
+          set -o pipefail
+
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version: $VERSION"
+            echo "Expected format: vX.Y.Z"
+            exit 1
+          fi
+
+          RELEASE_BRANCH="releases/${VERSION}"
+
+          git fetch origin main
+          git fetch origin "+refs/heads/releases/*:refs/remotes/origin/releases/*" || true
+          git fetch origin "+refs/tags/*:refs/tags/*"
+
+          if git show-ref --verify --quiet "refs/remotes/origin/${RELEASE_BRANCH}"; then
+            git checkout -B "${RELEASE_BRANCH}" "origin/${RELEASE_BRANCH}"
+          else
+            if [[ "$ACTION" != "create_rc" ]]; then
+              echo "Release branch ${RELEASE_BRANCH} does not exist."
+              exit 1
+            fi
+
+            git checkout -B "${RELEASE_BRANCH}" origin/main
+            git push origin "HEAD:${RELEASE_BRANCH}"
+          fi
+
+          if [[ "$ACTION" == "create_rc" ]]; then
+            IS_PRERELEASE="true"
+
+            if [[ -n "$RC_NUMBER" ]]; then
+              if [[ ! "$RC_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+                echo "Invalid RC number: $RC_NUMBER"
+                echo "Expected a positive integer."
+                exit 1
+              fi
+            else
+              LATEST_RC="$(git tag --list "${VERSION}-rc.*" --sort=-v:refname | head -n 1)"
+
+              if [[ -n "$LATEST_RC" ]]; then
+                RC_NUMBER="$(echo "$LATEST_RC" | sed -E 's/.*-rc\.([0-9]+)$/\1/')"
+                RC_NUMBER="$((RC_NUMBER + 1))"
+              else
+                RC_NUMBER="1"
+              fi
+            fi
+
+            TAG="${VERSION}-rc.${RC_NUMBER}"
+
+          elif [[ "$ACTION" == "promote_production" ]]; then
+            IS_PRERELEASE="false"
+            TAG="${VERSION}"
+            LATEST_RC="$(git tag --list "${VERSION}-rc.*" --sort=-v:refname | head -n 1)"
+
+            if [[ -z "$LATEST_RC" ]]; then
+              echo "At least one RC tag must exist before promoting ${VERSION} to production."
+              exit 1
+            fi
+
+            LATEST_RC_COMMIT="$(git rev-list -n 1 "$LATEST_RC")"
+            RELEASE_COMMIT="$(git rev-parse HEAD)"
+
+            if [[ "$LATEST_RC_COMMIT" != "$RELEASE_COMMIT" ]]; then
+              echo "Latest RC tag $LATEST_RC does not point to the current ${RELEASE_BRANCH} HEAD."
+              echo "Create a new RC before promoting ${VERSION} to production."
+              exit 1
+            fi
+          else
+            echo "Unsupported action: $ACTION"
+            exit 1
+          fi
+
+          LAST_RELEASE_TAG="$(git tag --sort=-v:refname | grep -v -- "-rc." | head -n 1 || true)"
+          REPOSITORY_URL="https://github.com/${{ github.repository }}"
+
+          if [[ -n "$LAST_RELEASE_TAG" ]]; then
+            COMMITS="$(git log --pretty=format:"%s|%h|%an|%ae" "${LAST_RELEASE_TAG}..HEAD" | \
+              while IFS='|' read -r subject hash author email; do
+                subject="$(echo "$subject" | sed -E "s|#([0-9]+)|[#\1](${REPOSITORY_URL}/pull/\1)|g")"
+
+                if [[ "$email" =~ @users\.noreply\.github\.com$ ]]; then
+                  github_user="$(echo "$email" | sed -E 's/^([^@]+).*@users\.noreply\.github\.com$/\1/')"
+                  author="@$github_user"
+                else
+                  github_user="$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                    "https://api.github.com/search/users?q=$email" | \
+                    jq -r '.items[0].login // empty')"
+                  if [[ -n "$github_user" ]]; then
+                    author="@$github_user"
+                  fi
+                fi
+
+                echo "* $subject ([${hash}](${REPOSITORY_URL}/commit/${hash})) by $author"
+              done | sort)"
+            COMPARE_URL="${REPOSITORY_URL}/compare/${LAST_RELEASE_TAG}...${TAG}"
+          else
+            LAST_RELEASE_TAG="No previous release tag"
+            COMMITS="$(git log --pretty=format:"%s|%h|%an" HEAD | \
+              while IFS='|' read -r subject hash author; do
+                subject="$(echo "$subject" | sed -E "s|#([0-9]+)|[#\1](${REPOSITORY_URL}/pull/\1)|g")"
+                echo "* $subject ([${hash}](${REPOSITORY_URL}/commit/${hash})) by $author"
+              done)"
+            COMPARE_URL="${REPOSITORY_URL}/releases/tag/${TAG}"
+          fi
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG"
+            exit 1
+          fi
+
+          git tag "$TAG"
+          git push origin "$TAG"
+
+          echo "Created $TAG from ${RELEASE_BRANCH}"
+          echo "release_tag=$TAG" >> "$GITHUB_ENV"
+          echo "release_branch=$RELEASE_BRANCH" >> "$GITHUB_ENV"
+          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_ENV"
+          echo "last_release_tag=$LAST_RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "compare_url=$COMPARE_URL" >> "$GITHUB_ENV"
+          echo "commits<<EOF" >> "$GITHUB_ENV"
+          echo "$COMMITS" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.release_tag }}
+          name: ${{ env.release_tag }}
+          prerelease: ${{ env.is_prerelease }}
+          body: |
+            Version ${{ env.release_tag }}
+
+            ## Changes since ${{ env.last_release_tag }}:
+            ${{ env.commits }}
+
+            **Full Changelog**: ${{ env.compare_url }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dispatch staging deployment
+        if: ${{ inputs.action == 'create_rc' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run staging.yml --ref "${{ env.release_branch }}" -f tag="${{ env.release_tag }}"
+
+      - name: Dispatch production deployment
+        if: ${{ inputs.action == 'promote_production' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run production_deploy.yml --ref "${{ env.release_branch }}" -f tag="${{ env.release_tag }}"

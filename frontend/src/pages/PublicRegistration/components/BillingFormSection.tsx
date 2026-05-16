@@ -129,7 +129,7 @@ export default function BillingFormSection({
           <input
             id="company_name"
             type="text"
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
             value={billing.company_name}
             onChange={(e) => setBilling({ ...billing, company_name: e.target.value })}
           />
@@ -147,7 +147,7 @@ export default function BillingFormSection({
             id="street"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
             value={billing.street}
             onChange={(e) => setBilling({ ...billing, street: e.target.value })}
           />
@@ -165,7 +165,7 @@ export default function BillingFormSection({
               id="postal_code"
               type="text"
               required
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
               value={billing.postal_code}
               onChange={(e) => setBilling({ ...billing, postal_code: e.target.value })}
             />
@@ -182,7 +182,7 @@ export default function BillingFormSection({
               id="city"
               type="text"
               required
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
               value={billing.city}
               onChange={(e) => setBilling({ ...billing, city: e.target.value })}
             />
@@ -200,7 +200,7 @@ export default function BillingFormSection({
           <select
             id="country"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
             value={billing.country}
             onChange={(e) => {
               setBilling({ ...billing, country: e.target.value });
@@ -251,7 +251,7 @@ export default function BillingFormSection({
               id="contact_first_name"
               type="text"
               required
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
               value={billing.contact_first_name}
               onChange={(e) => setBilling({ ...billing, contact_first_name: e.target.value })}
             />
@@ -268,7 +268,7 @@ export default function BillingFormSection({
               id="contact_last_name"
               type="text"
               required
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
               value={billing.contact_last_name}
               onChange={(e) => setBilling({ ...billing, contact_last_name: e.target.value })}
             />
@@ -288,7 +288,7 @@ export default function BillingFormSection({
                 id="contact_email"
                 type="email"
                 required
-                className={`mt-1 block w-full rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100 ${
+                className={`mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100 ${
                   emailValidated === true
                     ? 'border-green-500 dark:border-green-600 focus:border-green-500 focus:ring-green-500'
                     : emailError
@@ -354,7 +354,7 @@ export default function BillingFormSection({
                 type="tel"
                 required
                 placeholder="+49123456789"
-                className={`mt-1 block w-full rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100 ${
+                className={`mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100 ${
                   phoneValidated === true
                     ? 'border-green-500 dark:border-green-600 focus:border-green-500 focus:ring-green-500'
                     : phoneError
@@ -430,7 +430,7 @@ export default function BillingFormSection({
           <input
             id="procurement_code"
             type="text"
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100"
             value={billing.procurement_code || ''}
             onChange={(e) => setBilling({ ...billing, procurement_code: e.target.value })}
           />
@@ -449,7 +449,7 @@ export default function BillingFormSection({
               id="discount_code"
               type="text"
               placeholder="Enter code if applicable"
-              className={`mt-1 block w-full rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100 ${
+              className={`mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-900 dark:text-gray-100 ${
                 discountValidation?.valid
                   ? 'border-green-300 dark:border-green-600'
                   : discountMessage && !discountValidation?.valid

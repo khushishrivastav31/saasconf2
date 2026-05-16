@@ -1,0 +1,301 @@
+name: CI
+
+on:
+  # Runs on every PR — no branches filter so stacked PRs targeting non-main
+  # branches also get CI. Including ``edited`` so retargeting a PR fires CI.
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Stub to satisfy GitHub's "Detect Changes" required check after the
+  # path-filter job was removed. GitHub tracks previously-reported checks
+  # and shows them as pending until they're reported again.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "ok"
+
+  # ─────────────────────────────────────────────────────────────
+  # Backend Tests
+  # ─────────────────────────────────────────────────────────────
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    services:
+      postgres:
+        image: postgres:17.9-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,size=1g
+          --shm-size 1g
+
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install system dependencies (WeasyPrint)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            libpango-1.0-0
+            libpangocairo-1.0-0
+            libpangoft2-1.0-0
+            libcairo2
+            libgdk-pixbuf-2.0-0
+            libffi-dev
+            libglib2.0-0
+            fonts-dejavu-core
+          version: 1.0
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint with Ruff
+        working-directory: backend
+        run: |
+          ruff check app/
+          ruff format --check app/
+
+      - name: Cache mypy type-check results
+        uses: actions/cache@v5
+        with:
+          path: backend/.mypy_cache
+          key: mypy-${{ runner.os }}-py3.13-${{ hashFiles('backend/requirements.txt', 'backend/pyproject.toml') }}
+          restore-keys: |
+            mypy-${{ runner.os }}-py3.13-
+
+      - name: Type check with mypy
+        working-directory: backend
+        run: |
+          mypy app/ --config-file=pyproject.toml
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
+          SUPER_ADMIN_PASSWORD: TestPassword123!
+        run: |
+          pytest tests/ -n auto --dist=worksteal --durations=50 -m "not slow"
+
+  # ─────────────────────────────────────────────────────────────
+  # Frontend Tests
+  # ─────────────────────────────────────────────────────────────
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: frontend
+        run: pnpm exec eslint src/ --max-warnings 107
+
+      - name: Type check
+        working-directory: frontend
+        run: pnpm exec tsc --noEmit
+
+      - name: Run tests with coverage
+        working-directory: frontend
+        run: pnpm run test:coverage -- --run --reporter=verbose
+
+      - name: Upload frontend coverage report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          retention-days: 14
+
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://api.staging.sonrisa.ventures
+        run: pnpm run build
+
+      - name: Check bundle size
+        working-directory: frontend
+        run: |
+          TOTAL_JS=$(find dist/assets -name '*.js' -exec cat {} + | wc -c)
+          TOTAL_KB=$(( TOTAL_JS / 1024 ))
+          echo "Total JS: ${TOTAL_KB} KB"
+          if [ "$TOTAL_JS" -gt 6291456 ]; then
+            echo "::error::Total JS bundle exceeds 6MB (${TOTAL_KB} KB)"
+            exit 1
+          elif [ "$TOTAL_JS" -gt 4718592 ]; then
+            echo "::warning::Total JS bundle exceeds 4.5MB (${TOTAL_KB} KB)"
+          fi
+
+  # ─────────────────────────────────────────────────────────────
+  # OpenAPI schema drift check
+  # ─────────────────────────────────────────────────────────────
+  schema-drift:
+    name: OpenAPI schema drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install system dependencies (WeasyPrint)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+            libcairo2 libgdk-pixbuf-2.0-0 libffi-dev libglib2.0-0 fonts-dejavu-core
+
+      - name: Install backend deps
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Assert api.generated.ts matches backend schema
+        working-directory: frontend
+        env:
+          JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
+          SUPER_ADMIN_PASSWORD: TestPassword123!
+        run: pnpm run gen:api:check
+
+  # ─────────────────────────────────────────────────────────────
+  # Dependency Security Audit
+  # ─────────────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Audit Python dependencies
+        working-directory: backend
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Audit dependencies
+        working-directory: frontend
+        run: pnpm audit --audit-level=critical
+
+      - name: Scan for vulnerabilities in Dockerfiles
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+  # ─────────────────────────────────────────────────────────────
+  # Secrets Scanning
+  # ─────────────────────────────────────────────────────────────
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@v3.95.3
+        with:
+          extra_args: --only-verified

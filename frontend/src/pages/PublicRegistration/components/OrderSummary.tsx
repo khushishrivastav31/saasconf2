@@ -24,8 +24,8 @@ interface OrderSummaryProps {
 
 export default function OrderSummary({
   attendees,
-  bookingOptions,
-  bookingPeriods,
+  bookingOptions = [],
+  bookingPeriods = [],
   currency,
   discount,
   vatCalculation,

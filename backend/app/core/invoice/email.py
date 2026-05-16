@@ -3,7 +3,7 @@
 import base64
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -57,12 +57,13 @@ async def _resolve_invoice_cc(
 logger = logging.getLogger(__name__)
 
 
-def build_pdf_attachment(pdf_bytes: bytes, invoice: "Invoice") -> dict:
+def build_pdf_attachment(pdf_bytes: bytes, invoice: "Invoice", conference: "Any | None" = None) -> dict:
     """Build email attachment dict from PDF bytes.
 
     Args:
         pdf_bytes: PDF file content
         invoice: Invoice model
+        conference: Pre-loaded conference (avoids DetachedInstanceError when invoice is detached)
 
     Returns:
         Dict with filename and base64-encoded content
@@ -71,9 +72,17 @@ def build_pdf_attachment(pdf_bytes: bytes, invoice: "Invoice") -> dict:
     filename_prefix = "credit_note" if is_credit_note else "invoice"
 
     # Check if ZUGFeRD is enabled (add "zugferd_" prefix to filename)
+    # Use pre-loaded conference when provided; fall back to invoice.conference
+    # but catch DetachedInstanceError when invoice is detached from its session.
     zugferd_enabled = False
-    if invoice.conference and invoice.conference.settings:
-        zugferd_config = invoice.conference.settings.get("zugferd_settings", {})
+    conf = conference
+    if conf is None:
+        try:
+            conf = invoice.conference
+        except Exception:
+            conf = None
+    if conf and conf.settings:
+        zugferd_config = conf.settings.get("zugferd_settings", {})
         zugferd_enabled = zugferd_config.get("enabled", False)
 
     if zugferd_enabled:

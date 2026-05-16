@@ -1,0 +1,22 @@
+name: Deploy to Production
+
+# Triggered by release_management.yml when promoting an RC to production.
+# TODO: implement production deployment steps.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Production tag to deploy, e.g. v1.0.0'
+        required: true
+        type: string
+
+jobs:
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: |
+          echo "Production deployment for ${{ inputs.tag }} — not yet implemented."
+          echo "See staging.yml deploy-staging job for reference."

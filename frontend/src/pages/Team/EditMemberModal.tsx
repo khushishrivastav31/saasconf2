@@ -5,6 +5,7 @@ import Modal from '../../components/Modal';
 import { parseApiError } from '../../utils/apiError';
 import { validateEmail } from '../../utils/validators';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
+import { useAuth } from '../../hooks/useAuth';
 import type {
   TenantUser,
   TenantRole,
@@ -22,6 +23,9 @@ export default function EditMemberModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const canGrantSuperUser =
+    currentUser?.role === 'super_admin' || currentUser?.is_tenant_super_user === true;
   const [formData, setFormData] = useState<TenantUserUpdate>({
     email: user.email,
     first_name: user.first_name || '',
@@ -302,28 +306,30 @@ export default function EditMemberModal({
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
               <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Roles</h4>
 
-              {/* Super User toggle */}
-              <div className="flex items-center justify-between mb-2 py-1 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
-                <div>
-                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                    Super User
-                  </span>
-                  <p className="text-xs text-purple-500 dark:text-purple-400">
-                    Full access to everything
-                  </p>
+              {/* Super User toggle — hidden for users who can't grant it (QA 0.5.1.5) */}
+              {canGrantSuperUser && (
+                <div className="flex items-center justify-between mb-2 py-1 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                  <div>
+                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                      Super User
+                    </span>
+                    <p className="text-xs text-purple-500 dark:text-purple-400">
+                      Full access to everything
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSuperUserToggle}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                      isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSuperUser ? 'translate-x-4' : 'translate-x-0'}`}
+                    />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleSuperUserToggle}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                    isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSuperUser ? 'translate-x-4' : 'translate-x-0'}`}
-                  />
-                </button>
-              </div>
+              )}
 
               {/* Per-scope roles (only shown when not Super User) */}
               {!isSuperUser && (

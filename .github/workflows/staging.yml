@@ -1,19 +1,14 @@
 name: Staging CI/CD
 
 on:
-  # ``push`` is still main-only — we don't want feature branches burning
-  # CI minutes on every direct push.
   push:
     branches: [main]
-  # ``pull_request`` intentionally has NO ``branches:`` filter: that filter
-  # matches the *base* branch, which means stacked PRs (e.g. targeting
-  # ``perf/scale-indexes`` instead of ``main``) were silently skipping CI.
-  # Including ``edited`` in ``types`` so retargeting a PR's base branch
-  # (``gh pr edit --base main``) also fires CI — otherwise the first CI run
-  # on a newly-retargeted PR never starts until a separate push happens.
-  pull_request:
-    types: [opened, reopened, synchronize, edited, ready_for_review]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'RC tag to deploy (e.g. v1.0.0-rc.1). Leave empty to deploy HEAD of main.'
+        required: false
+        type: string
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -72,7 +67,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     services:
       postgres:
@@ -192,17 +186,12 @@ jobs:
           # consume ~17 min of wall time on their own. They run in parallel
           # in the ``backend-slow-tests`` job (push-to-main only), keeping
           # this critical-path job focused on the ~3k unit/integration tests.
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pytest tests/ -n auto --dist=worksteal --durations=50 -m "not slow"
-          else
-            pytest tests/ -n auto --dist=worksteal --durations=50 -m "not slow" \
-              --cov=app --cov-report=xml --cov-report=html \
-              --cov-report=term-missing --cov-fail-under=50
-          fi
+          pytest tests/ -n auto --dist=worksteal --durations=50 -m "not slow" \
+            --cov=app --cov-report=xml --cov-report=html \
+            --cov-report=term-missing --cov-fail-under=50
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
-        if: github.event_name == 'push'
         with:
           files: backend/coverage.xml
           flags: backend
@@ -210,8 +199,6 @@ jobs:
 
       - name: Upload backend coverage report
         uses: actions/upload-artifact@v7
-        # Only exists on push-to-main runs (PR runs skip --cov for speed).
-        if: github.event_name == 'push'
         with:
           name: backend-coverage-report
           path: backend/htmlcov/
@@ -296,7 +283,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
@@ -376,7 +362,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -505,18 +490,20 @@ jobs:
     needs: [changes, backend-tests, backend-slow-tests, frontend-tests, schema-drift, security-audit, secrets-scan]
     if: |
       always() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/main' &&
-      (needs.backend-tests.result == 'success' || needs.backend-tests.result == 'skipped') &&
-      (needs.backend-slow-tests.result == 'success' || needs.backend-slow-tests.result == 'skipped') &&
-      (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') &&
-      (needs.schema-drift.result == 'success' || needs.schema-drift.result == 'skipped') &&
+      needs.backend-tests.result == 'success' &&
+      needs.backend-slow-tests.result == 'success' &&
+      needs.frontend-tests.result == 'success' &&
+      needs.schema-drift.result == 'success' &&
       needs.security-audit.result == 'success' &&
       needs.secrets-scan.result == 'success'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # When dispatched from release_management with an RC tag, deploy that
+          # exact commit. On push-to-main this is empty and defaults to HEAD.
+          ref: ${{ inputs.tag || github.sha }}
 
       - name: Set up SSH
         run: |

@@ -71,7 +71,7 @@ export function useVatCalculation({
   billing,
   attendees,
   discountValidation,
-  bookingPeriods,
+  bookingPeriods = [],
   conferenceCountry,
   conferenceVenueType,
 }: UseVatCalculationParams): UseVatCalculationReturn {

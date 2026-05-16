@@ -7,6 +7,7 @@
 import { useState, useMemo, FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import { RECAPTCHA_ENABLED } from '../../utils/recaptcha';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
 import { useMutation } from '@tanstack/react-query';
@@ -414,12 +415,14 @@ export default function SinglePageForm({
     }
 
     // Get reCAPTCHA token
-    if (!executeRecaptcha) {
-      showToast('reCAPTCHA not ready. Please try again.', 'error');
-      return;
+    let recaptchaToken = '';
+    if (RECAPTCHA_ENABLED) {
+      if (!executeRecaptcha) {
+        showToast('reCAPTCHA not ready. Please try again.', 'error');
+        return;
+      }
+      recaptchaToken = await executeRecaptcha('registration_submit');
     }
-
-    const recaptchaToken = await executeRecaptcha('registration_submit');
 
     // Payment-first flow: For credit card, trigger Stripe payment confirmation
     // For bank transfer, create registration immediately

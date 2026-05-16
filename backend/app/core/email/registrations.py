@@ -60,7 +60,7 @@ async def send_registration_invoice_email(
         pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
 
         # Build attachment
-        attachment = build_pdf_attachment(pdf_bytes, invoice)
+        attachment = build_pdf_attachment(pdf_bytes, invoice, conference)
 
         # Get conference support email (fallback to settings)
         support_email = conference.support_email or conference.contact_email or settings.RESEND_FROM_EMAIL

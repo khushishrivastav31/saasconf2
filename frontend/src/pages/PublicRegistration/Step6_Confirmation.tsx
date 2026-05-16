@@ -17,24 +17,14 @@ export default function ConfirmationStep({
 }: ConfirmationStepProps) {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
 
-  // Default success message if not customized
-  const defaultMessage = `Thank you for registering! Please check your email for next steps.
-
-Each attendee will receive a welcome email with a link to set up their password. Once your password is set, you can log in to the attendee portal at:
-
-${window.location.origin}/${tenantSlug}/portal/user/login
-
-You'll be able to view your registration details, download your ticket, and access conference materials through the portal.`;
-
-  // Get custom or default message
-  const successMessage = conference.success_message || defaultMessage;
+  const portalUrl = `${window.location.origin}/${tenantSlug}/portal/user/login`;
 
   return (
     <div className="portal-card text-center">
       {/* Success Icon */}
-      <div className="portal-success-icon mx-auto mb-6">
+      <div className="mx-auto mb-4 w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
         <svg
-          className="w-16 h-16 text-green-500 mx-auto"
+          className="w-9 h-9 text-green-600 dark:text-green-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -48,29 +38,37 @@ You'll be able to view your registration details, download your ticket, and acce
         </svg>
       </div>
 
-      {/* Success Message */}
-      <h1 className="portal-heading">Registration Successful!</h1>
-      <div className="portal-success-message text-left max-w-2xl mx-auto">
-        {successMessage.split('\n').map((line, index) => (
-          <p key={index} className={line.trim() === '' ? 'h-4' : 'mb-3'}>
-            {line.includes('://')
-              ? // Convert URLs to clickable links
-                line.split(' ').map((word, i) =>
-                  word.includes('://') ? (
-                    <a
-                      key={i}
-                      href={word}
-                      className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
-                    >
-                      {word}
-                    </a>
-                  ) : (
-                    <span key={i}>{word} </span>
-                  )
-                )
-              : line}
-          </p>
-        ))}
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        You're registered!
+      </h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">
+        {conference.name} · Check your email for next steps
+      </p>
+
+      {/* Custom success message if set by admin */}
+      {conference.success_message && (
+        <div className="text-left max-w-2xl mx-auto mb-6 text-gray-700 dark:text-gray-300 text-sm space-y-2">
+          {conference.success_message.split('\n').map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Portal access CTA */}
+      <div className="max-w-sm mx-auto mb-8 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg p-5">
+        <p className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-1">
+          Attendee Portal
+        </p>
+        <p className="text-xs text-primary-700 dark:text-primary-300 mb-3">
+          Set your password from the email link, then sign in to access your ticket and conference
+          materials.
+        </p>
+        <a
+          href={portalUrl}
+          className="inline-block w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-md transition-colors"
+        >
+          Go to Attendee Portal
+        </a>
       </div>
 
       {/* What Happens Next - Modern Card Layout */}

@@ -67,6 +67,8 @@ describe('AdminLayout', () => {
       tenant_name: 'Test Tenant',
       modules: ['cfp', 'conferences'],
       is_active: true,
+      is_tenant_super_user: false,
+      tenant_roles: [{ scope: 'conferences', level: 'member' }],
       last_login: null,
       created_at: '2024-01-01T00:00:00Z',
     };
@@ -156,6 +158,7 @@ describe('AdminLayout', () => {
       mockUser = {
         ...mockUser!,
         modules: ['conferences'],
+        tenant_roles: [{ scope: 'conferences', level: 'admin' }],
       };
 
       renderWithProviders();
@@ -222,6 +225,122 @@ describe('AdminLayout', () => {
 
       expect(screen.queryByRole('link', { name: /companies/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /audit logs/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('sidebar module visibility by user role (QA 0.5.1.3 / 0.5.1.6)', () => {
+    const bothModules = ['conferences', 'trainings'];
+
+    it('Conferences Admin sees Conferences only — not Trainings', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: bothModules,
+        is_tenant_super_user: false,
+        tenant_roles: [{ scope: 'conferences', level: 'admin' }],
+      };
+      renderWithProviders();
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^trainings$/i })).not.toBeInTheDocument();
+    });
+
+    it('Conferences Member sees Conferences only — not Trainings', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: bothModules,
+        is_tenant_super_user: false,
+        tenant_roles: [{ scope: 'conferences', level: 'member' }],
+      };
+      renderWithProviders();
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^trainings$/i })).not.toBeInTheDocument();
+    });
+
+    it('Trainings Admin sees Trainings only — not Conferences', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: bothModules,
+        is_tenant_super_user: false,
+        tenant_roles: [{ scope: 'trainings', level: 'admin' }],
+      };
+      renderWithProviders();
+      expect(screen.queryByRole('link', { name: /^conferences$/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^trainings$/i })).toBeInTheDocument();
+    });
+
+    it('Trainings Member sees Trainings only — not Conferences', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: bothModules,
+        is_tenant_super_user: false,
+        tenant_roles: [{ scope: 'trainings', level: 'member' }],
+      };
+      renderWithProviders();
+      expect(screen.queryByRole('link', { name: /^conferences$/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^trainings$/i })).toBeInTheDocument();
+    });
+
+    it('user with both Conferences and Trainings roles sees both modules', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: bothModules,
+        is_tenant_super_user: false,
+        tenant_roles: [
+          { scope: 'conferences', level: 'admin' },
+          { scope: 'trainings', level: 'member' },
+        ],
+      };
+      renderWithProviders();
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^trainings$/i })).toBeInTheDocument();
+    });
+
+    it('Super User (scope=all) sees all enabled modules', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: bothModules,
+        is_tenant_super_user: true,
+        tenant_roles: [{ scope: 'all', level: 'super_user' }],
+      };
+      renderWithProviders();
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^trainings$/i })).toBeInTheDocument();
+    });
+
+    it('user with no tenant roles sees no module links', () => {
+      mockUser = {
+        ...mockUser!,
+        modules: bothModules,
+        is_tenant_super_user: false,
+        tenant_roles: [],
+      };
+      renderWithProviders();
+      expect(screen.queryByRole('link', { name: /^conferences$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^trainings$/i })).not.toBeInTheDocument();
+    });
+
+    it('super_admin sees all modules regardless of tenant_roles', () => {
+      mockUser = {
+        ...mockUser!,
+        role: 'super_admin',
+        modules: [],
+        tenant_roles: [],
+      };
+      renderWithProviders();
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^trainings$/i })).toBeInTheDocument();
+    });
+
+    it('tenant_admin with no tenant_roles but role=tenant_admin sees enabled modules', () => {
+      mockUser = {
+        ...mockUser!,
+        role: 'tenant_admin',
+        modules: bothModules,
+        is_tenant_super_user: false,
+        tenant_roles: [],
+      };
+      renderWithProviders();
+      expect(screen.getByRole('link', { name: /^conferences$/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^trainings$/i })).toBeInTheDocument();
     });
   });
 
