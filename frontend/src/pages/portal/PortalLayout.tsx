@@ -306,13 +306,18 @@ function PortalLayout() {
     has_any_mandatory_pending: boolean;
   }
 
+  const isAttendeeOnly = !applicant && !!portalMe?.is_conference_attendee;
+  const pendingQuestionsUrl = isAttendeeOnly
+    ? '/portal/attendee/registration-questions/pending'
+    : '/portal/registration-questions/pending';
+
   const { data: pendingQuestions, refetch: refetchPendingQuestions } = useQuery({
     queryKey: ['portal-pending-questions'],
     queryFn: async () => {
-      const res = await portalApi.get<PendingSummary>('/portal/registration-questions/pending');
+      const res = await portalApi.get<PendingSummary>(pendingQuestionsUrl);
       return res.data;
     },
-    enabled: !!applicant,
+    enabled: !!applicant || !!portalMe?.is_conference_attendee,
     staleTime: 60000,
   });
 
@@ -816,6 +821,7 @@ function PortalLayout() {
             conference={gateConference}
             tenantLogoUrl={tenant?.logo_url}
             onComplete={handleQuestionsComplete}
+            isAttendeeOnly={isAttendeeOnly}
           />
         ) : (
           <main className="py-6 px-4 sm:px-6 lg:px-8">

@@ -33,12 +33,14 @@ interface RegistrationQuestionnaireProps {
   conference: ConferencePending;
   tenantLogoUrl?: string | null;
   onComplete: () => void;
+  isAttendeeOnly?: boolean;
 }
 
 export default function RegistrationQuestionnaire({
   conference,
   tenantLogoUrl,
   onComplete,
+  isAttendeeOnly = false,
 }: RegistrationQuestionnaireProps) {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -67,12 +69,13 @@ export default function RegistrationQuestionnaire({
     });
   }, []);
 
+  const submitUrl = isAttendeeOnly
+    ? `/portal/conferences/${conference.conference_id}/attendee/registration-questions/answers`
+    : `/portal/conferences/${conference.conference_id}/registration-questions/answers`;
+
   const submitMutation = useMutation({
     mutationFn: async (submittedAnswers: { question_id: string; answer_value: string }[]) => {
-      const res = await portalApi.post(
-        `/portal/conferences/${conference.conference_id}/registration-questions/answers`,
-        { answers: submittedAnswers }
-      );
+      const res = await portalApi.post(submitUrl, { answers: submittedAnswers });
       return res.data;
     },
     onSuccess: () => {

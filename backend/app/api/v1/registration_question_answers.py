@@ -111,10 +111,11 @@ async def list_registration_question_answers(
     )
     all_answers = answers_result.scalars().all()
 
-    # Group answers by applicant
+    # Group answers by applicant (applicant_id is always set here — query filters on it)
     answers_by_applicant: dict[UUID, list[RegistrationQuestionAnswer]] = {}
     for a in all_answers:
-        answers_by_applicant.setdefault(a.applicant_id, []).append(a)
+        if a.applicant_id is not None:
+            answers_by_applicant.setdefault(a.applicant_id, []).append(a)
 
     items: list[ApplicantAnswersResponse] = []
     for aid in applicant_ids:
@@ -219,7 +220,7 @@ async def get_registration_question_answer_stats(
         elif qtype == "text":
             text_answers = []
             for a in q_answers:
-                applicant = applicants.get(a.applicant_id)
+                applicant = applicants.get(a.applicant_id) if a.applicant_id is not None else None
                 text_answers.append(
                     {
                         "applicant_name": f"{applicant.first_name} {applicant.last_name}".strip()
@@ -268,10 +269,11 @@ async def export_registration_question_answers(
     )
     all_answers = answers_result.scalars().all()
 
-    # Group by applicant
+    # Group by applicant (applicant_id is always set here — query filters on it)
     answers_by_applicant: dict[UUID, list[RegistrationQuestionAnswer]] = {}
     for a in all_answers:
-        answers_by_applicant.setdefault(a.applicant_id, []).append(a)
+        if a.applicant_id is not None:
+            answers_by_applicant.setdefault(a.applicant_id, []).append(a)
 
     # Load applicant info
     applicant_ids = list(answers_by_applicant.keys())

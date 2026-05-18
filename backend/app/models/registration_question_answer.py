@@ -1,4 +1,4 @@
-"""Registration question answer model for storing applicant responses to conference questions."""
+"""Registration question answer model for storing applicant or attendee responses."""
 
 import uuid
 from datetime import datetime
@@ -11,10 +11,10 @@ from app.db.base import Base
 
 
 class RegistrationQuestionAnswer(Base):
-    """Stores an applicant's answer to a registration question.
+    """Stores a registration question answer for either a CFP applicant or a portal attendee.
 
     Questions are defined in conference.settings["registration_questions"].
-    Each answer links to a question by its UUID string key.
+    Exactly one of ``applicant_id`` or ``portal_user_id`` is set per row.
     """
 
     __tablename__ = "registration_question_answers"
@@ -22,6 +22,7 @@ class RegistrationQuestionAnswer(Base):
         UniqueConstraint("conference_id", "applicant_id", "question_id", name="uq_reg_question_answer"),
         Index("ix_reg_question_answers_tenant", "tenant_id"),
         Index("ix_reg_question_answers_conf_applicant", "conference_id", "applicant_id"),
+        Index("ix_reg_question_answers_portal_user_conf", "portal_user_id", "conference_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -31,8 +32,11 @@ class RegistrationQuestionAnswer(Base):
     conference_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
     )
-    applicant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("cfp_applicants.id", ondelete="CASCADE"), nullable=False
+    applicant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cfp_applicants.id", ondelete="CASCADE"), nullable=True
+    )
+    portal_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("portal_users.id", ondelete="CASCADE"), nullable=True
     )
     question_id: Mapped[str] = mapped_column(String(36), nullable=False)
     answer_value: Mapped[str] = mapped_column(Text, nullable=False)

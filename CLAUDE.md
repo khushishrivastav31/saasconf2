@@ -21,14 +21,18 @@ On the first `Edit`/`Write` of a session while on `main`, silently create a topi
 
 Follow this sweep before asking to merge. **Every step is mandatory** — CI rejects what you skip, and skipping any of them will waste a CI cycle you could have avoided locally.
 
-1. Write tests alongside code — backend: `pytest` in `backend/tests/`; frontend: `vitest` in sibling `__tests__/` dirs.
-2. `cd backend && venv/bin/python -m pytest tests/test_<feature>.py -v` — targeted tests first.
-3. `cd backend && venv/bin/python -m mypy app/ --config-file=pyproject.toml` — type-check **the whole `app/` tree**, not just the file you touched.
-4. `cd backend && ruff check app/ && ruff format --check app/` — lint + format **the whole `app/` tree**.
-5. `cd frontend && pnpm exec tsc --noEmit && pnpm exec eslint src/` — type-check + lint **the whole `src/` tree**. Targeted per-file lint is a debugging convenience, not a substitute.
-6. Full sweep: `cd backend && venv/bin/python -m pytest tests/ -v` and `cd frontend && pnpm test`.
-7. **OpenAPI schema drift** — if you added/changed any backend endpoint, route prefix, request/response schema, or response code, run `cd frontend && JWT_SECRET_KEY=test-secret-key-for-ci-pipeline-minimum-32-chars SUPER_ADMIN_PASSWORD=TestPassword123! pnpm gen:api` and commit the updated `frontend/src/types/api.generated.ts`. CI's "OpenAPI schema drift" check will fail the PR otherwise. Verify locally with `pnpm gen:api:check` — it must print no output.
-8. For UI or user-visible changes, update the in-app handbook at `frontend/src/pages/Handbook/handbookSections.tsx`.
+**Red-Green-Refactor — mandatory for every feature or fix:**
+
+1. **RED** — Write the test(s) first. Run them and confirm they fail for the right reason before writing any implementation code. Backend: `pytest` in `backend/tests/`; frontend: `vitest` in sibling `__tests__/` dirs.
+2. **GREEN** — Write the minimum implementation to make the failing tests pass. Run the targeted tests again to confirm green.
+3. **REFACTOR** — Clean up the implementation (naming, duplication, structure) without changing behaviour. Tests stay green throughout.
+4. `cd backend && venv/bin/python -m pytest tests/test_<feature>.py -v` — targeted tests first.
+5. `cd backend && venv/bin/python -m mypy app/ --config-file=pyproject.toml` — type-check **the whole `app/` tree**, not just the file you touched.
+6. `cd backend && ruff check app/ && ruff format --check app/` — lint + format **the whole `app/` tree**.
+7. `cd frontend && pnpm exec tsc --noEmit && pnpm exec eslint src/` — type-check + lint **the whole `src/` tree**. Targeted per-file lint is a debugging convenience, not a substitute.
+8. Full sweep: `cd backend && venv/bin/python -m pytest tests/ -v` and `cd frontend && pnpm test`.
+9. **OpenAPI schema drift** — if you added/changed any backend endpoint, route prefix, request/response schema, or response code, run `cd frontend && JWT_SECRET_KEY=test-secret-key-for-ci-pipeline-minimum-32-chars SUPER_ADMIN_PASSWORD=TestPassword123! pnpm gen:api` and commit the updated `frontend/src/types/api.generated.ts`. CI's "OpenAPI schema drift" check will fail the PR otherwise. Verify locally with `pnpm gen:api:check` — it must print no output.
+10. For UI or user-visible changes, update the in-app handbook at `frontend/src/pages/Handbook/handbookSections.tsx`.
 
 **Why "whole tree" matters**: dependency bumps (Dependabot, manual upgrades) can add new lint or type-check rules that fire on code you didn't touch. A per-file check on your diff will pass while the full sweep fails on CI. Always run steps 3–6 across the full tree before pushing, especially on any PR that modifies `requirements.txt`, `package.json`, or lockfiles.
 

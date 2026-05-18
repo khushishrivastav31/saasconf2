@@ -11978,6 +11978,49 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/portal/attendee/registration-questions/pending': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Attendee Pending Questions
+     * @description Check all conferences for pending mandatory registration questions (attendee flow).
+     *
+     *     Finds conferences where the portal user has a registration (matched via
+     *     email_hash) and returns unanswered mandatory questions.
+     */
+    get: operations['get_attendee_pending_questions_api_v1_portal_attendee_registration_questions_pending_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/portal/conferences/{conference_id}/attendee/registration-questions/answers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit Attendee Answers
+     * @description Submit registration question answers for an attendee portal user.
+     */
+    post: operations['submit_attendee_answers_api_v1_portal_conferences__conference_id__attendee_registration_questions_answers_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/portal/{tenant_slug}/unified/login': {
     parameters: {
       query?: never;
@@ -56908,6 +56951,63 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_attendee_pending_questions_api_v1_portal_attendee_registration_questions_pending_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PendingSummaryResponse'];
+        };
+      };
+    };
+  };
+  submit_attendee_answers_api_v1_portal_conferences__conference_id__attendee_registration_questions_answers_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        conference_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SubmitAnswersRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
         };
       };
       /** @description Validation Error */
