@@ -1,8 +1,6 @@
 name: Staging CI/CD
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
