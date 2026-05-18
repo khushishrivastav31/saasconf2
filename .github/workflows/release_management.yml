@@ -54,10 +54,10 @@ jobs:
             exit 1
           fi
 
-          RELEASE_BRANCH="releases/${VERSION}"
+          RELEASE_BRANCH="release/${VERSION}"
 
           git fetch origin main
-          git fetch origin "+refs/heads/releases/*:refs/remotes/origin/releases/*" || true
+          git fetch origin "+refs/heads/release/*:refs/remotes/origin/release/*" || true
           git fetch origin "+refs/tags/*:refs/tags/*"
 
           if git show-ref --verify --quiet "refs/remotes/origin/${RELEASE_BRANCH}"; then

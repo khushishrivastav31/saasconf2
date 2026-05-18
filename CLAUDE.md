@@ -91,6 +91,14 @@ CI must gate the merge. Never run `gh pr merge` without `--auto`. Red CI leaves 
 - **VAT fields** — `<VatNumberInput>` component.
 - **HTML, user input, auth, secrets** — read `.claude/docs/security.md` before touching.
 
+## OpenSpec change lifecycle
+
+Change specs live under `openspec/changes/<NNN>-<slug>/` while in flight.
+When a change merges to `main`, move its folder to `openspec/shipped/` in the
+same PR or a follow-up chore commit. `openspec/changes/` should only contain
+work that has not yet shipped. `openspec/specs/` holds the source-of-truth
+feature specs and is never pruned.
+
 ## Local dev
 
 `docker compose up` runs the full stack (Postgres, Redis, FastAPI, React). For native backend/frontend workflows, see the **Development Setup** section of `README.md`. Secrets live in `.env` (template: `.env.example`).
