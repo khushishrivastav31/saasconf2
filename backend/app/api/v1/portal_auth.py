@@ -244,6 +244,51 @@ font-weight: bold;">Reset Password</a></p>
     return {"message": "If an account with this email exists, a password reset link has been sent."}
 
 
+@router.post("/portal/{tenant_slug}/unified/setup-password")
+@limiter.limit("5/minute")
+async def portal_setup_password(
+    request: Request,
+    tenant_slug: str,
+    data: SetPasswordRequest,
+    db: DbSessionDep,
+) -> dict:
+    """Set password for the first time using a welcome-email setup token.
+
+    Only accepts PortalRefreshToken rows with purpose='setup'. A purpose='reset'
+    token (from forgot-password flow) is explicitly rejected so the two flows
+    cannot be crossed.
+    """
+    tenant = await _resolve_tenant(db, tenant_slug)
+    await set_rls_context(db, tenant_id=str(tenant.id), is_super_admin=False)
+
+    token_hash = hashlib.sha256(data.token.encode()).hexdigest()
+
+    result = await db.execute(
+        select(PortalRefreshToken).where(
+            PortalRefreshToken.token_hash == token_hash,
+            PortalRefreshToken.purpose == "setup",
+            PortalRefreshToken.expires_at > utcnow(),
+        )
+    )
+    stored_token = result.scalar_one_or_none()
+    if not stored_token:
+        raise HTTPException(status_code=400, detail="Invalid or expired setup link")
+
+    user = await db.get(PortalUser, stored_token.portal_user_id)
+    if not user or user.tenant_id != tenant.id:
+        raise HTTPException(status_code=400, detail="Invalid setup link")
+
+    user.password_hash = hash_password(data.password)
+    if not user.email_verified_at:
+        user.email_verified_at = utcnow()
+
+    await db.delete(stored_token)
+    await db.commit()
+
+    logger.info("Portal password setup complete: user %s (tenant %s)", user.id, tenant.slug)
+    return {"message": "Password set successfully. You can now log in."}
+
+
 @router.post("/portal/{tenant_slug}/unified/reset-password")
 @limiter.limit("5/minute")
 async def portal_reset_password(
@@ -447,14 +492,26 @@ async def get_portal_profile(
 
 
 class PortalMePatch(BaseModel):
-    """Partial update for portal profile — currently theme only.
+    """Partial update for portal profile.
 
-    Name/email changes flow through the legacy module-specific endpoints so the
-    update hits the linked CFP applicant / training attendee rows too. Theme is
-    a pure UI preference that lives only on the portal_user.
+    All fields are optional — only provided (non-None) values are applied.
+    Phone uses the PortalUser.phone property setter which handles encryption
+    and hashing automatically.
     """
 
     theme_preference: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    phone: str | None = None
+    pronouns: str | None = None
+    title: str | None = None
+    company: str | None = None
+    bio: str | None = None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
 
 
 @router.patch("/portal/unified/me")
@@ -463,7 +520,7 @@ async def patch_portal_profile(
     request: Request,
     db: DbSessionDep,
 ) -> dict:
-    """Update the current portal user's UI preferences."""
+    """Update the current portal user's profile."""
     user = await _get_current_portal_user(request, db)
 
     if data.theme_preference is not None and data.theme_preference not in ("light", "dark"):
@@ -471,6 +528,30 @@ async def patch_portal_profile(
 
     if data.theme_preference is not None:
         user.theme_preference = data.theme_preference
+    if data.first_name is not None:
+        user.first_name = data.first_name
+    if data.last_name is not None:
+        user.last_name = data.last_name
+    if data.phone is not None:
+        user.phone = data.phone
+    if data.pronouns is not None:
+        user.pronouns = data.pronouns
+    if data.title is not None:
+        user.title = data.title
+    if data.company is not None:
+        user.company = data.company
+    if data.bio is not None:
+        user.bio = data.bio
+    if data.address_line_1 is not None:
+        user.address_line_1 = data.address_line_1
+    if data.address_line_2 is not None:
+        user.address_line_2 = data.address_line_2
+    if data.city is not None:
+        user.city = data.city
+    if data.postal_code is not None:
+        user.postal_code = data.postal_code
+    if data.country is not None:
+        user.country = data.country
 
     await db.commit()
     await db.refresh(user)

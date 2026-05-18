@@ -109,6 +109,22 @@ export interface ApplicantProfileUpdate {
   theme_preference?: 'light' | 'dark' | null;
 }
 
+export interface PortalMePatchBody {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  pronouns?: string;
+  title?: string;
+  company?: string;
+  bio?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+  theme_preference?: 'light' | 'dark' | null;
+}
+
 // --- Conference / CFP ---
 
 export interface PortalCFP {

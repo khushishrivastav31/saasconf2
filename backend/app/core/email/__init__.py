@@ -77,18 +77,30 @@ async def _send_with_fresh_session(
     """
     from app.db.session import async_session_maker
 
-    # Replace AsyncSession args with a fresh session
+    # Replace AsyncSession args/kwargs with a fresh session.
+    # Callers pass db= as a keyword arg, so we must check both.
     args_list = list(args)
+    kwargs_copy = dict(kwargs)
+
     session_idx: int | None = None
     for i, arg in enumerate(args_list):
         if isinstance(arg, AsyncSession):
             session_idx = i
             break
 
-    if session_idx is not None:
+    session_kwarg: str | None = None
+    for key, val in kwargs_copy.items():
+        if isinstance(val, AsyncSession):
+            session_kwarg = key
+            break
+
+    if session_idx is not None or session_kwarg is not None:
         async with async_session_maker() as fresh_db:
-            args_list[session_idx] = fresh_db
-            await _send_with_retry(send_fn, *args_list, max_retries=max_retries, **kwargs)
+            if session_idx is not None:
+                args_list[session_idx] = fresh_db
+            if session_kwarg is not None:
+                kwargs_copy[session_kwarg] = fresh_db
+            await _send_with_retry(send_fn, *args_list, max_retries=max_retries, **kwargs_copy)
     else:
         await _send_with_retry(send_fn, *args, max_retries=max_retries, **kwargs)
 

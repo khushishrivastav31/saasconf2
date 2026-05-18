@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
@@ -15,10 +15,13 @@ import type { PortalLandingData, PortalTenant } from '../../types/portal';
 function LoginPage() {
   const { login } = useApplicantAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const basePath = usePortalBasePath();
   const { companySlug } = useParams<{ companySlug: string }>();
   const [searchParams] = useSearchParams();
   const cfpAbbreviation = searchParams.get('cfp');
+
+  const successMessage = (location.state as { message?: string } | null)?.message ?? '';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -190,6 +193,12 @@ function LoginPage() {
           onSubmit={handleSubmit}
           className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4"
         >
+          {successMessage && (
+            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-3 py-2 rounded text-sm">
+              {successMessage}
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-3 py-2 rounded text-sm">
               {error}

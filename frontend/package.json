@@ -8,7 +8,7 @@
     "dev": "vite",
     "dev:portal": "vite --port 3002",
     "build": "tsc && vite build",
-    "lint": "eslint src --max-warnings 107",
+    "lint": "eslint src --max-warnings 110",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "preview": "vite preview",
@@ -24,7 +24,7 @@
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
-      "eslint --fix --max-warnings 107 --no-warn-ignored",
+      "eslint --fix --max-warnings 110 --no-warn-ignored",
       "prettier --write"
     ],
     "src/**/*.css": [

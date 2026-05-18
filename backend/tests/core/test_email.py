@@ -127,9 +127,16 @@ class TestSendEmail:
         """Falls back to console logging when Resend is not configured."""
         import logging
 
+        from app.config import Settings
+
         email_module._resend_client = None
 
-        with caplog.at_level(logging.INFO), patch("app.core.email._get_resend", return_value=None):
+        no_smtp_settings = Settings.model_construct(SMTP_HOST="")
+        with (
+            caplog.at_level(logging.INFO),
+            patch("app.core.email._get_resend", return_value=None),
+            patch("app.core.email.get_settings", return_value=no_smtp_settings),
+        ):
             result = await send_email(
                 to="test@example.com",
                 subject="Test Email",
@@ -143,7 +150,13 @@ class TestSendEmail:
     @pytest.mark.asyncio
     async def test_send_email_uses_text_when_no_html_fallback(self, capsys):
         """Uses text body for logging when text is provided."""
-        with patch("app.core.email._get_resend", return_value=None):
+        from app.config import Settings
+
+        no_smtp_settings = Settings.model_construct(SMTP_HOST="")
+        with (
+            patch("app.core.email._get_resend", return_value=None),
+            patch("app.core.email.get_settings", return_value=no_smtp_settings),
+        ):
             result = await send_email(
                 to="user@example.com",
                 subject="Plain Text",
@@ -156,7 +169,13 @@ class TestSendEmail:
     @pytest.mark.asyncio
     async def test_send_email_uses_html_when_no_text(self, capsys):
         """Uses html body for logging when text is None."""
-        with patch("app.core.email._get_resend", return_value=None):
+        from app.config import Settings
+
+        no_smtp_settings = Settings.model_construct(SMTP_HOST="")
+        with (
+            patch("app.core.email._get_resend", return_value=None),
+            patch("app.core.email.get_settings", return_value=no_smtp_settings),
+        ):
             result = await send_email(
                 to="user@example.com",
                 subject="HTML Only",
@@ -959,3 +978,72 @@ class TestSendEmailBackground:
 
         # Give the task time to complete
         await asyncio.sleep(0.05)
+
+    @pytest.mark.asyncio
+    async def test_replaces_session_kwarg_with_fresh_session(self):
+        """send_email_background must replace a db= kwarg AsyncSession with a fresh one.
+
+        Regression: _send_with_fresh_session only scanned positional args for
+        AsyncSession. All callers pass db= as a keyword arg, so the request-scoped
+        session leaked into the background task and caused asyncpg
+        'cannot use Connection.transaction() in a manually started transaction'.
+        """
+        import asyncio
+        from unittest.mock import MagicMock
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        received_sessions: list = []
+
+        async def capture_fn(db, **kwargs):
+            received_sessions.append(db)
+            return True
+
+        capture_fn.__name__ = "capture_fn"
+
+        request_session = MagicMock(spec=AsyncSession)
+        fresh_session = MagicMock(spec=AsyncSession)
+
+        with patch("app.db.session.async_session_maker") as mock_maker:
+            mock_cm = AsyncMock()
+            mock_cm.__aenter__ = AsyncMock(return_value=fresh_session)
+            mock_cm.__aexit__ = AsyncMock(return_value=False)
+            mock_maker.return_value = mock_cm
+
+            send_email_background(capture_fn, db=request_session)
+            await asyncio.sleep(0.05)
+
+        assert len(received_sessions) == 1
+        assert received_sessions[0] is fresh_session, (
+            "Background task received the request-scoped session instead of a fresh one"
+        )
+        assert received_sessions[0] is not request_session
+
+    @pytest.mark.asyncio
+    async def test_replaces_session_positional_arg_with_fresh_session(self):
+        """send_email_background also replaces positional AsyncSession args."""
+        import asyncio
+        from unittest.mock import MagicMock
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        received_sessions: list = []
+
+        async def capture_fn(db, **kwargs):
+            received_sessions.append(db)
+            return True
+
+        capture_fn.__name__ = "capture_fn"
+
+        request_session = MagicMock(spec=AsyncSession)
+        fresh_session = MagicMock(spec=AsyncSession)
+
+        with patch("app.db.session.async_session_maker") as mock_maker:
+            mock_cm = AsyncMock()
+            mock_cm.__aenter__ = AsyncMock(return_value=fresh_session)
+            mock_cm.__aexit__ = AsyncMock(return_value=False)
+            mock_maker.return_value = mock_cm
+
+            send_email_background(capture_fn, request_session)
+            await asyncio.sleep(0.05)
+
+        assert len(received_sessions) == 1
+        assert received_sessions[0] is fresh_session

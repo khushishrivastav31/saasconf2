@@ -74,6 +74,9 @@ const MyExpensesPage = lazy(() => import('./pages/portal/PortalExpensesTab'));
 const PublicRegistrationPage = lazy(() => import('./pages/PublicRegistration'));
 const PublicTrainingPortalPage = lazy(() => import('./pages/PublicTrainingPortal'));
 
+// Conference portal set-password page — linked from attendee welcome emails.
+const PortalSetPasswordPage = lazy(() => import('./pages/portal/SetPasswordPage'));
+
 // Training set-password page — kept under the legacy ``/trainings/portal/``
 // path because backend access tokens (in production emails) link to it.
 // The rest of the old Training Portal subtree was inlined into the unified
@@ -454,6 +457,7 @@ function App() {
             }
           />
           <Route path=":companySlug/portal/user/verify-email" element={<VerifyEmailPage />} />
+          <Route path=":companySlug/portal/set-password" element={<PortalSetPasswordPage />} />
 
           {/* CFP Landing Page — public route */}
           <Route path=":tenantSlug/portal/:abbreviation" element={<LandingPage />} />

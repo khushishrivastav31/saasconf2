@@ -5,7 +5,11 @@ import { useSaveStatus } from '../../hooks/useSaveStatus';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
 import portalApi from '../../config/portalApi';
-import type { ApplicantProfile, ApplicantProfileUpdate } from '../../types/portal';
+import type {
+  ApplicantProfile,
+  ApplicantProfileUpdate,
+  PortalMePatchBody,
+} from '../../types/portal';
 import RichTextEditor from '../../components/common/RichTextEditor';
 import MediaPreviewModal from '../../components/MediaPreviewModal';
 import ProgramCommitteeTab from './ProgramCommitteeTab';
@@ -35,7 +39,8 @@ function convertSocialLinks(
 type ProfileTab = 'personal-info' | 'program-committee';
 
 function ProfilePage() {
-  const { applicant, refreshApplicant } = useApplicantAuth();
+  const { applicant, portalMe, refreshApplicant } = useApplicantAuth();
+  const isAttendeeOnly = !applicant && !!portalMe?.is_conference_attendee;
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal-info');
 
   const [firstName, setFirstName] = useState('');
@@ -101,6 +106,23 @@ function ProfilePage() {
       setMessageNotifications(applicant.message_notifications_enabled ?? true);
     }
   }, [applicant]);
+
+  useEffect(() => {
+    if (isAttendeeOnly && portalMe) {
+      setFirstName(portalMe.first_name);
+      setLastName(portalMe.last_name);
+      setPronouns(portalMe.pronouns || '');
+      setPhone(portalMe.phone || '');
+      setTitle(portalMe.title || '');
+      setCompany(portalMe.company || '');
+      setAddressLine1(portalMe.address_line_1 || '');
+      setAddressLine2(portalMe.address_line_2 || '');
+      setProfileCity(portalMe.city || '');
+      setPostalCode(portalMe.postal_code || '');
+      setProfileCountry(portalMe.country || '');
+      setBio(portalMe.bio || '');
+    }
+  }, [isAttendeeOnly, portalMe]);
 
   const isDirty = useMemo(() => {
     if (!applicant) return false;
@@ -232,8 +254,42 @@ function ProfilePage() {
     },
   });
 
+  const attendeeMutation = useMutation({
+    mutationFn: async (data: PortalMePatchBody) => {
+      const res = await portalApi.patch('/portal/unified/me', data);
+      return res.data;
+    },
+    onMutate: () => setSaving(),
+    onSuccess: () => {
+      setSaved();
+      refreshApplicant();
+    },
+    onError: () => {
+      setSaveError();
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isAttendeeOnly) {
+      attendeeMutation.mutate({
+        first_name: firstName,
+        last_name: lastName,
+        pronouns: pronouns || undefined,
+        phone: phone || undefined,
+        title: title || undefined,
+        company: company || undefined,
+        address_line_1: addressLine1 || undefined,
+        address_line_2: addressLine2 || undefined,
+        city: profileCity || undefined,
+        postal_code: postalCode || undefined,
+        country: profileCountry || undefined,
+        bio: bio || undefined,
+      });
+      return;
+    }
+
     if (pictureError || videoError) return;
 
     const filteredLinks: Record<string, string> = {};
@@ -283,7 +339,84 @@ function ProfilePage() {
     }
   };
 
-  if (!applicant) return null;
+  if (!applicant && !isAttendeeOnly) return null;
+
+  if (isAttendeeOnly) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">My Profile</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Update your personal information.
+            </p>
+          </div>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-5"
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              disabled
+              value={portalMe?.email ?? ''}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+            />
+          </div>
+
+          <IdentityFields
+            firstName={firstName}
+            lastName={lastName}
+            pronouns={pronouns}
+            phone={phone}
+            title={title}
+            company={company}
+            pronounOptions={pronounOptions}
+            onFirstNameChange={setFirstName}
+            onLastNameChange={setLastName}
+            onPronounsChange={setPronouns}
+            onPhoneChange={setPhone}
+            onTitleChange={setTitle}
+            onCompanyChange={setCompany}
+          />
+
+          <AddressFields
+            addressLine1={addressLine1}
+            addressLine2={addressLine2}
+            city={profileCity}
+            postalCode={postalCode}
+            country={profileCountry}
+            onAddressLine1Change={setAddressLine1}
+            onAddressLine2Change={setAddressLine2}
+            onCityChange={setProfileCity}
+            onPostalCodeChange={setPostalCode}
+            onCountryChange={setProfileCountry}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Short Bio
+            </label>
+            <RichTextEditor
+              value={bio}
+              onChange={(html) => setBio(html)}
+              placeholder="Tell us about yourself..."
+              rows={4}
+            />
+          </div>
+
+          <SaveButton saveStatus={saveStatus} disabled={attendeeMutation.isPending} />
+        </form>
+
+        <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -338,7 +471,7 @@ function ProfilePage() {
               <input
                 type="email"
                 disabled
-                value={applicant.email}
+                value={applicant?.email ?? ''}
                 className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
               />
             </div>

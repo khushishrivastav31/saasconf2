@@ -115,6 +115,7 @@ async def send_attendee_welcome_email(
     registration: "Registration",
     conference: "Conference",
     password_setup_token: str,
+    tenant_slug: str | None = None,
 ) -> bool:
     """Send welcome email with password setup link to attendee.
 
@@ -126,6 +127,8 @@ async def send_attendee_welcome_email(
         registration: Registration instance
         conference: Conference instance
         password_setup_token: Raw password setup token (not hashed)
+        tenant_slug: Tenant URL slug; when provided the link routes to the
+            portal set-password page instead of the admin reset-password page.
 
     Returns:
         True if email sent successfully, False otherwise
@@ -135,9 +138,13 @@ async def send_attendee_welcome_email(
         return False
 
     try:
-        # Build password setup URL
+        # Build password setup URL — portal registrations land on the portal
+        # set-password page; admin-created accounts use the admin reset page.
         frontend_base = settings.FRONTEND_BASE_URL
-        password_setup_url = f"{frontend_base}/reset-password?token={password_setup_token}"
+        if tenant_slug:
+            password_setup_url = f"{frontend_base}/{tenant_slug}/portal/set-password?token={password_setup_token}"
+        else:
+            password_setup_url = f"{frontend_base}/reset-password?token={password_setup_token}"
 
         # Get booking option name
         booking_option_name = "Conference Registration"

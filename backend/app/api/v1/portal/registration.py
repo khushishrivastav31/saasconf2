@@ -18,10 +18,10 @@ from app.config import get_settings
 from app.core.dependencies import DbSessionDep
 from app.core.exceptions import ValidationError
 from app.core.invoice_auto_generation import create_invoice_for_registrations
+from app.core.portal_user_auto_creation import create_portal_user_for_registration
 from app.core.security.recaptcha import validate_recaptcha
 from app.core.security.registrations import validate_registration_security
 from app.core.stripe_helper import create_payment_intent
-from app.core.user_auto_creation import create_user_for_registration
 from app.db.session import set_rls_context
 from app.models.booking import BookingOption
 from app.models.cfp import CFPApplicant, CFPPaper
@@ -724,25 +724,27 @@ async def create_public_registration(
             for reg in registrations:
                 reg.status = RegistrationStatus.INVOICED.value
 
-    await db.commit()
-
-    # Post-commit operations (emails, user creation)
-    # Create user accounts and collect password tokens
-    user_tokens: list[tuple[Registration, str]] = []
+    # Create user accounts BEFORE the commit so that UserPasswordReset tokens land
+    # in the same transaction. If user creation runs after db.commit(), the session
+    # closes at the end of the request without a second commit and asyncpg rolls back
+    # the flush — making every welcome-email "set your password" link unresolvable.
+    portal_user_tokens: list[tuple[Registration, str]] = []
     for reg in registrations:
         try:
-            _user, raw_token = await create_user_for_registration(
+            _portal_user, raw_token = await create_portal_user_for_registration(
                 db=db,
                 tenant_id=tenant_id,
                 registration=reg,
             )
-            if raw_token:  # Only add if new user with token
-                user_tokens.append((reg, raw_token))
+            if raw_token:
+                portal_user_tokens.append((reg, raw_token))
         except Exception as e:
-            logger.error(f"Failed to create user for registration {reg.id}: {e}")
+            logger.error(f"Failed to create portal user for registration {reg.id}: {e}")
+
+    await db.commit()
 
     # Send emails in background (post-response) for faster registration flow
-    password_setup_tokens = {reg.id: token for reg, token in user_tokens}
+    password_setup_tokens = {reg.id: token for reg, token in portal_user_tokens}
     background_tasks.add_task(
         _send_registration_emails,
         db=db,
@@ -750,6 +752,7 @@ async def create_public_registration(
         conference=conference,
         invoice=invoice,
         password_setup_tokens=password_setup_tokens,
+        tenant_slug=tenant_slug,
     )
 
     # Build success URL

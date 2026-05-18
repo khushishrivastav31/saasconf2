@@ -26,6 +26,8 @@ router = APIRouter()
 def _build_response(settings: dict) -> RegistrationQuestionsSettings:
     """Build registration questions response with defaults for missing data."""
     rq = settings.get("registration_questions", {})
+    if not isinstance(rq, dict):
+        rq = {}
     return RegistrationQuestionsSettings(**rq)
 
 
@@ -92,9 +94,13 @@ async def update_registration_questions_settings(
             if q.get("options"):
                 q["options"] = [sanitize_html(opt) for opt in q["options"]]
 
-    # Merge into existing settings
+    # Merge into existing settings.
+    # Guard against legacy data where registration_questions was stored as a
+    # bare list instead of a dict — treat it as empty so the new shape wins.
     settings = conference.settings or {}
     existing_rq = settings.get("registration_questions", {})
+    if not isinstance(existing_rq, dict):
+        existing_rq = {}
     merged = {**existing_rq, **update_data}
     settings["registration_questions"] = merged
     conference.settings = settings

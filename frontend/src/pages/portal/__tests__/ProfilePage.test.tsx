@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router';
 import ProfilePage from '../ProfilePage';
 import { ApplicantAuthContext } from '../../../contexts/ApplicantAuthContext';
 import { ToastProvider } from '../../../components/Toast';
-import type { ApplicantProfile } from '../../../types/portal';
+import type { ApplicantProfile, PortalMe } from '../../../types/portal';
 import { createTestQueryClient } from '../../../test-utils';
 
 // Mock portalApi
@@ -15,6 +15,7 @@ vi.mock('../../../config/portalApi', () => ({
     get: vi.fn(),
     put: vi.fn(),
     post: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
@@ -91,9 +92,47 @@ const mockApplicant: ApplicantProfile = {
 
 const mockRefreshApplicant = vi.fn().mockResolvedValue(undefined);
 
-function buildAuthContext(applicant: ApplicantProfile | null = mockApplicant) {
+// Attendee-only portalMe (no CFP applicant)
+const mockPortalMe: PortalMe = {
+  id: 'portal-user-456',
+  email: 'attendee@example.com',
+  first_name: 'Alex',
+  last_name: 'Attendee',
+  phone: '+1 555 999 0001',
+  pronouns: 'they/them',
+  title: 'Designer',
+  company: 'Widgets Inc',
+  bio: '<p>Attendee bio</p>',
+  social_links: {},
+  address_line_1: '42 Elm St',
+  address_line_2: null,
+  city: 'Austin',
+  postal_code: '73301',
+  country: 'US',
+  theme_preference: null,
+  is_active: true,
+  email_verified: true,
+  last_login_at: null,
+  created_at: '2025-01-01T00:00:00Z',
+  has_conference_account: false,
+  has_training_account: false,
+  cfp_applicant_id: null,
+  training_attendee_id: null,
+  training_attendee_status: null,
+  is_conference_attendee: true,
+  is_committee_member: false,
+  has_papers: false,
+  has_invoices: false,
+  has_any_role: true,
+};
+
+function buildAuthContext(
+  applicant: ApplicantProfile | null = mockApplicant,
+  portalMe: PortalMe | null = null
+) {
   return {
     applicant,
+    portalMe,
     isLoading: false,
     tenantSlug: 'acme',
     login: vi.fn(),
@@ -105,14 +144,15 @@ function buildAuthContext(applicant: ApplicantProfile | null = mockApplicant) {
 
 function renderWithProviders(
   ui: React.ReactElement,
-  applicant: ApplicantProfile | null = mockApplicant
+  applicant: ApplicantProfile | null = mockApplicant,
+  portalMe: PortalMe | null = null
 ) {
   const queryClient = createTestQueryClient();
   return render(
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <ApplicantAuthContext.Provider value={buildAuthContext(applicant)}>
+          <ApplicantAuthContext.Provider value={buildAuthContext(applicant, portalMe)}>
             {ui}
           </ApplicantAuthContext.Provider>
         </ToastProvider>
@@ -349,6 +389,51 @@ describe('ProfilePage', () => {
 
       // A URL input for twitter should now appear
       expect(screen.getByPlaceholderText(/twitter\.com/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('attendee-only branch (applicant=null, is_conference_attendee=true)', () => {
+    it('renders the profile form seeded from portalMe when applicant is null', async () => {
+      renderWithProviders(<ProfilePage />, null, mockPortalMe);
+      expect(screen.getByDisplayValue('Alex')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Attendee')).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
+    });
+
+    it('calls PATCH /portal/unified/me (not PUT /portal/me) on save', async () => {
+      const user = userEvent.setup();
+      mockPortalApi.patch.mockResolvedValueOnce({ data: {} });
+
+      renderWithProviders(<ProfilePage />, null, mockPortalMe);
+
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(mockPortalApi.patch).toHaveBeenCalledWith(
+          '/portal/unified/me',
+          expect.objectContaining({ first_name: 'Alex', last_name: 'Attendee' })
+        );
+      });
+      expect(mockPortalApi.put).not.toHaveBeenCalled();
+    });
+
+    it('calls refreshApplicant after a successful attendee save', async () => {
+      const user = userEvent.setup();
+      mockPortalApi.patch.mockResolvedValueOnce({ data: {} });
+
+      renderWithProviders(<ProfilePage />, null, mockPortalMe);
+
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(mockRefreshApplicant).toHaveBeenCalled();
+      });
+    });
+
+    it('renders nothing when applicant is null and portalMe has is_conference_attendee=false', () => {
+      const nonAttendeePortalMe: PortalMe = { ...mockPortalMe, is_conference_attendee: false };
+      const { container } = renderWithProviders(<ProfilePage />, null, nonAttendeePortalMe);
+      expect(container.firstChild).toBeNull();
     });
   });
 

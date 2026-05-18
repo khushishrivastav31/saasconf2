@@ -347,7 +347,7 @@ function PortalLayout() {
   // redirected to a separate /trainings/portal/dashboard subtree; that
   // subtree is gone now and the unified portal renders for them with the
   // CFP-specific sections (Papers, Program Committee, Conferences) hidden.
-  if (!applicant && !portalMe?.has_training_account) {
+  if (!applicant && !portalMe?.has_training_account && !portalMe?.is_conference_attendee) {
     return <Navigate to={`${basePath}/user/login`} replace />;
   }
 
@@ -765,9 +765,13 @@ function PortalLayout() {
                 />
               </svg>
             </button>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 ml-auto">
               <ThemeToggle
-                onPersist={(t) => portalApi.put('/portal/me', { theme_preference: t })}
+                onPersist={(t) =>
+                  applicant
+                    ? portalApi.put('/portal/me', { theme_preference: t })
+                    : portalApi.patch('/portal/unified/me', { theme_preference: t })
+                }
               />
               <Link
                 to={`${basePath}/messages`}

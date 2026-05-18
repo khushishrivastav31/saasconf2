@@ -422,6 +422,7 @@ async def _send_registration_emails(
     conference: Conference,
     invoice,
     password_setup_tokens: dict[UUID, str] | None = None,
+    tenant_slug: str | None = None,
 ) -> None:
     """Send invoice and welcome emails for registrations.
 
@@ -433,6 +434,8 @@ async def _send_registration_emails(
         conference: Conference model
         invoice: Invoice model (or None if not created yet)
         password_setup_tokens: Optional dict mapping registration_id to password setup token
+        tenant_slug: Tenant URL slug; when set the welcome email links to the
+            portal set-password page instead of the admin reset-password page.
     """
     from app.core.email import send_email_background
     from app.core.registration_emails import send_attendee_welcome_email, send_registration_invoice_email
@@ -457,4 +460,5 @@ async def _send_registration_emails(
             registration=reg,
             conference=conference,
             password_setup_token=token,
+            tenant_slug=tenant_slug,
         )

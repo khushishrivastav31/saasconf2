@@ -660,3 +660,74 @@ async def test_export_csv(
     assert "L" in data_row
     assert "Vegan" in data_row
     assert "Frontend" in data_row
+
+
+# --- Legacy data format regression ---
+
+
+@pytest_asyncio.fixture
+async def legacy_list_conference(db_session: AsyncSession, conference: Conference) -> Conference:
+    """Conference whose registration_questions setting is a bare list (old format).
+
+    Early versions stored the questions array directly instead of wrapping it
+    in a dict with an 'enabled' key. Any conference migrated from that format
+    triggers a TypeError when the PUT endpoint tries {**existing_rq, **update}.
+    """
+    conference.settings = {
+        **(conference.settings or {}),
+        "registration_questions": SAMPLE_QUESTIONS,  # list, not dict
+    }
+    flag_modified(conference, "settings")
+    await db_session.commit()
+    await db_session.refresh(conference)
+    return conference
+
+
+@pytest.mark.asyncio
+async def test_get_questions_legacy_list_format(
+    client: AsyncClient,
+    legacy_list_conference: Conference,
+    tenant_admin_token: str,
+) -> None:
+    """GET must return defaults when registration_questions is stored as a bare list."""
+    resp = await client.get(
+        f"/api/v1/conferences/{legacy_list_conference.id}/settings/registration-questions",
+        headers=auth(tenant_admin_token),
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["enabled"] is False
+    assert data["questions"] == []
+
+
+@pytest.mark.asyncio
+async def test_put_questions_legacy_list_format_does_not_crash(
+    client: AsyncClient,
+    legacy_list_conference: Conference,
+    tenant_admin_token: str,
+) -> None:
+    """PUT must not raise TypeError when existing data is a bare list.
+
+    Regression: {**existing_rq, **update_data} crashed with
+    'TypeError: list object is not a mapping' when existing_rq was a list.
+    """
+    new_question = {
+        "id": "q-new",
+        "text": "New question?",
+        "type": "textarea",
+        "required": False,
+        "options": [],
+        "sort_order": 0,
+        "is_active": True,
+        "help_text": "",
+    }
+    resp = await client.put(
+        f"/api/v1/conferences/{legacy_list_conference.id}/settings/registration-questions",
+        headers=auth(tenant_admin_token),
+        json={"enabled": True, "questions": [new_question]},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["enabled"] is True
+    assert len(data["questions"]) == 1
+    assert data["questions"][0]["id"] == "q-new"

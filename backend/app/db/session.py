@@ -42,10 +42,7 @@ async_session_maker = async_sessionmaker(
 async def get_db() -> AsyncGenerator[AsyncSession]:
     """Dependency for getting database sessions."""
     async with async_session_maker() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+        yield session
 
 
 @asynccontextmanager
@@ -58,18 +55,14 @@ async def get_db_with_rls(tenant_id: str | None = None, is_super_admin: bool = F
         is_super_admin: Whether the user is a super admin (bypasses RLS)
     """
     async with async_session_maker() as session:
-        try:
-            # Set RLS context variables
-            if tenant_id:
-                await session.execute(
-                    text("SELECT set_config('app.current_tenant_id', :tid, true)"), {"tid": str(tenant_id)}
-                )
+        if tenant_id:
             await session.execute(
-                text("SELECT set_config('app.is_super_admin', :sa, true)"), {"sa": str(is_super_admin).lower()}
+                text("SELECT set_config('app.current_tenant_id', :tid, true)"), {"tid": str(tenant_id)}
             )
-            yield session
-        finally:
-            await session.close()
+        await session.execute(
+            text("SELECT set_config('app.is_super_admin', :sa, true)"), {"sa": str(is_super_admin).lower()}
+        )
+        yield session
 
 
 async def set_rls_context(session: AsyncSession, tenant_id: str | None = None, is_super_admin: bool = False) -> None:

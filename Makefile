@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend test test-backend test-frontend lint lint-backend lint-frontend format build clean help init install-hooks quality dev-clean db-reset
+.PHONY: dev dev-backend dev-frontend test test-backend test-backend-portal test-frontend lint lint-backend lint-frontend format build clean help init install-hooks quality dev-clean db-reset
 
 # ─── Setup ─────────────────────────────────────────────────
 init: ## First-time project setup (deps, hooks, migrations)
@@ -75,8 +75,11 @@ dev-clean: ## Remove volumes and restart fresh
 # ─── Testing ────────────────────────────────────────────────
 test: test-backend test-frontend ## Run all tests
 
-test-backend: ## Run backend tests with coverage
-	cd backend && venv/bin/python -m pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=50
+test-backend: ## Run backend tests in parallel (3 workers)
+	cd backend && venv/bin/python -m pytest tests/ -v -n 3 --dist=loadfile --cov=app --cov-report=term-missing --cov-fail-under=50
+
+test-backend-portal: ## Run portal tests only (faster feedback loop)
+	cd backend && venv/bin/python -m pytest tests/portal/ -v -n 3 --dist=loadfile
 
 test-frontend: ## Run frontend tests with coverage
 	cd frontend && pnpm run test:coverage -- --run

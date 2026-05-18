@@ -12038,6 +12038,30 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/portal/{tenant_slug}/unified/setup-password': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Portal Setup Password
+     * @description Set password for the first time using a welcome-email setup token.
+     *
+     *     Only accepts PortalRefreshToken rows with purpose='setup'. A purpose='reset'
+     *     token (from forgot-password flow) is explicitly rejected so the two flows
+     *     cannot be crossed.
+     */
+    post: operations['portal_setup_password_api_v1_portal__tenant_slug__unified_setup_password_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/portal/{tenant_slug}/unified/reset-password': {
     parameters: {
       query?: never;
@@ -12085,7 +12109,7 @@ export type paths = {
     head?: never;
     /**
      * Patch Portal Profile
-     * @description Update the current portal user's UI preferences.
+     * @description Update the current portal user's profile.
      */
     patch: operations['patch_portal_profile_api_v1_portal_unified_me_patch'];
     trace?: never;
@@ -22234,15 +22258,39 @@ export type components = {
     };
     /**
      * PortalMePatch
-     * @description Partial update for portal profile — currently theme only.
+     * @description Partial update for portal profile.
      *
-     *     Name/email changes flow through the legacy module-specific endpoints so the
-     *     update hits the linked CFP applicant / training attendee rows too. Theme is
-     *     a pure UI preference that lives only on the portal_user.
+     *     All fields are optional — only provided (non-None) values are applied.
+     *     Phone uses the PortalUser.phone property setter which handles encryption
+     *     and hashing automatically.
      */
     PortalMePatch: {
       /** Theme Preference */
       theme_preference?: string | null;
+      /** First Name */
+      first_name?: string | null;
+      /** Last Name */
+      last_name?: string | null;
+      /** Phone */
+      phone?: string | null;
+      /** Pronouns */
+      pronouns?: string | null;
+      /** Title */
+      title?: string | null;
+      /** Company */
+      company?: string | null;
+      /** Bio */
+      bio?: string | null;
+      /** Address Line 1 */
+      address_line_1?: string | null;
+      /** Address Line 2 */
+      address_line_2?: string | null;
+      /** City */
+      city?: string | null;
+      /** Postal Code */
+      postal_code?: string | null;
+      /** Country */
+      country?: string | null;
     };
     /**
      * PortalNewsArticle
@@ -25636,6 +25684,13 @@ export type components = {
     SessionVolunteerTaskUpdate: {
       /** Required Count */
       required_count: number;
+    };
+    /** SetPasswordRequest */
+    SetPasswordRequest: {
+      /** Token */
+      token: string;
+      /** Password */
+      password: string;
     };
     /**
      * SocialLinks
@@ -56948,6 +57003,43 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['app__api__v1__portal_auth__ForgotPasswordRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  portal_setup_password_api_v1_portal__tenant_slug__unified_setup_password_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetPasswordRequest'];
       };
     };
     responses: {
