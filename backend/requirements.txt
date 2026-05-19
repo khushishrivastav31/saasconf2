@@ -90,7 +90,7 @@ stripe==15.1.0
 striprtf==0.0.32
 tinycss2==1.5.1
 tinyhtml5==2.1.0
-types-openpyxl==3.1.5.20260508
+types-openpyxl==3.1.5.20260518
 types-passlib==1.7.7.20260211
 types-pyasn1==0.6.0.20260408
 typing-inspection==0.4.2
