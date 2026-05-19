@@ -8,6 +8,7 @@ import { formatDateTime } from '../../../utils/formatDate';
 import { queryKeys } from '../../../config/queryKeys';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { useToast } from '../../../components/Toast';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -121,6 +122,7 @@ function cardBorderClass(status: DeadlineStatus) {
 export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps) {
   const queryClient = useQueryClient();
   const conferenceId = conference.id;
+  const { showToast } = useToast();
 
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -172,9 +174,12 @@ export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps)
       queryClient.invalidateQueries({
         queryKey: queryKeys.deadlines.byConference(conferenceId),
       });
+      showToast('Deadline created', 'success');
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to create deadline'));
+      const msg = parseApiError(err, 'Failed to create deadline');
+      setError(msg);
+      showToast(msg, 'error');
     },
   });
 
@@ -192,9 +197,12 @@ export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps)
       queryClient.invalidateQueries({
         queryKey: queryKeys.deadlines.byConference(conferenceId),
       });
+      showToast('Deadline updated', 'success');
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to update deadline'));
+      const msg = parseApiError(err, 'Failed to update deadline');
+      setError(msg);
+      showToast(msg, 'error');
     },
   });
 
@@ -223,9 +231,12 @@ export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps)
       queryClient.invalidateQueries({
         queryKey: queryKeys.deadlines.byConference(conferenceId),
       });
+      showToast('Deadline deleted', 'success');
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to delete deadline'));
+      const msg = parseApiError(err, 'Failed to delete deadline');
+      setError(msg);
+      showToast(msg, 'error');
     },
   });
 
@@ -472,7 +483,7 @@ export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps)
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="e.g., Sponsor contract deadline"
               maxLength={500}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
@@ -485,7 +496,7 @@ export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps)
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Optional details about this deadline..."
               rows={3}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
@@ -497,7 +508,7 @@ export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps)
               type="datetime-local"
               value={form.due_date}
               onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
         </div>

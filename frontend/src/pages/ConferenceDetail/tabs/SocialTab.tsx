@@ -4,6 +4,8 @@ import api from '../../../config/api';
 import type { Conference, SocialLinks } from '../../../types';
 import { CONFERENCE_SOCIAL_PLATFORMS } from '../../../config/socialPlatforms';
 import { DirtyContext } from '../DirtyContext';
+import { useToast } from '../../../components/Toast';
+import { parseApiError } from '../../../utils/apiError';
 
 function ConferenceSocialTab({
   conference,
@@ -15,6 +17,7 @@ function ConferenceSocialTab({
   isAdmin: boolean;
 }) {
   const reportDirty = useContext(DirtyContext);
+  const { showToast } = useToast();
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(conference.social_links || {});
   const [isDirty, setIsDirty] = useState(false);
   const [addPlatform, setAddPlatform] = useState('');
@@ -40,6 +43,10 @@ function ConferenceSocialTab({
     onSuccess: () => {
       setIsDirty(false);
       onUpdate();
+      showToast('Social links saved', 'success');
+    },
+    onError: (error: unknown) => {
+      showToast(parseApiError(error, 'Failed to save social links'), 'error');
     },
   });
 

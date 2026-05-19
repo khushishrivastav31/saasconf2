@@ -3,6 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DeadlinesTab from '../DeadlinesTab';
 
+const mockShowToast = vi.fn();
+vi.mock('../../../../components/Toast', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+
 const mockGet = vi.fn();
 const mockPost = vi.fn();
 const mockPut = vi.fn();
@@ -160,6 +165,7 @@ const sampleDeadlines = [
 describe('DeadlinesTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGet.mockResolvedValue({ data: { items: [], total: 0 } });
   });
 
   it('shows empty state when no deadlines exist', async () => {
@@ -513,6 +519,109 @@ describe('DeadlinesTab', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+  });
+
+  describe('toast feedback', () => {
+    it('shows success toast after creating a deadline', async () => {
+      mockGet.mockResolvedValue({ data: { items: [], total: 0 } });
+      mockPost.mockResolvedValue({ data: {} });
+
+      render(<DeadlinesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('New Deadline')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('New Deadline'));
+
+      const titleInput = screen.getByPlaceholderText('e.g., Sponsor contract deadline');
+      fireEvent.change(titleInput, { target: { value: 'My Deadline' } });
+
+      const dateInput = document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
+      fireEvent.change(dateInput, { target: { value: '2026-06-15T10:00' } });
+
+      fireEvent.click(screen.getByText('Create'));
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith('Deadline created', 'success');
+      });
+    });
+
+    it('shows success toast after updating a deadline', async () => {
+      mockGet.mockResolvedValue({ data: { items: [sampleDeadlines[0]], total: 1 } });
+      mockPut.mockResolvedValue({ data: {} });
+
+      render(<DeadlinesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Sponsor Contract')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTitle('Edit'));
+
+      const titleInput = screen.getByDisplayValue('Sponsor Contract');
+      fireEvent.change(titleInput, { target: { value: 'Sponsor Contract Updated' } });
+
+      fireEvent.click(screen.getByText('Update'));
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith('Deadline updated', 'success');
+      });
+    });
+
+    it('shows success toast after deleting a deadline', async () => {
+      mockGet.mockResolvedValue({ data: { items: [sampleDeadlines[0]], total: 1 } });
+      mockDelete.mockResolvedValue({ data: {} });
+
+      render(<DeadlinesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Sponsor Contract')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTitle('Delete'));
+      fireEvent.click(screen.getByText('ConfirmDelete'));
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith('Deadline deleted', 'success');
+      });
+    });
+
+    it('shows error toast when create fails', async () => {
+      mockGet.mockResolvedValue({ data: { items: [], total: 0 } });
+      mockPost.mockRejectedValue({ response: { data: { detail: 'Server error' } } });
+
+      render(<DeadlinesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('New Deadline')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('New Deadline'));
+
+      const titleInput = screen.getByPlaceholderText('e.g., Sponsor contract deadline');
+      fireEvent.change(titleInput, { target: { value: 'Fail Test' } });
+
+      const dateInput = document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
+      fireEvent.change(dateInput, { target: { value: '2026-06-15T10:00' } });
+
+      fireEvent.click(screen.getByText('Create'));
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.stringContaining('Server error'),
+          'error'
+        );
+      });
     });
   });
 });

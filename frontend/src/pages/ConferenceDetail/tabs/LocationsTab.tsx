@@ -21,6 +21,7 @@ import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { useSelection } from '../SelectionContext';
+import { useToast } from '../../../components/Toast';
 
 export default function ConferenceLocationsTab({
   conference,
@@ -31,6 +32,7 @@ export default function ConferenceLocationsTab({
 }) {
   const { selectedLocationId, setSelectedLocationId } = useSelection();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showDeleteLocationConfirm, setShowDeleteLocationConfirm] = useState(false);
@@ -161,9 +163,12 @@ export default function ConferenceLocationsTab({
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.locations.allList });
       setSelectedLocationId(newLocation.id);
+      showToast('Location created', 'success');
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, 'Failed to create location'));
+      const msg = parseApiError(error, 'Failed to create location');
+      setLinkError(msg);
+      showToast(msg, 'error');
     },
   });
 
@@ -177,9 +182,12 @@ export default function ConferenceLocationsTab({
         queryKey: queryKeys.locations.byConference(conference.id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.locations.allList });
+      showToast('Location updated', 'success');
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, 'Failed to update location'));
+      const msg = parseApiError(error, 'Failed to update location');
+      setLinkError(msg);
+      showToast(msg, 'error');
     },
   });
 
@@ -194,9 +202,12 @@ export default function ConferenceLocationsTab({
         queryKey: queryKeys.locations.byConference(conference.id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.locations.allList });
+      showToast('Location deleted', 'success');
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, 'Failed to remove location'));
+      const msg = parseApiError(error, 'Failed to remove location');
+      setLinkError(msg);
+      showToast(msg, 'error');
     },
   });
 

@@ -358,7 +358,7 @@ async def create_location(
             TenantLocationType.is_active == True,
         )
     )
-    if not valid_type.scalar_one_or_none():
+    if not valid_type.scalars().first():
         raise ValidationError(f"Invalid location type '{location_data.location_type}'")
 
     # Check for duplicate code within tenant
