@@ -24,6 +24,7 @@ export default function EditMemberModal({
 }) {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const isSelf = currentUser?.id === user.id;
   const canGrantSuperUser =
     currentUser?.role === 'super_admin' || currentUser?.is_tenant_super_user === true;
   const [formData, setFormData] = useState<TenantUserUpdate>({
@@ -306,6 +307,25 @@ export default function EditMemberModal({
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
               <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Roles</h4>
 
+              {isSelf && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1">
+                  <svg
+                    className="w-3.5 h-3.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-6V7m-7 13h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v13a2 2 0 002 2z"
+                    />
+                  </svg>
+                  You cannot modify your own roles.
+                </p>
+              )}
+
               {/* Super User toggle — hidden for users who can't grant it (QA 0.5.1.5) */}
               {canGrantSuperUser && (
                 <div className="flex items-center justify-between mb-2 py-1 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
@@ -320,9 +340,10 @@ export default function EditMemberModal({
                   <button
                     type="button"
                     onClick={handleSuperUserToggle}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                      isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
-                    }`}
+                    disabled={isSelf}
+                    className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                      isSelf ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                    } ${isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}
                   >
                     <span
                       className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSuperUser ? 'translate-x-4' : 'translate-x-0'}`}
@@ -359,7 +380,8 @@ export default function EditMemberModal({
                               key={level}
                               type="button"
                               onClick={() => handleRoleToggle(scope, level)}
-                              className={`px-2 py-0.5 text-xs font-medium rounded transition-colors ${
+                              disabled={isSelf}
+                              className={`px-2 py-0.5 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                 current?.level === level
                                   ? level === 'admin'
                                     ? 'bg-blue-600 text-white'

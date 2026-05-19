@@ -330,10 +330,9 @@ function EditUserModal({
       setSaved();
       setNewPassword('');
     },
-    onError: (error: unknown) => {
+    onError: (err) => {
       setSaveError();
-      const err = error as { response?: { data?: { detail?: string } } };
-      setErrorMessage(err.response?.data?.detail || 'Failed to update user');
+      setErrorMessage(parseApiError(err, 'Failed to update user'));
     },
   });
 
