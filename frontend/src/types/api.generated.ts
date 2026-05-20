@@ -14360,6 +14360,8 @@ export type components = {
       honeypot_field?: string | null;
       /** Form Start Timestamp */
       form_start_timestamp?: number | null;
+      /** Conference Id */
+      conference_id?: string | null;
     };
     /**
      * ApplicantResponse

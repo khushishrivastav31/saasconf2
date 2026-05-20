@@ -22,6 +22,7 @@ class ApplicantRegisterRequest(BaseModel):
     recaptcha_token: str | None = None
     honeypot_field: str | None = None
     form_start_timestamp: float | None = None
+    conference_id: UUID | None = None
 
     @field_validator("password")
     @classmethod

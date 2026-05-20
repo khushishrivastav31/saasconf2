@@ -92,6 +92,8 @@ interface RichTextEditorProps {
   maxLength?: number;
   /** Extra CSS classes for the ProseMirror editor element (e.g. 'prose-tight') */
   editorClassName?: string;
+  /** Show a toggle button to switch between visual editing and raw HTML source */
+  showHtmlToggle?: boolean;
 }
 
 const EMPTY_BODY = '<p></p>';
@@ -108,10 +110,13 @@ function RichTextEditor(
     minLength,
     maxLength,
     editorClassName = '',
+    showHtmlToggle = false,
   }: RichTextEditorProps,
   ref: React.Ref<RichTextEditorHandle>
 ) {
   const [charCount, setCharCount] = useState(0);
+  const [isSourceMode, setIsSourceMode] = useState(false);
+  const [sourceHtml, setSourceHtml] = useState('');
   const [, setSelectionUpdate] = useState(0); // Force re-render on selection change
   const defaultPromptState: PromptDialogState = {
     open: false,
@@ -257,6 +262,28 @@ function RichTextEditor(
     }
   }, [editor, placeholder]);
 
+  // ---- HTML source toggle ----
+
+  const handleSourceChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const html = e.target.value;
+      setSourceHtml(html);
+      onChange(html);
+    },
+    [onChange]
+  );
+
+  const toggleSourceMode = useCallback(() => {
+    if (!editor) return;
+    if (!isSourceMode) {
+      const current = editor.getHTML();
+      setSourceHtml(current === EMPTY_BODY ? '' : current);
+    } else {
+      editor.commands.setContent(sourceHtml || '', { emitUpdate: false });
+    }
+    setIsSourceMode((prev) => !prev);
+  }, [editor, isSourceMode, sourceHtml]);
+
   // ---- Toolbar callbacks ----
 
   const setLink = useCallback(() => {
@@ -365,23 +392,50 @@ function RichTextEditor(
     <div
       className={`border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-primary-500 focus-within:border-primary-500 ${disabled ? 'opacity-50 bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'} ${className}`}
     >
-      {/* Toolbar */}
-      <EditorToolbar
-        editor={editor}
-        disabled={disabled}
-        onSetLink={setLink}
-        onAddImage={addImage}
-        onAddYoutubeVideo={addYoutubeVideo}
-        onInsertTable={insertTable}
-        onSetTextColor={setTextColor}
-        onSetHighlightColor={setHighlightColor}
-        onClearFormatting={clearFormatting}
-      />
+      {/* Toolbar — hidden in source mode */}
+      {!isSourceMode && (
+        <EditorToolbar
+          editor={editor}
+          disabled={disabled}
+          onSetLink={setLink}
+          onAddImage={addImage}
+          onAddYoutubeVideo={addYoutubeVideo}
+          onInsertTable={insertTable}
+          onSetTextColor={setTextColor}
+          onSetHighlightColor={setHighlightColor}
+          onClearFormatting={clearFormatting}
+        />
+      )}
+
+      {/* HTML source toggle button */}
+      {showHtmlToggle && (
+        <div className="flex justify-end px-2 py-1 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <button
+            type="button"
+            onClick={toggleSourceMode}
+            disabled={disabled}
+            className="text-xs px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 font-mono"
+          >
+            {isSourceMode ? 'Visual' : '<> HTML'}
+          </button>
+        </div>
+      )}
 
       {/* Editor area */}
-      <div className="px-3 py-2 overflow-y-auto" style={{ maxHeight: `${maxRows * 1.5}rem` }}>
-        <EditorContent editor={editor} />
-      </div>
+      {isSourceMode ? (
+        <textarea
+          value={sourceHtml}
+          onChange={handleSourceChange}
+          disabled={disabled}
+          spellCheck={false}
+          className="w-full px-3 py-2 font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none resize-none"
+          style={{ minHeight: `${rows * 1.5}rem`, maxHeight: `${maxRows * 1.5}rem` }}
+        />
+      ) : (
+        <div className="px-3 py-2 overflow-y-auto" style={{ maxHeight: `${maxRows * 1.5}rem` }}>
+          <EditorContent editor={editor} />
+        </div>
+      )}
 
       {/* Character counter */}
       {(minLength != null || maxLength != null) && (

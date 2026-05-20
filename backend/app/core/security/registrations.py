@@ -11,6 +11,8 @@ from collections import defaultdict
 from fastapi import HTTPException, Request
 from pydantic import EmailStr
 
+from app.config import get_settings
+
 # In-memory rate limiting (production should use Redis)
 _rate_limit_store: defaultdict[str, list[float]] = defaultdict(list)
 
@@ -125,8 +127,9 @@ async def validate_registration_security(
             detail="Temporary email addresses are not allowed. Please use a permanent email address.",
         )
 
-    # 4. Rate limit check (3 registrations per hour per IP)
-    await check_rate_limit(client_ip, "registration", limit=3, window=3600)
+    # 4. Rate limit check (3 registrations per hour per IP) — skipped in debug mode
+    if not get_settings().DEBUG:
+        await check_rate_limit(client_ip, "registration", limit=3, window=3600)
 
 
 # Helper function to clear rate limits (for testing)

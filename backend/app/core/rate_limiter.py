@@ -49,6 +49,7 @@ def _tenant_or_ip_key(request: Request) -> str:
 limiter = Limiter(
     key_func=get_remote_address,
     storage_uri=_settings.REDIS_URL,
+    enabled=not _settings.DEBUG,
 )
 
 tenant_limiter = Limiter(

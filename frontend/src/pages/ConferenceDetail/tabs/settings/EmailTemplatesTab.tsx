@@ -466,11 +466,13 @@ function EmailTemplateForm({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             HTML Body
           </label>
-          <RichTextEditor
-            value={bodyHtml}
-            onChange={handleHtmlChange}
-            placeholder="Enter the HTML email body..."
-          />
+          <div data-testid="email-editor-wrapper" className="px-4 py-2">
+            <RichTextEditor
+              value={bodyHtml}
+              onChange={handleHtmlChange}
+              placeholder="Enter the HTML email body..."
+            />
+          </div>
         </div>
 
         <div>

@@ -111,6 +111,7 @@ function RegisterPage() {
         recaptcha_token,
         honeypot_field: honeypotField,
         form_start_timestamp: formStartRef.current,
+        conference_id: conferenceData?.conference?.id,
       });
       setSuccessMessage(message);
     } catch (err: unknown) {

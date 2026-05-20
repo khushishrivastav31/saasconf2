@@ -178,7 +178,12 @@ function EmailSettingsTab({ conference, isAdmin }: { conference: Conference; isA
           </p>
         </div>
         <div className="p-6">
-          <RichTextEditor value={headerHtml} onChange={handleHeaderChange} disabled={!isAdmin} />
+          <RichTextEditor
+            value={headerHtml}
+            onChange={handleHeaderChange}
+            disabled={!isAdmin}
+            showHtmlToggle
+          />
         </div>
       </div>
 
@@ -192,7 +197,12 @@ function EmailSettingsTab({ conference, isAdmin }: { conference: Conference; isA
           </p>
         </div>
         <div className="p-6">
-          <RichTextEditor value={footerHtml} onChange={handleFooterChange} disabled={!isAdmin} />
+          <RichTextEditor
+            value={footerHtml}
+            onChange={handleFooterChange}
+            disabled={!isAdmin}
+            showHtmlToggle
+          />
         </div>
       </div>
     </div>

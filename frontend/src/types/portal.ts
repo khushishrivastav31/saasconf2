@@ -14,6 +14,7 @@ export interface ApplicantRegisterRequest {
   recaptcha_token?: string;
   honeypot_field?: string;
   form_start_timestamp?: number;
+  conference_id?: string;
 }
 
 export interface ApplicantTokenResponse {

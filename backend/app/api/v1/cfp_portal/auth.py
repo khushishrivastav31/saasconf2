@@ -183,7 +183,7 @@ async def register_applicant(
 
         await ensure_portal_user_for_applicant(db, applicant)
         await db.commit()
-        return {"message": "Registration successful. Email auto-verified (debug mode). You can now log in."}
+        # Fall through to send the verification email to MailHog in debug mode
 
     # Create email verification token
     raw_token, token_hash = generate_email_verification_token()
@@ -215,9 +215,12 @@ async def register_applicant(
         first_name=data.first_name,
         last_name=data.last_name,
         company_name=tenant.name,
+        conference_id=data.conference_id,
         base_url=settings.PORTAL_BASE_URL,
     )
 
+    if settings.DEBUG:
+        return {"message": "Registration successful. Email auto-verified (debug mode). You can now log in."}
     return {"message": "Registration successful. Please check your email to verify your account."}
 
 
