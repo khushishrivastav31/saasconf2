@@ -1,0 +1,167 @@
+name: Package Freshness Check
+
+# Blocks merging of dependency PRs that include packages published less than
+# MIN_AGE_DAYS ago. Protects against supply chain attacks where a malicious
+# version is published and immediately picked up by Dependabot.
+#
+# Runs on any PR that touches a package manifest or lockfile.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'frontend/package.json'
+      - 'frontend/pnpm-lock.yaml'
+      - 'backend/requirements.txt'
+      - 'backend/pyproject.toml'
+
+jobs:
+  npm-freshness:
+    name: npm package age check
+    runs-on: ubuntu-latest
+    if: contains(fromJSON('["dependabot[bot]", "renovate[bot]"]'), github.actor) || contains(github.head_ref, 'deps') || contains(github.head_ref, 'dependabot')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check npm package publish dates
+        env:
+          MIN_AGE_DAYS: '3'
+        run: |
+          python3 - <<'PYEOF'
+          import json, urllib.request, datetime, subprocess, sys, os, re
+
+          MIN_AGE_DAYS = int(os.environ.get('MIN_AGE_DAYS', 3))
+
+          diff = subprocess.check_output(
+              ['git', 'diff', 'HEAD~1', 'HEAD', '--', 'frontend/package.json'],
+              text=True
+          )
+
+          added   = re.findall(r'^\+\s+"([^"/][^"]*)":\s+"([^"]+)"', diff, re.MULTILINE)
+          removed = re.findall(r'^-\s+"([^"/][^"]*)":\s+"([^"]+)"', diff, re.MULTILINE)
+
+          removed_map = {k: v for k, v in removed}
+          updated = [
+              (k, v.lstrip('^~>=< '))
+              for k, v in added
+              if k in removed_map and v != removed_map[k]
+          ]
+
+          if not updated:
+              print('No npm package version changes detected in frontend/package.json.')
+              sys.exit(0)
+
+          print(f'Checking {len(updated)} updated package(s) (minimum age: {MIN_AGE_DAYS} days)\n')
+
+          now    = datetime.datetime.now(datetime.timezone.utc)
+          failed = []
+
+          for name, version in updated:
+              try:
+                  url = f'https://registry.npmjs.org/{urllib.request.quote(name, safe="@/")}'
+                  req = urllib.request.Request(url, headers={'Accept': 'application/json'})
+                  with urllib.request.urlopen(req, timeout=15) as resp:
+                      meta = json.loads(resp.read())
+                  published_str = meta.get('time', {}).get(version, '')
+                  if not published_str:
+                      print(f'  ⚠️  {name}@{version}: publish date not found, skipping')
+                      continue
+                  published = datetime.datetime.fromisoformat(published_str.replace('Z', '+00:00'))
+                  age_days  = (now - published).days
+                  icon      = '✅' if age_days >= MIN_AGE_DAYS else '❌'
+                  print(f'  {icon} {name}@{version} — published {published_str[:10]} ({age_days}d ago)')
+                  if age_days < MIN_AGE_DAYS:
+                      failed.append((name, version, age_days, published_str[:10]))
+              except Exception as exc:
+                  print(f'  ⚠️  {name}@{version}: registry lookup failed ({exc}), skipping')
+
+          if failed:
+              print(f'\n❌ {len(failed)} package(s) published less than {MIN_AGE_DAYS} days ago:\n')
+              for name, version, age, pub_date in failed:
+                  print(f'   {name}@{version}  (published {pub_date}, {age} day(s) old)')
+              print(f'\nHold this PR until the packages are at least {MIN_AGE_DAYS} days old.')
+              print('This gate protects against supply chain attacks on freshly published packages.')
+              sys.exit(1)
+          else:
+              print(f'\n✅ All packages are at least {MIN_AGE_DAYS} days old.')
+          PYEOF
+
+  pypi-freshness:
+    name: PyPI package age check
+    runs-on: ubuntu-latest
+    if: contains(fromJSON('["dependabot[bot]", "renovate[bot]"]'), github.actor) || contains(github.head_ref, 'deps') || contains(github.head_ref, 'dependabot')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check PyPI package publish dates
+        env:
+          MIN_AGE_DAYS: '3'
+        run: |
+          python3 - <<'PYEOF'
+          import json, urllib.request, datetime, subprocess, sys, os, re
+
+          MIN_AGE_DAYS = int(os.environ.get('MIN_AGE_DAYS', 3))
+
+          diff = subprocess.check_output(
+              ['git', 'diff', 'HEAD~1', 'HEAD', '--', 'backend/requirements.txt'],
+              text=True
+          )
+
+          # Match lines like: +somepackage==1.2.3  or  +some-package==1.2.3
+          added   = re.findall(r'^\+([A-Za-z0-9_\-\.]+)==([^\s]+)', diff, re.MULTILINE)
+          removed = re.findall(r'^-([A-Za-z0-9_\-\.]+)==([^\s]+)', diff, re.MULTILINE)
+
+          removed_map = {k.lower(): v for k, v in removed}
+          updated = [
+              (k, v)
+              for k, v in added
+              if k.lower() in removed_map and v != removed_map[k.lower()]
+          ]
+
+          if not updated:
+              print('No PyPI package version changes detected in backend/requirements.txt.')
+              sys.exit(0)
+
+          print(f'Checking {len(updated)} updated package(s) (minimum age: {MIN_AGE_DAYS} days)\n')
+
+          now    = datetime.datetime.now(datetime.timezone.utc)
+          failed = []
+
+          for name, version in updated:
+              try:
+                  url = f'https://pypi.org/pypi/{name}/{version}/json'
+                  with urllib.request.urlopen(url, timeout=15) as resp:
+                      data = json.loads(resp.read())
+                  # Find the earliest upload time for this version
+                  releases = data.get('urls', [])
+                  if not releases:
+                      print(f'  ⚠️  {name}=={version}: no release files found, skipping')
+                      continue
+                  upload_times = [r['upload_time_iso_8601'] for r in releases if r.get('upload_time_iso_8601')]
+                  if not upload_times:
+                      print(f'  ⚠️  {name}=={version}: upload time not found, skipping')
+                      continue
+                  published_str = min(upload_times)
+                  published = datetime.datetime.fromisoformat(published_str.replace('Z', '+00:00'))
+                  age_days  = (now - published).days
+                  icon      = '✅' if age_days >= MIN_AGE_DAYS else '❌'
+                  print(f'  {icon} {name}=={version} — published {published_str[:10]} ({age_days}d ago)')
+                  if age_days < MIN_AGE_DAYS:
+                      failed.append((name, version, age_days, published_str[:10]))
+              except Exception as exc:
+                  print(f'  ⚠️  {name}=={version}: registry lookup failed ({exc}), skipping')
+
+          if failed:
+              print(f'\n❌ {len(failed)} package(s) published less than {MIN_AGE_DAYS} days ago:\n')
+              for name, version, age, pub_date in failed:
+                  print(f'   {name}=={version}  (published {pub_date}, {age} day(s) old)')
+              print(f'\nHold this PR until the packages are at least {MIN_AGE_DAYS} days old.')
+              print('This gate protects against supply chain attacks on freshly published packages.')
+              sys.exit(1)
+          else:
+              print(f'\n✅ All packages are at least {MIN_AGE_DAYS} days old.')
+          PYEOF
