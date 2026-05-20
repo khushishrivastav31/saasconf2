@@ -23,6 +23,137 @@ import { EmptyState } from '../../../components/common/EmptyState';
 import { useSelection } from '../SelectionContext';
 import { useToast } from '../../../components/Toast';
 
+function RoomRow({
+  loc,
+  selectedLocationId,
+  onSelect,
+}: {
+  loc: Location;
+  selectedLocationId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <li data-testid="child-row">
+      <button
+        type="button"
+        onClick={() => onSelect(loc.id)}
+        className={`w-full flex items-center gap-2 py-2.5 pl-7 pr-3 text-sm text-left transition-colors ${
+          loc.id === selectedLocationId
+            ? 'bg-primary-50 text-primary-700 font-medium'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+        }`}
+      >
+        <svg
+          className="flex-shrink-0 w-3 h-3 text-gray-300"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="truncate flex-1">{loc.name}</span>
+        {loc.capacity && (
+          <span className="text-xs text-gray-400 dark:text-gray-500" title="Capacity">
+            {loc.capacity}
+          </span>
+        )}
+        <span className="text-xs text-gray-400 dark:text-gray-500 w-12 text-right">
+          {loc.location_type}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function VenueRow({
+  venue,
+  children,
+  selectedLocationId,
+  collapsed,
+  onToggle,
+  onSelect,
+}: {
+  venue: Location;
+  children: Location[];
+  selectedLocationId: string | null;
+  collapsed: boolean;
+  onToggle: () => void;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <>
+      <li data-testid="venue-row">
+        <div className="flex items-center">
+          {children.length > 0 && (
+            <button
+              type="button"
+              aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${venue.name}`}
+              onClick={onToggle}
+              className="pl-2 pr-1 py-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+            >
+              <svg
+                className={`w-3.5 h-3.5 transition-transform ${collapsed ? '' : 'rotate-90'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onSelect(venue.id)}
+            className={`flex-1 flex items-center gap-2 py-2.5 text-sm text-left transition-colors ${
+              venue.id === selectedLocationId
+                ? 'bg-primary-50 text-primary-700 font-medium'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+            style={{ paddingLeft: children.length > 0 ? '0.25rem' : '0.75rem' }}
+          >
+            <svg
+              className="flex-shrink-0 w-4 h-4 text-gray-400 dark:text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+            <span className="truncate flex-1">{venue.name}</span>
+            {venue.capacity && (
+              <span className="text-xs text-gray-400 dark:text-gray-500" title="Capacity">
+                {venue.capacity}
+              </span>
+            )}
+            <span className="text-xs text-gray-400 dark:text-gray-500 w-12 text-right">
+              {venue.location_type}
+            </span>
+          </button>
+        </div>
+      </li>
+      {!collapsed &&
+        children.map((child) => (
+          <RoomRow
+            key={child.id}
+            loc={child}
+            selectedLocationId={selectedLocationId}
+            onSelect={onSelect}
+          />
+        ))}
+    </>
+  );
+}
+
 export default function ConferenceLocationsTab({
   conference,
   isAdmin,
@@ -114,7 +245,7 @@ export default function ConferenceLocationsTab({
   });
 
   const selectedLocation = useMemo(
-    () => data?.items?.find((loc) => loc.id === selectedLocationId) || null,
+    () => data?.items?.find((loc) => loc.id === selectedLocationId) ?? null,
     [data, selectedLocationId]
   );
 
@@ -240,7 +371,18 @@ export default function ConferenceLocationsTab({
   const linkedIds = new Set(data?.items?.map((l) => l.id) || []);
   const unlinkableLocations = allLocations?.items?.filter((l) => !linkedIds.has(l.id)) || [];
 
-  // Organize locations into hierarchy: venues (no parent) and their children
+  const [collapsedVenues, setCollapsedVenues] = useState<Set<string>>(new Set());
+
+  const toggleVenue = (venueId: string) => {
+    setCollapsedVenues((prev) => {
+      const next = new Set(prev);
+      if (next.has(venueId)) next.delete(venueId);
+      else next.add(venueId);
+      return next;
+    });
+  };
+
+  // Venues (no parent_id) with their child rooms
   const locationTree = useMemo(() => {
     if (!data?.items) return [];
     const items = data.items;
@@ -248,31 +390,24 @@ export default function ConferenceLocationsTab({
     const childrenByParent = new Map<string, Location[]>();
 
     items.forEach((loc) => {
-      if (loc.parent_id) {
-        const children = childrenByParent.get(loc.parent_id) || [];
-        children.push(loc);
-        childrenByParent.set(loc.parent_id, children);
+      if (loc.parent_id && items.find((p) => p.id === loc.parent_id)) {
+        const siblings = childrenByParent.get(loc.parent_id) || [];
+        siblings.push(loc);
+        childrenByParent.set(loc.parent_id, siblings);
       }
     });
 
-    // Build flat list with hierarchy info
-    const result: { location: Location; level: number; hasChildren: boolean }[] = [];
-    parentLocations.forEach((parent) => {
-      const children = childrenByParent.get(parent.id) || [];
-      result.push({ location: parent, level: 0, hasChildren: children.length > 0 });
-      children.forEach((child) => {
-        result.push({ location: child, level: 1, hasChildren: false });
-      });
-    });
+    return parentLocations.map((venue) => ({
+      venue,
+      children: childrenByParent.get(venue.id) || [],
+    }));
+  }, [data?.items]);
 
-    // Add orphan children (parent not in current conference) at top level
-    items.forEach((loc) => {
-      if (loc.parent_id && !items.find((p) => p.id === loc.parent_id)) {
-        result.push({ location: loc, level: 0, hasChildren: false });
-      }
-    });
-
-    return result;
+  // Rooms whose parent venue is not present in the conference list
+  const orphanedLocations = useMemo(() => {
+    if (!data?.items) return [];
+    const items = data.items;
+    return items.filter((loc) => loc.parent_id && !items.find((p) => p.id === loc.parent_id));
   }, [data?.items]);
 
   return (
@@ -540,65 +675,71 @@ export default function ConferenceLocationsTab({
                 </h5>
               </div>
               <ul className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
-                {locationTree.map(({ location: loc, level, hasChildren }) => (
-                  <li key={loc.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedLocationId(loc.id)}
-                      className={`w-full flex items-center gap-2 py-2.5 text-sm text-left transition-colors ${
-                        loc.id === selectedLocationId
-                          ? 'bg-primary-50 text-primary-700 font-medium'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                      style={{ paddingLeft: level === 0 ? '0.75rem' : '1.75rem' }}
-                    >
-                      {level === 0 && hasChildren ? (
-                        <svg
-                          className="flex-shrink-0 w-4 h-4 text-gray-400 dark:text-gray-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                          />
-                        </svg>
-                      ) : level === 1 ? (
-                        <svg
-                          className="flex-shrink-0 w-3 h-3 text-gray-300"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      ) : (
-                        <span
-                          className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                            loc.is_active ? 'bg-green-400' : 'bg-red-400'
-                          }`}
-                        />
-                      )}
-                      <span className="truncate flex-1">{loc.name}</span>
-                      {loc.capacity && (
-                        <span className="text-xs text-gray-400 dark:text-gray-500" title="Capacity">
-                          {loc.capacity}
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400 dark:text-gray-500 w-12 text-right">
-                        {loc.location_type}
-                      </span>
-                    </button>
-                  </li>
+                {locationTree.map(({ venue, children }) => (
+                  <VenueRow
+                    key={venue.id}
+                    venue={venue}
+                    children={children}
+                    selectedLocationId={selectedLocationId}
+                    collapsed={collapsedVenues.has(venue.id)}
+                    onToggle={() => toggleVenue(venue.id)}
+                    onSelect={setSelectedLocationId}
+                  />
                 ))}
+                {orphanedLocations.length > 0 && (
+                  <li>
+                    <div className="px-3 pt-3 pb-1 flex items-center gap-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-amber-500 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                        />
+                      </svg>
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        Orphaned rooms
+                      </span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        — parent venue not found
+                      </span>
+                    </div>
+                    <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {orphanedLocations.map((loc) => (
+                        <li key={loc.id} data-testid="orphaned-row">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLocationId(loc.id)}
+                            className={`w-full flex items-center gap-2 py-2.5 pl-3 pr-3 text-sm text-left transition-colors ${
+                              loc.id === selectedLocationId
+                                ? 'bg-primary-50 text-primary-700 font-medium'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            <span className="flex-shrink-0 w-2 h-2 rounded-full bg-amber-400" />
+                            <span className="truncate flex-1">{loc.name}</span>
+                            {loc.capacity && (
+                              <span
+                                className="text-xs text-gray-400 dark:text-gray-500"
+                                title="Capacity"
+                              >
+                                {loc.capacity}
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-400 dark:text-gray-500 w-12 text-right">
+                              {loc.location_type}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                )}
               </ul>
             </div>
           </div>

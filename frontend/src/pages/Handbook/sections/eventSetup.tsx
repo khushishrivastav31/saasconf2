@@ -140,10 +140,11 @@ export const eventSetupCategory: HandbookCategory = {
             __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Manage conference venues and rooms. <strong>Requires: <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">locations</code> module.</strong></p>
 <strong>What you can do:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">Create locations with name, address, capacity, and type</li>
-<li class="text-gray-700 dark:text-gray-300">Organize in a tree hierarchy (e.g., Building → Floor → Room)</li>
+<li class="text-gray-700 dark:text-gray-300">Create venues (top-level) and rooms nested beneath them</li>
+<li class="text-gray-700 dark:text-gray-300">Expand or collapse a venue's rooms with the chevron toggle</li>
 <li class="text-gray-700 dark:text-gray-300">Assign location types (defined in Settings 1.4.1)</li>
 <li class="text-gray-700 dark:text-gray-300">Link locations to program tracks</li>
+<li class="text-gray-700 dark:text-gray-300">Orphaned rooms (parent venue removed) appear in a separate warning section</li>
 </ul>
 <strong>Dependencies:</strong> Location Types (Settings 1.4.1) should be defined first.
 <strong>Consequences:</strong>
