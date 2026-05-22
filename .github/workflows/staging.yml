@@ -72,14 +72,6 @@ jobs:
           VITE_APP_VERSION: ${{ inputs.tag || github.sha }}
         run: pnpm run build
 
-      - name: Build backend image
-        run: |
-          docker build \
-            -t saasconf-backend:staging \
-            -t saasconf-backend:${{ steps.image_tag.outputs.tag }} \
-            -f backend/Dockerfile.prod \
-            backend/
-
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
@@ -129,7 +121,7 @@ jobs:
           EOF
 
       - name: Reclaim docker disk space on staging
-        # Runs BEFORE image transfer so there is room on disk to receive the new images.
+        # Runs BEFORE the server-side build so there is room on disk for the new image.
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
             echo "=== Disk usage BEFORE cleanup ==="
@@ -153,14 +145,6 @@ jobs:
             df -h / | tail -1
             docker system df 2>/dev/null || true
           EOF
-
-      - name: Transfer backend image to staging
-        # Frontend image is built directly on the server from the rsynced dist/.
-        run: |
-          docker save saasconf-backend:staging saasconf-backend:${{ steps.image_tag.outputs.tag }} \
-            | gzip \
-            | ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
-                "docker load"
 
       - name: Deploy backend source
         # Alembic migrations run from app/ source on the server — keep it in sync.
@@ -264,6 +248,11 @@ jobs:
 
             # Ensure infrastructure services are running and healthy
             docker compose up -d --wait db redis
+
+            # Build backend image on the server so it picks up the staging .env
+            # context (RESEND_API_KEY and other secrets live in deploy/staging/.env).
+            echo "Building backend image..."
+            docker compose build --no-cache backend
 
             # Run migrations in an isolated one-off container before starting the
             # backend service. This avoids running alembic inside a live uvicorn

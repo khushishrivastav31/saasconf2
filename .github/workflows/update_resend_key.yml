@@ -1,0 +1,93 @@
+name: Update Resend API Key — Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      resend_api_key:
+        description: 'New Resend API key (re_...)'
+        required: true
+        type: string
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_PATH: ${{ secrets.STAGING_PATH }}
+
+permissions:
+  contents: read
+
+jobs:
+  update-key:
+    name: Update RESEND_API_KEY on staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+
+    steps:
+      - name: Mask API key in logs
+        run: echo "::add-mask::${{ inputs.resend_api_key }}"
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Update key and restart backend
+        env:
+          NEW_KEY: ${{ inputs.resend_api_key }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+            "export NEW_KEY='$NEW_KEY' && bash -s" << 'EOF'
+            set -e
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            # Backup current .env before touching it
+            cp .env .env.bak
+
+            # Replace or append RESEND_API_KEY
+            if grep -q '^RESEND_API_KEY=' .env; then
+              sed -i "s|^RESEND_API_KEY=.*|RESEND_API_KEY=$NEW_KEY|" .env
+              echo "RESEND_API_KEY updated in .env"
+            else
+              echo "RESEND_API_KEY=$NEW_KEY" >> .env
+              echo "RESEND_API_KEY appended to .env"
+            fi
+
+            # Recreate backend container so it picks up the new value
+            echo "Restarting backend..."
+            docker compose up -d --force-recreate --no-deps backend
+
+            # Wait for the container to report healthy (up to 60s)
+            echo "Waiting for backend to become healthy..."
+            for i in $(seq 1 12); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' saasconf_backend_staging 2>/dev/null || echo "unknown")
+              echo "  attempt $i/12 — health: $STATUS"
+              [ "$STATUS" = "healthy" ] && break
+              sleep 5
+            done
+          EOF
+
+      - name: Verify and write summary
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF' >> $GITHUB_STEP_SUMMARY
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            echo "## RESEND_API_KEY Update — Staging"
+            echo "_$(date -u)_"
+            echo ""
+
+            KEY=$(docker exec saasconf_backend_staging printenv RESEND_API_KEY 2>/dev/null || true)
+            if [ -n "$KEY" ]; then
+              echo "✅ **RESEND_API_KEY is set in the container** (${#KEY} chars)"
+            else
+              echo "❌ **RESEND_API_KEY is NOT in the container** — check restart logs above"
+            fi
+
+            echo ""
+            echo "### Backend container status"
+            echo '```'
+            docker compose ps backend
+            echo '```'
+          EOF
