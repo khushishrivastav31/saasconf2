@@ -1,0 +1,98 @@
+name: Email Diagnostics — Staging
+
+on:
+  workflow_dispatch:
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_PATH: ${{ secrets.STAGING_PATH }}
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Diagnose email on staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Collect diagnostics
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF' >> $GITHUB_STEP_SUMMARY
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            # Load staging .env so ${DB_USER} / ${DB_NAME} are available for psql
+            set -a; source .env 2>/dev/null || true; set +a
+
+            echo "## Email Diagnostics — Staging"
+            echo "_$(date -u)_"
+            echo ""
+
+            # ── 1. Container ────────────────────────────────────────────────
+            echo "### 1 · Backend container"
+            echo '```'
+            docker compose ps backend 2>&1 || echo "(docker compose ps failed)"
+            echo '```'
+            echo ""
+
+            # ── 2. Env vars ─────────────────────────────────────────────────
+            echo "### 2 · Email environment"
+            echo '```'
+
+            # RESEND_API_KEY — show presence and length, never the value
+            KEY_CONTAINER=$(docker exec saasconf_backend_staging printenv RESEND_API_KEY 2>/dev/null || true)
+            KEY_FILE=$(grep '^RESEND_API_KEY=' .env 2>/dev/null | cut -d= -f2- | tr -d '\r')
+            if [ -n "$KEY_CONTAINER" ]; then
+              echo "RESEND_API_KEY (container) : ✅ set (${#KEY_CONTAINER} chars)"
+            elif [ -n "$KEY_FILE" ]; then
+              echo "RESEND_API_KEY (container) : ❌ not set in container"
+              echo "RESEND_API_KEY (.env file) : ✅ present in .env — docker-compose may not have picked it up"
+            else
+              echo "RESEND_API_KEY             : ❌ NOT SET anywhere — all mail falls back to console logging"
+            fi
+
+            # SMTP_HOST — should be unset in staging
+            SMTP=$(docker exec saasconf_backend_staging printenv SMTP_HOST 2>/dev/null || true)
+            if [ -z "$SMTP" ]; then
+              echo "SMTP_HOST                  : ✅ not set (correct — Resend is used)"
+            else
+              echo "SMTP_HOST                  : ⚠️  \"$SMTP\" — routes mail away from Resend in non-staging envs"
+            fi
+
+            SENV=$(docker exec saasconf_backend_staging printenv SENTRY_ENVIRONMENT 2>/dev/null || true)
+            echo "SENTRY_ENVIRONMENT         : ${SENV:-(not set)}"
+
+            FROM=$(docker exec saasconf_backend_staging printenv RESEND_FROM_EMAIL 2>/dev/null || true)
+            echo "RESEND_FROM_EMAIL          : ${FROM:-(not set)}"
+            echo '```'
+            echo ""
+
+            # ── 3. Recent log lines ──────────────────────────────────────────
+            echo "### 3 · Recent email log lines (last 30 matches)"
+            echo '```'
+            docker logs --tail 300 saasconf_backend_staging 2>&1 \
+              | grep -i "email\|resend\|smtp" \
+              | tail -30 \
+              || echo "(no matching lines in last 300 log lines)"
+            echo '```'
+            echo ""
+
+            # ── 4. DB failure records ────────────────────────────────────────
+            echo "### 4 · Recent email_logs records (last 10)"
+            echo '```'
+            docker compose exec -T db \
+              psql -U "${DB_USER:-saasconf}" -d "${DB_NAME:-saasconf}" -x \
+              -c "SELECT email_type, status, error_message, created_at FROM email_logs ORDER BY created_at DESC LIMIT 10;" \
+              2>&1 || echo "(could not query — DB container may not be healthy)"
+            echo '```'
+          EOF
