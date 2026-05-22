@@ -1,0 +1,40 @@
+name: Add SSH Public Key — Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: 'Your SSH public key (contents of ~/.ssh/id_ed25519.pub or similar)'
+        required: true
+        type: string
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+
+permissions:
+  contents: read
+
+jobs:
+  add-key:
+    name: Authorize SSH public key on staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 5
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Append public key to authorized_keys
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+            "mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
+             echo '${{ inputs.public_key }}' >> ~/.ssh/authorized_keys && \
+             chmod 600 ~/.ssh/authorized_keys && \
+             echo 'Key added. Total authorized keys:' && \
+             wc -l ~/.ssh/authorized_keys"
