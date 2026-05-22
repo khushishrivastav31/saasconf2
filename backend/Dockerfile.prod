@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # For production builds with hash verification, add --require-hashes to pip install
 COPY requirements.txt pyproject.toml poetry.lock* ./
 RUN python -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+    /opt/venv/bin/pip install --no-cache-dir --timeout 120 --retries 5 -r requirements.txt
 
 # Production image
 # python:3.12.13-slim

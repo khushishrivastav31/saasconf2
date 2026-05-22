@@ -1,0 +1,56 @@
+name: Create Superuser (Staging)
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'Email address for the superuser'
+        required: true
+        type: string
+      password:
+        description: 'Password for the superuser'
+        required: true
+        type: string
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_PATH: ${{ secrets.STAGING_PATH }}
+
+permissions:
+  contents: read
+
+jobs:
+  create-superuser:
+    name: Create Superuser on Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 5
+
+    steps:
+      - name: Mask password in logs
+        run: echo "::add-mask::${{ inputs.password }}"
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create or update superuser
+        run: |
+          EMAIL="${{ inputs.email }}"
+          PASSWORD="${{ inputs.password }}"
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+            "export SA_EMAIL='$EMAIL' SA_PASS='$PASSWORD' && bash -s" << 'EOF'
+            set -e
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            echo "Creating/updating superuser: $SA_EMAIL ..."
+            docker compose run --rm --no-deps \
+              -e SUPER_ADMIN_EMAIL="$SA_EMAIL" \
+              -e SUPER_ADMIN_PASSWORD="$SA_PASS" \
+              backend python -u -m app.db.seed
+            echo "Superuser ready: $SA_EMAIL"
+          EOF

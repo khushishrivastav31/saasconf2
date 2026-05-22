@@ -190,8 +190,10 @@ class TestSendEmail:
         """SMTP_HOST is a dev-only escape hatch — production must refuse it.
 
         Even if SMTP_HOST somehow leaks into a prod environment, the send_email
-        path must not silently divert mail to SMTP. Returns False and logs an
-        ERROR so the misconfiguration is visible.
+        path must not silently divert mail to SMTP. Logs an ERROR so the
+        misconfiguration is visible, then falls through to Resend.
+        When Resend is also unconfigured the result is False, but the error
+        is logged and SMTP was never used.
         """
         import logging
 
@@ -205,6 +207,7 @@ class TestSendEmail:
         )
         with (
             patch("app.core.email.get_settings", return_value=prod_settings),
+            patch("app.core.email._get_resend", return_value=None),
             caplog.at_level(logging.ERROR),
         ):
             result = await send_email(
@@ -215,6 +218,44 @@ class TestSendEmail:
             )
         assert result is False
         assert "SMTP_HOST is set in production" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_smtp_host_in_staging_falls_through_to_resend(self, caplog):
+        """When SMTP_HOST is set in staging, email must fall through to Resend.
+
+        Root cause of staging email outage: SMTP_HOST=localhost copied from
+        .env.example caused send_email to return False without ever trying Resend.
+        """
+        import logging
+
+        from app.config import Settings
+
+        staging_settings = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SENTRY_ENVIRONMENT="staging",
+            SMTP_HOST="localhost",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+        )
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.return_value = {"id": "email-123"}
+
+        with (
+            patch("app.core.email.get_settings", return_value=staging_settings),
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            caplog.at_level(logging.ERROR),
+        ):
+            result = await send_email(
+                to="user@example.com",
+                subject="Staging email",
+                html="<p>x</p>",
+                text="x",
+            )
+
+        assert result is True
+        assert "SMTP_HOST is set in staging" in caplog.text
+        mock_resend.Emails.send.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_email_success_with_resend(self):

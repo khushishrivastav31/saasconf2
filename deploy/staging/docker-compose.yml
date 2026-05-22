@@ -53,10 +53,9 @@ services:
       - saasconf_network
 
   # FastAPI Backend
+  # Image is built on the CI runner and transferred via docker save | gzip | docker load.
   backend:
-    build:
-      context: ../../backend
-      dockerfile: Dockerfile.prod
+    image: saasconf-backend:staging
     container_name: saasconf_backend_staging
     restart: unless-stopped
     environment:
@@ -81,6 +80,7 @@ services:
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@sonrisa.ventures}
       FRONTEND_BASE_URL: https://${DOMAIN}
       PORTAL_BASE_URL: https://${DOMAIN}
+      UVICORN_WORKERS: "1"
     depends_on:
       db:
         condition: service_healthy
@@ -98,15 +98,14 @@ services:
       - saasconf_network
 
   # React Frontend (Nginx)
+  # dist/ is built on the CI runner and rsynced to the server.
+  # The image is then built on the server using the prebuilt stage (COPY dist only — no Node.js).
   frontend:
+    image: saasconf-frontend:staging
     build:
       context: ../../frontend
       dockerfile: Dockerfile.prod
-      args:
-        VITE_API_URL: https://api.${DOMAIN}
-        VITE_SENTRY_DSN: ${SENTRY_DSN_FRONTEND:-}
-        VITE_SENTRY_ENVIRONMENT: staging
-        VITE_APP_VERSION: ${APP_VERSION:-0.1.0}
+      target: prebuilt
     container_name: saasconf_frontend_staging
     restart: unless-stopped
     depends_on:

@@ -23,459 +23,12 @@ permissions:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Detect which areas changed
+  # Verification gate — single source of truth in _verify.yml.
+  # Staging opts into coverage collection; CI does not.
   # ─────────────────────────────────────────────────────────────
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v4
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-              # CI-config edits must revalidate the backend suite — the
-              # pytest invocation + env live here, and regressions in the
-              # workflow (e.g. a broken --cov toggle) are only catchable
-              # by actually running the tests.
-              - '.github/workflows/staging.yml'
-            frontend:
-              - 'frontend/src/**'
-              - 'frontend/e2e/**'
-              - 'frontend/package*.json'
-              - 'frontend/tsconfig*.json'
-              - 'frontend/vite.config.*'
-              - 'frontend/eslint.config.*'
-              # Same rationale as the backend filter: re-run on CI edits.
-              - '.github/workflows/staging.yml'
-
-  # ─────────────────────────────────────────────────────────────
-  # Backend Tests
-  # On PR: path-filtered (only when backend/ changed) — fast feedback.
-  # On push to main or manual dispatch: always run — the full pipeline
-  # must exercise every suite before a deploy.
-  # ─────────────────────────────────────────────────────────────
-  backend-tests:
-    name: Backend Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    needs: changes
-
-    services:
-      postgres:
-        image: postgres:17.9-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,size=1g
-          --shm-size 1g
-
-      redis:
-        image: redis:7.4-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install system dependencies (WeasyPrint)
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          # Cached across runs — saves ~90s vs. cold apt-get install.
-          packages: >-
-            libpango-1.0-0
-            libpangocairo-1.0-0
-            libpangoft2-1.0-0
-            libcairo2
-            libgdk-pixbuf-2.0-0
-            libffi-dev
-            libglib2.0-0
-            fonts-dejavu-core
-          version: 1.0
-
-      - name: Install dependencies
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Lint with Ruff
-        working-directory: backend
-        # ``ruff`` is already pinned in requirements.txt and installed above.
-        # Do not re-pin it here — a lower pin would silently downgrade the
-        # CI linter relative to local dev and let style/lint errors merge.
-        run: |
-          ruff check app/
-          ruff format --check app/
-
-      - name: Cache mypy type-check results
-        uses: actions/cache@v5
-        with:
-          path: backend/.mypy_cache
-          # Invalidate on requirements (deps drive type surface) + app/ changes
-          # (mypy caches per-file hash internally, so this is best-effort).
-          key: mypy-${{ runner.os }}-py3.13-${{ hashFiles('backend/requirements.txt', 'backend/pyproject.toml') }}
-          restore-keys: |
-            mypy-${{ runner.os }}-py3.13-
-
-      - name: Type check with mypy
-        working-directory: backend
-        # ``mypy`` is already pinned in requirements.txt and installed above.
-        # Do not re-pin it here — a lower pin would silently downgrade the
-        # CI type-checker relative to local dev and let new type errors merge.
-        run: |
-          mypy app/ --config-file=pyproject.toml
-
-      - name: Run tests
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
-          SUPER_ADMIN_PASSWORD: TestPassword123!
-        run: |
-          # -n auto spreads the 3,000+ tests across all available cores.
-          # Each xdist worker gets its own per-worker test database via
-          # conftest.py (PYTEST_XDIST_WORKER → test_gwN), so the per-test
-          # TRUNCATE loop stays isolated.
-          #
-          # ``--dist=worksteal`` (xdist 3.0+): hands tests out one at a
-          # time and lets idle workers steal pending tests from busy ones.
-          # We previously used ``loadfile`` which keeps an entire file on
-          # one worker — a single large file becomes a wall-time floor.
-          # ``worksteal`` rebalances at runtime and trims the long-tail
-          # worker; the win compounds when we move to 4+ core runners.
-          # No -v: parallel output is noisy and hard to read.
-          #
-          # Coverage.py is a ~25-40% tax. We only pay it on push-to-main
-          # runs (which upload to Codecov); PR events skip it to keep CI
-          # feedback fast. --durations=50 prints the slowest 50 tests so
-          # we can spot structural slowdowns as the suite grows.
-          #
-          # ``-m "not slow"`` deselects the two migration-chain integrity
-          # tests (test_dashboard_matviews, test_rls_coverage) that each
-          # spawn ``alembic upgrade/downgrade`` subprocesses and collectively
-          # consume ~17 min of wall time on their own. They run in parallel
-          # in the ``backend-slow-tests`` job (push-to-main only), keeping
-          # this critical-path job focused on the ~3k unit/integration tests.
-          pytest tests/ -n auto --dist=worksteal --durations=50 -m "not slow" \
-            --cov=app --cov-report=xml --cov-report=html \
-            --cov-report=term-missing --cov-fail-under=50
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
-        with:
-          files: backend/coverage.xml
-          flags: backend
-        continue-on-error: true
-
-      - name: Upload backend coverage report
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-coverage-report
-          path: backend/htmlcov/
-          retention-days: 14
-
-  # ─────────────────────────────────────────────────────────────
-  # Backend Slow Tests (push-to-main only)
-  #
-  # Runs the ``slow`` pytest marker — currently
-  # ``test_dashboard_matviews`` + ``test_rls_coverage``, each of which
-  # spawns ``alembic upgrade/downgrade`` subprocesses and consumes
-  # 7-10 minutes on its own. Splitting them into a parallel job
-  # (instead of bolting onto ``backend-tests``) cuts the push-to-main
-  # critical path from ~40 min to ~max(regular, slow) ≈ ~25 min, since
-  # both jobs now run concurrently on separate runners.
-  #
-  # Skipped entirely on PR events — regressions in these guards
-  # (migrations + RLS coverage) only land on main, so gating main-push
-  # is enough. ``deploy-staging`` still waits on this job so a broken
-  # migration or new unprotected tenant-scoped table can't ship.
-  # ─────────────────────────────────────────────────────────────
-  backend-slow-tests:
-    name: Backend Slow Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: changes
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-
-    services:
-      postgres:
-        image: postgres:17.9-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,size=1g
-          --shm-size 1g
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install dependencies
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run slow tests
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
-          JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
-          SUPER_ADMIN_PASSWORD: TestPassword123!
-        run: |
-          # -n 2 — the two slow modules each spawn alembic subprocesses
-          # and build isolated databases; running them in parallel on a
-          # 2-core runner is the sweet spot (more workers would just
-          # contend for CPU during the alembic chain). --dist=loadfile
-          # keeps each module on a single worker.
-          pytest tests/ -n 2 --dist=loadfile --durations=10 -m "slow"
-  # On PR: path-filtered (only when frontend src/config changed) — fast feedback.
-  # On push to main or manual dispatch: always run — the full pipeline
-  # must exercise every suite before a deploy.
-  # ─────────────────────────────────────────────────────────────
-  frontend-tests:
-    name: Frontend Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: changes
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        working-directory: frontend
-        # Budget mixes two warning sources: grandfathered max-lines warnings
-        # (files >400 LOC) and, since the 2026-04 bump of
-        # ``eslint-plugin-react-hooks`` to 6.x, React Compiler
-        # ``incompatible-library`` notices on ``react-hook-form`` ``watch()``
-        # call sites. Must stay ≤ current count; lower as files are split
-        # and ``watch()`` calls migrate to ``useWatch({ control, name })``.
-        # See frontend/eslint.config.js comment + audit step 38.
-        run: pnpm exec eslint src/ --max-warnings 110
-
-      - name: Type check
-        working-directory: frontend
-        run: pnpm exec tsc --noEmit
-
-      - name: Run tests with coverage
-        working-directory: frontend
-        run: pnpm run test:coverage -- --run --reporter=verbose
-
-      - name: Upload frontend coverage report
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: frontend-coverage-report
-          path: frontend/coverage/
-          retention-days: 14
-
-      - name: Build
-        working-directory: frontend
-        env:
-          VITE_API_URL: https://api.staging.sonrisa.ventures
-        run: pnpm run build
-
-      - name: Check bundle size
-        working-directory: frontend
-        run: |
-          echo "=== Bundle Size Report ==="
-          du -sh dist/
-          du -sh dist/assets/*.js | sort -rh | head -10
-          TOTAL_JS=$(find dist/assets -name '*.js' -exec cat {} + | wc -c)
-          TOTAL_KB=$(( TOTAL_JS / 1024 ))
-          echo "Total JS: ${TOTAL_KB} KB"
-          # Warn at 4.5MB, fail at 6MB (current baseline ~4MB with code splitting)
-          if [ "$TOTAL_JS" -gt 6291456 ]; then
-            echo "::error::Total JS bundle exceeds 6MB (${TOTAL_KB} KB) — investigate large dependencies"
-            exit 1
-          elif [ "$TOTAL_JS" -gt 4718592 ]; then
-            echo "::warning::Total JS bundle exceeds 4.5MB (${TOTAL_KB} KB) — consider optimizing"
-          fi
-
-  # ─────────────────────────────────────────────────────────────
-  # OpenAPI schema drift check (runs when either side changed)
-  # ─────────────────────────────────────────────────────────────
-  schema-drift:
-    name: OpenAPI schema drift
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: changes
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install system dependencies (WeasyPrint)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
-            libcairo2 libgdk-pixbuf-2.0-0 libffi-dev libglib2.0-0 fonts-dejavu-core
-
-      - name: Install backend deps
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install frontend deps
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Assert api.generated.ts matches backend schema
-        working-directory: frontend
-        env:
-          # Backend imports get_settings() at module load time; supply the
-          # minimum vars needed to validate Settings. Values are throwaway —
-          # the script only invokes app.openapi(), never opens a connection.
-          JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
-          SUPER_ADMIN_PASSWORD: TestPassword123!
-        run: pnpm run gen:api:check
-
-  # ─────────────────────────────────────────────────────────────
-  # Dependency Security Audit (always runs — fast)
-  # ─────────────────────────────────────────────────────────────
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-
-      - name: Audit Python dependencies
-        working-directory: backend
-        run: |
-          pip install pip-audit
-          pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539  # pygments 2.19.2 — no fix available yet
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.2
-
-      # No `cache: 'pnpm'` here: this job runs `pnpm audit` only — it never
-      # calls `pnpm install`, so the pnpm store stays empty and setup-node's
-      # post-job cache save fails with "Path Validation Error" (which marks
-      # the whole job as failed). The audit doesn't need a cache anyway.
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-
-      - name: Audit dependencies
-        working-directory: frontend
-        run: pnpm audit --audit-level=critical
-
-      - name: Scan for vulnerabilities in Dockerfiles
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-
-  # ─────────────────────────────────────────────────────────────
-  # Secrets Scanning (always runs — fast)
-  # ─────────────────────────────────────────────────────────────
-  secrets-scan:
-    name: Secrets Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@v3.95.3
-        with:
-          extra_args: --only-verified
+  verify:
+    name: Verify
+    uses: ./.github/workflows/_verify.yml
 
   # ─────────────────────────────────────────────────────────────
   # Deploy to Staging
@@ -485,15 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 30
-    needs: [changes, backend-tests, backend-slow-tests, frontend-tests, schema-drift, security-audit, secrets-scan]
-    if: |
-      always() &&
-      needs.backend-tests.result == 'success' &&
-      needs.backend-slow-tests.result == 'success' &&
-      needs.frontend-tests.result == 'success' &&
-      needs.schema-drift.result == 'success' &&
-      needs.security-audit.result == 'success' &&
-      needs.secrets-scan.result == 'success'
+    needs: verify
+    if: needs.verify.result == 'success'
 
     steps:
       - name: Checkout code
@@ -503,6 +49,37 @@ jobs:
           # exact commit. On push-to-main this is empty and defaults to HEAD.
           ref: ${{ inputs.tag || github.sha }}
 
+      - name: Compute image tag
+        id: image_tag
+        run: |
+          VERSION="${{ inputs.tag || github.sha }}"
+          # Sanitise for Docker: replace '+' and other invalid chars with '-'
+          TAG="staging-${VERSION//[^a-zA-Z0-9._-]/-}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Set up frontend tooling
+        uses: ./.github/actions/setup-frontend
+
+      - name: Build frontend dist
+        # Produces frontend/dist/ on the CI runner. The dist is rsynced to the
+        # server and the image is built there using the lightweight prebuilt
+        # stage (COPY dist into nginx — no Node.js on the server needed).
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://api.staging.sonrisa.ventures
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_FRONTEND }}
+          VITE_SENTRY_ENVIRONMENT: staging
+          VITE_APP_VERSION: ${{ inputs.tag || github.sha }}
+        run: pnpm run build
+
+      - name: Build backend image
+        run: |
+          docker build \
+            -t saasconf-backend:staging \
+            -t saasconf-backend:${{ steps.image_tag.outputs.tag }} \
+            -f backend/Dockerfile.prod \
+            backend/
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
@@ -510,7 +87,83 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy backend
+      - name: Ensure swap is available on staging
+        # FastAPI + WeasyPrint startup OOM-kills the backend on servers with no swap.
+        # The deploy user lacks passwordless sudo, so we use a privileged Docker
+        # container (no sudo needed — deploy user already has Docker socket access)
+        # to create the swapfile and enable it in the host mount namespace via nsenter.
+        # Idempotent: exits early if swap is already active.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            SWAP_TOTAL=$(free -b | awk '/^Swap:/ {print $2}')
+            if [ "$SWAP_TOTAL" -gt 0 ]; then
+              echo "Swap already active — skipping."
+              free -h
+              exit 0
+            fi
+
+            echo "No active swap — creating 2 GB swapfile via privileged container..."
+            # --privileged --pid=host: shares host PID namespace + CAP_SYS_ADMIN so
+            # nsenter can enter the host mount namespace and call swapon there.
+            # -v /:/hostfs: host filesystem is visible inside the container at /hostfs.
+            docker run --rm --privileged --pid=host \
+              -v /:/hostfs \
+              alpine:3 sh -c '
+                apk add -q util-linux 2>/dev/null
+                if [ ! -f /hostfs/swapfile ]; then
+                  fallocate -l 2G /hostfs/swapfile 2>/dev/null \
+                    || dd if=/dev/zero of=/hostfs/swapfile bs=1M count=2048
+                  chmod 600 /hostfs/swapfile
+                  mkswap /hostfs/swapfile
+                fi
+                nsenter -t 1 -m -- /sbin/swapon /swapfile 2>/dev/null || true
+              '
+
+            free -h
+            SWAP_TOTAL=$(free -b | awk '/^Swap:/ {print $2}')
+            if [ "$SWAP_TOTAL" -eq 0 ]; then
+              echo "::error::Swap is still 0 after privileged container setup — investigate manually"
+              exit 1
+            fi
+            echo "Swap is active."
+          EOF
+
+      - name: Reclaim docker disk space on staging
+        # Runs BEFORE image transfer so there is room on disk to receive the new images.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            echo "=== Disk usage BEFORE cleanup ==="
+            df -h / | tail -1
+            docker system df 2>/dev/null || true
+
+            # Remove ALL versioned saasconf staging/failed tags — they pile up
+            # on every RC deploy and are the primary driver of disk growth.
+            # The rolling :staging tag is kept; versioned snapshots are ephemeral.
+            docker images --format '{{.Repository}}:{{.Tag}}' \
+              | grep -E '^saasconf-(backend|frontend):(staging-|failed-)' \
+              | xargs -r docker rmi -f 2>&1 | tail -10 || true
+
+            # Prune ALL unused Docker resources — no age filter because all our
+            # RC images are from today and would be skipped by until=24h.
+            # Named volumes (postgres_data, redis_data) are NOT touched by
+            # docker system prune unless --volumes is passed — DB data is safe.
+            docker system prune -af 2>&1 | tail -5 || true
+
+            echo "=== Disk usage AFTER cleanup ==="
+            df -h / | tail -1
+            docker system df 2>/dev/null || true
+          EOF
+
+      - name: Transfer backend image to staging
+        # Frontend image is built directly on the server from the rsynced dist/.
+        run: |
+          docker save saasconf-backend:staging saasconf-backend:${{ steps.image_tag.outputs.tag }} \
+            | gzip \
+            | ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+                "docker load"
+
+      - name: Deploy backend source
+        # Alembic migrations run from app/ source on the server — keep it in sync.
         run: |
           rsync -avz --delete \
             --exclude '__pycache__' \
@@ -521,21 +174,28 @@ jobs:
             -e "ssh -i ~/.ssh/id_ed25519" \
             backend/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/backend/
 
-      - name: Deploy frontend
-        run: |
-          rsync -avz --delete \
-            --exclude 'node_modules' \
-            --exclude 'dist' \
-            --exclude '.env*' \
-            -e "ssh -i ~/.ssh/id_ed25519" \
-            frontend/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/frontend/
-
       - name: Deploy configuration
         run: |
           rsync -avz \
             --exclude '.env' \
             -e "ssh -i ~/.ssh/id_ed25519" \
             deploy/staging/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/deploy/staging/
+
+      - name: Deploy frontend dist to staging
+        # Rsync the pre-built dist/ and Dockerfile to the server so the server
+        # can build the tiny nginx+prebuilt image without needing Node.js.
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            frontend/dist/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/frontend/dist/
+          rsync -avz \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            frontend/Dockerfile.prod \
+            ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/frontend/
+          rsync -avz \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            frontend/deploy/ \
+            ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/frontend/deploy/
 
       - name: Tag previous images for rollback
         run: |
@@ -562,6 +222,17 @@ jobs:
             done
           EOF
 
+      - name: Build frontend image on staging
+        # The frontend image is built on the server using the prebuilt stage —
+        # just COPY dist into nginx, no Node.js required (~50 MB RAM vs ~1 GB).
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+            echo "Building frontend image from prebuilt dist..."
+            docker compose build --no-cache frontend
+            echo "Frontend image built successfully."
+          EOF
+
       - name: Reset database for PG16 (one-time fix)
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
@@ -585,39 +256,6 @@ jobs:
             fi
           EOF
 
-      - name: Reclaim docker disk space on staging
-        # Staging filled up its disk on 2026-04-26 during a docker compose
-        # build (see PR #141 deploy run). Cause was accumulated build cache
-        # plus :failed-<sha> tags from rollback cycles. Cleanup runs every
-        # deploy now so the disk doesn't drift back into a wedged state.
-        # We deliberately preserve :latest, :previous, and recent :failed-*
-        # tags (last 14 days, kept for post-mortem) — only stale layers
-        # and dangling images get removed.
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            echo "=== Disk usage BEFORE cleanup ==="
-            df -h / | tail -1
-            docker system df 2>/dev/null || true
-
-            # Dangling images (untagged) and unused build cache > 7 days.
-            # ``docker image prune`` (no -a) only touches dangling images,
-            # so :latest/:previous/:failed-* tags stay intact.
-            docker image prune -f 2>&1 | tail -3 || true
-            docker builder prune -f --filter "until=168h" 2>&1 | tail -3 || true
-
-            # Remove :failed-* tags older than 14 days. They exist for
-            # post-mortem after a rollback; 14 days is a generous window
-            # before they become disk weight rather than evidence.
-            docker images --format '{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}' \
-              | awk -v cutoff="$(date -d '14 days ago' '+%Y-%m-%d')" \
-                  '/:failed-/ { split($2, d, " "); if (d[1] < cutoff) print $1 }' \
-              | xargs -r docker rmi -f 2>&1 | tail -5 || true
-
-            echo "=== Disk usage AFTER cleanup ==="
-            df -h / | tail -1
-            docker system df 2>/dev/null || true
-          EOF
-
       - name: Rebuild and restart containers
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
@@ -627,19 +265,19 @@ jobs:
             # Ensure infrastructure services are running and healthy
             docker compose up -d --wait db redis
 
-            # Rebuild application containers — fail deploy if build fails
-            docker compose build --no-cache backend frontend
-
-            # Restart app services only (--no-deps prevents recreating db/redis)
-            docker compose up -d --force-recreate --no-deps backend frontend nginx
-
-            # Wait for backend to be healthy before running migrations
-            echo "Waiting for backend to be healthy..."
-            sleep 30
-
-            # Run database migrations — fail the deploy if migrations fail
+            # Run migrations in an isolated one-off container before starting the
+            # backend service. This avoids running alembic inside a live uvicorn
+            # process, which doubles memory pressure and triggers OOM on low-RAM servers.
             echo "Running database migrations..."
-            docker compose exec -T backend alembic upgrade head
+            docker compose run --rm --no-deps backend alembic upgrade head
+
+            # Force-remove frontend and nginx containers before recreating them.
+            # docker compose --force-recreate silently skips unhealthy containers,
+            # leaving the old image running. Explicit rm guarantees a fresh start.
+            docker rm -f saasconf_frontend_staging saasconf_nginx_staging 2>/dev/null || true
+
+            # Start app services — migrations already applied
+            docker compose up -d --force-recreate --no-deps backend frontend nginx
           EOF
 
       - name: Seed platform data
@@ -658,7 +296,7 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} <<EOF
             cd ${{ env.STAGING_PATH }}/deploy/staging
             echo "Seeding platform data..."
-            docker compose exec -T \\
+            docker compose run --rm --no-deps \\
               -e E2E_PORTAL_EMAIL='$E2E_PORTAL_EMAIL' \\
               -e E2E_PORTAL_PASSWORD='$E2E_PORTAL_PASSWORD' \\
               -e E2E_PORTAL_TENANT_SLUG='$E2E_PORTAL_TENANT_SLUG' \\
@@ -755,21 +393,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-frontend
 
       - name: Install Playwright browsers
         working-directory: frontend

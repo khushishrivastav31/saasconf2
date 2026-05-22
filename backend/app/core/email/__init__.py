@@ -316,8 +316,8 @@ async def send_email(
     settings = get_settings()
 
     # SMTP override is a dev-only escape hatch (MailHog locally). In prod or
-    # staging it would silently divert real email away from Resend — refuse
-    # to use it there even if the env var leaks through.
+    # staging, log an error and fall through to Resend rather than silently
+    # dropping the email. Using SMTP in those environments is never correct.
     if settings.SMTP_HOST:
         env = settings.SENTRY_ENVIRONMENT.lower()
         if env in ("production", "staging"):
@@ -326,16 +326,17 @@ async def send_email(
                 "Unset SMTP_HOST or remove it from the environment.",
                 env,
             )
-            return False
-        return await _send_via_smtp(
-            to=to,
-            subject=subject,
-            html=html,
-            text=text,
-            from_email=from_email or settings.RESEND_FROM_EMAIL,
-            from_name=tenant_from_name or settings.RESEND_FROM_NAME,
-            settings=settings,
-        )
+            # Fall through to Resend instead of dropping the email.
+        else:
+            return await _send_via_smtp(
+                to=to,
+                subject=subject,
+                html=html,
+                text=text,
+                from_email=from_email or settings.RESEND_FROM_EMAIL,
+                from_name=tenant_from_name or settings.RESEND_FROM_NAME,
+                settings=settings,
+            )
 
     resend = _get_resend(api_key=tenant_api_key)
 
