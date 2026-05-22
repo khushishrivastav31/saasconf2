@@ -217,6 +217,19 @@ jobs:
             echo "Frontend image built successfully."
           EOF
 
+      - name: Build backend image on staging
+        # The backend image is built on the server from the rsynced source so it
+        # picks up runtime secrets (RESEND_API_KEY etc.) via deploy/staging/.env.
+        # Running in its own step keeps the deploy log readable and isolates build
+        # failures from the container-recreation step.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+            echo "Building backend image..."
+            docker compose build --no-cache backend
+            echo "Backend image built successfully."
+          EOF
+
       - name: Reset database for PG16 (one-time fix)
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
@@ -249,24 +262,23 @@ jobs:
             # Ensure infrastructure services are running and healthy
             docker compose up -d --wait db redis
 
-            # Build backend image on the server so it picks up the staging .env
-            # context (RESEND_API_KEY and other secrets live in deploy/staging/.env).
-            echo "Building backend image..."
-            docker compose build --no-cache backend
-
             # Run migrations in an isolated one-off container before starting the
             # backend service. This avoids running alembic inside a live uvicorn
             # process, which doubles memory pressure and triggers OOM on low-RAM servers.
             echo "Running database migrations..."
-            docker compose run --rm --no-deps backend alembic upgrade head
+            docker compose run --rm --no-deps backend alembic upgrade head < /dev/null
 
-            # Force-remove frontend and nginx containers before recreating them.
-            # docker compose --force-recreate silently skips unhealthy containers,
-            # leaving the old image running. Explicit rm guarantees a fresh start.
-            docker rm -f saasconf_frontend_staging saasconf_nginx_staging 2>/dev/null || true
+            # Explicitly remove all app containers before recreating them.
+            # Relying solely on --force-recreate has proven unreliable when the
+            # SSH session has been open for a long build — the old container can
+            # remain running if the SSH pipe closes between the migration step and
+            # the compose up. Explicit rm guarantees a clean slate.
+            echo "Removing old app containers..."
+            docker rm -f saasconf_backend_staging saasconf_frontend_staging saasconf_nginx_staging 2>/dev/null || true
 
-            # Start app services — migrations already applied
-            docker compose up -d --force-recreate --no-deps backend frontend nginx
+            # Start app services — images already built, migrations already applied
+            echo "Starting app containers..."
+            docker compose up -d --no-deps backend frontend nginx
           EOF
 
       - name: Seed platform data

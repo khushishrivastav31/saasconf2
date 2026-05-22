@@ -53,9 +53,12 @@ services:
       - saasconf_network
 
   # FastAPI Backend
-  # Image is built on the CI runner and transferred via docker save | gzip | docker load.
+  # Image is built on the staging server from rsynced source (backend/ → ../../backend).
   backend:
     image: saasconf-backend:staging
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.prod
     container_name: saasconf_backend_staging
     restart: unless-stopped
     environment:
