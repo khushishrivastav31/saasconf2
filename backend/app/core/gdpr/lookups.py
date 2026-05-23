@@ -194,6 +194,11 @@ PORTAL_EXPORT_FIELDS: dict[str, frozenset[str]] = {
             "email",
             "pronouns",
             "created_at",
+            "address_line_1",
+            "address_line_2",
+            "city",
+            "postal_code",
+            "country",
         }
     ),
     "portal_users": frozenset(

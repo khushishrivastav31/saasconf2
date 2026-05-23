@@ -27201,6 +27201,16 @@ export type components = {
        * Format: date-time
        */
       updated_at: string;
+      /** Address Line 1 */
+      address_line_1?: string | null;
+      /** Address Line 2 */
+      address_line_2?: string | null;
+      /** City */
+      city?: string | null;
+      /** Postal Code */
+      postal_code?: string | null;
+      /** Country */
+      country?: string | null;
     };
     /**
      * ThreadDetailResponse
@@ -28693,6 +28703,16 @@ export type components = {
        * Format: date-time
        */
       updated_at: string;
+      /** Address Line 1 */
+      address_line_1?: string | null;
+      /** Address Line 2 */
+      address_line_2?: string | null;
+      /** City */
+      city?: string | null;
+      /** Postal Code */
+      postal_code?: string | null;
+      /** Country */
+      country?: string | null;
     };
     /**
      * UserListResponse
@@ -28886,6 +28906,16 @@ export type components = {
       has_all_conference_access?: boolean | null;
       /** Password */
       password?: string | null;
+      /** Address Line 1 */
+      address_line_1?: string | null;
+      /** Address Line 2 */
+      address_line_2?: string | null;
+      /** City */
+      city?: string | null;
+      /** Postal Code */
+      postal_code?: string | null;
+      /** Country */
+      country?: string | null;
     };
     /** ValidationError */
     ValidationError: {

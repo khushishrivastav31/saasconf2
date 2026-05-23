@@ -173,6 +173,11 @@ export interface TenantUser {
   last_login: string | null;
   created_at: string;
   updated_at: string;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
 }
 
 export interface TenantUserCreate {
@@ -192,6 +197,11 @@ export interface TenantUserUpdate {
   is_active?: boolean;
   has_all_conference_access?: boolean;
   password?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
 }
 
 // User Conference Access types

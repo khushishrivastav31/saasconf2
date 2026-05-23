@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
 import { ChevronLeftIcon, CloseIcon } from '../../../ConferenceDetail/icons';
 import { ApplicantForm } from './ApplicantForm';
 import type { ApplicantFormData } from './ApplicantForm';
+import { buildApplicantPayload } from './utils';
 
 interface ApplicantListResponse {
   items: Applicant[];
@@ -196,6 +197,11 @@ export default function CFPApplicants({
       if (data.phone.trim()) payload.phone = data.phone.trim();
       if (data.title.trim()) payload.title = data.title.trim();
       if (data.company.trim()) payload.company = data.company.trim();
+      if (data.address_line_1.trim()) payload.address_line_1 = data.address_line_1.trim();
+      if (data.address_line_2.trim()) payload.address_line_2 = data.address_line_2.trim();
+      if (data.city.trim()) payload.city = data.city.trim();
+      if (data.postal_code.trim()) payload.postal_code = data.postal_code.trim();
+      if (data.country) payload.country = data.country;
       if (data.bio.trim()) payload.bio = data.bio.trim();
       if (data.needs_accessibility && data.accessibility_details.trim()) {
         payload.accessibility_details = data.accessibility_details.trim();
@@ -223,32 +229,7 @@ export default function CFPApplicants({
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: ApplicantFormData }) => {
-      const payload: Record<string, unknown> = {
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        allow_out_of_timeframe: data.allow_out_of_timeframe,
-        needs_accessibility: data.needs_accessibility,
-        agrees_to_recording: data.agrees_to_recording,
-      };
-      payload.pronouns = data.pronouns.trim() || null;
-      payload.phone = data.phone.trim() || '';
-      payload.title = data.title.trim() || '';
-      payload.company = data.company.trim() || '';
-      payload.bio = data.bio.trim() || '';
-      payload.accessibility_details = data.needs_accessibility
-        ? data.accessibility_details.trim()
-        : '';
-      if (data.password.trim()) payload.password = data.password.trim();
-      // Filter out empty social links
-      const socialLinks: Record<string, string> = {};
-      Object.entries(data.social_links).forEach(([key, value]) => {
-        if (value && value.trim()) {
-          socialLinks[key] = value.trim();
-        }
-      });
-      payload.social_links = socialLinks;
-      payload.role_ids = data.role_ids;
+      const payload = buildApplicantPayload(data);
       const response = await api.put<Applicant>(`/cfp/applicants/${id}`, payload);
       return response.data;
     },

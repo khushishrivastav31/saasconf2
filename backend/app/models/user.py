@@ -56,6 +56,11 @@ class User(Base):
     )
     message_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     theme_preference: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    address_line_1: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    address_line_2: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Relationships
     tenant: Mapped["Tenant | None"] = relationship(

@@ -1,5 +1,6 @@
 """User management endpoints for tenant admins."""
 
+import logging
 import secrets
 from datetime import timedelta
 from uuid import UUID
@@ -39,6 +40,8 @@ from app.schemas.user import (
     UserListResponse,
     UserUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -109,6 +112,11 @@ async def list_tenant_users(
             last_login=u.last_login,
             created_at=u.created_at,
             updated_at=u.updated_at,
+            address_line_1=u.address_line_1,
+            address_line_2=u.address_line_2,
+            city=u.city,
+            postal_code=u.postal_code,
+            country=u.country,
         )
         for u in result.items
     ]
@@ -280,6 +288,11 @@ async def create_tenant_user(
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
+        address_line_1=user.address_line_1,
+        address_line_2=user.address_line_2,
+        city=user.city,
+        postal_code=user.postal_code,
+        country=user.country,
     )
 
 
@@ -314,6 +327,11 @@ async def get_tenant_user(
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
+        address_line_1=user.address_line_1,
+        address_line_2=user.address_line_2,
+        city=user.city,
+        postal_code=user.postal_code,
+        country=user.country,
     )
 
 
@@ -388,6 +406,7 @@ async def update_tenant_user(
 
     await db.commit()
     await db.refresh(user)
+    logger.info("User %s updated successfully. Fields: %s", user_id, list(update_data.keys()))
 
     tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
@@ -403,6 +422,11 @@ async def update_tenant_user(
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
+        address_line_1=user.address_line_1,
+        address_line_2=user.address_line_2,
+        city=user.city,
+        postal_code=user.postal_code,
+        country=user.country,
     )
 
 

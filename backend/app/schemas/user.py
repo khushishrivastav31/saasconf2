@@ -50,6 +50,11 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
     has_all_conference_access: bool | None = None
     password: str | None = Field(None, min_length=8, max_length=128)
+    address_line_1: str | None = Field(None, max_length=500)
+    address_line_2: str | None = Field(None, max_length=500)
+    city: str | None = Field(None, max_length=255)
+    postal_code: str | None = Field(None, max_length=20)
+    country: str | None = Field(None, max_length=100)
 
     @field_validator("password")
     @classmethod
@@ -118,6 +123,11 @@ class UserInDB(UserBase):
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
 
 
 class UserListResponse(BaseModel):
@@ -182,3 +192,8 @@ class TenantUserResponse(BaseModel):
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
+    country: str | None = None

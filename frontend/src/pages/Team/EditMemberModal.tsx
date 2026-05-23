@@ -6,6 +6,7 @@ import { parseApiError } from '../../utils/apiError';
 import { validateEmail } from '../../utils/validators';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
 import { useAuth } from '../../hooks/useAuth';
+import { COUNTRY_OPTIONS } from '../../config/countries';
 import type {
   TenantUser,
   TenantRole,
@@ -35,6 +36,11 @@ export default function EditMemberModal({
     role: user.role,
     is_active: user.is_active,
     has_all_conference_access: user.has_all_conference_access,
+    address_line_1: user.address_line_1 || '',
+    address_line_2: user.address_line_2 || '',
+    city: user.city || '',
+    postal_code: user.postal_code || '',
+    country: user.country || '',
   });
   const [newPassword, setNewPassword] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -302,6 +308,75 @@ export default function EditMemberModal({
                 </select>
               </div>
             )}
+
+            {/* Address */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Address</h4>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Street
+                  </label>
+                  <input
+                    type="text"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                    value={formData.address_line_1 || ''}
+                    onChange={(e) => setFormData({ ...formData, address_line_1: e.target.value })}
+                    placeholder="Address line 1"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                    value={formData.address_line_2 || ''}
+                    onChange={(e) => setFormData({ ...formData, address_line_2: e.target.value })}
+                    placeholder="Apartment, suite, etc. (optional)"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                      value={formData.city || ''}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                      value={formData.postal_code || ''}
+                      onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Country
+                  </label>
+                  <select
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                    value={formData.country || ''}
+                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  >
+                    <option value="">Select country...</option>
+                    {COUNTRY_OPTIONS.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
 
             {/* Roles */}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
