@@ -110,10 +110,18 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""  # Leave empty to disable Sentry
     SENTRY_ENVIRONMENT: str = "development"
 
-    # Email (Resend)
-    RESEND_API_KEY: str = ""  # Leave empty to use console logging (development)
+    # Email — per-tenant Resend keys (tenants can configure their own)
     RESEND_FROM_EMAIL: str = "noreply@sonrisa.ventures"
     RESEND_FROM_NAME: str = "SaaSConf"
+
+    # Email — Mailgun (system-level fallback when no tenant Resend key is set,
+    # or when the tenant key is invalid)
+    MAILGUN_API_KEY: str = ""
+    MAILGUN_DOMAIN: str = ""
+    MAILGUN_FROM_EMAIL: str = "noreply@sonrisa.ventures"
+    MAILGUN_FROM_NAME: str = "SaaSConf"
+    # Override to "https://api.eu.mailgun.net" for EU-region Mailgun accounts
+    MAILGUN_BASE_URL: str = "https://api.mailgun.net"
 
     # Email (SMTP — dev only, e.g. MailHog). Takes priority over Resend when set.
     SMTP_HOST: str = ""  # e.g. localhost

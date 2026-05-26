@@ -1,0 +1,132 @@
+name: Update Mailgun Keys — Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      mailgun_domain:
+        description: 'Mailgun sending domain (e.g. mg.cfp.trendig.com)'
+        required: false
+        default: 'mg.cfp.trendig.com'
+        type: string
+      mailgun_from_email:
+        description: 'From address (e.g. cfp@trendig.com)'
+        required: false
+        default: 'cfp@trendig.com'
+        type: string
+      mailgun_from_name:
+        description: 'From display name'
+        required: false
+        default: 'SaaSConf'
+        type: string
+      mailgun_base_url:
+        description: 'API base URL — use https://api.eu.mailgun.net for EU accounts'
+        required: false
+        default: 'https://api.mailgun.net'
+        type: string
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_PATH: ${{ secrets.STAGING_PATH }}
+
+permissions:
+  contents: read
+
+jobs:
+  update-keys:
+    name: Update Mailgun config on staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+
+    steps:
+      - name: Mask API key in logs
+        run: echo "::add-mask::${{ secrets.MAILGUN_API_KEY }}"
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Update Mailgun vars and restart backend
+        env:
+          MG_API_KEY:   ${{ secrets.MAILGUN_API_KEY }}
+          MG_DOMAIN:    ${{ inputs.mailgun_domain }}
+          MG_FROM:      ${{ inputs.mailgun_from_email }}
+          MG_NAME:      ${{ inputs.mailgun_from_name }}
+          MG_BASE_URL:  ${{ inputs.mailgun_base_url }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+            "export MG_API_KEY='$MG_API_KEY' MG_DOMAIN='$MG_DOMAIN' MG_FROM='$MG_FROM' MG_NAME='$MG_NAME' MG_BASE_URL='$MG_BASE_URL' && bash -s" << 'EOF'
+            set -e
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            cp .env .env.bak
+
+            upsert() {
+              local key="$1" val="$2"
+              if grep -q "^${key}=" .env; then
+                sed -i "s|^${key}=.*|${key}=${val}|" .env
+                echo "${key} updated"
+              else
+                echo "${key}=${val}" >> .env
+                echo "${key} appended"
+              fi
+            }
+
+            upsert MAILGUN_API_KEY   "$MG_API_KEY"
+            upsert MAILGUN_DOMAIN    "$MG_DOMAIN"
+            upsert MAILGUN_FROM_EMAIL "$MG_FROM"
+            upsert MAILGUN_FROM_NAME  "$MG_NAME"
+            upsert MAILGUN_BASE_URL   "$MG_BASE_URL"
+
+            echo "Restarting backend..."
+            docker compose up -d --force-recreate --no-deps backend
+
+            echo "Waiting for backend to become healthy..."
+            for i in $(seq 1 12); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' saasconf_backend_staging 2>/dev/null || echo "unknown")
+              echo "  attempt $i/12 — health: $STATUS"
+              [ "$STATUS" = "healthy" ] && break
+              sleep 5
+            done
+          EOF
+
+      - name: Verify and write summary
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF' >> $GITHUB_STEP_SUMMARY
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            echo "## Mailgun Keys Update — Staging"
+            echo "_$(date -u)_"
+            echo ""
+            echo '```'
+
+            KEY=$(docker exec saasconf_backend_staging printenv MAILGUN_API_KEY 2>/dev/null || true)
+            if [ -n "$KEY" ]; then
+              echo "MAILGUN_API_KEY    : ✅ set (${#KEY} chars)"
+            else
+              echo "MAILGUN_API_KEY    : ❌ not in container"
+            fi
+
+            DOMAIN=$(docker exec saasconf_backend_staging printenv MAILGUN_DOMAIN 2>/dev/null || true)
+            echo "MAILGUN_DOMAIN     : ${DOMAIN:-(not set)}"
+
+            FROM=$(docker exec saasconf_backend_staging printenv MAILGUN_FROM_EMAIL 2>/dev/null || true)
+            echo "MAILGUN_FROM_EMAIL : ${FROM:-(not set)}"
+
+            NAME=$(docker exec saasconf_backend_staging printenv MAILGUN_FROM_NAME 2>/dev/null || true)
+            echo "MAILGUN_FROM_NAME  : ${NAME:-(not set)}"
+
+            BASE=$(docker exec saasconf_backend_staging printenv MAILGUN_BASE_URL 2>/dev/null || true)
+            echo "MAILGUN_BASE_URL   : ${BASE:-(not set)}"
+
+            echo '```'
+            echo ""
+            echo "### Backend container status"
+            echo '```'
+            docker compose ps backend
+            echo '```'
+          EOF

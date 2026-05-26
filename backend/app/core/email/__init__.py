@@ -1,7 +1,13 @@
-"""Email sending with Resend.
+"""Email sending.
 
-Uses Resend API when RESEND_API_KEY is configured,
-otherwise falls back to console logging for development.
+Primary path: per-tenant Resend API key (configured in My Company → Email).
+System fallback: Mailgun (MAILGUN_API_KEY + MAILGUN_DOMAIN env vars).
+
+Flow:
+  1. Tenant has a Resend key → send via Resend.
+  2. Tenant key missing or invalid → send via Mailgun system account.
+  3. Mailgun also unconfigured → console-log (development only).
+
 Failures are logged to the email_logs table for admin visibility.
 """
 
@@ -31,9 +37,6 @@ from app.core.email.templates import (
 from app.schemas.email_template import EmailTemplateType
 
 logger = logging.getLogger(__name__)
-
-# Lazy initialization of Resend client
-_resend_client = None
 
 # Store references to background email tasks so they aren't garbage-collected.
 _background_tasks: set[asyncio.Task[None]] = set()
@@ -131,31 +134,64 @@ def send_email_background(
     task.add_done_callback(_background_tasks.discard)
 
 
-def _get_resend(api_key: str | None = None):
-    """Get or initialize a Resend client.
+def _get_resend(api_key: str) -> Any:
+    """Configure and return the Resend module for a per-tenant key.
 
-    Args:
-        api_key: Optional per-tenant API key. When provided, a fresh client
-                 is created instead of reusing the global singleton.
+    Always sets resend_mod.api_key immediately before use so a stale key
+    from a previous call can never bleed into the next send.
     """
-    global _resend_client
     import resend as resend_mod
 
-    if api_key:
-        # Per-tenant key: create a one-off client configuration
-        resend_mod.api_key = api_key
-        return resend_mod
+    resend_mod.api_key = api_key
+    return resend_mod
+
+
+async def _send_via_mailgun(
+    *,
+    to: str,
+    subject: str,
+    html: str,
+    text: str | None,
+    from_addr: str,
+    reply_to: str | None = None,
+    cc: list[str] | None = None,
+    attachments: list[dict] | None = None,
+) -> None:
+    """Send via the Mailgun system account. Raises on failure."""
+    import base64
+
+    import httpx
 
     settings = get_settings()
+    url = f"{settings.MAILGUN_BASE_URL}/v3/{settings.MAILGUN_DOMAIN}/messages"
 
-    if not settings.RESEND_API_KEY:
-        return None
+    data: dict[str, Any] = {
+        "from": from_addr,
+        "to": to,
+        "subject": subject,
+        "html": html,
+    }
+    if text:
+        data["text"] = text
+    if reply_to:
+        data["h:Reply-To"] = reply_to
+    if cc:
+        data["cc"] = ",".join(cc)
 
-    if _resend_client is None:
-        resend_mod.api_key = settings.RESEND_API_KEY
-        _resend_client = resend_mod
+    files: list[tuple[str, Any]] = []
+    if attachments:
+        for att in attachments:
+            content = base64.b64decode(att["content"])
+            files.append(("attachment", (att["filename"], content)))
 
-    return _resend_client
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            url,
+            auth=("api", settings.MAILGUN_API_KEY),
+            data=data,
+            files=files or None,
+        )
+        resp.raise_for_status()
 
 
 def _log_email(to: str, subject: str, body: str) -> None:
@@ -315,9 +351,7 @@ async def send_email(
 
     settings = get_settings()
 
-    # SMTP override is a dev-only escape hatch (MailHog locally). In prod or
-    # staging, log an error and fall through to Resend rather than silently
-    # dropping the email. Using SMTP in those environments is never correct.
+    # SMTP is a dev-only escape hatch (MailHog). Refuse it in prod/staging.
     if settings.SMTP_HOST:
         env = settings.SENTRY_ENVIRONMENT.lower()
         if env in ("production", "staging"):
@@ -326,7 +360,7 @@ async def send_email(
                 "Unset SMTP_HOST or remove it from the environment.",
                 env,
             )
-            # Fall through to Resend instead of dropping the email.
+            # Fall through to the Resend/Mailgun path instead of dropping.
         else:
             return await _send_via_smtp(
                 to=to,
@@ -338,26 +372,13 @@ async def send_email(
                 settings=settings,
             )
 
-    resend = _get_resend(api_key=tenant_api_key)
+    # ── Step 1: try the tenant's own Resend key ───────────────────────────────
+    use_mailgun_fallback = True  # assume fallback until Resend succeeds or errors non-auth
 
-    if resend is None:
-        _log_email(to, subject, text or html)
-        if db is not None:
-            await _log_email_failure(
-                db,
-                tenant_id=tenant_id,
-                conference_id=conference_id,
-                recipient=to,
-                subject=subject,
-                email_type=email_type,
-                status="not_configured",
-                error="No Resend API key configured",
-            )
-        return False
-
-    sender = from_email or settings.RESEND_FROM_EMAIL
-    sender_name = tenant_from_name or settings.RESEND_FROM_NAME
-    try:
+    if tenant_api_key:
+        sender = from_email or settings.RESEND_FROM_EMAIL
+        sender_name = tenant_from_name or settings.RESEND_FROM_NAME
+        resend = _get_resend(api_key=tenant_api_key)
         payload: dict = {
             "from": f"{sender_name} <{sender}>",
             "to": [to],
@@ -371,30 +392,22 @@ async def send_email(
             payload["cc"] = cc
         if attachments:
             payload["attachments"] = attachments
-        await asyncio.to_thread(resend.Emails.send, payload)
-        logger.info(f"Email sent to {to}: {subject}")
-        return True
-    except Exception as e:
-        error_str = str(e)
-        # When a tenant key is present but invalid, fall back to the system key so
-        # the email still goes out while the tenant fixes their configuration.
-        if tenant_api_key and "API key is invalid" in error_str and settings.RESEND_API_KEY:
-            logger.warning(
-                "Tenant Resend API key invalid (tenant %s); retrying with system key for %s",
-                tenant_id,
-                to,
-            )
-            fallback_payload: dict = payload.copy()
-            fallback_payload["from"] = f"{settings.RESEND_FROM_NAME} <{settings.RESEND_FROM_EMAIL}>"
-            try:
-                import resend as resend_mod
-
-                resend_mod.api_key = settings.RESEND_API_KEY
-                await asyncio.to_thread(resend_mod.Emails.send, fallback_payload)  # type: ignore[arg-type]
-                logger.info(f"Email sent to {to} via system fallback key: {subject}")
-                return True
-            except Exception as fallback_e:
-                logger.error(f"Failed to send email to {to} via system fallback: {fallback_e}")
+        try:
+            await asyncio.to_thread(resend.Emails.send, payload)
+            logger.info(f"Email sent to {to} via tenant Resend key: {subject}")
+            return True
+        except Exception as e:
+            if "API key is invalid" in str(e):
+                logger.warning(
+                    "Tenant Resend API key invalid (tenant %s); falling back to Mailgun for %s",
+                    tenant_id,
+                    to,
+                )
+                # use_mailgun_fallback stays True → continue below
+            else:
+                # Transient / non-auth error — don't silently swap provider
+                use_mailgun_fallback = False
+                logger.error(f"Failed to send email to {to} via tenant Resend key: {e}")
                 if db is not None:
                     await _log_email_failure(
                         db,
@@ -404,22 +417,57 @@ async def send_email(
                         subject=subject,
                         email_type=email_type,
                         status="failed",
-                        error=str(fallback_e),
+                        error=str(e),
                     )
                 return False
-        logger.error(f"Failed to send email to {to}: {e}")
-        if db is not None:
-            await _log_email_failure(
-                db,
-                tenant_id=tenant_id,
-                conference_id=conference_id,
-                recipient=to,
+
+    # ── Step 2: Mailgun system fallback (no tenant key, or tenant key invalid) ─
+    if use_mailgun_fallback:
+        if not settings.MAILGUN_API_KEY or not settings.MAILGUN_DOMAIN:
+            _log_email(to, subject, text or html)
+            if db is not None:
+                await _log_email_failure(
+                    db,
+                    tenant_id=tenant_id,
+                    conference_id=conference_id,
+                    recipient=to,
+                    subject=subject,
+                    email_type=email_type,
+                    status="not_configured",
+                    error="No Mailgun config — set MAILGUN_API_KEY and MAILGUN_DOMAIN",
+                )
+            return False
+
+        mailgun_from = f"{settings.MAILGUN_FROM_NAME} <{settings.MAILGUN_FROM_EMAIL}>"
+        try:
+            await _send_via_mailgun(
+                to=to,
                 subject=subject,
-                email_type=email_type,
-                status="failed",
-                error=str(e),
+                html=html,
+                text=text,
+                from_addr=mailgun_from,
+                reply_to=reply_to,
+                cc=cc,
+                attachments=attachments,
             )
-        return False
+            logger.info(f"Email sent to {to} via Mailgun: {subject}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send email to {to} via Mailgun: {e}")
+            if db is not None:
+                await _log_email_failure(
+                    db,
+                    tenant_id=tenant_id,
+                    conference_id=conference_id,
+                    recipient=to,
+                    subject=subject,
+                    email_type=email_type,
+                    status="failed",
+                    error=str(e),
+                )
+            return False
+
+    return False
 
 
 async def _get_tenant_from_email(db: AsyncSession, tenant_id: UUID | None) -> str | None:

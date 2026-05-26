@@ -259,7 +259,7 @@ async def get_email_defaults(
     return {
         "resend_from_email": settings.RESEND_FROM_EMAIL,
         "resend_from_name": settings.RESEND_FROM_NAME,
-        "resend_api_key_set": bool(settings.RESEND_API_KEY),
+        "resend_api_key_set": bool(settings.MAILGUN_API_KEY),
         "tenant_api_key_set": bool(tenant_key),
     }
 

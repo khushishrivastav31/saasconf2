@@ -24,7 +24,7 @@ import os
 import uuid
 from collections.abc import AsyncGenerator
 from contextvars import ContextVar
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -44,6 +44,10 @@ os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ["RATELIMIT_ENABLED"] = "false"  # Disable rate limiting in tests
 os.environ["TESTING"] = "true"  # Disable background email tasks in tests
+# Mailgun vars must be non-empty so send_email reaches _send_via_mailgun
+# (the actual HTTP call is intercepted by the _mock_resend_client fixture).
+os.environ.setdefault("MAILGUN_API_KEY", "test-mailgun-key")
+os.environ.setdefault("MAILGUN_DOMAIN", "mg.test.example.com")
 
 from app.core.security import create_access_token, hash_password
 from app.db.base import Base
@@ -58,17 +62,24 @@ from app.models.user import User, UserRole
 
 @pytest.fixture(autouse=True)
 def _mock_resend_client(request):
-    """Provide a fake Resend client so send_email succeeds without an API key.
+    """Make email sending succeed in tests without real API keys.
 
-    Tests that need the real _get_resend (e.g. test_email.py) can opt out
-    with @pytest.mark.no_mock_email.
+    Mocks both paths:
+    - _get_resend: used when a tenant Resend key is configured
+    - _send_via_mailgun: used when no tenant key (or key is invalid)
+
+    Tests marked with @pytest.mark.no_mock_email get the real implementations.
     """
     if request.node.get_closest_marker("no_mock_email"):
         yield
         return
     mock_resend = MagicMock()
     mock_resend.Emails.send.return_value = {"id": "test-email-id"}
-    with patch("app.core.email._get_resend", return_value=mock_resend):
+
+    with (
+        patch("app.core.email._get_resend", return_value=mock_resend),
+        patch("app.core.email._send_via_mailgun", new_callable=AsyncMock),
+    ):
         yield
 
 

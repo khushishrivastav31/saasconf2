@@ -78,21 +78,50 @@ jobs:
             echo ""
 
             # ── 3. Recent log lines ──────────────────────────────────────────
-            echo "### 3 · Recent email log lines (last 30 matches)"
+            LOGS=$(docker logs --tail 500 saasconf_backend_staging 2>&1)
+
+            echo "### 3a · Successful sends (last 20)"
             echo '```'
-            docker logs --tail 300 saasconf_backend_staging 2>&1 \
-              | grep -i "email\|resend\|smtp" \
-              | tail -30 \
-              || echo "(no matching lines in last 300 log lines)"
+            echo "$LOGS" \
+              | grep -E "Email sent to|via system fallback key" \
+              | tail -20 \
+              || echo "(no successful sends in last 500 log lines)"
+            echo '```'
+            echo ""
+
+            echo "### 3b · Failed sends (last 20)"
+            echo '```'
+            echo "$LOGS" \
+              | grep -E "Failed to send email|API key is invalid|not_configured|SMTP send failed" \
+              | tail -20 \
+              || echo "(no failures in last 500 log lines)"
+            echo '```'
+            echo ""
+
+            echo "### 3c · Fallback warnings (tenant key → system key)"
+            echo '```'
+            echo "$LOGS" \
+              | grep -i "retrying with system key\|Tenant Resend API key invalid" \
+              | tail -20 \
+              || echo "(no fallback events in last 500 log lines)"
             echo '```'
             echo ""
 
             # ── 4. DB failure records ────────────────────────────────────────
-            echo "### 4 · Recent email_logs records (last 10)"
+            echo "### 4a · email_logs status summary (last 24 h)"
+            echo '```'
+            docker compose exec -T db \
+              psql -U "${DB_USER:-saasconf}" -d "${DB_NAME:-saasconf}" \
+              -c "SELECT status, COUNT(*) AS count FROM email_logs WHERE created_at > now() - interval '24 hours' GROUP BY status ORDER BY count DESC;" \
+              2>&1 || echo "(could not query — DB container may not be healthy)"
+            echo '```'
+            echo ""
+
+            echo "### 4b · Recent failure records (last 10)"
             echo '```'
             docker compose exec -T db \
               psql -U "${DB_USER:-saasconf}" -d "${DB_NAME:-saasconf}" -x \
-              -c "SELECT email_type, status, error_message, created_at FROM email_logs ORDER BY created_at DESC LIMIT 10;" \
+              -c "SELECT email_type, status, error_message, recipient_email, created_at FROM email_logs WHERE status != 'sent' ORDER BY created_at DESC LIMIT 10;" \
               2>&1 || echo "(could not query — DB container may not be healthy)"
             echo '```'
           EOF

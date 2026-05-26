@@ -70,8 +70,8 @@ def _check_production_safety() -> None:
         logger.warning("SECURITY: SUPER_ADMIN_EMAIL is still the default — change for production")
     if is_prod and any("localhost" in o or "127.0.0.1" in o for o in settings.CORS_ORIGINS):
         logger.warning("SECURITY: CORS_ORIGINS contains localhost entries — remove for production")
-    if is_prod and not settings.RESEND_API_KEY:
-        logger.warning("SECURITY: RESEND_API_KEY not set — emails will only be logged, not sent")
+    if is_prod and not settings.MAILGUN_API_KEY:
+        logger.warning("SECURITY: MAILGUN_API_KEY not set — emails will only be logged, not sent")
     if is_prod and not settings.DATABASE_SSL_REQUIRED:
         logger.warning(
             "SECURITY: DATABASE_SSL_REQUIRED=False in '%s' environment — DB traffic is not encrypted in transit",

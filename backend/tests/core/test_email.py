@@ -39,49 +39,23 @@ pytestmark = pytest.mark.no_mock_email
 
 
 class TestGetResend:
-    """Tests for the _get_resend helper function."""
+    """Tests for the _get_resend helper — tenant-key-only path."""
 
-    def test_get_resend_returns_none_when_no_api_key(self):
-        """Returns None when RESEND_API_KEY is not set."""
-        # Reset the global client
-        email_module._resend_client = None
+    def test_get_resend_sets_tenant_key(self):
+        """Sets api_key to the tenant key."""
+        mock_resend = MagicMock()
+        with patch.dict("sys.modules", {"resend": mock_resend}):
+            result = _get_resend(api_key="tenant-key-123")
+            assert result is not None
+            assert mock_resend.api_key == "tenant-key-123"
 
-        with patch("app.core.email.get_settings") as mock_settings:
-            mock_settings.return_value.RESEND_API_KEY = None
-            result = _get_resend()
-            assert result is None
-
-    def test_get_resend_initializes_client_with_api_key(self):
-        """Initializes and returns resend client when API key is set."""
-        # Reset the global client
-        email_module._resend_client = None
-
-        with patch("app.core.email.get_settings") as mock_settings:
-            mock_settings.return_value.RESEND_API_KEY = "test-api-key"
-
-            with patch.dict("sys.modules", {"resend": MagicMock()}):
-                import sys
-
-                sys.modules["resend"]
-
-                with patch("app.core.email._resend_client", None):
-                    # This will import resend and set the api_key
-                    result = _get_resend()
-                    # Result should be the resend module (mocked)
-                    assert result is not None
-
-    def test_get_resend_returns_cached_client(self):
-        """Returns the cached client on subsequent calls."""
-        mock_client = MagicMock()
-        email_module._resend_client = mock_client
-
-        with patch("app.core.email.get_settings") as mock_settings:
-            mock_settings.return_value.RESEND_API_KEY = "test-api-key"
-            result = _get_resend()
-            assert result is mock_client
-
-        # Clean up
-        email_module._resend_client = None
+    def test_get_resend_overwrites_previous_key(self):
+        """Each call sets the key so a stale key never bleeds into the next send."""
+        mock_resend = MagicMock()
+        with patch.dict("sys.modules", {"resend": mock_resend}):
+            _get_resend(api_key="old-key")
+            _get_resend(api_key="new-key")
+            assert mock_resend.api_key == "new-key"
 
 
 # ---------------------------------------------------------------------------
@@ -123,19 +97,22 @@ class TestSendEmail:
     """Tests for the send_email function."""
 
     @pytest.mark.asyncio
-    async def test_send_email_falls_back_to_logging_when_no_resend(self, caplog):
-        """Falls back to console logging when Resend is not configured."""
+    async def test_no_mailgun_config_falls_back_to_logging(self, caplog):
+        """Falls back to console logging when Mailgun is not configured."""
         import logging
 
         from app.config import Settings
 
-        email_module._resend_client = None
-
-        no_smtp_settings = Settings.model_construct(SMTP_HOST="")
+        no_mail_settings = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            MAILGUN_API_KEY="",
+            MAILGUN_DOMAIN="",
+        )
         with (
             caplog.at_level(logging.INFO),
-            patch("app.core.email._get_resend", return_value=None),
-            patch("app.core.email.get_settings", return_value=no_smtp_settings),
+            patch("app.core.email.get_settings", return_value=no_mail_settings),
         ):
             result = await send_email(
                 to="test@example.com",
@@ -148,53 +125,8 @@ class TestSendEmail:
         assert "To: test@example.com" in caplog.text
 
     @pytest.mark.asyncio
-    async def test_send_email_uses_text_when_no_html_fallback(self, capsys):
-        """Uses text body for logging when text is provided."""
-        from app.config import Settings
-
-        no_smtp_settings = Settings.model_construct(SMTP_HOST="")
-        with (
-            patch("app.core.email._get_resend", return_value=None),
-            patch("app.core.email.get_settings", return_value=no_smtp_settings),
-        ):
-            result = await send_email(
-                to="user@example.com",
-                subject="Plain Text",
-                html="<p>HTML content</p>",
-                text="Plain text content",
-            )
-
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_send_email_uses_html_when_no_text(self, capsys):
-        """Uses html body for logging when text is None."""
-        from app.config import Settings
-
-        no_smtp_settings = Settings.model_construct(SMTP_HOST="")
-        with (
-            patch("app.core.email._get_resend", return_value=None),
-            patch("app.core.email.get_settings", return_value=no_smtp_settings),
-        ):
-            result = await send_email(
-                to="user@example.com",
-                subject="HTML Only",
-                html="<p>HTML content</p>",
-                text=None,
-            )
-
-        assert result is False
-
-    @pytest.mark.asyncio
     async def test_smtp_route_refused_in_production(self, caplog):
-        """SMTP_HOST is a dev-only escape hatch — production must refuse it.
-
-        Even if SMTP_HOST somehow leaks into a prod environment, the send_email
-        path must not silently divert mail to SMTP. Logs an ERROR so the
-        misconfiguration is visible, then falls through to Resend.
-        When Resend is also unconfigured the result is False, but the error
-        is logged and SMTP was never used.
-        """
+        """SMTP_HOST is a dev-only escape hatch — production must refuse it."""
         import logging
 
         from app.config import Settings
@@ -204,10 +136,11 @@ class TestSendEmail:
             SUPER_ADMIN_PASSWORD="testpassword123",
             SENTRY_ENVIRONMENT="production",
             SMTP_HOST="evil.example.com",
+            MAILGUN_API_KEY="",
+            MAILGUN_DOMAIN="",
         )
         with (
             patch("app.core.email.get_settings", return_value=prod_settings),
-            patch("app.core.email._get_resend", return_value=None),
             caplog.at_level(logging.ERROR),
         ):
             result = await send_email(
@@ -220,12 +153,8 @@ class TestSendEmail:
         assert "SMTP_HOST is set in production" in caplog.text
 
     @pytest.mark.asyncio
-    async def test_smtp_host_in_staging_falls_through_to_resend(self, caplog):
-        """When SMTP_HOST is set in staging, email must fall through to Resend.
-
-        Root cause of staging email outage: SMTP_HOST=localhost copied from
-        .env.example caused send_email to return False without ever trying Resend.
-        """
+    async def test_smtp_host_in_staging_falls_through_to_mailgun(self, caplog):
+        """When SMTP_HOST is set in staging, email falls through to Mailgun."""
         import logging
 
         from app.config import Settings
@@ -235,15 +164,15 @@ class TestSendEmail:
             SUPER_ADMIN_PASSWORD="testpassword123",
             SENTRY_ENVIRONMENT="staging",
             SMTP_HOST="localhost",
-            RESEND_FROM_EMAIL="noreply@example.com",
-            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
         )
-        mock_resend = MagicMock()
-        mock_resend.Emails.send.return_value = {"id": "email-123"}
-
         with (
             patch("app.core.email.get_settings", return_value=staging_settings),
-            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
             caplog.at_level(logging.ERROR),
         ):
             result = await send_email(
@@ -255,11 +184,11 @@ class TestSendEmail:
 
         assert result is True
         assert "SMTP_HOST is set in staging" in caplog.text
-        mock_resend.Emails.send.assert_called_once()
+        mock_mailgun.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_send_email_success_with_resend(self):
-        """Successfully sends email via Resend."""
+    async def test_send_email_success_with_tenant_resend_key(self):
+        """Sends via tenant Resend key when one is configured."""
         mock_resend = MagicMock()
         mock_resend.Emails.send.return_value = {"id": "email-123"}
 
@@ -267,9 +196,6 @@ class TestSendEmail:
             patch("app.core.email._get_resend", return_value=mock_resend),
             patch("app.core.email.get_settings") as mock_settings,
         ):
-            # SMTP_HOST="" forces the Resend branch — without this, a bare
-            # MagicMock would return a truthy attribute and trip the new
-            # SMTP escape hatch added in PR #211.
             mock_settings.return_value.SMTP_HOST = ""
             mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
             mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
@@ -279,6 +205,7 @@ class TestSendEmail:
                 subject="Test Subject",
                 html="<p>Test HTML</p>",
                 text="Test text",
+                tenant_api_key="re_valid_tenant_key",
             )
 
         assert result is True
@@ -288,26 +215,109 @@ class TestSendEmail:
         assert call_args["subject"] == "Test Subject"
 
     @pytest.mark.asyncio
-    async def test_send_email_returns_false_on_resend_error(self):
-        """Returns False when Resend raises an exception."""
+    async def test_invalid_tenant_key_falls_back_to_mailgun(self, caplog):
+        """Invalid tenant Resend key triggers Mailgun fallback."""
+        import logging
+
+        from app.config import Settings
+
+        settings_with_mailgun = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+        )
         mock_resend = MagicMock()
-        mock_resend.Emails.send.side_effect = Exception("API error")
+        mock_resend.Emails.send.side_effect = Exception("API key is invalid")
 
         with (
             patch("app.core.email._get_resend", return_value=mock_resend),
-            patch("app.core.email.get_settings") as mock_settings,
+            patch("app.core.email.get_settings", return_value=settings_with_mailgun),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+            caplog.at_level(logging.WARNING),
         ):
-            mock_settings.return_value.SMTP_HOST = ""
-            mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
-            mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
-
             result = await send_email(
                 to="recipient@example.com",
                 subject="Test",
-                html="<p>Test</p>",
+                html="<p>x</p>",
+                tenant_api_key="re_bad_key",
+            )
+
+        assert result is True
+        assert "Tenant Resend API key invalid" in caplog.text
+        mock_mailgun.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_transient_resend_error_does_not_fall_back(self):
+        """Non-auth Resend errors return False without trying Mailgun."""
+        from app.config import Settings
+
+        settings_with_mailgun = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+        )
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.side_effect = Exception("Rate limit exceeded")
+
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings", return_value=settings_with_mailgun),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+        ):
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test",
+                html="<p>x</p>",
+                tenant_api_key="re_valid_key",
             )
 
         assert result is False
+        mock_mailgun.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_no_tenant_key_sends_via_mailgun_directly(self):
+        """When no tenant key is set, Mailgun is used without trying Resend."""
+        from app.config import Settings
+
+        settings_with_mailgun = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+        )
+
+        with (
+            patch("app.core.email.get_settings", return_value=settings_with_mailgun),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+            patch("app.core.email._get_resend") as mock_get_resend,
+        ):
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test",
+                html="<p>x</p>",
+            )
+
+        assert result is True
+        mock_mailgun.assert_awaited_once()
+        mock_get_resend.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
