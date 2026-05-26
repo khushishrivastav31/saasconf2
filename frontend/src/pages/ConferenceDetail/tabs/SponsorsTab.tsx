@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
@@ -336,27 +337,33 @@ function ConferenceSponsorsTab({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Sponsor Package
+                    Sponsorship Tier (Package)
                   </label>
                   <select
                     className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.sponsor_package_id || ''}
                     onChange={(e) => handleCreatePackageChange(e.target.value)}
                   >
-                    <option value="">-- No Package --</option>
+                    <option value="">-- No Tier --</option>
                     {(sponsorPackagesData?.items || []).map((pkg) => (
                       <option key={pkg.id} value={pkg.id}>
                         {pkg.name}
                       </option>
                     ))}
                   </select>
-                  {/* QA 4.1.4: tell admins where to create packages when the
-                      list is empty. Sub-tab navigation in Settings is local
-                      state, so we point the user rather than deep-link. */}
-                  {(sponsorPackagesData?.items?.length ?? 0) === 0 && (
+                  {(sponsorPackagesData?.items?.length ?? 0) === 0 ? (
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      No packages yet. Create them in the Settings tab under{' '}
-                      <span className="font-medium">Sponsor Packages</span>.
+                      No tiers yet.{' '}
+                      <Link
+                        to={`/modules/conferences/${conference.id}?tab=settings`}
+                        className="text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Create them in Settings → Sponsor Packages.
+                      </Link>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Tiers are managed in Settings → Sponsor Packages.
                     </p>
                   )}
                 </div>
@@ -662,7 +669,7 @@ function ConferenceSponsorsTab({
                       Company Name
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Package
+                      Tier
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Price
@@ -690,8 +697,14 @@ function ConferenceSponsorsTab({
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {sponsor.company_name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                        {sponsor.sponsor_package_name || '-'}
+                      <td className="px-4 py-3 text-sm">
+                        {sponsor.sponsor_package_name ? (
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                            {sponsor.sponsor_package_name}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500 text-xs">No tier</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {sponsor.price != null
