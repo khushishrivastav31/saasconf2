@@ -79,8 +79,13 @@ services:
       SENTRY_DSN: ${SENTRY_DSN_BACKEND:-}
       SENTRY_ENVIRONMENT: staging
       APP_VERSION: ${APP_VERSION:-0.1.0}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@sonrisa.ventures}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-SaaSConf}
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN:-}
+      MAILGUN_FROM_EMAIL: ${MAILGUN_FROM_EMAIL:-noreply@sonrisa.ventures}
+      MAILGUN_FROM_NAME: ${MAILGUN_FROM_NAME:-SaaSConf}
+      MAILGUN_BASE_URL: ${MAILGUN_BASE_URL:-https://api.mailgun.net}
       FRONTEND_BASE_URL: https://${DOMAIN}
       PORTAL_BASE_URL: https://${DOMAIN}
       UVICORN_WORKERS: "1"

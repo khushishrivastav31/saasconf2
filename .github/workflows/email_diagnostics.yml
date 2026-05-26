@@ -49,31 +49,42 @@ jobs:
             echo "### 2 · Email environment"
             echo '```'
 
-            # RESEND_API_KEY — show presence and length, never the value
-            KEY_CONTAINER=$(docker exec saasconf_backend_staging printenv RESEND_API_KEY 2>/dev/null || true)
-            KEY_FILE=$(grep '^RESEND_API_KEY=' .env 2>/dev/null | cut -d= -f2- | tr -d '\r')
-            if [ -n "$KEY_CONTAINER" ]; then
-              echo "RESEND_API_KEY (container) : ✅ set (${#KEY_CONTAINER} chars)"
-            elif [ -n "$KEY_FILE" ]; then
-              echo "RESEND_API_KEY (container) : ❌ not set in container"
-              echo "RESEND_API_KEY (.env file) : ✅ present in .env — docker-compose may not have picked it up"
+            # MAILGUN_API_KEY — system fallback, show presence and length, never the value
+            MG_KEY=$(docker exec saasconf_backend_staging printenv MAILGUN_API_KEY 2>/dev/null || true)
+            MG_KEY_FILE=$(grep '^MAILGUN_API_KEY=' .env 2>/dev/null | cut -d= -f2- | tr -d '\r')
+            if [ -n "$MG_KEY" ]; then
+              echo "MAILGUN_API_KEY (container): ✅ set (${#MG_KEY} chars)"
+            elif [ -n "$MG_KEY_FILE" ]; then
+              echo "MAILGUN_API_KEY (container): ❌ not in container — docker-compose.yml missing the var mapping"
+              echo "MAILGUN_API_KEY (.env file): ✅ present in .env"
             else
-              echo "RESEND_API_KEY             : ❌ NOT SET anywhere — all mail falls back to console logging"
+              echo "MAILGUN_API_KEY            : ❌ NOT SET — system fallback disabled, emails only console-logged"
+            fi
+
+            MG_DOMAIN=$(docker exec saasconf_backend_staging printenv MAILGUN_DOMAIN 2>/dev/null || true)
+            echo "MAILGUN_DOMAIN (container) : ${MG_DOMAIN:-(not set)}"
+
+            # RESEND_API_KEY — per-tenant only; no longer used as a system key
+            KEY_CONTAINER=$(docker exec saasconf_backend_staging printenv RESEND_API_KEY 2>/dev/null || true)
+            if [ -n "$KEY_CONTAINER" ]; then
+              echo "RESEND_API_KEY (container) : set (${#KEY_CONTAINER} chars) — per-tenant use only"
+            else
+              echo "RESEND_API_KEY             : not set (tenants without own key fall back to Mailgun)"
             fi
 
             # SMTP_HOST — should be unset in staging
             SMTP=$(docker exec saasconf_backend_staging printenv SMTP_HOST 2>/dev/null || true)
             if [ -z "$SMTP" ]; then
-              echo "SMTP_HOST                  : ✅ not set (correct — Resend is used)"
+              echo "SMTP_HOST                  : ✅ not set (correct)"
             else
-              echo "SMTP_HOST                  : ⚠️  \"$SMTP\" — routes mail away from Resend in non-staging envs"
+              echo "SMTP_HOST                  : ⚠️  \"$SMTP\" — dev SMTP active, Mailgun bypassed"
             fi
 
             SENV=$(docker exec saasconf_backend_staging printenv SENTRY_ENVIRONMENT 2>/dev/null || true)
             echo "SENTRY_ENVIRONMENT         : ${SENV:-(not set)}"
 
-            FROM=$(docker exec saasconf_backend_staging printenv RESEND_FROM_EMAIL 2>/dev/null || true)
-            echo "RESEND_FROM_EMAIL          : ${FROM:-(not set)}"
+            FROM=$(docker exec saasconf_backend_staging printenv MAILGUN_FROM_EMAIL 2>/dev/null || true)
+            echo "MAILGUN_FROM_EMAIL         : ${FROM:-(not set)}"
             echo '```'
             echo ""
 
@@ -98,10 +109,10 @@ jobs:
             echo '```'
             echo ""
 
-            echo "### 3c · Fallback warnings (tenant key → system key)"
+            echo "### 3c · Fallback warnings (tenant Resend key invalid → Mailgun)"
             echo '```'
             echo "$LOGS" \
-              | grep -i "retrying with system key\|Tenant Resend API key invalid" \
+              | grep -i "falling back to Mailgun\|Tenant Resend API key invalid" \
               | tail -20 \
               || echo "(no fallback events in last 500 log lines)"
             echo '```'
