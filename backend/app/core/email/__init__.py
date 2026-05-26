@@ -375,6 +375,38 @@ async def send_email(
         logger.info(f"Email sent to {to}: {subject}")
         return True
     except Exception as e:
+        error_str = str(e)
+        # When a tenant key is present but invalid, fall back to the system key so
+        # the email still goes out while the tenant fixes their configuration.
+        if tenant_api_key and "API key is invalid" in error_str and settings.RESEND_API_KEY:
+            logger.warning(
+                "Tenant Resend API key invalid (tenant %s); retrying with system key for %s",
+                tenant_id,
+                to,
+            )
+            fallback_payload: dict = payload.copy()
+            fallback_payload["from"] = f"{settings.RESEND_FROM_NAME} <{settings.RESEND_FROM_EMAIL}>"
+            try:
+                import resend as resend_mod
+
+                resend_mod.api_key = settings.RESEND_API_KEY
+                await asyncio.to_thread(resend_mod.Emails.send, fallback_payload)  # type: ignore[arg-type]
+                logger.info(f"Email sent to {to} via system fallback key: {subject}")
+                return True
+            except Exception as fallback_e:
+                logger.error(f"Failed to send email to {to} via system fallback: {fallback_e}")
+                if db is not None:
+                    await _log_email_failure(
+                        db,
+                        tenant_id=tenant_id,
+                        conference_id=conference_id,
+                        recipient=to,
+                        subject=subject,
+                        email_type=email_type,
+                        status="failed",
+                        error=str(fallback_e),
+                    )
+                return False
         logger.error(f"Failed to send email to {to}: {e}")
         if db is not None:
             await _log_email_failure(
