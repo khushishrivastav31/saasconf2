@@ -75,7 +75,7 @@ Status labels: `RETEST` — fix committed, verify it works | `FAIL` — still br
 
 | # | Scenario | Status |
 |---|----------|--------|
-| 2.1.3 | Add committee member and assign topics | FAIL: UI not findable |
+| 2.1.3 | Add committee member and assign topics | OK (fix: 011 — solid primary Add Member button, topic chips in form and list) |
 | 2.1.4 | Submit paper via public CFP portal | RETEST (fix: 8438653) |
 | 2.1.5–2.1.8 | Review / accept / reject papers | BLOCKED by 2.1.4 |
 | 2.2.5 | Published program visible on public portal | RETEST (fix: 70929f4) |
@@ -100,7 +100,7 @@ Status labels: `RETEST` — fix committed, verify it works | `FAIL` — still br
 
 | # | Scenario | Status |
 |---|----------|--------|
-| 4.1.2 | Assign sponsor to a tier from the sponsor form | FAIL: flow unclear |
+| 4.1.2 | Assign sponsor to a tier from the sponsor form | OK (fix: 010 — Sponsorship Tier dropdown, badge in list, link to Settings when no tiers exist) |
 | 4.1.4 | Sponsor package creation discoverable from Sponsors tab | RETEST (fix: ab60cab) |
 | 4.1.5 | Sponsor invoice — accounting email warning shown upfront | RETEST (fix: dae75e6) |
 
@@ -126,7 +126,7 @@ Status labels: `RETEST` — fix committed, verify it works | `FAIL` — still br
 | 6.1.3 | Bulk send via email template — arrives in MailHog | RETEST (fix: SMTP_HOST=localhost) |
 | 6.2.1 | News article email renders HTML correctly | RETEST (fix: 12d036a) |
 | 6.2.2 | Published news article visible on public portal | RETEST (fix: 70929f4) |
-| 6.2.3 | Unpublishing removes article from portal | FAIL: behaviour unconfirmed |
+| 6.2.3 | Unpublishing removes article from portal | OK (fix: 012 — portal refetches every 30s, accurate modal copy, backend regression test added) |
 
 ---
 
