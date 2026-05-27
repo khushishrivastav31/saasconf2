@@ -76,6 +76,8 @@ const PublicTrainingPortalPage = lazy(() => import('./pages/PublicTrainingPortal
 
 // Conference portal set-password page — linked from attendee welcome emails.
 const PortalSetPasswordPage = lazy(() => import('./pages/portal/SetPasswordPage'));
+const PortalForgotPasswordPage = lazy(() => import('./pages/portal/ForgotPasswordPage'));
+const PortalResetPasswordPage = lazy(() => import('./pages/portal/ResetPasswordPage'));
 
 // Training set-password page — kept under the legacy ``/trainings/portal/``
 // path because backend access tokens (in production emails) link to it.
@@ -458,6 +460,11 @@ function App() {
           />
           <Route path=":companySlug/portal/user/verify-email" element={<VerifyEmailPage />} />
           <Route path=":companySlug/portal/set-password" element={<PortalSetPasswordPage />} />
+          <Route
+            path=":companySlug/portal/forgot-password"
+            element={<PortalForgotPasswordPage />}
+          />
+          <Route path=":companySlug/portal/reset-password" element={<PortalResetPasswordPage />} />
 
           {/* CFP Landing Page — public route */}
           <Route path=":tenantSlug/portal/:abbreviation" element={<LandingPage />} />
