@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     if: contains(fromJSON('["dependabot[bot]", "renovate[bot]"]'), github.actor) || contains(github.head_ref, 'deps') || contains(github.head_ref, 'dependabot')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     if: contains(fromJSON('["dependabot[bot]", "renovate[bot]"]'), github.actor) || contains(github.head_ref, 'deps') || contains(github.head_ref, 'dependabot')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
