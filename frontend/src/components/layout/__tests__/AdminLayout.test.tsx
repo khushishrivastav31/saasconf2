@@ -11,6 +11,16 @@ vi.mock('../../ThemeToggle', () => ({
   default: () => <button aria-label="theme-toggle">Theme</button>,
 }));
 
+// Mock api — controls sidebar conference fetches and notification bell calls
+vi.mock('../../../config/api', () => ({
+  default: {
+    get: vi.fn().mockResolvedValue({ data: { items: [], total_unread_count: 0, conferences: [] } }),
+    patch: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
+import api from '../../../config/api';
+
 // Mock react-router
 const mockNavigate = vi.fn();
 const mockLocation = { pathname: '/dashboard' };
@@ -435,6 +445,89 @@ describe('AdminLayout', () => {
       renderWithProviders();
 
       expect(mockRefreshUser).toHaveBeenCalled();
+    });
+  });
+
+  describe('sidebar conference list (013)', () => {
+    beforeEach(() => {
+      vi.mocked(api.get).mockResolvedValue({
+        data: { items: [], total_unread_count: 0, conferences: [] },
+      });
+    });
+
+    it('renders conference nav items when API returns conferences', async () => {
+      vi.mocked(api.get).mockImplementation((url: string) => {
+        if (url === '/conferences?page_size=50') {
+          return Promise.resolve({
+            data: {
+              items: [
+                { id: 'c1', name: 'Conf One' },
+                { id: 'c2', name: 'Conf Two' },
+              ],
+            },
+          });
+        }
+        return Promise.resolve({ data: { items: [], total_unread_count: 0, conferences: [] } });
+      });
+
+      renderWithProviders();
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Conf One' })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Conf Two' })).toBeInTheDocument();
+      });
+    });
+
+    it('active conference link has aria-current when on that conference URL', async () => {
+      mockLocation.pathname = '/modules/conferences/c1';
+      vi.mocked(api.get).mockImplementation((url: string) => {
+        if (url === '/conferences?page_size=50') {
+          return Promise.resolve({
+            data: {
+              items: [
+                { id: 'c1', name: 'Conf One' },
+                { id: 'c2', name: 'Conf Two' },
+              ],
+            },
+          });
+        }
+        return Promise.resolve({ data: { items: [], total_unread_count: 0, conferences: [] } });
+      });
+
+      renderWithProviders();
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Conf One' })).toHaveAttribute(
+          'aria-current',
+          'page'
+        );
+      });
+
+      const confTwoLink = screen.getByRole('link', { name: 'Conf Two' });
+      expect(confTwoLink).not.toHaveAttribute('aria-current');
+    });
+
+    it('does not render conference sub-list when sidebar is collapsed', async () => {
+      const user = userEvent.setup();
+      vi.mocked(api.get).mockImplementation((url: string) => {
+        if (url === '/conferences?page_size=50') {
+          return Promise.resolve({
+            data: { items: [{ id: 'c1', name: 'Conf One' }] },
+          });
+        }
+        return Promise.resolve({ data: { items: [], total_unread_count: 0, conferences: [] } });
+      });
+
+      renderWithProviders();
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Conf One' })).toBeInTheDocument();
+      });
+
+      const collapseButton = screen.getByTitle('Collapse sidebar');
+      await user.click(collapseButton);
+
+      expect(screen.queryByRole('link', { name: 'Conf One' })).not.toBeInTheDocument();
     });
   });
 

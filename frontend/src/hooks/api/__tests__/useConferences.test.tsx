@@ -402,6 +402,23 @@ describe('useConferences hooks', () => {
       );
     });
 
+    it('invalidates sidebar-conferences query on create success', async () => {
+      vi.mocked(api.post).mockResolvedValue({ data: createdConference });
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      const { result } = renderHook(() => useCreateConference(), { wrapper });
+
+      await act(async () => {
+        await result.current.mutateAsync(newConferencePayload);
+      });
+
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: ['sidebar-conferences'] })
+      );
+    });
+
     it('returns error state when the mutation fails', async () => {
       vi.mocked(api.post).mockRejectedValue(new Error('Validation error: name is required'));
 

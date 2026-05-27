@@ -19,6 +19,7 @@ export const queryKeys = {
     stats: ['conference-stats'] as const,
     forSelect: ['conferences-for-select'] as const,
     forAccess: ['conferences-for-access'] as const,
+    sidebar: ['sidebar-conferences'] as const,
   },
 
   // ── Volunteers ──────────────────────────────────────────────────

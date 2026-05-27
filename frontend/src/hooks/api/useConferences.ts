@@ -87,6 +87,7 @@ export function useCreateConference() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.conferences.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.conferences.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.conferences.sidebar });
     },
   });
 }

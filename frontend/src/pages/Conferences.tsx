@@ -6,6 +6,7 @@ import { parseApiError } from '../utils/apiError';
 import { formatDate } from '../utils/formatDate';
 import { useAuth } from '../hooks/useAuth';
 import { useIsTenantAdmin } from '../hooks/useIsAdmin';
+import { queryKeys } from '../config/queryKeys';
 import CreateConferenceModal from '../components/CreateConferenceModal';
 import DuplicateConferenceModal from '../components/modals/DuplicateConferenceModal';
 import ConferenceLogo from '../components/ConferenceLogo';
@@ -131,6 +132,7 @@ export default function Conferences() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conferences'] });
       queryClient.invalidateQueries({ queryKey: ['conference-stats'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.conferences.sidebar });
       setCreateError(null);
       setIsCreateModalOpen(false);
     },

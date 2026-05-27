@@ -266,6 +266,17 @@ export default function AdminLayout() {
 
   const isSuperAdmin = user?.role === 'super_admin';
 
+  const { data: sidebarConferences } = useQuery({
+    queryKey: queryKeys.conferences.sidebar,
+    queryFn: async () => {
+      const res = await api.get<{ items: Array<{ id: string; name: string }> }>(
+        '/conferences?page_size=50'
+      );
+      return res.data.items;
+    },
+    staleTime: 60_000,
+  });
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
@@ -393,24 +404,54 @@ export default function AdminLayout() {
                       const isActive =
                         location.pathname === item.href ||
                         location.pathname.startsWith(item.href + '/');
+                      const conferenceSubList =
+                        !sidebarCollapsed &&
+                        item.moduleCode === 'conferences' &&
+                        sidebarConferences &&
+                        sidebarConferences.length > 0 ? (
+                          <div className="mt-0.5 ml-4 space-y-0.5">
+                            {sidebarConferences.map((conf) => {
+                              const isConfActive = location.pathname.startsWith(
+                                `/modules/conferences/${conf.id}`
+                              );
+                              return (
+                                <Link
+                                  key={conf.id}
+                                  to={`/modules/conferences/${conf.id}`}
+                                  onClick={() => setSidebarOpen(false)}
+                                  aria-current={isConfActive ? 'page' : undefined}
+                                  className={`flex items-center py-1.5 px-3 text-sm rounded-md truncate ${
+                                    isConfActive
+                                      ? 'bg-gray-800 text-white'
+                                      : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                                  }`}
+                                >
+                                  {conf.name}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        ) : null;
                       return (
-                        <Link
-                          key={item.name}
-                          to={item.href}
-                          onClick={() => setSidebarOpen(false)}
-                          title={sidebarCollapsed ? item.name : undefined}
-                          aria-current={isActive ? 'page' : undefined}
-                          className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                            sidebarCollapsed ? 'justify-center px-2' : 'px-3'
-                          } ${
-                            isActive
-                              ? 'bg-gray-800 text-white'
-                              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                          }`}
-                        >
-                          <item.icon />
-                          {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
-                        </Link>
+                        <div key={item.name}>
+                          <Link
+                            to={item.href}
+                            onClick={() => setSidebarOpen(false)}
+                            title={sidebarCollapsed ? item.name : undefined}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                              sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                            } ${
+                              isActive
+                                ? 'bg-gray-800 text-white'
+                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                            }`}
+                          >
+                            <item.icon />
+                            {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
+                          </Link>
+                          {conferenceSubList}
+                        </div>
                       );
                     })}
                   </div>
