@@ -37,6 +37,7 @@ export default function NewsPage() {
       const res = await portalApi.get<PortalNewsListResponse>('/portal/news');
       return res.data;
     },
+    staleTime: 0,
     refetchInterval: 30000,
   });
 

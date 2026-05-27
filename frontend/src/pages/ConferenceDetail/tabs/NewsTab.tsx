@@ -405,7 +405,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
         title={publishModal.target?.is_published ? 'Unpublish Article' : 'Publish Article'}
         message={
           publishModal.target?.is_published
-            ? `Are you sure you want to unpublish "${publishModal.target?.title ?? ''}"? It will no longer be visible to portal users.`
+            ? `Are you sure you want to unpublish "${publishModal.target?.title ?? ''}"? It will be removed from the portal feed. Portal users currently viewing the news page may see it for up to 30 seconds.`
             : `Are you sure you want to publish "${publishModal.target?.title ?? ''}"? It will become visible to all portal users.`
         }
         confirmLabel={publishModal.target?.is_published ? 'Unpublish' : 'Publish'}
