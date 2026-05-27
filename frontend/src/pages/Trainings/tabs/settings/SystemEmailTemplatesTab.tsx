@@ -103,7 +103,7 @@ function TemplateEditModal({
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div data-testid="email-form-body" className="p-6 space-y-4">
           {/* Active toggle */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -133,7 +133,9 @@ function TemplateEditModal({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Body (HTML)
             </label>
-            <RichTextEditor value={bodyHtml} onChange={setBodyHtml} rows={12} />
+            <div data-testid="email-editor-wrapper">
+              <RichTextEditor value={bodyHtml} onChange={setBodyHtml} rows={12} />
+            </div>
           </div>
 
           {/* Placeholders */}

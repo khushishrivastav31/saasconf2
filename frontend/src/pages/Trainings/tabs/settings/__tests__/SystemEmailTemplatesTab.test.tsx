@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SystemEmailTemplatesTab from '../SystemEmailTemplatesTab';
 
@@ -13,6 +13,10 @@ vi.mock('../../../../../config/api', () => ({
 
 vi.mock('../../../../../components/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
+}));
+
+vi.mock('../../../../../components/common/RichTextEditor', () => ({
+  default: () => <div data-testid="rich-text-editor" />,
 }));
 
 import api from '../../../../../config/api';
@@ -80,5 +84,22 @@ describe('Training SystemEmailTemplatesTab', () => {
     await waitFor(() => {
       expect(mockApi.get).toHaveBeenCalledWith('/trainings/email-templates');
     });
+  });
+
+  it('modal content area has p-6 padding so all fields are consistently inset (QA 1.4.4.2)', async () => {
+    renderWithProviders(<SystemEmailTemplatesTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Registration Confirmation')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByTitle('Edit template')[0]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument();
+    });
+
+    const formBody = screen.getByTestId('email-form-body');
+    expect(formBody.className).toContain('p-6');
   });
 });
