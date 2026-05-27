@@ -664,7 +664,7 @@ export default function CFPProgramCommittee({
               setSelectedMemberId(null);
               setError(null);
             }}
-            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 transition-colors"
+            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
           >
             + Add Member
           </button>
