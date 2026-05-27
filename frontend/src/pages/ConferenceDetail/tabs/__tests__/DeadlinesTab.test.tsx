@@ -646,3 +646,23 @@ describe('DeadlinesTab', () => {
     });
   });
 });
+
+describe('DeadlinesTab — status badge tooltips (QA 1.5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('each status badge has a title attribute matching its status label', async () => {
+    mockGet.mockResolvedValue({ data: { items: sampleDeadlines, total: sampleDeadlines.length } });
+    render(<DeadlinesTab conference={mockConference} isAdmin={false} />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(screen.getByText('Sponsor Contract')).toBeInTheDocument());
+
+    expect(screen.getByText('Active')).toHaveAttribute('title', 'Active');
+    expect(screen.getByText('Due soon')).toHaveAttribute('title', 'Due soon');
+    expect(screen.getByText('Overdue')).toHaveAttribute('title', 'Overdue');
+    expect(screen.getByText('Resolved')).toHaveAttribute('title', 'Resolved');
+  });
+});
