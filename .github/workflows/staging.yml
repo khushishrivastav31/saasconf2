@@ -388,7 +388,7 @@ jobs:
       always() &&
       needs.deploy-staging.result == 'success' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/main'
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
 
     steps:
       - name: Checkout code
@@ -496,7 +496,7 @@ jobs:
       needs.deploy-staging.result == 'success' &&
       needs.e2e-tests.result == 'failure' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
 
     steps:
       - name: Set up SSH
