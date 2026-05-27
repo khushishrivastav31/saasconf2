@@ -522,6 +522,27 @@ describe('DeadlinesTab', () => {
     });
   });
 
+  describe('form field CSS consistency (QA 1.5.1)', () => {
+    it('all three modal inputs use the shared component class signature (shadow-sm + rounded-md)', async () => {
+      mockGet.mockResolvedValue({ data: { items: [], total: 0 } });
+      render(<DeadlinesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(screen.getByText('New Deadline')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('New Deadline'));
+
+      const titleInput = screen.getByPlaceholderText('e.g., Sponsor contract deadline');
+      const descInput = screen.getByPlaceholderText('Optional details about this deadline...');
+      const dateInput = document.querySelector('input[type="datetime-local"]') as HTMLElement;
+
+      for (const el of [titleInput, descInput, dateInput]) {
+        expect(el.className).toContain('shadow-sm');
+        expect(el.className).toContain('rounded-md');
+      }
+    });
+  });
+
   describe('toast feedback', () => {
     it('shows success toast after creating a deadline', async () => {
       mockGet.mockResolvedValue({ data: { items: [], total: 0 } });
