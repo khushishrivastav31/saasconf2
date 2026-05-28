@@ -160,30 +160,7 @@ async def register_applicant(
         activity_type=ApplicantActivityType.REGISTERED,
     )
 
-    # In debug mode, auto-verify the email so developers can log in immediately
     settings = get_settings()
-    if settings.DEBUG:
-        applicant.email_verified_at = utcnow()
-        # Log auto-verification in debug mode
-        await log_applicant_activity(
-            db,
-            tenant_id=tenant.id,
-            applicant_id=applicant.id,
-            applicant_email=normalized_email,
-            applicant_first_name=data.first_name,
-            applicant_last_name=data.last_name,
-            activity_type=ApplicantActivityType.EMAIL_VERIFIED,
-        )
-        # Mirror the production verify-email path: create the linked
-        # PortalUser so the unified login (``/portal/{slug}/unified/login``)
-        # finds the freshly-verified user. Without this, only the legacy
-        # CFP login auto-heals; new-frontend users hit "Invalid email or
-        # password" against the unified endpoint.
-        from app.core.portal_linkage import ensure_portal_user_for_applicant
-
-        await ensure_portal_user_for_applicant(db, applicant)
-        await db.commit()
-        # Fall through to send the verification email to MailHog in debug mode
 
     # Create email verification token
     raw_token, token_hash = generate_email_verification_token()
@@ -219,8 +196,6 @@ async def register_applicant(
         base_url=settings.PORTAL_BASE_URL,
     )
 
-    if settings.DEBUG:
-        return {"message": "Registration successful. Email auto-verified (debug mode). You can now log in."}
     return {"message": "Registration successful. Please check your email to verify your account."}
 
 

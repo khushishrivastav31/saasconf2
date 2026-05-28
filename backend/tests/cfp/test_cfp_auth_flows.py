@@ -346,54 +346,6 @@ class TestLogin:
         # Either 403 (admin redirect) or 401 (email mismatch on tenant slug) is acceptable
         assert resp.status_code in (401, 403)
 
-    async def test_self_registered_user_can_log_in_via_unified_endpoint(
-        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant
-    ) -> None:
-        """Reproduce Brandon's QA finding 2.1.4–2.1.8: a user who registers
-        via the CFP portal endpoint MUST be able to log back in via the
-        unified portal login (``/portal/{slug}/unified/login``). The
-        unified login authenticates against ``portal_users`` — the
-        applicant row alone is not enough.
-
-        Before the fix, ``register_applicant`` created the ``CFPApplicant``
-        but no linked ``PortalUser``, so the unified login returned
-        ``Invalid email or password``. The fix wires
-        ``ensure_portal_user_for_applicant`` into the verification handler
-        (and the DEBUG auto-verify branch of register).
-        """
-        from unittest.mock import patch
-
-        from app.config import Settings
-
-        debug_settings = Settings(
-            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
-            SUPER_ADMIN_PASSWORD="testpassword123",
-            DEBUG=True,
-        )
-        email = f"self-reg-unified-{uuid.uuid4().hex[:8]}@example.com"
-        register_payload = {
-            "email": email,
-            "password": VALID_PASSWORD,
-            "first_name": "Self",
-            "last_name": "Registered",
-        }
-        with patch("app.api.v1.cfp_portal.auth.get_settings", return_value=debug_settings):
-            register_resp = await client.post(
-                f"/api/v1/portal/{tenant.slug}/register",
-                json=register_payload,
-            )
-        assert register_resp.status_code in (200, 201), register_resp.text
-
-        # Hit the unified portal login — this is what the new frontend uses.
-        login_resp = await client.post(
-            f"/api/v1/portal/{tenant.slug}/unified/login",
-            json={"email": email, "password": VALID_PASSWORD},
-        )
-        assert login_resp.status_code == 200, login_resp.text
-        body = login_resp.json()
-        assert body.get("access_token")
-        assert body.get("refresh_token")
-
     async def test_verified_user_can_log_in_via_unified_endpoint(
         self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant
     ) -> None:
