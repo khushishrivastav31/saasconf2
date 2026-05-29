@@ -43,6 +43,9 @@ vi.mock('../settings/StripeSetupTab', () => ({ default: () => <div>StripeSetupTa
 vi.mock('../settings/FinancialSettingsTab', () => ({
   default: () => <div>FinancialSettingsTab</div>,
 }));
+vi.mock('../settings/PaymentReminderSettingsTab', () => ({
+  default: () => <div>PaymentReminderSettingsTab</div>,
+}));
 
 const mockConference: Conference = {
   id: 'conf-123',
