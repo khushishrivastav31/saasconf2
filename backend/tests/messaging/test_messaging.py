@@ -2128,6 +2128,16 @@ class TestListRecipientLists:
         assert data["items"] == []
         assert data["total"] == 0
 
+    async def test_list_recipient_lists_unauthenticated(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "recipient-lists")
+        response = await client.get(url)
+        assert response.status_code == 401
+
     async def test_list_recipient_lists_with_data(
         self,
         client: AsyncClient,
@@ -2208,6 +2218,40 @@ class TestCreateRecipientList:
             "name": "Ghost List",
             "applicant_ids": [str(uuid.uuid4())],
         }
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
+        assert response.status_code == 404
+
+    async def test_create_recipient_list_applicant_from_other_tenant_rejected(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_with_cfp: Tenant,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Applicant IDs from a different tenant are treated as non-existent (404)."""
+        from app.models.tenant import Tenant as TenantModel
+
+        other_tenant = TenantModel(
+            id=uuid.uuid4(),
+            name="Other Org",
+            slug=f"other-{uuid.uuid4().hex[:8]}",
+            is_active=True,
+        )
+        db_session.add(other_tenant)
+        other_applicant = CFPApplicant(
+            id=uuid.uuid4(),
+            tenant_id=other_tenant.id,
+            first_name="Eve",
+            last_name="External",
+            email=f"eve-{uuid.uuid4().hex[:8]}@other.com",
+            password_hash=hash_password("Password123!"),
+        )
+        db_session.add(other_applicant)
+        await db_session.commit()
+
+        url = _messaging_url(conference.id, "recipient-lists")
+        payload = {"name": "Cross-Tenant Attempt", "applicant_ids": [str(other_applicant.id)]}
         response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 404
 
@@ -2294,6 +2338,35 @@ class TestUpdateRecipientList:
         assert response.status_code == 200
         assert len(response.json()["members"]) == 1
 
+    async def test_update_recipient_list_duplicate_name_rejected(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        recipient_list_with_members: RecipientList,
+    ) -> None:
+        """Renaming a list to the name of another existing list returns 400."""
+        other = RecipientList(
+            id=uuid.uuid4(),
+            tenant_id=tenant_with_cfp.id,
+            name="Taken Name",
+            description="",
+        )
+        db_session.add(other)
+        await db_session.commit()
+
+        url = _messaging_url(conference.id, f"recipient-lists/{recipient_list_with_members.id}")
+        response = await client.put(
+            url,
+            json={"name": "Taken Name"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        assert response.status_code == 400
+
 
 class TestDeleteRecipientList:
     """DELETE /conferences/{id}/messaging/recipient-lists/{list_id}"""
@@ -2316,6 +2389,49 @@ class TestDeleteRecipientList:
         # Verify deleted
         get_resp = await client.get(url, headers=auth_headers(messaging_admin_token))
         assert get_resp.status_code == 404
+
+    async def test_delete_recipient_list_not_found(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, f"recipient-lists/{uuid.uuid4()}")
+        response = await client.delete(url, headers=auth_headers(messaging_admin_token))
+        assert response.status_code == 404
+
+    async def test_delete_recipient_list_from_other_tenant_returns_404(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_with_cfp: Tenant,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """A list belonging to another tenant cannot be deleted — returns 404."""
+        from app.models.tenant import Tenant as TenantModel
+
+        other_tenant = TenantModel(
+            id=uuid.uuid4(),
+            name="Rival Corp",
+            slug=f"rival-{uuid.uuid4().hex[:8]}",
+            is_active=True,
+        )
+        db_session.add(other_tenant)
+        await db_session.flush()  # satisfy FK before inserting the list
+        other_list = RecipientList(
+            id=uuid.uuid4(),
+            tenant_id=other_tenant.id,
+            name="Private List",
+            description="",
+        )
+        db_session.add(other_list)
+        await db_session.commit()
+
+        url = _messaging_url(conference.id, f"recipient-lists/{other_list.id}")
+        response = await client.delete(url, headers=auth_headers(messaging_admin_token))
+        assert response.status_code == 404
 
 
 # ═══════════════════════════════════════════════════════════════════════

@@ -124,9 +124,7 @@ describe('RecipientListsTab — characterization', () => {
     await user.click(screen.getByRole('button', { name: /^Create List$/ }));
     // Applicants endpoint is fetched only when modal opens
     await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith(
-        expect.stringContaining('/cfp/applicants?conference_id=conf-1')
-      );
+      expect(mockedApi.get).toHaveBeenCalledWith('/cfp/applicants');
     });
   });
 

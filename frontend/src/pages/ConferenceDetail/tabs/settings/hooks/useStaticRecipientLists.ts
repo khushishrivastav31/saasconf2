@@ -38,10 +38,14 @@ export function useStaticRecipientLists(conferenceId: string) {
     enabled: !!editingListId,
   });
 
-  const { data: allApplicants } = useQuery({
+  const {
+    data: allApplicants,
+    isLoading: isLoadingApplicants,
+    error: applicantsError,
+  } = useQuery({
     queryKey: queryKeys.cfp.applicantsForMessaging(conferenceId),
     queryFn: async () => {
-      const resp = await api.get(`/cfp/applicants?conference_id=${conferenceId}`);
+      const resp = await api.get(`/cfp/applicants`);
       return resp.data.items as Applicant[];
     },
     enabled: showModal,
@@ -149,6 +153,8 @@ export function useStaticRecipientLists(conferenceId: string) {
     applicantSearch,
     setApplicantSearch,
     allApplicants,
+    isLoadingApplicants,
+    applicantsError,
     saving,
     deleteMutation,
     openCreate,

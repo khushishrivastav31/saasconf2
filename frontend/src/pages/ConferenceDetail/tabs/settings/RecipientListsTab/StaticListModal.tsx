@@ -19,6 +19,8 @@ export default function StaticListModal({ hook }: Props) {
     applicantSearch,
     setApplicantSearch,
     allApplicants,
+    isLoadingApplicants,
+    applicantsError,
     saving,
     closeModal,
     handleSave,
@@ -107,6 +109,20 @@ export default function StaticListModal({ hook }: Props) {
               onChange={(e) => setApplicantSearch(e.target.value)}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             />
+            {isLoadingApplicants && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Loading applicants…</p>
+            )}
+            {applicantsError && (
+              <p className="text-xs text-red-500 mt-1">
+                Failed to load applicants:{' '}
+                {applicantsError instanceof Error ? applicantsError.message : 'Unknown error'}
+              </p>
+            )}
+            {!isLoadingApplicants && !applicantsError && allApplicants !== undefined && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {allApplicants.length - formApplicantIds.length} available — type to search
+              </p>
+            )}
             {applicantSearch.trim() && filteredApplicants && filteredApplicants.length > 0 && (
               <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md mt-1">
                 {filteredApplicants.slice(0, 30).map((a) => (
