@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import UpdateBanner from './components/UpdateBanner';
 import { Routes, Route, Navigate, useSearchParams, useParams } from 'react-router';
 import { useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
@@ -560,6 +561,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <UpdateBanner />
     </ErrorBoundary>
   );
 }

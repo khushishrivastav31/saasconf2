@@ -41,9 +41,11 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
       JWT_ALGORITHM: HS256
       DEBUG: "true"
-      CORS_ORIGINS: '["http://localhost:3000", "http://127.0.0.1:3000"]'
+      CORS_ORIGINS: '["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]'
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@saasconf.com}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-changeme123}
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
     ports:
       - "8000:8000"
     depends_on:
@@ -54,6 +56,15 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # MailHog — catches all outbound email in local dev (no real mail sent)
+  # Web UI: http://localhost:8025
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: saasconf_mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
 
   # React Frontend
   frontend:

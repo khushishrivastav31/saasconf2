@@ -82,6 +82,7 @@ describe('CRUDSettingsTab — sticky actions layout', () => {
     const actionsTh = screen.getByRole('columnheader', { name: /actions/i });
     expect(actionsTh.className).toMatch(/sticky/);
     expect(actionsTh.className).toMatch(/right-0/);
+    expect(actionsTh.className).toMatch(/z-\[1\]/);
   });
 
   it('applies sticky right-0 to every Actions <td>', async () => {
@@ -105,6 +106,7 @@ describe('CRUDSettingsTab — sticky actions layout', () => {
     const actionsTd = editBtn.closest('td')!;
     expect(actionsTd.className).toMatch(/sticky/);
     expect(actionsTd.className).toMatch(/right-0/);
+    expect(actionsTd.className).toMatch(/z-\[1\]/);
   });
 
   it('does not render an Actions column when isAdmin is false', async () => {

@@ -279,7 +279,7 @@ export default function CRUDSettingsTab<
                   </th>
                 ))}
                 {isAdmin && (
-                  <th className="sticky right-0 bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="sticky right-0 z-[1] bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 )}
@@ -303,7 +303,7 @@ export default function CRUDSettingsTab<
                     </td>
                   ))}
                   {isAdmin && (
-                    <td className="sticky right-0 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="sticky right-0 z-[1] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleEdit(item)}
                         className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-2"
