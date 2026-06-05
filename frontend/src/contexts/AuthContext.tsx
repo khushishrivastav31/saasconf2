@@ -66,9 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, [fetchUser]);
 
+  const clearDeadlineToastKeys = () => {
+    Object.keys(sessionStorage)
+      .filter((k) => k.startsWith('deadline_toast_shown:'))
+      .forEach((k) => sessionStorage.removeItem(k));
+  };
+
   const login = async (credentials: LoginRequest) => {
     // Clear any cached data from previous user session
     queryClient.clear();
+    clearDeadlineToastKeys();
     const response = await api.post<TokenResponse | MFALoginResponse>('/auth/login', credentials);
 
     // Check if MFA is required
@@ -99,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       // Clear all cached queries to prevent stale data when switching users
       queryClient.clear();
+      clearDeadlineToastKeys();
     }
   };
 

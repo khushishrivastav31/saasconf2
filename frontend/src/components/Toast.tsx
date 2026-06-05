@@ -1,13 +1,19 @@
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface ToastItem {
   id: number;
   message: string;
   type: 'error' | 'success' | 'info' | 'warning';
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  showToast: (message: string, type?: ToastItem['type']) => void;
+  showToast: (message: string, type?: ToastItem['type'], action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -125,6 +131,19 @@ function ToastMessage({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: 
       {/* Message */}
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
 
+      {/* Optional action */}
+      {toast.action && (
+        <button
+          onClick={() => {
+            toast.action!.onClick();
+            handleDismiss();
+          }}
+          className={`flex-shrink-0 text-xs font-semibold underline ${s.text} hover:opacity-70`}
+        >
+          {toast.action.label}
+        </button>
+      )}
+
       {/* Dismiss */}
       <button
         onClick={handleDismiss}
@@ -148,10 +167,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextIdRef = useRef(1);
 
-  const showToast = useCallback((message: string, type: ToastItem['type'] = 'error') => {
-    const id = nextIdRef.current++;
-    setToasts((prev) => [...prev, { id, message, type }]);
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: ToastItem['type'] = 'error', action?: ToastAction) => {
+      const id = nextIdRef.current++;
+      setToasts((prev) => [...prev, { id, message, type, action }]);
+    },
+    []
+  );
 
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));

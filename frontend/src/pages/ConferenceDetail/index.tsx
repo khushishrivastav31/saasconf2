@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
 import { useToast } from '../../components/Toast';
@@ -83,7 +83,7 @@ function ConferenceDetailContent() {
   const { setSelectedCommitteeMemberId, setSelectedApplicantId } = useSelection();
 
   const { showToast } = useToast();
-  const deadlineToastShownRef = useRef(false);
+  const queryClient = useQueryClient();
 
   const {
     // Conference data
@@ -126,27 +126,43 @@ function ConferenceDetailContent() {
     staleTime: 60_000,
   });
 
-  // Show toast warnings for approaching deadlines (once per mount)
+  const DEADLINE_OVERDUE_CUTOFF_DAYS = 30;
+
+  // Show toast warnings for approaching/overdue deadlines — once per browser session per conference.
   useEffect(() => {
-    if (!deadlineData?.items || deadlineToastShownRef.current) return;
+    if (!deadlineData?.items) return;
+    if (sessionStorage.getItem(`deadline_toast_shown:${conferenceId}`)) return;
+
     const now = new Date();
     const approaching = deadlineData.items.filter((d) => {
       if (!d.is_active) return false;
       const due = new Date(d.due_date);
-      const diffDays = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-      return diffDays <= 7;
+      const diffDays = (due.getTime() - now.getTime()) / 86_400_000;
+      return diffDays > -DEADLINE_OVERDUE_CUTOFF_DAYS && diffDays <= 7;
     });
 
     if (approaching.length === 0) return;
-    deadlineToastShownRef.current = true;
+    sessionStorage.setItem(`deadline_toast_shown:${conferenceId}`, '1');
 
     if (approaching.length <= 2) {
       approaching.forEach((d) => {
         const due = new Date(d.due_date);
         const isOverdue = due < now;
+        const action = isOverdue
+          ? {
+              label: 'Mark as resolved',
+              onClick: async () => {
+                await api.patch(`/conferences/${conferenceId}/deadlines/${d.id}/toggle`);
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.deadlines.byConference(conferenceId ?? ''),
+                });
+              },
+            }
+          : undefined;
         showToast(
           `${isOverdue ? 'Overdue' : 'Deadline approaching'}: "${d.title}" is due ${due.toLocaleDateString()}`,
-          'warning'
+          'warning',
+          action
         );
       });
     } else {
@@ -155,7 +171,7 @@ function ConferenceDetailContent() {
         'warning'
       );
     }
-  }, [deadlineData, showToast]);
+  }, [deadlineData, showToast, conferenceId, queryClient]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
