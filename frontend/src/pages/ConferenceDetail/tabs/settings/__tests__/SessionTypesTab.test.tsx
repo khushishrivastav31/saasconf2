@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ConferenceSessionTypesTab from '../SessionTypesTab';
+import SessionTypesTab from '../SessionTypesTab';
 import type { Conference } from '../../../../../types';
 
 vi.mock('../../../../../config/api', () => {
@@ -10,7 +10,67 @@ vi.mock('../../../../../config/api', () => {
   return { api, default: api };
 });
 
+vi.mock('../../../../../components/Modal', () => ({
+  default: ({
+    open,
+    children,
+    title,
+    onClose,
+  }: {
+    open: boolean;
+    title: string;
+    onClose: () => void;
+    children: React.ReactNode;
+  }) =>
+    open ? (
+      <div data-testid="modal" role="dialog">
+        <span>{title}</span>
+        <button onClick={onClose}>CloseModal</button>
+        {children}
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../../../../components/ConfirmDialog', () => ({
+  default: ({
+    open,
+    onConfirm,
+    onCancel,
+    title,
+  }: {
+    open: boolean;
+    onConfirm: () => void;
+    onCancel: () => void;
+    title: string;
+  }) =>
+    open ? (
+      <div data-testid="confirm-dialog">
+        <span>{title}</span>
+        <button onClick={onConfirm}>Confirm</button>
+        <button onClick={onCancel}>Cancel</button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../../../../components/common/ErrorBanner', () => ({
+  ErrorBanner: ({ message }: { message: string | null }) =>
+    message ? <div role="alert">{message}</div> : null,
+}));
+
+vi.mock('../../../../../components/common/LoadingSpinner', () => ({
+  LoadingSpinner: () => <div data-testid="loading-spinner" />,
+}));
+
+vi.mock('../../../../../components/common/ModalFooter', () => ({
+  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('../../../../../components/common/StatusBadge', () => ({
+  default: ({ isActive }: { isActive: boolean }) => <span>{isActive ? 'Active' : 'Inactive'}</span>,
+}));
+
 import { api } from '../../../../../config/api';
+
 const mockedApi = vi.mocked(api);
 
 const mockConference: Conference = {
@@ -47,6 +107,8 @@ const mockConference: Conference = {
 const SESSION_TYPES = [
   {
     id: 'st-1',
+    conference_id: 'conf-1',
+    tenant_id: 'tenant-1',
     name: 'Keynote',
     slug: 'keynote',
     duration_minutes: 45,
@@ -55,10 +117,13 @@ const SESSION_TYPES = [
     max_attendees: null,
     is_active: true,
     user_role_id: null,
-    conference_id: 'conf-1',
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
   },
   {
     id: 'st-2',
+    conference_id: 'conf-1',
+    tenant_id: 'tenant-1',
     name: 'Workshop',
     slug: 'workshop',
     duration_minutes: 120,
@@ -67,94 +132,193 @@ const SESSION_TYPES = [
     max_attendees: 30,
     is_active: true,
     user_role_id: null,
-    conference_id: 'conf-1',
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
   },
 ];
 
+const sampleSessionType = SESSION_TYPES[0];
+
 function createWrapper() {
-  const qc = new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockedApi.get.mockImplementation((url: string) => {
-    if (url.includes('user-roles')) return Promise.resolve({ data: { items: [], total: 0 } });
-    if (url.includes('session-types'))
-      return Promise.resolve({ data: { items: SESSION_TYPES, total: 2 } });
-    return Promise.resolve({ data: { items: [], total: 0 } });
-  });
-});
-
-describe('ConferenceSessionTypesTab', () => {
-  it('renders the section header and Add button for admin', async () => {
-    render(<ConferenceSessionTypesTab conference={mockConference} isAdmin />, {
-      wrapper: createWrapper(),
+describe('SessionTypesTab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes('user-roles')) {
+        return Promise.resolve({ data: { items: [], total: 0 } });
+      }
+      if (url.includes('session-types')) {
+        return Promise.resolve({ data: { items: SESSION_TYPES, total: SESSION_TYPES.length } });
+      }
+      return Promise.resolve({ data: { items: [], total: 0 } });
     });
-
-    await waitFor(() => screen.getByText('Session Types'));
-    expect(
-      screen.getByText('Define the types of sessions available for the conference')
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add session type/i })).toBeInTheDocument();
   });
 
-  it('renders a row for each session type', async () => {
-    render(<ConferenceSessionTypesTab conference={mockConference} isAdmin />, {
-      wrapper: createWrapper(),
-    });
+  describe('loading state', () => {
+    it('renders a loading spinner while fetching', () => {
+      mockedApi.get.mockImplementation(() => new Promise(() => {}));
 
-    await waitFor(() => screen.getByText('Keynote'));
-    expect(screen.getByText('Workshop')).toBeInTheDocument();
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+    });
   });
 
-  it('shows duration and CFP-eligible badge per row', async () => {
-    render(<ConferenceSessionTypesTab conference={mockConference} isAdmin />, {
-      wrapper: createWrapper(),
+  describe('empty state', () => {
+    beforeEach(() => {
+      mockedApi.get.mockImplementation((url: string) => {
+        if (url.includes('user-roles')) return Promise.resolve({ data: { items: [], total: 0 } });
+        if (url.includes('session-types'))
+          return Promise.resolve({ data: { items: [], total: 0 } });
+        return Promise.resolve({ data: { items: [], total: 0 } });
+      });
     });
 
-    await waitFor(() => screen.getByText('45 min'));
-    expect(screen.getByText('120 min')).toBeInTheDocument();
-    // cfp_eligible=true → "Yes" badge; false → "No"
-    const yesBadges = screen.getAllByText('Yes');
-    expect(yesBadges.length).toBeGreaterThanOrEqual(1);
+    it('shows the section heading when data loads', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Session Types')).toBeInTheDocument();
+      });
+    });
+
+    it('shows the Add button for admins', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add session type/i })).toBeInTheDocument();
+      });
+    });
   });
 
-  it('shows edit and delete buttons for admin', async () => {
-    render(<ConferenceSessionTypesTab conference={mockConference} isAdmin />, {
-      wrapper: createWrapper(),
+  describe('list view', () => {
+    it('renders existing session types', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Keynote')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Workshop')).toBeInTheDocument();
     });
 
-    await waitFor(() => screen.getByText('Keynote'));
-    const editBtns = screen.getAllByRole('button', { name: /edit/i });
-    const deleteBtns = screen.getAllByRole('button', { name: /delete/i });
-    expect(editBtns.length).toBe(SESSION_TYPES.length);
-    expect(deleteBtns.length).toBe(SESSION_TYPES.length);
+    it('renders the slug column', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('keynote')).toBeInTheDocument();
+      });
+    });
+
+    it('renders the duration column', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('45 min')).toBeInTheDocument();
+      });
+      expect(screen.getByText('120 min')).toBeInTheDocument();
+    });
+
+    it('shows edit and delete buttons for each row when admin', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => screen.getByText('Keynote'));
+      expect(screen.getAllByRole('button', { name: /edit/i })).toHaveLength(SESSION_TYPES.length);
+      expect(screen.getAllByRole('button', { name: /delete/i })).toHaveLength(SESSION_TYPES.length);
+    });
+
+    it('does not show Add button when isAdmin is false', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={false} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => screen.getByText('Keynote'));
+      expect(screen.queryByRole('button', { name: /add session type/i })).toBeNull();
+    });
   });
 
-  it('does not show Add button when isAdmin is false', async () => {
-    render(<ConferenceSessionTypesTab conference={mockConference} isAdmin={false} />, {
-      wrapper: createWrapper(),
+  describe('create flow', () => {
+    it('opens the create modal when the Add button is clicked', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add session type/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /add session type/i }));
+
+      expect(screen.getByTestId('modal')).toBeInTheDocument();
     });
 
-    await waitFor(() => screen.getByText('Keynote'));
-    expect(screen.queryByRole('button', { name: /add session type/i })).toBeNull();
+    it('modal is accessible via dialog role', async () => {
+      const user = userEvent.setup();
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => screen.getByRole('button', { name: /add session type/i }));
+      await user.click(screen.getByRole('button', { name: /add session type/i }));
+
+      await waitFor(() => screen.getByRole('dialog'));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
   });
 
-  it('opens the Add modal when Add Session Type is clicked', async () => {
-    const user = userEvent.setup();
-    render(<ConferenceSessionTypesTab conference={mockConference} isAdmin />, {
-      wrapper: createWrapper(),
+  describe('edit flow', () => {
+    it('opens the edit modal when the edit button is clicked', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(sampleSessionType.name)).toBeInTheDocument();
+      });
+
+      const editButtons = screen.getAllByRole('button', { name: /edit/i });
+      fireEvent.click(editButtons[0]);
+
+      const modal = screen.getByTestId('modal');
+      expect(modal).toBeInTheDocument();
     });
+  });
 
-    await waitFor(() => screen.getByRole('button', { name: /add session type/i }));
-    await user.click(screen.getByRole('button', { name: /add session type/i }));
+  describe('delete flow', () => {
+    it('shows a confirm dialog when the delete button is clicked', async () => {
+      render(<SessionTypesTab conference={mockConference} isAdmin={true} />, {
+        wrapper: createWrapper(),
+      });
 
-    await waitFor(() => screen.getByRole('dialog'));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(sampleSessionType.name)).toBeInTheDocument();
+      });
+
+      const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+      fireEvent.click(deleteButtons[0]);
+
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+    });
   });
 });

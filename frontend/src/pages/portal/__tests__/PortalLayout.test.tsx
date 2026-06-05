@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import PortalLayout from '../PortalLayout';
-import { renderWithPortalProviders } from '../../../test-utils';
+import {
+  renderWithPortalProviders,
+  makeApplicantAuthContext,
+  mockPortalMe,
+} from '../../../test-utils';
 
 // Mock portalApi — the layout fires ~8 GETs at mount; we route them by URL
 // here and only customize ``/portal/unified/my-trainings`` per test. Everything
@@ -157,5 +161,43 @@ describe('PortalLayout — Trainings sidebar entry', () => {
     // PortalLayout.tsx:643, so when activeTrainingsCount is 0 the link's
     // textContent is just the label — no digits.
     expect(link.textContent).not.toMatch(/\d/);
+  });
+});
+
+describe('PortalLayout — Registrations sidebar entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupApi();
+  });
+
+  it('shows the Registrations link when is_conference_attendee is true', async () => {
+    const authContext = makeApplicantAuthContext();
+    authContext.portalMe = { ...mockPortalMe, is_conference_attendee: true };
+
+    renderWithPortalProviders(<PortalLayout />, {
+      authContext,
+      route: '/acme/portal/news',
+      path: '/:companySlug/portal/*',
+    });
+
+    const link = await screen.findByRole('link', { name: /registrations/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/acme/portal/registrations');
+  });
+
+  it('hides the Registrations link when is_conference_attendee is false', async () => {
+    const authContext = makeApplicantAuthContext();
+    authContext.portalMe = { ...mockPortalMe, is_conference_attendee: false };
+
+    renderWithPortalProviders(<PortalLayout />, {
+      authContext,
+      route: '/acme/portal/news',
+      path: '/:companySlug/portal/*',
+    });
+
+    // Wait for the layout to settle by checking a known-visible element
+    await screen.findByText(/my profile/i);
+
+    expect(screen.queryByRole('link', { name: /registrations/i })).not.toBeInTheDocument();
   });
 });

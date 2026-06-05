@@ -111,6 +111,7 @@ export const registrationFinanceCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">Paid registrations create Attendee records (3.4) and Alumni records (3.6)</li>
 <li class="text-gray-700 dark:text-gray-300">Registration answers populate Analytics > Registration Questions (7.1.1)</li>
 <li class="text-gray-700 dark:text-gray-300">Cancelling a registration (via invoice cancellation) revokes conference access but preserves user accounts</li>
+<li class="text-gray-700 dark:text-gray-300">Registered attendees see a <strong>Registrations</strong> entry in their portal sidebar — showing conference name, booking option, and payment status across all their registrations.</li>
 </ul>
 <strong>Interdependencies:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">

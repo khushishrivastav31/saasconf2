@@ -24,11 +24,12 @@ export function getCurrentPrice(
 /**
  * Format price with currency
  */
-export function formatPrice(price: number, currency: string): string {
+export function formatPrice(price: number | string, currency: string): string {
+  const n = typeof price === 'string' ? parseFloat(price) : price;
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(price);
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(n);
   } catch {
-    return `${price.toFixed(2)} ${currency}`;
+    return `${n.toFixed(2)} ${currency}`;
   }
 }
 

@@ -1,68 +1,41 @@
-"""Tests for session type CRUD guards and business-logic hooks.
+"""Tests for session types CRUD endpoints (QA 2.3.1-2.3.2).
 
-Covers the gaps in test_settings_crud.py:
-- Delete blocked when CFP papers reference the type.
-- separately_bookable propagation to linked papers on update.
-- Non-admin access guard (403).
+Endpoint prefix: /api/v1/conferences/{conference_id}/settings/session-types
 """
 
-import os
 import uuid
 
-os.environ.setdefault(
-    "DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test"
-)
-os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
-os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
-os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
-
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import create_access_token, hash_password
 from app.models.cfp import CallForPapers
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import CFPPaper, PaperStatus
 from app.models.conference import Conference
+from app.models.settings import SessionType
 from app.models.tenant import Tenant
+from app.models.user import User
 from tests.conftest import auth_headers
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
-_BASE = "/api/v1/conferences/{conference_id}/settings/session-types"
+# ── Helpers ────────────────────────────────────────────────────────────
+
+
+def _make_token(user: User, modules: list[str] | None = None) -> str:
+    return create_access_token(
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        role=user.role,
+        modules=modules or [],
+    )
 
 
 def _url(conference_id: uuid.UUID, suffix: str = "") -> str:
-    base = _BASE.format(conference_id=conference_id)
-    return f"{base}/{suffix}" if suffix else base
-
-
-async def _create_session_type(
-    client: AsyncClient,
-    conference_id: uuid.UUID,
-    token: str,
-    *,
-    name: str = "Talk",
-    slug: str | None = None,
-    separately_bookable: bool = False,
-) -> dict:
-    slug = slug or name.lower().replace(" ", "-")
-    resp = await client.post(
-        _url(conference_id),
-        json={
-            "name": name,
-            "slug": slug,
-            "duration_minutes": 30,
-            "separately_bookable": separately_bookable,
-        },
-        headers=auth_headers(token),
-    )
-    assert resp.status_code == 200, resp.text
-    return resp.json()
+    base = f"/api/v1/conferences/{conference_id}/settings/session-types"
+    return f"{base}{suffix}" if suffix else base
 
 
 async def _create_cfp_with_paper(
@@ -71,12 +44,10 @@ async def _create_cfp_with_paper(
     conference: Conference,
     session_type_id: uuid.UUID,
 ) -> CFPPaper:
-    """Create minimal CFP + applicant + paper linked to a session type."""
     cfp = CallForPapers(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         title="Test CFP",
-        status="open",
     )
     db.add(cfp)
     await db.flush()
@@ -106,36 +77,232 @@ async def _create_cfp_with_paper(
     return paper
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
+# ── Fixtures ───────────────────────────────────────────────────────────
 
 
-class TestSessionTypeGuards:
-    """Business-logic guards and hooks on the session-types endpoint."""
+@pytest.fixture()
+def admin_token(tenant_admin_user: User) -> str:
+    return _make_token(tenant_admin_user, modules=["conferences"])
 
-    @pytest.mark.asyncio
-    async def test_delete_blocked_when_paper_references_session_type(
+
+@pytest.fixture()
+def user_token(regular_user: User) -> str:
+    return _make_token(regular_user, modules=["conferences"])
+
+
+@pytest_asyncio.fixture()
+async def session_type(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+) -> SessionType:
+    st = SessionType(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        name="Talk",
+        slug="talk",
+        duration_minutes=30,
+        cfp_eligible=True,
+        separately_bookable=False,
+        is_active=True,
+    )
+    db_session.add(st)
+    await db_session.commit()
+    await db_session.refresh(st)
+    return st
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 1. LIST
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestListSessionTypes:
+    async def test_list_empty(
         self,
         client: AsyncClient,
-        db_session: AsyncSession,
         conference: Conference,
-        tenant: Tenant,
         tenant_with_modules: Tenant,
-        tenant_admin_token: str,
+        admin_token: str,
     ) -> None:
-        """DELETE returns 400 when a CFP paper is using the session type."""
-        st = await _create_session_type(client, conference.id, tenant_admin_token, name="Keynote", slug="keynote")
-        st_id = uuid.UUID(st["id"])
+        response = await client.get(_url(conference.id), headers=auth_headers(admin_token))
 
-        await _create_cfp_with_paper(db_session, tenant, conference, session_type_id=st_id)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
 
-        resp = await client.delete(
-            _url(conference.id, st["id"]),
-            headers=auth_headers(tenant_admin_token),
+    async def test_list_returns_existing(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+        session_type: SessionType,
+    ) -> None:
+        response = await client.get(_url(conference.id), headers=auth_headers(admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["name"] == "Talk"
+        assert data["items"][0]["slug"] == "talk"
+        assert data["items"][0]["duration_minutes"] == 30
+
+    async def test_list_requires_auth(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+    ) -> None:
+        response = await client.get(_url(conference.id))
+        assert response.status_code == 401
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 2. CREATE
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestCreateSessionType:
+    async def test_create_minimal(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+    ) -> None:
+        payload = {
+            "name": "Workshop",
+            "slug": "workshop",
+            "duration_minutes": 90,
+        }
+        response = await client.post(_url(conference.id), json=payload, headers=auth_headers(admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Workshop"
+        assert data["slug"] == "workshop"
+        assert data["duration_minutes"] == 90
+        assert data["cfp_eligible"] is True
+        assert data["separately_bookable"] is False
+        assert data["is_active"] is True
+
+    async def test_create_with_all_fields(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+    ) -> None:
+        payload = {
+            "name": "Keynote",
+            "slug": "keynote",
+            "duration_minutes": 60,
+            "cfp_eligible": False,
+            "separately_bookable": True,
+            "max_attendees": 500,
+            "is_active": True,
+        }
+        response = await client.post(_url(conference.id), json=payload, headers=auth_headers(admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["cfp_eligible"] is False
+        assert data["separately_bookable"] is True
+        assert data["max_attendees"] == 500
+
+    async def test_create_duplicate_slug_fails(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+        session_type: SessionType,
+    ) -> None:
+        payload = {"name": "Talk 2", "slug": "talk", "duration_minutes": 45}
+        response = await client.post(_url(conference.id), json=payload, headers=auth_headers(admin_token))
+
+        assert response.status_code == 400
+
+    async def test_create_requires_tenant_admin(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        user_token: str,
+    ) -> None:
+        payload = {"name": "X", "slug": "x", "duration_minutes": 30}
+        response = await client.post(_url(conference.id), json=payload, headers=auth_headers(user_token))
+
+        assert response.status_code == 403
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 3. UPDATE (PATCH)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestUpdateSessionType:
+    async def test_put_name(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+        session_type: SessionType,
+    ) -> None:
+        payload = {
+            "name": "Lightning Talk",
+            "slug": session_type.slug,
+            "duration_minutes": session_type.duration_minutes,
+        }
+        response = await client.put(
+            _url(conference.id, f"/{session_type.id}"),
+            json=payload,
+            headers=auth_headers(admin_token),
         )
-        assert resp.status_code == 400
-        assert "Cannot delete" in resp.json()["detail"]
+
+        assert response.status_code == 200
+        assert response.json()["name"] == "Lightning Talk"
+
+    async def test_put_duration(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+        session_type: SessionType,
+    ) -> None:
+        payload = {
+            "name": session_type.name,
+            "slug": session_type.slug,
+            "duration_minutes": 45,
+        }
+        response = await client.put(
+            _url(conference.id, f"/{session_type.id}"),
+            json=payload,
+            headers=auth_headers(admin_token),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["duration_minutes"] == 45
+
+    async def test_put_not_found(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+    ) -> None:
+        response = await client.put(
+            _url(conference.id, f"/{uuid.uuid4()}"),
+            json={"name": "Ghost", "slug": "ghost", "duration_minutes": 30},
+            headers=auth_headers(admin_token),
+        )
+
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_separately_bookable_propagates_to_linked_papers(
@@ -145,58 +312,174 @@ class TestSessionTypeGuards:
         conference: Conference,
         tenant: Tenant,
         tenant_with_modules: Tenant,
-        tenant_admin_token: str,
+        admin_token: str,
+        session_type: SessionType,
     ) -> None:
         """Updating separately_bookable on a session type propagates to linked papers."""
-        st = await _create_session_type(
-            client, conference.id, tenant_admin_token, name="Workshop", slug="workshop", separately_bookable=False
-        )
-        st_id = uuid.UUID(st["id"])
-
-        paper = await _create_cfp_with_paper(db_session, tenant, conference, session_type_id=st_id)
+        paper = await _create_cfp_with_paper(db_session, tenant, conference, session_type_id=session_type.id)
         assert paper.separately_bookable is False
 
-        resp = await client.put(
-            _url(conference.id, st["id"]),
-            json={"separately_bookable": True},
-            headers=auth_headers(tenant_admin_token),
+        response = await client.put(
+            _url(conference.id, f"/{session_type.id}"),
+            json={
+                "name": session_type.name,
+                "slug": session_type.slug,
+                "duration_minutes": session_type.duration_minutes,
+                "separately_bookable": True,
+            },
+            headers=auth_headers(admin_token),
         )
-        assert resp.status_code == 200
+        assert response.status_code == 200
 
         await db_session.refresh(paper)
         assert paper.separately_bookable is True
 
-    @pytest.mark.asyncio
-    async def test_non_admin_cannot_create_session_type(
-        self,
-        client: AsyncClient,
-        conference: Conference,
-        tenant_with_modules: Tenant,
-        regular_user_token: str,
-    ) -> None:
-        """Regular (non-admin) user cannot create a session type."""
-        resp = await client.post(
-            _url(conference.id),
-            json={"name": "Talk", "slug": "talk", "duration_minutes": 30},
-            headers=auth_headers(regular_user_token),
-        )
-        assert resp.status_code == 403
 
-    @pytest.mark.asyncio
-    async def test_non_admin_cannot_delete_session_type(
+# ═══════════════════════════════════════════════════════════════════════
+# 4. DELETE
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestDeleteSessionType:
+    async def test_delete_succeeds(
         self,
         client: AsyncClient,
         conference: Conference,
         tenant_with_modules: Tenant,
-        tenant_admin_token: str,
-        regular_user_token: str,
+        admin_token: str,
+        session_type: SessionType,
     ) -> None:
-        """Regular user cannot delete a session type."""
-        st = await _create_session_type(
-            client, conference.id, tenant_admin_token, name="Panel", slug="panel"
+        response = await client.delete(
+            _url(conference.id, f"/{session_type.id}"),
+            headers=auth_headers(admin_token),
         )
-        resp = await client.delete(
-            _url(conference.id, st["id"]),
-            headers=auth_headers(regular_user_token),
+
+        assert response.status_code == 200
+
+        list_response = await client.get(_url(conference.id), headers=auth_headers(admin_token))
+        assert list_response.json()["total"] == 0
+
+    async def test_delete_blocked_when_paper_uses_it(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        conference: Conference,
+        tenant: Tenant,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+        session_type: SessionType,
+    ) -> None:
+        """409 when a CFPPaper references the session type."""
+        await _create_cfp_with_paper(db_session, tenant, conference, session_type_id=session_type.id)
+
+        response = await client.delete(
+            _url(conference.id, f"/{session_type.id}"),
+            headers=auth_headers(admin_token),
         )
-        assert resp.status_code == 403
+
+        assert response.status_code == 400
+        assert "paper" in response.json()["detail"].lower()
+
+    async def test_delete_not_found(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+    ) -> None:
+        response = await client.delete(
+            _url(conference.id, f"/{uuid.uuid4()}"),
+            headers=auth_headers(admin_token),
+        )
+
+        assert response.status_code == 404
+
+    async def test_delete_requires_tenant_admin(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+        user_token: str,
+        session_type: SessionType,
+    ) -> None:
+        response = await client.delete(
+            _url(conference.id, f"/{session_type.id}"),
+            headers=auth_headers(user_token),
+        )
+
+        assert response.status_code == 403
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 5. TENANT ISOLATION
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestTenantIsolation:
+    async def test_other_tenant_session_type_not_visible(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        admin_token: str,
+        session_type: SessionType,
+    ) -> None:
+        """Session type created for tenant_a must not appear for tenant_b."""
+        from app.models.module import Module, TenantModule
+
+        tenant_b = Tenant(
+            id=uuid.uuid4(),
+            name="Other Corp",
+            slug=f"other-{uuid.uuid4().hex[:8]}",
+            is_active=True,
+        )
+        db_session.add(tenant_b)
+        await db_session.flush()
+
+        user_b = User(
+            id=uuid.uuid4(),
+            tenant_id=tenant_b.id,
+            email=f"admin-b-{uuid.uuid4().hex[:8]}@test.com",
+            password_hash=hash_password("Password123!"),
+            first_name="B",
+            last_name="Admin",
+            role="tenant_admin",
+            is_active=True,
+        )
+        db_session.add(user_b)
+
+        mod = Module(
+            id=uuid.uuid4(),
+            name="Conferences",
+            code=f"conferences-{uuid.uuid4().hex[:4]}",
+            description="",
+            is_active=True,
+        )
+        db_session.add(mod)
+        await db_session.flush()
+
+        db_session.add(TenantModule(id=uuid.uuid4(), tenant_id=tenant_b.id, module_id=mod.id, is_enabled=True))
+        await db_session.flush()
+
+        conf_b = Conference(
+            id=uuid.uuid4(),
+            tenant_id=tenant_b.id,
+            name="Other Conf",
+            is_active=True,
+        )
+        db_session.add(conf_b)
+        await db_session.commit()
+
+        token_b = create_access_token(
+            user_id=user_b.id,
+            tenant_id=user_b.tenant_id,
+            role=user_b.role,
+            modules=["conferences"],
+        )
+
+        response = await client.get(_url(conf_b.id), headers=auth_headers(token_b))
+        assert response.status_code == 200
+        assert response.json()["total"] == 0

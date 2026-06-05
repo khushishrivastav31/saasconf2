@@ -16,8 +16,10 @@ it — preserving "one email = one portal account" per tenant.
 from __future__ import annotations
 
 import logging
+import uuid as _uuid
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security.pii_crypto import encrypt_pii, hash_email, hash_phone
@@ -38,6 +40,10 @@ async def ensure_portal_user_for_applicant(
     successful legacy CFP login so orphans self-heal without operator action.
 
     This does NOT commit — the caller's transaction controls persistence.
+
+    Uses INSERT ... ON CONFLICT DO NOTHING so concurrent verify-email requests
+    (e.g. email client pre-fetch + user click) are handled atomically without
+    savepoints, which asyncpg does not recover from cleanly.
     """
     if applicant.portal_user_id:
         return await db.get(PortalUser, applicant.portal_user_id)
@@ -50,16 +56,14 @@ async def ensure_portal_user_for_applicant(
 
     email_hash = hash_email(applicant.email)
 
-    result = await db.execute(
-        select(PortalUser).where(
-            PortalUser.tenant_id == applicant.tenant_id,
-            PortalUser.email_hash == email_hash,
-        )
-    )
-    portal_user = result.scalar_one_or_none()
-
-    if portal_user is None:
-        portal_user = PortalUser(
+    # Use INSERT ... ON CONFLICT DO NOTHING so that concurrent requests for the
+    # same email (e.g. email-client pre-fetch + real click) don't race into a
+    # UniqueViolationError.  The final SELECT always retrieves the authoritative
+    # row — whether we just inserted it or a concurrent request beat us to it.
+    stmt = (
+        pg_insert(PortalUser)
+        .values(
+            id=_uuid.uuid4(),
             tenant_id=applicant.tenant_id,
             email_encrypted=encrypt_pii(applicant.email),
             email_hash=email_hash,
@@ -79,23 +83,26 @@ async def ensure_portal_user_for_applicant(
             postal_code=applicant.postal_code,
             country=applicant.country,
             email_verified_at=applicant.email_verified_at,
+            is_active=True,
             theme_preference=applicant.theme_preference,
         )
-        db.add(portal_user)
-        await db.flush()
-        logger.info(
-            "Auto-healed orphan CFP applicant %s → new portal_user %s (tenant %s)",
-            applicant.id,
-            portal_user.id,
-            applicant.tenant_id,
+        .on_conflict_do_nothing(index_elements=["tenant_id", "email_hash"])
+    )
+    await db.execute(stmt)
+
+    result = await db.execute(
+        select(PortalUser).where(
+            PortalUser.tenant_id == applicant.tenant_id,
+            PortalUser.email_hash == email_hash,
         )
-    else:
-        logger.info(
-            "Linked orphan CFP applicant %s to existing portal_user %s (tenant %s)",
-            applicant.id,
-            portal_user.id,
-            applicant.tenant_id,
-        )
+    )
+    portal_user = result.scalar_one()
 
     applicant.portal_user_id = portal_user.id
+    logger.info(
+        "Ensured portal_user %s for CFP applicant %s (tenant %s)",
+        portal_user.id,
+        applicant.id,
+        applicant.tenant_id,
+    )
     return portal_user

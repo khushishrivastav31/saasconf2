@@ -343,11 +343,12 @@ class TestMergeHistoryContinuity:
         event_b_id = event_b.id
         b_email_hash = pu_b.email_hash
 
-        # Merge: A absorbs B. The merge code will move B's email_hash onto A
-        # (so the email can still log in) and delete B.
-        pu_a.email = pu_b.email
-        await db_session.flush()
+        # Merge: A absorbs B. Delete B first to release the unique email_hash,
+        # then assign B's email to A so the email can still log in.
+        b_email = pu_b.email
         await db_session.delete(pu_b)
+        await db_session.flush()
+        pu_a.email = b_email
         await db_session.commit()
 
         # A reader querying "events for A" via (portal_user_id OR email_hash)

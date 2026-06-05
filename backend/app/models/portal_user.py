@@ -58,9 +58,12 @@ class PortalUser(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    # Legacy (tenant_id, email) unique index retired in migration 199; uniqueness
-    # is enforced via (tenant_id, email_hash) created in migration 197.
-    __table_args__ = (Index("idx_portal_users_tenant", "tenant_id"),)
+    # ix_portal_users_tenant_email_hash created in migration 197 — declared here
+    # so create_all() (test DB) also creates it and ON CONFLICT DO NOTHING works.
+    __table_args__ = (
+        Index("idx_portal_users_tenant", "tenant_id"),
+        Index("ix_portal_users_tenant_email_hash", "tenant_id", "email_hash", unique=True),
+    )
 
     # customer_events uses SET NULL rather than cascade-delete so that a
     # merged user's history survives via subject_email_hash.

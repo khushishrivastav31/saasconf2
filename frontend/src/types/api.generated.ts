@@ -12157,6 +12157,30 @@ export type paths = {
     patch: operations['patch_portal_profile_api_v1_portal_unified_me_patch'];
     trace?: never;
   };
+  '/api/v1/portal/unified/me/registrations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Portal My Registrations
+     * @description List the current portal user's conference registrations.
+     *
+     *     Matched by email_hash so training-only users who were also registered
+     *     as conference attendees see the right rows. Cancelled registrations are
+     *     excluded. Results are ordered by conference name.
+     */
+    get: operations['get_portal_my_registrations_api_v1_portal_unified_me_registrations_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/portal/unified/my-trainings': {
     parameters: {
       query?: never;
@@ -57287,6 +57311,28 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_portal_my_registrations_api_v1_portal_unified_me_registrations_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          }[];
         };
       };
     };

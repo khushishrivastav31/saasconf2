@@ -40,15 +40,16 @@ export function getCurrentPrice(
   return { price, currency: active.currency, periodName: active.name };
 }
 
-export function formatPrice(price: number, currency: string | null): string {
+export function formatPrice(price: number | string, currency: string | null): string {
+  const n = typeof price === 'string' ? parseFloat(price) : price;
   if (currency) {
     try {
-      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(price);
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(n);
     } catch {
-      return `${price.toFixed(2)} ${currency}`;
+      return `${n.toFixed(2)} ${currency}`;
     }
   }
-  return price.toFixed(2);
+  return n.toFixed(2);
 }
 
 // ---------------------------------------------------------------------------

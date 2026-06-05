@@ -252,6 +252,7 @@ function PortalLayout() {
   const hasInvoices = portalMe?.has_invoices ?? false;
   const hasPapers = portalMe?.has_papers ?? false;
   const hasAnyRole = portalMe?.has_any_role ?? false;
+  const isConferenceAttendee = portalMe?.is_conference_attendee ?? false;
 
   // Backend returns ``{items: [...]}`` (see backend/app/core/portal_training_listing.py).
   // Enabled for any logged-in portal user — training-only users (no
@@ -433,6 +434,9 @@ function PortalLayout() {
       label: 'Account',
       items: [
         { name: 'My Profile', href: `${basePath}/profile`, icon: UserIcon },
+        ...(isConferenceAttendee
+          ? [{ name: 'Registrations', href: `${basePath}/registrations`, icon: TicketIcon }]
+          : []),
         ...(hasInvoices
           ? [{ name: 'My Invoices', href: `${basePath}/invoices`, icon: InvoiceIcon }]
           : []),

@@ -491,6 +491,86 @@ async def get_portal_profile(
     }
 
 
+@router.get("/portal/unified/me/registrations")
+async def get_portal_my_registrations(
+    request: Request,
+    db: DbSessionDep,
+) -> list[dict]:
+    """List the current portal user's conference registrations.
+
+    Matched by email_hash so training-only users who were also registered
+    as conference attendees see the right rows. Cancelled registrations are
+    excluded. Results are ordered by conference name.
+    """
+    from app.models.booking import BookingOption
+    from app.models.conference import Conference
+    from app.models.invoice import Invoice
+    from app.models.registration import Registration, RegistrationStatus
+
+    user = await _get_current_portal_user(request, db)
+    user_email = (read_pii(user, "email") or "").lower()
+    if not user_email:
+        return []
+
+    email_hash = hash_email(user_email)
+
+    result = await db.execute(
+        select(
+            Registration,
+            Conference.name.label("conference_name"),
+            BookingOption.name.label("booking_option_name"),
+        )
+        .join(Conference, Conference.id == Registration.conference_id)
+        .outerjoin(BookingOption, BookingOption.id == Registration.booking_option_id)
+        .where(
+            Registration.tenant_id == user.tenant_id,
+            Registration.email_hash == email_hash,
+            Registration.status != RegistrationStatus.CANCELLED.value,
+        )
+        .order_by(Conference.name)
+    )
+    rows = result.all()
+
+    if not rows:
+        return []
+
+    billing_profile_ids = list(
+        {row.Registration.billing_profile_id for row in rows if row.Registration.billing_profile_id}
+    )
+    invoices_by_bp: dict = {}
+    if billing_profile_ids:
+        inv_result = await db.execute(
+            select(Invoice).where(
+                Invoice.tenant_id == user.tenant_id,
+                Invoice.recipient_source_type == "registration",
+                Invoice.recipient_source_id.in_(billing_profile_ids),
+                Invoice.is_active.is_(True),
+                Invoice.replaced_by_invoice_id.is_(None),
+            )
+        )
+        for inv in inv_result.scalars():
+            if inv.recipient_source_id is not None and inv.recipient_source_id not in invoices_by_bp:
+                invoices_by_bp[inv.recipient_source_id] = inv
+
+    return [
+        {
+            "id": str(reg.id),
+            "conference_id": str(reg.conference_id),
+            "conference_name": conference_name,
+            "booking_option_name": booking_option_name,
+            "status": reg.status,
+            "invoice_id": str(invoices_by_bp[reg.billing_profile_id].id)
+            if reg.billing_profile_id in invoices_by_bp
+            else None,
+            "invoice_number": invoices_by_bp[reg.billing_profile_id].invoice_number
+            if reg.billing_profile_id in invoices_by_bp
+            else None,
+            "created_at": reg.created_at.isoformat() if reg.created_at else None,
+        }
+        for reg, conference_name, booking_option_name in rows
+    ]
+
+
 class PortalMePatch(BaseModel):
     """Partial update for portal profile.
 
