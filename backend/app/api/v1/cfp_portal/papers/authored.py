@@ -12,6 +12,7 @@ from fastapi import APIRouter
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import selectinload
 
+from app.api.v1.cfp._paper_helpers import sync_paper_topics, validate_topics
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import AuthorizationError, NotFoundError, SubmissionValidationError, ValidationError
 from app.core.utils import utcnow
@@ -140,6 +141,10 @@ async def create_paper(
     db.add(paper)
     await db.flush()
 
+    if data.topic_ids:
+        await validate_topics(db, data.topic_ids, current.tenant_id)
+        await sync_paper_topics(db, paper.id, data.topic_ids)
+
     if data.cospeaker_emails:
         await _sync_cospeakers(db, paper, data.cospeaker_emails, current)
 
@@ -163,9 +168,15 @@ async def update_paper(
 
     is_main = str(paper.main_speaker_id) == str(current.applicant_id)
 
-    update_data = data.model_dump(exclude_unset=True, exclude={"cospeaker_emails"})
+    update_data = data.model_dump(exclude_unset=True, exclude={"cospeaker_emails", "topic_ids"})
     for field, value in update_data.items():
         setattr(paper, field, value)
+
+    if "topic_ids" in data.model_fields_set:
+        topic_ids = data.topic_ids or []
+        if topic_ids:
+            await validate_topics(db, topic_ids, current.tenant_id)
+        await sync_paper_topics(db, paper.id, topic_ids)
 
     # Only main speaker can manage co-speakers
     if data.cospeaker_emails is not None:

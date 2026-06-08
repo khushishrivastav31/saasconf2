@@ -22425,6 +22425,8 @@ export type components = {
       level?: string | null;
       /** Learning Objectives */
       learning_objectives?: string | null;
+      /** Topic Ids */
+      topic_ids?: string[];
       /** Custom Field Answers */
       custom_field_answers?: {
         [key: string]: unknown;
@@ -22503,6 +22505,11 @@ export type components = {
        * @default []
        */
       cospeakers?: components['schemas']['PortalCospeakerResponse'][];
+      /**
+       * Topics
+       * @default []
+       */
+      topics?: components['schemas']['PortalTopicResponse'][];
       /** Submitted At */
       submitted_at?: string | null;
       /**
@@ -22535,6 +22542,8 @@ export type components = {
       level?: string | null;
       /** Learning Objectives */
       learning_objectives?: string | null;
+      /** Topic Ids */
+      topic_ids?: string[] | null;
       /** Custom Field Answers */
       custom_field_answers?: {
         [key: string]: unknown;
@@ -22944,7 +22953,7 @@ export type components = {
     };
     /**
      * PortalTopicResponse
-     * @description Topic info for committee membership.
+     * @description Topic info for portal paper and committee membership.
      */
     PortalTopicResponse: {
       /**

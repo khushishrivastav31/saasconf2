@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
@@ -16,6 +16,7 @@ import type {
   PortalPaperFormSchema,
   PortalPaperFormField,
   PortalPaperFormVariant,
+  PortalTopic,
 } from '../../types/portal';
 import { parseApiError } from '../../utils/apiError';
 import { validateEmail } from '../../utils/validators';
@@ -168,11 +169,13 @@ function SubmitPaperPage() {
   const [abstractLong, setAbstractLong] = useState('');
   const [level, setLevel] = useState('');
   const [learningObjectives, setLearningObjectives] = useState('');
+  const [topicIds, setTopicIds] = useState<string[]>([]);
   const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
   const [cospeakerInput, setCospeakerInput] = useState('');
   const [customFieldAnswers, setCustomFieldAnswers] = useState<Record<string, unknown>>({});
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
 
   // Unsaved changes guard — dirty if user has entered any meaningful content
   const isDirty = useMemo(
@@ -224,6 +227,16 @@ function SubmitPaperPage() {
     refetchOnWindowFocus: true, // Refetch when user returns to the tab
   });
 
+  // Load available topics for the tenant
+  const { data: availableTopics = [] } = useQuery({
+    queryKey: ['portal-topics'],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalTopic[]>('/portal/topics');
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+
   const selectedConference = conferences?.find((c) => c.id === selectedConferenceId);
   const allowOutOfTimeframe = applicant?.allow_out_of_timeframe ?? false;
   const availableCfps = selectedConference?.cfps.filter(
@@ -236,6 +249,13 @@ function SubmitPaperPage() {
       setSelectedCfpId(availableCfps[0].id);
     }
   }, [availableCfps, selectedCfpId]);
+
+  // Scroll error banner into view whenever a new error is set
+  useEffect(() => {
+    if (error && errorRef.current && typeof errorRef.current.scrollIntoView === 'function') {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [error]);
 
   const selectedCfp = availableCfps?.find((c) => c.id === selectedCfpId);
   const requiredSpeakerFields = selectedCfp?.required_speaker_fields || [];
@@ -391,6 +411,13 @@ function SubmitPaperPage() {
       return;
     }
 
+    // Validate required builtin topics field
+    const topicsField = unifiedFormFields.find((f) => f.type === 'builtin' && f.key === 'topics');
+    if (topicsField?.is_required && topicIds.length === 0) {
+      setError('Please select at least one topic');
+      return;
+    }
+
     // Validate required custom fields
     for (const field of unifiedFormFields) {
       if (field.type === 'custom' && field.is_required) {
@@ -418,6 +445,7 @@ function SubmitPaperPage() {
       ...(abstractLong ? { abstract_long: abstractLong } : {}),
       ...(level ? { level } : {}),
       ...(learningObjectives ? { learning_objectives: learningObjectives } : {}),
+      ...(topicIds.length > 0 ? { topic_ids: topicIds } : {}),
       ...(cospeakerEmails.length > 0 ? { cospeaker_emails: cospeakerEmails } : {}),
       ...(Object.keys(customFieldAnswers).length > 0
         ? { custom_field_answers: customFieldAnswers }
@@ -441,7 +469,10 @@ function SubmitPaperPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-3 py-2 rounded text-sm mb-4">
+        <div
+          ref={errorRef}
+          className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-3 py-2 rounded text-sm mb-4"
+        >
           {error}
         </div>
       )}
@@ -726,8 +757,63 @@ function SubmitPaperPage() {
                   );
 
                 case 'topics':
-                  // Topics would need topic selection - skip for now if not implemented
-                  return null;
+                  return (
+                    <div key={field.key}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {field.label}
+                        {field.is_required && <span className="text-red-500"> *</span>}
+                      </label>
+                      {availableTopics.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {availableTopics.map((topic) => {
+                            const isSelected = topicIds.includes(topic.id);
+                            return (
+                              <button
+                                key={topic.id}
+                                type="button"
+                                onClick={() =>
+                                  setTopicIds((prev) =>
+                                    isSelected
+                                      ? prev.filter((id) => id !== topic.id)
+                                      : [...prev, topic.id]
+                                  )
+                                }
+                                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                  isSelected
+                                    ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                {topic.name}
+                                {isSelected && (
+                                  <svg
+                                    className="w-4 h-4 ml-1"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                          No topics available.
+                        </p>
+                      )}
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
+                    </div>
+                  );
 
                 default:
                   return null;

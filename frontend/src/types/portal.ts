@@ -228,6 +228,7 @@ export interface PortalPaper {
   main_speaker_first_name: string | null;
   main_speaker_last_name: string | null;
   cospeakers: PortalCospeaker[];
+  topics: PortalTopic[];
   custom_field_answers: Record<string, unknown> | null;
   submitted_at: string | null;
   created_at: string;
@@ -248,6 +249,7 @@ export interface PortalPaperCreateRequest {
   abstract_long?: string;
   level?: string;
   learning_objectives?: string;
+  topic_ids?: string[];
   cospeaker_emails?: string[];
   custom_field_answers?: Record<string, unknown>;
 }
@@ -259,6 +261,7 @@ export interface PortalPaperUpdateRequest {
   abstract_long?: string;
   level?: string;
   learning_objectives?: string;
+  topic_ids?: string[];
   cospeaker_emails?: string[];
   custom_field_answers?: Record<string, unknown>;
 }

@@ -11,6 +11,7 @@ import type {
   PortalSpeakerFeedbackListResponse,
   PortalPaperFormSchema,
   PortalPaperFormField,
+  PortalTopic,
 } from '../../types/portal';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
 import { isAxiosError } from 'axios';
@@ -64,6 +65,7 @@ function PaperDetailPage() {
   const [editLevel, setEditLevel] = useState('');
   const [editSessionTypeId, setEditSessionTypeId] = useState('');
   const [editLearningObjectives, setEditLearningObjectives] = useState('');
+  const [editTopicIds, setEditTopicIds] = useState<string[]>([]);
   const [editCustomFieldAnswers, setEditCustomFieldAnswers] = useState<Record<string, unknown>>({});
   const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
   const [cospeakerInput, setCospeakerInput] = useState('');
@@ -131,6 +133,16 @@ function PaperDetailPage() {
       return res.data;
     },
     enabled: !!paper?.cfp_id && (isEditing || paper?.status === 'draft'),
+    staleTime: 60_000,
+  });
+
+  // Load available topics for topic selection
+  const { data: availableTopics = [] } = useQuery({
+    queryKey: ['portal-topics'],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalTopic[]>('/portal/topics');
+      return res.data;
+    },
     staleTime: 60_000,
   });
 
@@ -326,6 +338,7 @@ function PaperDetailPage() {
     setEditLevel(paper.level || '');
     setEditSessionTypeId(paper.session_type_id || '');
     setEditLearningObjectives(paper.learning_objectives || '');
+    setEditTopicIds(paper.topics.map((t) => t.id));
     setCospeakerEmails(paper.cospeakers.map((cs) => cs.email));
     setEditCustomFieldAnswers(paper.custom_field_answers || {});
     setVideoFile(null);
@@ -358,6 +371,7 @@ function PaperDetailPage() {
       level: editLevel || undefined,
       session_type_id: editSessionTypeId || undefined,
       learning_objectives: editLearningObjectives || undefined,
+      topic_ids: editTopicIds,
       ...(paper?.is_main_speaker ? { cospeaker_emails: cospeakerEmails } : {}),
       ...(Object.keys(editCustomFieldAnswers).length > 0
         ? { custom_field_answers: editCustomFieldAnswers }
@@ -520,6 +534,9 @@ function PaperDetailPage() {
             setEditSessionTypeId={setEditSessionTypeId}
             editLearningObjectives={editLearningObjectives}
             setEditLearningObjectives={setEditLearningObjectives}
+            editTopicIds={editTopicIds}
+            setEditTopicIds={setEditTopicIds}
+            availableTopics={availableTopics}
             editCustomFieldAnswers={editCustomFieldAnswers}
             setEditCustomFieldAnswers={setEditCustomFieldAnswers}
             cospeakerEmails={cospeakerEmails}

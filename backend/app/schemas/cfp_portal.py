@@ -226,6 +226,14 @@ class PortalConferenceDetailResponse(BaseModel):
 # --- Paper Schemas ---
 
 
+class PortalTopicResponse(BaseModel):
+    """Topic info for portal paper and committee membership."""
+
+    id: UUID
+    name: str
+    description: str | None = None
+
+
 class PortalCospeakerResponse(BaseModel):
     """Co-speaker info in portal paper response."""
 
@@ -262,6 +270,7 @@ class PortalPaperResponse(BaseModel):
     main_speaker_first_name: str | None = None
     main_speaker_last_name: str | None = None
     cospeakers: list[PortalCospeakerResponse] = []
+    topics: list[PortalTopicResponse] = []
     submitted_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -285,6 +294,7 @@ class PortalPaperCreateRequest(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
+    topic_ids: list[UUID] = Field(default_factory=list)
     custom_field_answers: dict | None = None
     cospeaker_emails: list[EmailStr] = Field(default_factory=list, max_length=3)
 
@@ -299,6 +309,7 @@ class PortalPaperUpdateRequest(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
+    topic_ids: list[UUID] | None = None
     custom_field_answers: dict | None = None
     cospeaker_emails: list[EmailStr] | None = Field(None, max_length=3)
 
@@ -328,14 +339,6 @@ class PortalInvitationListResponse(BaseModel):
 
 
 # --- Committee Membership Schemas ---
-
-
-class PortalTopicResponse(BaseModel):
-    """Topic info for committee membership."""
-
-    id: UUID
-    name: str
-    description: str | None = None
 
 
 class PortalCommitteeMembershipResponse(BaseModel):

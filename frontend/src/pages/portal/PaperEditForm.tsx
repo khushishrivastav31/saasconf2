@@ -1,4 +1,9 @@
-import type { PortalPaper, PortalConferenceDetail, PortalPaperFormField } from '../../types/portal';
+import type {
+  PortalPaper,
+  PortalConferenceDetail,
+  PortalPaperFormField,
+  PortalTopic,
+} from '../../types/portal';
 import RichTextEditor from '../../components/common/RichTextEditor';
 import { validateEmail } from '../../utils/validators';
 import { INVITATION_STATUS_COLORS } from '../../config/statusColors';
@@ -42,6 +47,9 @@ interface PaperEditFormProps {
   setEditSessionTypeId: (v: string) => void;
   editLearningObjectives: string;
   setEditLearningObjectives: (v: string) => void;
+  editTopicIds: string[];
+  setEditTopicIds: React.Dispatch<React.SetStateAction<string[]>>;
+  availableTopics: PortalTopic[];
   editCustomFieldAnswers: Record<string, unknown>;
   setEditCustomFieldAnswers: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
   // Co-speakers
@@ -87,6 +95,9 @@ export default function PaperEditForm({
   setEditSessionTypeId,
   editLearningObjectives,
   setEditLearningObjectives,
+  editTopicIds,
+  setEditTopicIds,
+  availableTopics,
   editCustomFieldAnswers,
   setEditCustomFieldAnswers,
   cospeakerEmails,
@@ -186,7 +197,59 @@ export default function PaperEditForm({
               );
 
             case 'topics':
-              return null;
+              return (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {field.label}
+                    {field.is_required && <span className="text-red-500"> *</span>}
+                  </label>
+                  {availableTopics.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {availableTopics.map((topic) => {
+                        const isSelected = editTopicIds.includes(topic.id);
+                        return (
+                          <button
+                            key={topic.id}
+                            type="button"
+                            onClick={() =>
+                              setEditTopicIds((prev) =>
+                                isSelected
+                                  ? prev.filter((id) => id !== topic.id)
+                                  : [...prev, topic.id]
+                              )
+                            }
+                            className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                              isSelected
+                                ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {topic.name}
+                            {isSelected && (
+                              <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                      No topics available.
+                    </p>
+                  )}
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
+              );
 
             case 'level':
               return (

@@ -56,6 +56,7 @@ _PAPER_RESPONSE_LOAD_OPTIONS = (
     selectinload(CFPPaper.main_speaker),
     selectinload(CFPPaper.form_variant),
     selectinload(CFPPaper.cospeaker_associations).selectinload(CFPPaperCospeaker.applicant),
+    selectinload(CFPPaper.topics),
 )
 
 
@@ -191,6 +192,8 @@ def _render_portal_paper(
         if cfp_status != CFPStatus.COMPLETED.value:
             portal_status = PaperStatus.FINAL_CONSIDERATION.value
 
+    topics = [PortalTopicResponse(id=t.id, name=t.name, description=t.description) for t in paper.topics]
+
     return PortalPaperResponse(
         id=paper.id,
         cfp_id=paper.cfp_id,
@@ -212,6 +215,7 @@ def _render_portal_paper(
         main_speaker_first_name=main_speaker_first_name,
         main_speaker_last_name=main_speaker_last_name,
         cospeakers=cospeakers,
+        topics=topics,
         submitted_at=paper.submitted_at,
         created_at=paper.created_at,
         updated_at=paper.updated_at,
