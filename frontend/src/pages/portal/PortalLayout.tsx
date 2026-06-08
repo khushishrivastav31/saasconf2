@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense } from 'react';
+import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Navigate, Outlet, Link, useLocation, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
@@ -209,6 +209,28 @@ function PortalLayout() {
     },
     enabled: !!applicant,
   });
+
+  const missingRequiredSpeakerFields = useMemo(() => {
+    if (!applicant || !conferences) return [];
+    const required = new Set<string>();
+    for (const conf of conferences) {
+      for (const cfp of conf.cfps) {
+        if (cfp.status === 'open') {
+          for (const f of cfp.required_speaker_fields) required.add(f);
+        }
+      }
+    }
+    if (required.size === 0) return [];
+    const present: Record<string, boolean> = {
+      bio: !!(applicant.bio && applicant.bio.replace(/<[^>]*>/g, '').trim()),
+      title: !!applicant.title,
+      company: !!applicant.company,
+      phone: !!applicant.phone,
+      picture: !!applicant.picture_url,
+      video: !!applicant.video_url,
+    };
+    return [...required].filter((f) => !present[f]);
+  }, [applicant, conferences]);
 
   const { data: tenant } = useQuery({
     queryKey: ['portal-tenant', companySlug],
@@ -823,8 +845,57 @@ function PortalLayout() {
             onComplete={handleQuestionsComplete}
             isAttendeeOnly={isAttendeeOnly}
           />
+        ) : conferences !== undefined &&
+          missingRequiredSpeakerFields.length > 0 &&
+          !location.pathname.endsWith('/profile') ? (
+          <Navigate to={`${basePath}/profile`} replace />
         ) : (
           <main className="py-6 px-4 sm:px-6 lg:px-8">
+            {missingRequiredSpeakerFields.length > 0 && (
+              <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+                <svg
+                  className="mt-0.5 h-5 w-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
+                </svg>
+                <span>
+                  Your speaker profile is incomplete. Please{' '}
+                  <Link
+                    to={`${basePath}/profile`}
+                    className="font-semibold underline hover:no-underline"
+                  >
+                    complete your profile
+                  </Link>{' '}
+                  to submit papers. Missing:{' '}
+                  {missingRequiredSpeakerFields
+                    .map((f) =>
+                      f === 'bio'
+                        ? 'Short Bio'
+                        : f === 'title'
+                          ? 'Title / Position'
+                          : f === 'company'
+                            ? 'Company / Organization'
+                            : f === 'phone'
+                              ? 'Phone'
+                              : f === 'picture'
+                                ? 'Profile Picture'
+                                : f === 'video'
+                                  ? 'Video'
+                                  : f
+                    )
+                    .join(', ')}
+                  .
+                </span>
+              </div>
+            )}
             <Outlet />
           </main>
         )}

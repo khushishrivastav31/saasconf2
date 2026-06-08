@@ -164,8 +164,11 @@ function renderWithProviders(
 describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Stub pronoun-options fetch used by the page's own useEffect
-    mockPortalApi.get.mockResolvedValue({ data: [] });
+    mockPortalApi.get.mockImplementation((url: string) => {
+      // Both pronoun-options and portal/conferences return empty arrays by default
+      void url;
+      return Promise.resolve({ data: [] });
+    });
   });
 
   describe('null applicant guard', () => {
@@ -439,11 +442,16 @@ describe('ProfilePage', () => {
 
   describe('pronoun options', () => {
     it('fetches pronoun options on mount', async () => {
-      mockPortalApi.get.mockResolvedValueOnce({
-        data: [
-          { id: '1', name: 'she/her' },
-          { id: '2', name: 'he/him' },
-        ],
+      mockPortalApi.get.mockImplementation((url: string) => {
+        if (url === '/portal/pronoun-options') {
+          return Promise.resolve({
+            data: [
+              { id: '1', name: 'she/her' },
+              { id: '2', name: 'he/him' },
+            ],
+          });
+        }
+        return Promise.resolve({ data: [] });
       });
 
       renderWithProviders(<ProfilePage />);
@@ -454,12 +462,17 @@ describe('ProfilePage', () => {
     });
 
     it('renders pronoun options returned from the API', async () => {
-      mockPortalApi.get.mockResolvedValueOnce({
-        data: [
-          { id: '1', name: 'she/her' },
-          { id: '2', name: 'he/him' },
-          { id: '3', name: 'they/them' },
-        ],
+      mockPortalApi.get.mockImplementation((url: string) => {
+        if (url === '/portal/pronoun-options') {
+          return Promise.resolve({
+            data: [
+              { id: '1', name: 'she/her' },
+              { id: '2', name: 'he/him' },
+              { id: '3', name: 'they/them' },
+            ],
+          });
+        }
+        return Promise.resolve({ data: [] });
       });
 
       renderWithProviders(<ProfilePage />);

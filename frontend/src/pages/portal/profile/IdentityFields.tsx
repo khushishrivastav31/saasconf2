@@ -6,6 +6,7 @@ interface Props {
   title: string;
   company: string;
   pronounOptions: { id: string; name: string }[];
+  requiredFields?: string[];
   onFirstNameChange: (v: string) => void;
   onLastNameChange: (v: string) => void;
   onPronounsChange: (v: string) => void;
@@ -17,6 +18,8 @@ interface Props {
 const inputClass =
   'w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100';
 
+const Req = () => <span className="text-red-500"> *</span>;
+
 export default function IdentityFields({
   firstName,
   lastName,
@@ -25,6 +28,7 @@ export default function IdentityFields({
   title,
   company,
   pronounOptions,
+  requiredFields = [],
   onFirstNameChange,
   onLastNameChange,
   onPronounsChange,
@@ -32,6 +36,7 @@ export default function IdentityFields({
   onTitleChange,
   onCompanyChange,
 }: Props) {
+  const req = (field: string) => requiredFields.includes(field);
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
@@ -77,7 +82,7 @@ export default function IdentityFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Phone
+          Phone{req('phone') && <Req />}
         </label>
         <input
           type="tel"
@@ -88,7 +93,7 @@ export default function IdentityFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Title / Position
+          Title / Position{req('title') && <Req />}
         </label>
         <input
           type="text"
@@ -100,7 +105,7 @@ export default function IdentityFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Company / Organization
+          Company / Organization{req('company') && <Req />}
         </label>
         <input
           type="text"

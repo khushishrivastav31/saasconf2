@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
@@ -9,6 +9,7 @@ import type {
   ApplicantProfile,
   ApplicantProfileUpdate,
   PortalMePatchBody,
+  PortalConferenceSummary,
 } from '../../types/portal';
 import RichTextEditor from '../../components/common/RichTextEditor';
 import MediaPreviewModal from '../../components/MediaPreviewModal';
@@ -65,6 +66,30 @@ function ProfilePage() {
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   const [pronounOptions, setPronounOptions] = useState<{ id: string; name: string }[]>([]);
+
+  const { data: conferences } = useQuery({
+    queryKey: ['portal-conferences'],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalConferenceSummary[]>('/portal/conferences');
+      return res.data;
+    },
+    enabled: !!applicant,
+  });
+
+  const requiredSpeakerFields = useMemo(() => {
+    if (!conferences) return [];
+    const fields = new Set<string>();
+    for (const conf of conferences) {
+      for (const cfp of conf.cfps) {
+        if (cfp.status === 'open') {
+          for (const f of cfp.required_speaker_fields) {
+            fields.add(f);
+          }
+        }
+      }
+    }
+    return [...fields];
+  }, [conferences]);
 
   const [pictureFile, setPictureFile] = useState<File | null>(null);
   const [picturePreview, setPicturePreview] = useState<string | null>(null);
@@ -269,8 +294,38 @@ function ProfilePage() {
     },
   });
 
+  const [requiredFieldErrors, setRequiredFieldErrors] = useState<string[]>([]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isAttendeeOnly && requiredSpeakerFields.length > 0) {
+      const missing: string[] = [];
+      const fieldValues: Record<string, boolean> = {
+        bio: !!bio.replace(/<[^>]*>/g, '').trim(),
+        title: !!title.trim(),
+        company: !!company.trim(),
+        phone: !!phone.trim(),
+        picture: !!pictureFile || !!applicant?.picture_url,
+        video: !!videoFile || !!applicant?.video_url,
+      };
+      const labels: Record<string, string> = {
+        bio: 'Short Bio',
+        title: 'Title / Position',
+        company: 'Company / Organization',
+        phone: 'Phone',
+        picture: 'Profile Picture',
+        video: 'Video',
+      };
+      for (const field of requiredSpeakerFields) {
+        if (!fieldValues[field]) missing.push(labels[field] ?? field);
+      }
+      if (missing.length > 0) {
+        setRequiredFieldErrors(missing);
+        return;
+      }
+    }
+    setRequiredFieldErrors([]);
 
     if (isAttendeeOnly) {
       attendeeMutation.mutate({
@@ -481,6 +536,7 @@ function ProfilePage() {
               videoPreviewSrc={videoPreviewSrc}
               pictureError={pictureError}
               videoError={videoError}
+              requiredFields={requiredSpeakerFields}
               onPictureChange={handlePictureChange}
               onVideoChange={handleVideoChange}
               onOpenPreview={(src, type) => setMediaPreview({ open: true, src, type })}
@@ -494,6 +550,7 @@ function ProfilePage() {
               title={title}
               company={company}
               pronounOptions={pronounOptions}
+              requiredFields={requiredSpeakerFields}
               onFirstNameChange={setFirstName}
               onLastNameChange={setLastName}
               onPronounsChange={setPronouns}
@@ -518,6 +575,7 @@ function ProfilePage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Short Bio
+                {requiredSpeakerFields.includes('bio') && <span className="text-red-500"> *</span>}
               </label>
               <RichTextEditor
                 value={bio}
@@ -546,6 +604,12 @@ function ProfilePage() {
               onAgreesToRecordingChange={setAgreesToRecording}
               onMessageNotificationsChange={setMessageNotifications}
             />
+
+            {requiredFieldErrors.length > 0 && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
+                Please fill in all required fields before saving: {requiredFieldErrors.join(', ')}.
+              </div>
+            )}
 
             <SaveButton
               saveStatus={saveStatus}

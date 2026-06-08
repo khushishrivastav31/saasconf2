@@ -5,16 +5,20 @@ interface Props {
   videoPreviewSrc: string | null;
   pictureError: string | null;
   videoError: string | null;
+  requiredFields?: string[];
   onPictureChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onVideoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenPreview: (src: string, type: 'image' | 'video') => void;
 }
+
+const Req = () => <span className="text-red-500"> *</span>;
 
 export default function MediaUploader({
   picturePreviewSrc,
   videoPreviewSrc,
   pictureError,
   videoError,
+  requiredFields = [],
   onPictureChange,
   onVideoChange,
   onOpenPreview,
@@ -23,7 +27,7 @@ export default function MediaUploader({
     <>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Picture
+          Picture{requiredFields.includes('picture') && <Req />}
         </label>
         <div className="flex items-start gap-4">
           <button
@@ -71,7 +75,7 @@ export default function MediaUploader({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Video
+          Video{requiredFields.includes('video') && <Req />}
         </label>
         <div className="flex items-start gap-4">
           <button
