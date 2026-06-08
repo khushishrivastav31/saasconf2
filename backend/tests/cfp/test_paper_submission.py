@@ -27,6 +27,7 @@ from app.models.cfp import CallForPapers, CFPStatus
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import CFPPaper, PaperStatus
 from app.models.conference import Conference
+from app.models.form_schema import ConferencePaperFormSchema
 from app.models.tenant import Tenant
 
 # ---------------------------------------------------------------------------
@@ -428,6 +429,127 @@ class TestSubmitPaper:
         )
 
         assert resp.status_code == 422
+
+    async def test_builtin_required_field_from_form_schema_blocks_submission(
+        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant, conference: Conference
+    ) -> None:
+        """When builtin_fields_config marks abstract_long as required, submitting without it returns 422.
+
+        This is the MAIN-13316 regression test: the required checkbox in the Paper Form Builder
+        saves to builtin_fields_config, not to cfp.required_paper_fields, so validation must
+        read from the form schema config.
+        """
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+
+        # Simulate what the admin does in the Paper Form Builder: mark abstract_long as required
+        schema = ConferencePaperFormSchema(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            builtin_fields_config={
+                "abstract_long": {"visible": True, "required": True},
+            },
+        )
+        db_session.add(schema)
+        # cfp.required_paper_fields deliberately left empty (the legacy field)
+        await db_session.commit()
+
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Paper Missing Long Abstract",
+            abstract_short="Short abstract present.",
+            abstract_long=None,  # missing — should be caught
+            status=PaperStatus.DRAFT.value,
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 422
+
+    async def test_builtin_optional_field_does_not_block_submission(
+        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant, conference: Conference
+    ) -> None:
+        """When builtin_fields_config marks abstract_long as NOT required, omitting it is fine."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+
+        schema = ConferencePaperFormSchema(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            builtin_fields_config={
+                "abstract_long": {"visible": True, "required": False},
+            },
+        )
+        db_session.add(schema)
+        await db_session.commit()
+
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Paper Without Long Abstract",
+            abstract_short="Short abstract present.",
+            abstract_long=None,
+            status=PaperStatus.DRAFT.value,
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 200
+
+    async def test_invisible_required_field_does_not_block_submission(
+        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant, conference: Conference
+    ) -> None:
+        """A field marked required but hidden (visible=False) must not block submission."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+
+        schema = ConferencePaperFormSchema(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            builtin_fields_config={
+                "abstract_long": {"visible": False, "required": True},
+            },
+        )
+        db_session.add(schema)
+        await db_session.commit()
+
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Paper Without Hidden Field",
+            abstract_short="Short abstract.",
+            abstract_long=None,
+            status=PaperStatus.DRAFT.value,
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 200
 
     async def test_unauthenticated_submit_returns_401(
         self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant, conference: Conference

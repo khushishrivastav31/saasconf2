@@ -534,6 +534,7 @@ function PaperDetailPage() {
             isUpdatePending={updateMutation.isPending}
             isSubmitPending={submitMutation.isPending}
             isDeletePending={deleteMutation.isPending}
+            submitError={error || undefined}
             onSave={handleSave}
             onSubmit={() => submitMutation.mutate()}
             onCancel={() => setIsEditing(false)}

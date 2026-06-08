@@ -776,11 +776,7 @@ function PortalLayout() {
             </button>
             <div className="flex items-center gap-4 ml-auto">
               <ThemeToggle
-                onPersist={(t) =>
-                  applicant
-                    ? portalApi.put('/portal/me', { theme_preference: t })
-                    : portalApi.patch('/portal/unified/me', { theme_preference: t })
-                }
+                onPersist={(t) => portalApi.patch('/portal/unified/me', { theme_preference: t })}
               />
               <Link
                 to={`${basePath}/messages`}

@@ -56,6 +56,7 @@ interface PaperEditFormProps {
   videoError: string | null;
   // Save status
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  submitError?: string;
   // Pending states
   isUpdatePending: boolean;
   isSubmitPending: boolean;
@@ -97,6 +98,7 @@ export default function PaperEditForm({
   videoPreviewSrc,
   videoError,
   saveStatus,
+  submitError,
   isUpdatePending,
   isSubmitPending,
   isDeletePending,
@@ -577,6 +579,12 @@ export default function PaperEditForm({
       )}
 
       {/* Actions */}
+      {submitError && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
+          {submitError}
+        </div>
+      )}
+
       <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
         <div>
           {paper.is_main_speaker && (

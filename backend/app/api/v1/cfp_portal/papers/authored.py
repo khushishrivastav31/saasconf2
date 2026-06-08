@@ -190,14 +190,42 @@ async def submit_paper(
     if paper.status != PaperStatus.DRAFT.value:
         raise ValidationError("Only draft papers can be submitted")
 
+    # --- Load form schema config (authoritative source for required + char-limit validation) ---
+    from app.api.v1.cfp._paper_helpers import strip_html_for_char_count
+    from app.models.form_schema import ConferencePaperFormSchema
+    from app.models.paper_form_variant import PaperFormVariant
+
+    builtin_cfg: dict = {}
+    if paper.form_variant_id:
+        fv_result = await db.execute(select(PaperFormVariant).where(PaperFormVariant.id == paper.form_variant_id))
+        variant = fv_result.scalar_one_or_none()
+        if variant and variant.builtin_fields_config:
+            builtin_cfg = variant.builtin_fields_config
+    if not builtin_cfg:
+        # Get conference_id via the CFP junction table (papers don't have conference_id directly)
+        conf_id_result = await db.execute(
+            select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == paper.cfp_id)
+        )
+        conf_id = conf_id_result.scalar_one_or_none()
+        schema_result = (
+            await db.execute(
+                select(ConferencePaperFormSchema).where(ConferencePaperFormSchema.conference_id == conf_id)
+            )
+            if conf_id
+            else None
+        )
+        schema = schema_result.scalar_one_or_none() if schema_result else None
+        if schema and schema.builtin_fields_config:
+            builtin_cfg = schema.builtin_fields_config
+
     # --- Validate required fields before submission ---
     cfp_result = await db.execute(select(CallForPapers).where(CallForPapers.id == paper.cfp_id))
     cfp = cfp_result.scalar_one_or_none()
     if cfp:
         missing: list[str] = []
 
-        # Check required paper fields
         paper_field_map = {
+            "title": paper.title,
             "abstract_short": paper.abstract_short,
             "abstract_long": paper.abstract_long,
             "level": paper.level,
@@ -205,10 +233,24 @@ async def submit_paper(
             "session_type": paper.session_type_id,
             "topics": paper.topics if paper.topics else None,
         }
-        for field in cfp.required_paper_fields or []:
-            val = paper_field_map.get(field)
-            if not val:
-                missing.append(f"paper:{field}")
+
+        if builtin_cfg:
+            # builtin_fields_config is the authoritative source for the required flag —
+            # this is what the Paper Form Builder UI writes to when toggling the checkbox.
+            for field_key, cfg in builtin_cfg.items():
+                if not cfg.get("visible", True):
+                    continue  # hidden fields are never enforced
+                if not cfg.get("required", False):
+                    continue
+                val = paper_field_map.get(field_key)
+                if not val:
+                    missing.append(f"paper:{field_key}")
+        else:
+            # Legacy fallback: no form schema configured yet
+            for field in cfp.required_paper_fields or []:
+                val = paper_field_map.get(field)
+                if not val:
+                    missing.append(f"paper:{field}")
 
         # Check required speaker fields
         applicant_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == current.applicant_id))
@@ -240,33 +282,6 @@ async def submit_paper(
             )
 
     # --- Validate character limits from form schema config ---
-    from app.api.v1.cfp._paper_helpers import strip_html_for_char_count
-    from app.models.form_schema import ConferencePaperFormSchema
-    from app.models.paper_form_variant import PaperFormVariant
-
-    builtin_cfg: dict = {}
-    if paper.form_variant_id:
-        fv_result = await db.execute(select(PaperFormVariant).where(PaperFormVariant.id == paper.form_variant_id))
-        variant = fv_result.scalar_one_or_none()
-        if variant and variant.builtin_fields_config:
-            builtin_cfg = variant.builtin_fields_config
-    if not builtin_cfg:
-        # Get conference_id via the CFP junction table (papers don't have conference_id directly)
-        conf_id_result = await db.execute(
-            select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == paper.cfp_id)
-        )
-        conf_id = conf_id_result.scalar_one_or_none()
-        schema_result = (
-            await db.execute(
-                select(ConferencePaperFormSchema).where(ConferencePaperFormSchema.conference_id == conf_id)
-            )
-            if conf_id
-            else None
-        )
-        schema = schema_result.scalar_one_or_none() if schema_result else None
-        if schema and schema.builtin_fields_config:
-            builtin_cfg = schema.builtin_fields_config
-
     if builtin_cfg:
         char_limit_fields = {
             "title": ("Title", paper.title, False),
