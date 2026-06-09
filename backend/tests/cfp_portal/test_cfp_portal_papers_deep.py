@@ -1206,6 +1206,233 @@ class TestAttachments:
         )
         assert old_resp.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_upload_paper_file_for_draft_succeeds(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        cfp: CallForPapers,
+        tenant: Tenant,
+    ) -> None:
+        """Can upload a paper_file for a draft paper."""
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Paper with slides",
+            status=PaperStatus.DRAFT.value,
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        resp = await client.post(
+            f"{PORTAL_BASE}/attachments",
+            data={
+                "entity_type": "paper_file",
+                "entity_id": str(paper.id),
+                "description": "slides_field",
+            },
+            files={"file": ("slides.pdf", b"%PDF-1.4 test", "application/pdf")},
+            headers=auth_headers(applicant_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "id" in data
+        assert data["filename"] == "slides.pdf"
+
+    @pytest.mark.asyncio
+    async def test_upload_paper_file_to_non_draft_fails(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        cfp: CallForPapers,
+        tenant: Tenant,
+    ) -> None:
+        """Cannot upload paper_file to a submitted paper."""
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Submitted Paper",
+            status=PaperStatus.SUBMITTED.value,
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        resp = await client.post(
+            f"{PORTAL_BASE}/attachments",
+            data={
+                "entity_type": "paper_file",
+                "entity_id": str(paper.id),
+                "description": "slides_field",
+            },
+            files={"file": ("slides.pdf", b"%PDF-1.4 test", "application/pdf")},
+            headers=auth_headers(applicant_token),
+        )
+        assert resp.status_code == 400
+        assert "draft" in resp.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_upload_paper_file_replaces_same_field_keeps_other(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        cfp: CallForPapers,
+        tenant: Tenant,
+    ) -> None:
+        """Re-uploading a paper_file for the same field_key replaces only that field."""
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Paper with multi files",
+            status=PaperStatus.DRAFT.value,
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        # Upload for field "slides"
+        r1 = await client.post(
+            f"{PORTAL_BASE}/attachments",
+            data={"entity_type": "paper_file", "entity_id": str(paper.id), "description": "slides"},
+            files={"file": ("slides_v1.pdf", b"%PDF-1.4 v1", "application/pdf")},
+            headers=auth_headers(applicant_token),
+        )
+        assert r1.status_code == 200
+        slides_v1_id = r1.json()["id"]
+
+        # Upload for different field "video"
+        mp4_magic = b"\x00\x00\x00\x20ftypisom\x00\x00\x00\x00isomiso2avc1mp41"
+        r2 = await client.post(
+            f"{PORTAL_BASE}/attachments",
+            data={"entity_type": "paper_file", "entity_id": str(paper.id), "description": "video_field"},
+            files={"file": ("video.mp4", mp4_magic, "video/mp4")},
+            headers=auth_headers(applicant_token),
+        )
+        assert r2.status_code == 200
+        video_id = r2.json()["id"]
+
+        # Re-upload "slides" — should replace v1 but keep video
+        r3 = await client.post(
+            f"{PORTAL_BASE}/attachments",
+            data={"entity_type": "paper_file", "entity_id": str(paper.id), "description": "slides"},
+            files={"file": ("slides_v2.pdf", b"%PDF-1.4 v2", "application/pdf")},
+            headers=auth_headers(applicant_token),
+        )
+        assert r3.status_code == 200
+        slides_v2_id = r3.json()["id"]
+        assert slides_v2_id != slides_v1_id
+
+        # Original slides attachment should be replaced
+        old = await client.get(f"{PORTAL_BASE}/attachments/{slides_v1_id}/download", headers=auth_headers(applicant_token))
+        assert old.status_code == 404
+
+        # Video attachment should still exist
+        vid = await client.get(f"{PORTAL_BASE}/attachments/{video_id}/download", headers=auth_headers(applicant_token))
+        assert vid.status_code == 200
+
+
+class TestCustomFieldAnswers:
+    """Tests for custom_field_answers saved and returned on paper create/update/get."""
+
+    @pytest.mark.asyncio
+    async def test_create_paper_with_custom_field_answers(
+        self,
+        client: AsyncClient,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        cfp: CallForPapers,
+    ) -> None:
+        """custom_field_answers are saved on paper creation."""
+        resp = await client.post(
+            f"{PORTAL_BASE}/papers",
+            json={
+                "cfp_id": str(cfp.id),
+                "title": "Paper with custom answers",
+                "custom_field_answers": {
+                    "bio_field": "My session bio",
+                    "checkbox_field": True,
+                },
+            },
+            headers=auth_headers(applicant_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["custom_field_answers"]["bio_field"] == "My session bio"
+        assert data["custom_field_answers"]["checkbox_field"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_paper_custom_field_answers(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        cfp: CallForPapers,
+        tenant: Tenant,
+    ) -> None:
+        """custom_field_answers can be updated."""
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Paper",
+            status=PaperStatus.DRAFT.value,
+            custom_field_answers={"old_field": "old_value"},
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        resp = await client.put(
+            f"{PORTAL_BASE}/papers/{paper.id}",
+            json={"custom_field_answers": {"new_field": "new_value"}},
+            headers=auth_headers(applicant_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["custom_field_answers"]["new_field"] == "new_value"
+
+    @pytest.mark.asyncio
+    async def test_get_paper_returns_custom_field_answers(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        cfp: CallForPapers,
+        tenant: Tenant,
+    ) -> None:
+        """GET paper returns custom_field_answers in response."""
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Paper with answers",
+            status=PaperStatus.DRAFT.value,
+            custom_field_answers={"slides": {"attachment_id": "abc123", "filename": "slides.pdf"}},
+        )
+        db_session.add(paper)
+        await db_session.commit()
+
+        resp = await client.get(
+            f"{PORTAL_BASE}/papers/{paper.id}",
+            headers=auth_headers(applicant_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["custom_field_answers"]["slides"]["filename"] == "slides.pdf"
+
 
 # ── TestAssignedPapersDeep ───────────────────────────────────────────────
 

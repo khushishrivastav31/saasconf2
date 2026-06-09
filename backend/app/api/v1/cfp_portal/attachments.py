@@ -17,7 +17,7 @@ from .papers import _get_applicant_or_cospeaker_paper
 
 router = APIRouter()
 
-PORTAL_ALLOWED_ENTITY_TYPES = {"applicant_picture", "applicant_video", "paper_video", "speaker_expense"}
+PORTAL_ALLOWED_ENTITY_TYPES = {"applicant_picture", "applicant_video", "paper_video", "paper_file", "speaker_expense"}
 
 
 @router.post("/portal/attachments")
@@ -29,7 +29,7 @@ async def upload_portal_attachment(
     entity_id: str = Form(...),
     description: str | None = Form(None),
 ) -> dict:
-    """Upload an attachment (picture/video) for the current applicant or their paper."""
+    """Upload an attachment (picture/video/file) for the current applicant or their paper."""
     if entity_type not in PORTAL_ALLOWED_ENTITY_TYPES:
         raise ValidationError(f"Invalid entity_type: {entity_type}")
 
@@ -37,10 +37,10 @@ async def upload_portal_attachment(
     if entity_type in ("applicant_picture", "applicant_video"):
         if str(current.applicant_id) != entity_id:
             raise AuthorizationError("You can only upload media for your own profile")
-    elif entity_type == "paper_video":
+    elif entity_type in ("paper_video", "paper_file"):
         paper = await _get_applicant_or_cospeaker_paper(db, entity_id, current.applicant_id, current.tenant_id)
         if paper.status != PaperStatus.DRAFT.value:
-            raise ValidationError("Can only upload video for draft papers")
+            raise ValidationError("Can only upload files for draft papers")
     elif entity_type == "speaker_expense":
         from app.models.speaker_expense import SpeakerExpense
 
@@ -70,16 +70,18 @@ async def upload_portal_attachment(
         file_size = len(file_data)
     safe_filename = sanitize_filename(file.filename or "upload")
 
-    # Delete existing attachment of same type for this entity (only keep latest)
-    # Exception: speaker_expense allows multiple receipts
-    if entity_type != "speaker_expense":
-        existing_result = await db.execute(
-            select(Attachment).where(
-                Attachment.tenant_id == current.tenant_id,
-                Attachment.entity_type == entity_type,
-                Attachment.entity_id == entity_id,
-            )
+    # Delete existing attachment of same type for this entity (only keep latest).
+    # For paper_file, description holds the field_key — scope the replace to that field.
+    # Exception: speaker_expense allows multiple receipts.
+    if entity_type not in ("speaker_expense",):
+        stmt = select(Attachment).where(
+            Attachment.tenant_id == current.tenant_id,
+            Attachment.entity_type == entity_type,
+            Attachment.entity_id == entity_id,
         )
+        if entity_type == "paper_file" and description is not None:
+            stmt = stmt.where(Attachment.description == description)
+        existing_result = await db.execute(stmt)
         for old in existing_result.scalars().all():
             await db.delete(old)
 

@@ -342,6 +342,7 @@ export interface Paper {
   must_have_count: number;
   max_review_score: number | null;
   review_summaries: PaperReviewSummary[];
+  custom_field_answers: Record<string, unknown> | null;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;

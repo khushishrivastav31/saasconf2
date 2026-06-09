@@ -23,7 +23,7 @@ import { validateVideo } from '../../utils/mediaValidation';
 import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
 import PaperEditForm from './PaperEditForm';
-import PaperViewDisplay from './PaperViewDisplay';
+import PaperViewDisplay, { type ViewCustomField } from './PaperViewDisplay';
 
 const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean }[] = [
   { key: 'title', label: 'Title', alwaysRequired: true },
@@ -77,6 +77,9 @@ function PaperDetailPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
+
+  // Custom field file state (keyed by field_key)
+  const [editCustomFieldFiles, setEditCustomFieldFiles] = useState<Record<string, File>>({});
 
   // Media preview modal
   const [mediaPreview, setMediaPreview] = useState<{
@@ -132,7 +135,7 @@ function PaperDetailPage() {
       );
       return res.data;
     },
-    enabled: !!paper?.cfp_id && (isEditing || paper?.status === 'draft'),
+    enabled: !!paper?.cfp_id,
     staleTime: 60_000,
   });
 
@@ -345,6 +348,7 @@ function PaperDetailPage() {
     if (videoPreview) URL.revokeObjectURL(videoPreview);
     setVideoPreview(null);
     setVideoError(null);
+    setEditCustomFieldFiles({});
     setIsEditing(true);
     setError('');
   };
@@ -364,6 +368,34 @@ function PaperDetailPage() {
 
     setSaving();
 
+    // Upload any pending custom field files first
+    let resolvedCustomFieldAnswers = { ...editCustomFieldAnswers };
+    const pendingFiles = Object.entries(editCustomFieldFiles);
+    if (pendingFiles.length > 0 && paperId) {
+      for (const [fieldKey, file] of pendingFiles) {
+        try {
+          const form = new FormData();
+          form.append('file', file);
+          form.append('entity_type', 'paper_file');
+          form.append('entity_id', paperId);
+          form.append('description', fieldKey);
+          const resp = await portalApi.post<{ id: string; filename: string; file_size: number }>(
+            '/portal/attachments',
+            form,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
+          resolvedCustomFieldAnswers = {
+            ...resolvedCustomFieldAnswers,
+            [fieldKey]: { attachment_id: resp.data.id, filename: resp.data.filename },
+          };
+        } catch {
+          // Non-fatal: keep existing value for this field
+        }
+      }
+      setEditCustomFieldAnswers(resolvedCustomFieldAnswers);
+      setEditCustomFieldFiles({});
+    }
+
     const payload: PortalPaperUpdateRequest = {
       title: editTitle,
       abstract_short: editAbstractShort || undefined,
@@ -373,8 +405,8 @@ function PaperDetailPage() {
       learning_objectives: editLearningObjectives || undefined,
       topic_ids: editTopicIds,
       ...(paper?.is_main_speaker ? { cospeaker_emails: cospeakerEmails } : {}),
-      ...(Object.keys(editCustomFieldAnswers).length > 0
-        ? { custom_field_answers: editCustomFieldAnswers }
+      ...(Object.keys(resolvedCustomFieldAnswers).length > 0
+        ? { custom_field_answers: resolvedCustomFieldAnswers }
         : {}),
     };
 
@@ -539,6 +571,8 @@ function PaperDetailPage() {
             availableTopics={availableTopics}
             editCustomFieldAnswers={editCustomFieldAnswers}
             setEditCustomFieldAnswers={setEditCustomFieldAnswers}
+            editCustomFieldFiles={editCustomFieldFiles}
+            setEditCustomFieldFiles={setEditCustomFieldFiles}
             cospeakerEmails={cospeakerEmails}
             setCospeakerEmails={setCospeakerEmails}
             cospeakerInput={cospeakerInput}
@@ -565,6 +599,19 @@ function PaperDetailPage() {
             paper={paper}
             videoPreviewSrc={videoPreviewSrc}
             onMediaPreview={(src) => setMediaPreview({ open: true, src })}
+            customFields={unifiedFormFields
+              .filter(
+                (f): f is typeof f & { customField: NonNullable<typeof f.customField> } =>
+                  f.type === 'custom' && !!f.customField
+              )
+              .map(
+                (f): ViewCustomField => ({
+                  key: f.key,
+                  label: f.label,
+                  fieldType: f.customField.field_type,
+                  options: f.customField.options,
+                })
+              )}
           />
         )}
       </div>

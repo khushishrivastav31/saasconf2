@@ -105,6 +105,7 @@ export function PaperForm({
   // Reset form when the paper changes
   useEffect(() => {
     reset(paper ? paperToFormData(paper) : { ...emptyForm, cfp_id: conferenceCfpId || '' });
+    setCustomFieldAnswers(paper?.custom_field_answers ?? {});
     setValidationErrors([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paper?.id]);

@@ -1,3 +1,4 @@
+import api from '../../../../../config/api';
 import RichTextEditor from '../../../../../components/common/RichTextEditor';
 import type { UnifiedFormField } from './schema';
 
@@ -6,6 +7,20 @@ interface Props {
   canEdit: boolean;
   value: unknown;
   onChange: (value: unknown) => void;
+}
+
+async function downloadAdminAttachment(attachmentId: string, filename: string) {
+  try {
+    const res = await api.get(`/attachments/${attachmentId}/download`, { responseType: 'blob' });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    // silent
+  }
 }
 
 export default function PaperCustomField({ field, canEdit, value, onChange }: Props) {
@@ -103,7 +118,45 @@ export default function PaperCustomField({ field, canEdit, value, onChange }: Pr
           })}
         </div>
       )}
-      {cf.help_text && (
+      {cf.field_type === 'file_upload' &&
+        (() => {
+          const fileVal = value as { attachment_id?: string; filename?: string } | undefined;
+          const filename = fileVal?.filename;
+          const attachmentId = fileVal?.attachment_id;
+          if (!filename) {
+            return (
+              <p className="text-sm text-gray-400 dark:text-gray-500 italic">No file uploaded</p>
+            );
+          }
+          return (
+            <div className="flex items-center gap-2">
+              <svg
+                className="w-4 h-4 text-gray-400 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                />
+              </svg>
+              <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{filename}</span>
+              {attachmentId && (
+                <button
+                  type="button"
+                  onClick={() => downloadAdminAttachment(attachmentId, filename)}
+                  className="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                >
+                  Download
+                </button>
+              )}
+            </div>
+          );
+        })()}
+      {cf.help_text && cf.field_type !== 'file_upload' && (
         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{cf.help_text}</p>
       )}
     </div>

@@ -52,6 +52,8 @@ interface PaperEditFormProps {
   availableTopics: PortalTopic[];
   editCustomFieldAnswers: Record<string, unknown>;
   setEditCustomFieldAnswers: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  editCustomFieldFiles: Record<string, File>;
+  setEditCustomFieldFiles: React.Dispatch<React.SetStateAction<Record<string, File>>>;
   // Co-speakers
   cospeakerEmails: string[];
   setCospeakerEmails: (v: string[]) => void;
@@ -100,6 +102,8 @@ export default function PaperEditForm({
   availableTopics,
   editCustomFieldAnswers,
   setEditCustomFieldAnswers,
+  editCustomFieldFiles,
+  setEditCustomFieldFiles,
   cospeakerEmails,
   setCospeakerEmails,
   cospeakerInput,
@@ -471,6 +475,60 @@ export default function PaperEditForm({
                   })}
                 </div>
               )}
+              {cf.field_type === 'file_upload' &&
+                (() => {
+                  const existing = cfValue as
+                    | { attachment_id: string; filename: string }
+                    | null
+                    | undefined;
+                  const pendingFile = editCustomFieldFiles[field.key];
+                  const acceptTypes = cf.validation_rules?.allowed_file_types
+                    ?.map((t) => `.${t}`)
+                    .join(',');
+                  return (
+                    <div className="space-y-2">
+                      {(existing || pendingFile) && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md">
+                          <svg
+                            className="w-4 h-4 text-gray-400 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                            />
+                          </svg>
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {pendingFile ? pendingFile.name : existing?.filename}
+                          </span>
+                          {pendingFile && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">
+                              pending
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept={acceptTypes}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          setEditCustomFieldFiles((prev) => {
+                            if (file) return { ...prev, [field.key]: file };
+                            const copy = { ...prev };
+                            delete copy[field.key];
+                            return copy;
+                          });
+                        }}
+                        className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-900/30 dark:file:text-primary-300"
+                      />
+                    </div>
+                  );
+                })()}
               {cf.help_text && (
                 <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{cf.help_text}</p>
               )}

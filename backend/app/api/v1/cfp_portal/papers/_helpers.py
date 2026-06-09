@@ -209,6 +209,7 @@ def _render_portal_paper(
         abstract_long=paper.abstract_long,
         level=paper.level,
         learning_objectives=paper.learning_objectives,
+        custom_field_answers=paper.custom_field_answers,
         status=portal_status,
         video_url=video_url,
         is_main_speaker=is_main_speaker,

@@ -22,6 +22,28 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "portal_user_picture": {"image/jpeg", "image/png", "image/webp"},
     "portal_user_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
     "customer_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "paper_file": {
+        # Documents
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.oasis.opendocument.text",
+        "application/rtf",
+        "text/rtf",
+        "text/plain",
+        "application/zip",  # DOCX/ODT detected as ZIP by magic bytes
+        # Images
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        # Videos
+        "video/mp4",
+        "video/quicktime",
+        "video/webm",
+        "video/x-msvideo",
+        "video/x-matroska",
+    },
     "offer_template": {
         "application/pdf",
         "application/msword",

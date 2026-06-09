@@ -37,11 +37,15 @@ function DynamicField({
   field,
   value,
   onChange,
+  onFileSelect,
+  pendingFileName,
   disabled,
 }: {
   field: PortalPaperFormField;
   value: unknown;
   onChange: (val: unknown) => void;
+  onFileSelect?: (file: File | null) => void;
+  pendingFileName?: string | null;
   disabled?: boolean;
 }) {
   switch (field.field_type) {
@@ -138,14 +142,50 @@ function DynamicField({
         </select>
       );
 
-    case 'file_upload':
+    case 'file_upload': {
+      const existingFile = value as { attachment_id: string; filename: string } | null | undefined;
+      const acceptTypes = field.validation_rules?.allowed_file_types?.map((t) => `.${t}`).join(',');
+      const displayName = pendingFileName ?? existingFile?.filename ?? null;
       return (
-        <div className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            File upload not yet implemented
-          </span>
+        <div className="space-y-2">
+          {displayName && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md">
+              <svg
+                className="w-4 h-4 text-gray-400 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                />
+              </svg>
+              <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                {displayName}
+              </span>
+              {pendingFileName && (
+                <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">
+                  pending upload
+                </span>
+              )}
+            </div>
+          )}
+          <input
+            type="file"
+            accept={acceptTypes}
+            disabled={disabled}
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              onFileSelect?.(file);
+            }}
+            className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-900/30 dark:file:text-primary-300"
+          />
         </div>
       );
+    }
 
     default:
       return null;
@@ -173,6 +213,7 @@ function SubmitPaperPage() {
   const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
   const [cospeakerInput, setCospeakerInput] = useState('');
   const [customFieldAnswers, setCustomFieldAnswers] = useState<Record<string, unknown>>({});
+  const [customFieldFiles, setCustomFieldFiles] = useState<Record<string, File>>({});
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -368,10 +409,6 @@ function SubmitPaperPage() {
       const res = await portalApi.post<PortalPaper>('/portal/papers', payload);
       return res.data;
     },
-    onSuccess: (paper) => {
-      queryClient.invalidateQueries({ queryKey: ['portal-papers'] });
-      navigate(`${basePath}/papers/${paper.id}`);
-    },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to create paper. Please try again.'));
     },
@@ -405,7 +442,7 @@ function SubmitPaperPage() {
     setCustomFieldAnswers((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedCfpId || !title.trim()) {
       setError('Please select a CFP and provide a title');
       return;
@@ -418,15 +455,18 @@ function SubmitPaperPage() {
       return;
     }
 
-    // Validate required custom fields
+    // Validate required custom fields (file fields count as filled if a file is pending)
     for (const field of unifiedFormFields) {
       if (field.type === 'custom' && field.is_required) {
         const val = customFieldAnswers[field.key];
+        const hasPendingFile =
+          field.customField?.field_type === 'file_upload' && !!customFieldFiles[field.key];
         const isEmpty =
-          val === undefined ||
-          val === null ||
-          val === '' ||
-          (Array.isArray(val) && val.length === 0);
+          !hasPendingFile &&
+          (val === undefined ||
+            val === null ||
+            val === '' ||
+            (Array.isArray(val) && val.length === 0));
         if (isEmpty) {
           setError(`Please fill in the required field: ${field.label}`);
           return;
@@ -452,7 +492,46 @@ function SubmitPaperPage() {
         : {}),
     };
 
-    createMutation.mutate(payload);
+    try {
+      const paper = await createMutation.mutateAsync(payload);
+
+      // Upload any pending custom field files after paper creation
+      const fileEntries = Object.entries(customFieldFiles);
+      if (fileEntries.length > 0) {
+        const fileAnswers: Record<string, unknown> = {};
+        for (const [fieldKey, file] of fileEntries) {
+          try {
+            const form = new FormData();
+            form.append('file', file);
+            form.append('entity_type', 'paper_file');
+            form.append('entity_id', paper.id);
+            form.append('description', fieldKey);
+            const resp = await portalApi.post<{ id: string; filename: string; file_size: number }>(
+              '/portal/attachments',
+              form,
+              { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+            fileAnswers[fieldKey] = { attachment_id: resp.data.id, filename: resp.data.filename };
+          } catch {
+            // Non-fatal: file can be uploaded later in edit mode
+          }
+        }
+        if (Object.keys(fileAnswers).length > 0) {
+          try {
+            await portalApi.put(`/portal/papers/${paper.id}`, {
+              custom_field_answers: { ...(paper.custom_field_answers ?? {}), ...fileAnswers },
+            });
+          } catch {
+            // Non-fatal
+          }
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['portal-papers'] });
+      navigate(`${basePath}/papers/${paper.id}`);
+    } catch {
+      // Error handled by onError
+    }
   };
 
   return (
@@ -503,6 +582,7 @@ function SubmitPaperPage() {
               setSelectedVariantId('');
               setSessionTypeId('');
               setCustomFieldAnswers({});
+              setCustomFieldFiles({});
             }}
             className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           >
@@ -554,6 +634,7 @@ function SubmitPaperPage() {
               onChange={(e) => {
                 setSelectedVariantId(e.target.value);
                 setCustomFieldAnswers({});
+                setCustomFieldFiles({});
               }}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             >
@@ -837,6 +918,23 @@ function SubmitPaperPage() {
                     field={field.customField}
                     value={customFieldAnswers[field.key]}
                     onChange={(val) => handleCustomFieldChange(field.key, val)}
+                    onFileSelect={
+                      field.customField.field_type === 'file_upload'
+                        ? (file) => {
+                            setCustomFieldFiles((prev) => {
+                              if (file) return { ...prev, [field.key]: file };
+                              const copy = { ...prev };
+                              delete copy[field.key];
+                              return copy;
+                            });
+                          }
+                        : undefined
+                    }
+                    pendingFileName={
+                      field.customField.field_type === 'file_upload'
+                        ? (customFieldFiles[field.key]?.name ?? null)
+                        : undefined
+                    }
                   />
                   {field.customField.help_text && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -920,7 +1018,7 @@ function SubmitPaperPage() {
           </button>
           <button
             type="button"
-            onClick={() => handleSubmit()}
+            onClick={handleSubmit}
             disabled={createMutation.isPending}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md disabled:opacity-50 transition-colors"
           >

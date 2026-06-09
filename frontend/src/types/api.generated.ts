@@ -12510,7 +12510,7 @@ export type paths = {
     put?: never;
     /**
      * Upload Portal Attachment
-     * @description Upload an attachment (picture/video) for the current applicant or their paper.
+     * @description Upload an attachment (picture/video/file) for the current applicant or their paper.
      */
     post: operations['upload_portal_attachment_api_v1_portal_attachments_post'];
     delete?: never;
