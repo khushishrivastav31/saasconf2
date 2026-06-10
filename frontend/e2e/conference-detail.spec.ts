@@ -140,7 +140,7 @@ test.describe('Conference Sponsors Tab', () => {
     if (hasTable) {
       const table = page.locator('table').first();
       await expect(table.getByText(/company name/i).first()).toBeVisible();
-      await expect(table.getByText(/package/i).first()).toBeVisible();
+      await expect(table.getByText(/tier/i).first()).toBeVisible();
       await expect(table.getByText(/price/i).first()).toBeVisible();
     }
   });
