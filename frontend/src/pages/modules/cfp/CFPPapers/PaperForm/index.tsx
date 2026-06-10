@@ -220,15 +220,17 @@ export function PaperForm({
           setCustomFieldAnswer={setCustomFieldAnswer}
         />
 
-        <PaperVideoInput
-          canEdit={canEdit}
-          videoPreviewSrc={videoPreviewSrc}
-          videoError={videoError}
-          mediaPreview={mediaPreview}
-          onMediaPreviewOpen={(src) => setMediaPreview({ open: true, src })}
-          onMediaPreviewClose={() => setMediaPreview({ open: false, src: null })}
-          onVideoChange={handleVideoChange}
-        />
+        {unifiedFormFields.some((f) => f.key === 'video' && f.is_visible) && (
+          <PaperVideoInput
+            canEdit={canEdit}
+            videoPreviewSrc={videoPreviewSrc}
+            videoError={videoError}
+            mediaPreview={mediaPreview}
+            onMediaPreviewOpen={(src) => setMediaPreview({ open: true, src })}
+            onMediaPreviewClose={() => setMediaPreview({ open: false, src: null })}
+            onVideoChange={handleVideoChange}
+          />
+        )}
 
         <PaperReadOnlySections paper={paper} assignments={assignments} />
 

@@ -252,6 +252,10 @@ export default function PaperBuiltinField({
         </div>
       );
 
+    case 'video':
+      // Rendered separately by the parent via PaperVideoInput
+      return null;
+
     default:
       return null;
   }

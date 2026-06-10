@@ -13,6 +13,7 @@ export const BUILTIN_FIELD_DEFS: {
   { key: 'learning_objectives', label: 'Learning Objectives' },
   { key: 'session_type', label: 'Session Type' },
   { key: 'topics', label: 'Topics' },
+  { key: 'video', label: 'Video' },
 ];
 
 export const LEVEL_OPTIONS: { value: PaperLevel; label: string }[] = [

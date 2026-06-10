@@ -33,6 +33,7 @@ const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean
   { key: 'learning_objectives', label: 'Learning Objectives' },
   { key: 'session_type', label: 'Session Type' },
   { key: 'topics', label: 'Topics' },
+  { key: 'video', label: 'Video' },
 ];
 
 type UnifiedFormField = {
@@ -171,7 +172,7 @@ function PaperDetailPage() {
         key: bf.key,
         label: bf.label,
         display_order: config?.display_order ?? defaultIdx,
-        is_visible: config?.visible !== false,
+        is_visible: bf.key === 'video' ? config?.visible === true : config?.visible !== false,
         is_required: bf.alwaysRequired || config?.required || false,
         help_text: config?.help_text,
         min_chars: config?.min_chars,

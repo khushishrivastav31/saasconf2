@@ -121,14 +121,18 @@ function PaperFormBuilderTab({
 
     // Create unified built-in fields
     const builtinUnified: UnifiedField[] = BUILTIN_FIELDS_DEF.map((bf, defaultIdx) => {
-      const config = schema.builtin_fields_config[bf.key] || { visible: true, required: false };
+      const defaultVisible = bf.key === 'video' ? false : true;
+      const config = schema.builtin_fields_config[bf.key] || {
+        visible: defaultVisible,
+        required: false,
+      };
       return {
         id: `builtin_${bf.key}`,
         type: 'builtin' as const,
         key: bf.key,
         label: bf.label,
         display_order: config.display_order ?? defaultIdx,
-        is_visible: config.visible ?? true,
+        is_visible: config.visible ?? defaultVisible,
         is_required: bf.alwaysRequired || (config.required ?? false),
         alwaysRequired: bf.alwaysRequired,
         builtinConfig: config,
@@ -270,7 +274,11 @@ function PaperFormBuilderTab({
   ) => {
     if (!schema) return;
     checkVersioningAndExecute(() => {
-      const existing = schema.builtin_fields_config[fieldKey] || { visible: true, required: false };
+      const defaultVisible = fieldKey === 'video' ? false : true;
+      const existing = schema.builtin_fields_config[fieldKey] || {
+        visible: defaultVisible,
+        required: false,
+      };
       const newConfig = {
         ...schema.builtin_fields_config,
         [fieldKey]: { ...existing, [property]: value },
@@ -282,7 +290,11 @@ function PaperFormBuilderTab({
   const handleBuiltinFieldHelpText = (fieldKey: string, helpText: string) => {
     if (!schema) return;
     checkVersioningAndExecute(() => {
-      const existing = schema.builtin_fields_config[fieldKey] || { visible: true, required: false };
+      const defaultVisible = fieldKey === 'video' ? false : true;
+      const existing = schema.builtin_fields_config[fieldKey] || {
+        visible: defaultVisible,
+        required: false,
+      };
       const newConfig = {
         ...schema.builtin_fields_config,
         [fieldKey]: { ...existing, help_text: helpText || null },
@@ -304,7 +316,11 @@ function PaperFormBuilderTab({
   ) => {
     if (!schema) return;
     checkVersioningAndExecute(() => {
-      const existing = schema.builtin_fields_config[fieldKey] || { visible: true, required: false };
+      const defaultVisible = fieldKey === 'video' ? false : true;
+      const existing = schema.builtin_fields_config[fieldKey] || {
+        visible: defaultVisible,
+        required: false,
+      };
       const newConfig = {
         ...schema.builtin_fields_config,
         [fieldKey]: { ...existing, min_chars: minChars, max_chars: maxChars },
@@ -386,7 +402,11 @@ function PaperFormBuilderTab({
       if (field.type === 'builtin' || field.id.startsWith('builtin_')) {
         // Handle builtin fields - use key for config
         const key = field.key;
-        const existing = schema.builtin_fields_config[key] || { visible: true, required: false };
+        const defaultVisible = key === 'video' ? false : true;
+        const existing = schema.builtin_fields_config[key] || {
+          visible: defaultVisible,
+          required: false,
+        };
         newBuiltinConfig[key] = { ...existing, display_order: idx };
       } else if (uuidRegex.test(field.id)) {
         // Only add valid UUIDs to custom field orders
@@ -397,8 +417,9 @@ function PaperFormBuilderTab({
     // Preserve any builtin fields that weren't in the reordered list (shouldn't happen, but safety)
     BUILTIN_FIELDS_DEF.forEach((bf) => {
       if (!newBuiltinConfig[bf.key]) {
+        const defaultVisible = bf.key === 'video' ? false : true;
         newBuiltinConfig[bf.key] = schema.builtin_fields_config[bf.key] || {
-          visible: true,
+          visible: defaultVisible,
           required: false,
         };
       }

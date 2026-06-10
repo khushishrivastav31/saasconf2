@@ -6,4 +6,5 @@ export const BUILTIN_FIELDS_DEF: { key: string; label: string; alwaysRequired?: 
   { key: 'learning_objectives', label: 'Learning Objectives' },
   { key: 'session_type', label: 'Session Type' },
   { key: 'topics', label: 'Topics' },
+  { key: 'video', label: 'Video' },
 ];

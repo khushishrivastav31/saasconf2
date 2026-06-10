@@ -120,7 +120,7 @@ export function usePaperFormData({
         key: bf.key,
         label: bf.label,
         display_order: config?.display_order ?? defaultIdx,
-        is_visible: config?.visible !== false,
+        is_visible: bf.key === 'video' ? config?.visible === true : config?.visible !== false,
         is_required: bf.alwaysRequired || config?.required || false,
         help_text: config?.help_text,
         min_chars: config?.min_chars,
