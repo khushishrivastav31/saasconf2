@@ -554,6 +554,7 @@ PORTAL_EXPORT_EXCLUDED_COLUMNS: dict[str, frozenset[str]] = {
             "message_notifications_enabled",
             "theme_preference",
             "portal_user_id",
+            "is_deleted",
             "updated_at",
         }
     ),

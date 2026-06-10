@@ -3,7 +3,8 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -18,6 +19,7 @@ from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivit
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.cfp import (
+    CallForPapers,
     CFPApplicant,
     CFPCommitteeMember,
     CFPPaper,
@@ -144,7 +146,7 @@ async def list_applicants(
     can render a pager.
     """
     tenant_id = current_user.require_tenant_id()
-    base_filters = [CFPApplicant.tenant_id == tenant_id]
+    base_filters = [CFPApplicant.tenant_id == tenant_id, CFPApplicant.is_deleted.is_(False)]
 
     if conference_id is not None:
         # Sub-query: CFP IDs linked to this conference
@@ -396,15 +398,23 @@ async def delete_applicant(
     applicant_id: UUID,
     current_user: TenantAdminDep,
     db: DbSessionDep,
+    mode: str = Query(
+        "default",
+        description="default=block if papers exist; anonymize=redact PII keep papers; cascade=delete speaker+papers",
+    ),
 ) -> dict:
-    """Delete an applicant and their attachments.
+    """Delete or anonymize an applicant.
 
-    Will fail if the applicant has papers or committee memberships.
+    - ``default``: fails with 409 listing dependencies when papers/cospeaker/committee records exist.
+    - ``anonymize``: redacts all PII and marks the record as deleted; papers remain with a generic
+      "Deleted User" speaker entry that is hidden from all applicant list views.
+    - ``cascade``: permanently deletes the speaker together with all their papers (and paper attachments).
     """
+    tenant_id = current_user.require_tenant_id()
     result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.id == applicant_id,
-            CFPApplicant.tenant_id == current_user.require_tenant_id(),
+            CFPApplicant.tenant_id == tenant_id,
         )
     )
     applicant = result.scalar_one_or_none()
@@ -414,56 +424,166 @@ async def delete_applicant(
 
     applicant_name = f"{applicant.first_name} {applicant.last_name}"
 
-    # Check for papers as main speaker
-    papers_result = await db.execute(select(func.count()).where(CFPPaper.main_speaker_id == applicant_id))
-    paper_count = papers_result.scalar() or 0
+    if mode == "anonymize":
+        return await _anonymize_applicant(applicant, tenant_id, db)
 
-    # Check for co-speaker invitations
-    cospeaker_result = await db.execute(select(func.count()).where(CFPPaperCospeaker.applicant_id == applicant_id))
-    cospeaker_count = cospeaker_result.scalar() or 0
+    if mode == "cascade":
+        return await _cascade_delete_applicant(applicant, applicant_name, tenant_id, db)
 
-    # Check for committee memberships
-    committee_result = await db.execute(select(func.count()).where(CFPCommitteeMember.applicant_id == applicant_id))
-    committee_count = committee_result.scalar() or 0
+    # --- default mode: block if dependencies exist ---
+    papers_result = await db.execute(
+        select(CFPPaper.id, CFPPaper.title, CFPPaper.status, CFPPaper.cfp_id).where(
+            CFPPaper.main_speaker_id == applicant_id
+        )
+    )
+    papers = papers_result.all()
 
-    # Build error message if there are dependencies
-    dependencies = []
-    if paper_count > 0:
-        dependencies.append(f"{paper_count} paper{'s' if paper_count > 1 else ''} as main speaker")
-    if cospeaker_count > 0:
-        dependencies.append(f"{cospeaker_count} co-speaker invitation{'s' if cospeaker_count > 1 else ''}")
-    if committee_count > 0:
-        dependencies.append(f"{committee_count} committee membership{'s' if committee_count > 1 else ''}")
+    cospeaker_count_result = await db.execute(
+        select(func.count()).where(CFPPaperCospeaker.applicant_id == applicant_id)
+    )
+    cospeaker_count = cospeaker_count_result.scalar() or 0
 
-    if dependencies:
-        raise ValidationError(
-            f"Cannot delete '{applicant_name}'. This user has: {', '.join(dependencies)}. "
-            f"Please remove these associations first."
+    committee_count_result = await db.execute(
+        select(func.count()).where(CFPCommitteeMember.applicant_id == applicant_id)
+    )
+    committee_count = committee_count_result.scalar() or 0
+
+    if papers or cospeaker_count > 0 or committee_count > 0:
+        # Enrich papers with CFP title for the frontend list
+        paper_list: list[dict] = []
+        if papers:
+            cfp_ids = list({p.cfp_id for p in papers})
+            cfp_result = await db.execute(
+                select(CallForPapers.id, CallForPapers.title).where(CallForPapers.id.in_(cfp_ids))
+            )
+            cfp_titles = {row.id: row.title for row in cfp_result.all()}
+            for p in papers:
+                paper_list.append(
+                    {
+                        "id": str(p.id),
+                        "title": p.title,
+                        "status": p.status,
+                        "cfp_title": cfp_titles.get(p.cfp_id, ""),
+                    }
+                )
+
+        dep_parts: list[str] = []
+        if paper_list:
+            dep_parts.append(f"{len(paper_list)} paper{'s' if len(paper_list) > 1 else ''} as main speaker")
+        if cospeaker_count > 0:
+            dep_parts.append(f"{cospeaker_count} co-speaker invitation{'s' if cospeaker_count > 1 else ''}")
+        if committee_count > 0:
+            dep_parts.append(f"{committee_count} committee membership{'s' if committee_count > 1 else ''}")
+
+        raise ConflictError(
+            f"Cannot delete '{applicant_name}'. This speaker has: {', '.join(dep_parts)}.",
+            details={
+                "error_type": "speaker_has_dependencies",
+                "papers": paper_list,
+                "cospeaker_count": cospeaker_count,
+                "committee_count": committee_count,
+            },
         )
 
-    # Delete any associated attachments (pictures and videos)
+    # No dependencies — plain delete
+    await _delete_applicant_attachments(applicant_id, tenant_id, db)
+    _log_account_deleted(applicant, tenant_id, db)
+    await db.delete(applicant)
+    await db.commit()
+
+    return {"message": f"Applicant '{applicant_name}' deleted successfully"}
+
+
+async def _anonymize_applicant(applicant: CFPApplicant, tenant_id: UUID, db: AsyncSession) -> dict:
+    """Redact all PII and mark the applicant as deleted (papers are preserved)."""
+    original_name = f"{applicant.first_name} {applicant.last_name}"
+    applicant.first_name = "Deleted"
+    applicant.last_name = "User"
+    applicant.pronouns = None
+    applicant.email = None
+    applicant.phone = None
+    applicant.title = None
+    applicant.company = None
+    applicant.bio = None
+    applicant.social_links = {}
+    applicant.needs_accessibility = False
+    applicant.accessibility_details = None
+    applicant.agrees_to_recording = False
+    applicant.address_line_1 = None
+    applicant.address_line_2 = None
+    applicant.city = None
+    applicant.postal_code = None
+    applicant.country = None
+    applicant.is_deleted = True
+
+    await db.commit()
+    return {"message": f"Applicant '{original_name}' has been anonymized"}
+
+
+async def _cascade_delete_applicant(
+    applicant: CFPApplicant,
+    applicant_name: str,
+    tenant_id: UUID,
+    db: AsyncSession,
+) -> dict:
+    """Delete the applicant together with all their papers and paper attachments."""
+    applicant_id = applicant.id
+
+    # Collect paper IDs for the applicant
+    paper_ids_result = await db.execute(select(CFPPaper.id).where(CFPPaper.main_speaker_id == applicant_id))
+    paper_ids = [row[0] for row in paper_ids_result.all()]
+
+    # Delete paper attachments (videos) for all those papers
+    if paper_ids:
+        paper_attachments_result = await db.execute(
+            select(Attachment).where(
+                Attachment.tenant_id == tenant_id,
+                Attachment.entity_type == "paper_video",
+                Attachment.entity_id.in_(paper_ids),
+            )
+        )
+        for att in paper_attachments_result.scalars().all():
+            await db.delete(att)
+
+        # Delete the papers themselves (cascade in DB removes cospeakers/comments/assignments)
+        await db.execute(delete(CFPPaper).where(CFPPaper.id.in_(paper_ids)))
+
+    # Delete cospeaker invitations where this applicant is a co-speaker
+    await db.execute(delete(CFPPaperCospeaker).where(CFPPaperCospeaker.applicant_id == applicant_id))
+
+    # Delete committee memberships
+    await db.execute(delete(CFPCommitteeMember).where(CFPCommitteeMember.applicant_id == applicant_id))
+
+    # Delete the applicant's own profile attachments
+    await _delete_applicant_attachments(applicant_id, tenant_id, db)
+
+    _log_account_deleted(applicant, tenant_id, db)
+    await db.delete(applicant)
+    await db.commit()
+
+    paper_word = "paper" if len(paper_ids) == 1 else "papers"
+    return {"message": f"Applicant '{applicant_name}' and {len(paper_ids)} {paper_word} deleted successfully"}
+
+
+async def _delete_applicant_attachments(applicant_id: UUID, tenant_id: UUID, db: AsyncSession) -> None:
     attachments_result = await db.execute(
         select(Attachment).where(
-            Attachment.tenant_id == current_user.require_tenant_id(),
+            Attachment.tenant_id == tenant_id,
             Attachment.entity_type.in_(["applicant_picture", "applicant_video"]),
             Attachment.entity_id == applicant_id,
         )
     )
-    for attachment in attachments_result.scalars().all():
-        await db.delete(attachment)
+    for att in attachments_result.scalars().all():
+        await db.delete(att)
 
-    # Log account deletion event before deleting
+
+def _log_account_deleted(applicant: CFPApplicant, tenant_id: UUID, db: AsyncSession) -> None:
     activity_log = ApplicantActivityLog(
-        tenant_id=current_user.require_tenant_id(),
-        applicant_id=None,  # Will be deleted, so set to None
+        tenant_id=tenant_id,
+        applicant_id=None,
         applicant_email=applicant.email,
         applicant_first_name=applicant.first_name,
         applicant_last_name=applicant.last_name,
         activity_type=ApplicantActivityType.ACCOUNT_DELETED.value,
     )
     db.add(activity_log)
-
-    await db.delete(applicant)
-    await db.commit()
-
-    return {"message": f"Applicant '{applicant_name}' deleted successfully"}

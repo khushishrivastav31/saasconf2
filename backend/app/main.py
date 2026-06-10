@@ -261,7 +261,10 @@ async def not_found_error_handler(request: Request, exc: NotFoundError) -> JSONR
 @app.exception_handler(ConflictError)
 async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONResponse:
     """Handle resource conflict errors."""
-    return _cors_response(request, 409, {"detail": exc.message, "type": "conflict_error"})
+    body: dict = {"detail": exc.message, "type": "conflict_error"}
+    if exc.details:
+        body.update(exc.details)
+    return _cors_response(request, 409, body)
 
 
 @app.exception_handler(SubmissionValidationError)

@@ -12,6 +12,8 @@ import { ChevronLeftIcon, CloseIcon } from '../../../ConferenceDetail/icons';
 import { ApplicantForm } from './ApplicantForm';
 import type { ApplicantFormData } from './ApplicantForm';
 import { buildApplicantPayload } from './utils';
+import SpeakerDeleteDialog from './SpeakerDeleteDialog';
+import type { SpeakerDependencyData } from './SpeakerDeleteDialog';
 
 interface ApplicantListResponse {
   items: Applicant[];
@@ -112,6 +114,10 @@ export default function CFPApplicants({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Applicant | null>(null);
+  const [deleteDependencyTarget, setDeleteDependencyTarget] = useState<{
+    applicant: Applicant;
+    dependencies: SpeakerDependencyData;
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination — default 100/page, capped at backend's 500. Prevents
@@ -249,8 +255,61 @@ export default function CFPApplicants({
       queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
     },
     onError: (err: unknown) => {
+      const axiosErr = err as {
+        response?: {
+          data?: {
+            error_type?: string;
+            papers?: unknown;
+            cospeaker_count?: unknown;
+            committee_count?: unknown;
+          };
+        };
+      };
+      const data = axiosErr.response?.data;
+      if (data?.error_type === 'speaker_has_dependencies' && deleteTarget) {
+        setDeleteDependencyTarget({
+          applicant: deleteTarget,
+          dependencies: {
+            papers: (data.papers as SpeakerDependencyData['papers']) ?? [],
+            cospeaker_count: (data.cospeaker_count as number) ?? 0,
+            committee_count: (data.committee_count as number) ?? 0,
+          },
+        });
+        setDeleteTarget(null);
+        return;
+      }
       setDeleteError(parseApiError(err, 'Failed to delete applicant'));
       setDeleteTarget(null);
+    },
+  });
+
+  const anonymizeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/cfp/applicants/${id}`, { params: { mode: 'anonymize' } });
+    },
+    onSuccess: () => {
+      setDeleteDependencyTarget(null);
+      setSelectedApplicantId(null);
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
+    },
+    onError: (err: unknown) => {
+      setDeleteError(parseApiError(err, 'Failed to anonymize speaker'));
+      setDeleteDependencyTarget(null);
+    },
+  });
+
+  const cascadeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/cfp/applicants/${id}`, { params: { mode: 'cascade' } });
+    },
+    onSuccess: () => {
+      setDeleteDependencyTarget(null);
+      setSelectedApplicantId(null);
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
+    },
+    onError: (err: unknown) => {
+      setDeleteError(parseApiError(err, 'Failed to delete speaker and papers'));
+      setDeleteDependencyTarget(null);
     },
   });
 
@@ -554,6 +613,19 @@ export default function CFPApplicants({
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {/* Speaker has papers — choose how to delete */}
+      {deleteDependencyTarget && (
+        <SpeakerDeleteDialog
+          open={!!deleteDependencyTarget}
+          speakerName={`${deleteDependencyTarget.applicant.first_name} ${deleteDependencyTarget.applicant.last_name}`}
+          dependencies={deleteDependencyTarget.dependencies}
+          isLoading={anonymizeMutation.isPending || cascadeMutation.isPending}
+          onAnonymize={() => anonymizeMutation.mutate(deleteDependencyTarget.applicant.id)}
+          onCascadeDelete={() => cascadeMutation.mutate(deleteDependencyTarget.applicant.id)}
+          onCancel={() => setDeleteDependencyTarget(null)}
+        />
+      )}
 
       {/* Delete Error Popup */}
       <AlertDialog

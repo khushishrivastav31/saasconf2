@@ -43,6 +43,7 @@ class CFPApplicant(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     message_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     theme_preference: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # Address fields
     address_line_1: Mapped[str | None] = mapped_column(String(500), nullable=True)

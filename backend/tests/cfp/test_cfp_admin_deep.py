@@ -2256,3 +2256,189 @@ class TestApplicantResponsePortalUserId:
         )
         assert resp.status_code == 200
         assert resp.json()["portal_user_id"] == str(pu.id)
+
+
+# ============================================================================
+# Delete Applicant — modes: default (block), anonymize, cascade
+# ============================================================================
+
+
+class TestDeleteApplicant:
+    """Covers the three delete modes for applicants with paper dependencies."""
+
+    @pytest.mark.asyncio
+    async def test_delete_no_papers_succeeds(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        applicant: CFPApplicant,
+    ) -> None:
+        """An applicant with no papers can be deleted without specifying a mode."""
+        resp = await client.delete(
+            f"/api/v1/cfp/applicants/{applicant.id}",
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 200
+        assert "deleted" in resp.json()["message"].lower()
+
+        # Confirm gone from list
+        list_resp = await client.get("/api/v1/cfp/applicants", headers=_admin_headers(tenant_admin_user))
+        ids = [item["id"] for item in list_resp.json()["items"]]
+        assert str(applicant.id) not in ids
+
+    @pytest.mark.asyncio
+    async def test_delete_with_papers_default_returns_409(
+        self,
+        client: AsyncClient,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        draft_paper: CFPPaper,
+        applicant: CFPApplicant,
+        cfp: CallForPapers,
+    ) -> None:
+        """Default delete of a speaker with papers returns 409 with structured dependency info."""
+        resp = await client.delete(
+            f"/api/v1/cfp/applicants/{applicant.id}",
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 409
+        data = resp.json()
+        assert data["error_type"] == "speaker_has_dependencies"
+        assert len(data["papers"]) == 1
+        assert data["papers"][0]["title"] == draft_paper.title
+        assert data["papers"][0]["cfp_title"] == cfp.title
+        assert data["papers"][0]["status"] == draft_paper.status
+
+    @pytest.mark.asyncio
+    async def test_delete_with_cospeaker_default_returns_409(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        draft_paper: CFPPaper,
+        applicant2: CFPApplicant,
+    ) -> None:
+        """An applicant who is a co-speaker on a paper blocks default delete."""
+        cospeaker = CFPPaperCospeaker(
+            paper_id=draft_paper.id,
+            applicant_id=applicant2.id,
+            invitation_status="accepted",
+        )
+        db_session.add(cospeaker)
+        await db_session.commit()
+
+        resp = await client.delete(
+            f"/api/v1/cfp/applicants/{applicant2.id}",
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 409
+        data = resp.json()
+        assert data["error_type"] == "speaker_has_dependencies"
+        assert data["cospeaker_count"] == 1
+        assert data["papers"] == []  # applicant2 is not the main speaker
+
+    @pytest.mark.asyncio
+    async def test_anonymize_clears_pii_and_hides_from_list(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        draft_paper: CFPPaper,
+        applicant: CFPApplicant,
+    ) -> None:
+        """mode=anonymize wipes PII, sets is_deleted, hides from list, but keeps the paper."""
+        resp = await client.delete(
+            f"/api/v1/cfp/applicants/{applicant.id}?mode=anonymize",
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 200
+        assert "anonymized" in resp.json()["message"].lower()
+
+        # Must be absent from the list
+        list_resp = await client.get("/api/v1/cfp/applicants", headers=_admin_headers(tenant_admin_user))
+        ids = [item["id"] for item in list_resp.json()["items"]]
+        assert str(applicant.id) not in ids
+
+        # PII must be cleared in DB
+        await db_session.refresh(applicant)
+        assert applicant.is_deleted is True
+        assert applicant.first_name == "Deleted"
+        assert applicant.last_name == "User"
+        assert applicant.email is None
+        assert applicant.bio is None
+
+        # Paper must still exist
+        paper_result = await db_session.get(CFPPaper, draft_paper.id)
+        assert paper_result is not None
+        assert paper_result.main_speaker_id == applicant.id
+
+    @pytest.mark.asyncio
+    async def test_cascade_delete_removes_speaker_and_papers(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        draft_paper: CFPPaper,
+        applicant: CFPApplicant,
+    ) -> None:
+        """mode=cascade deletes the speaker and all their papers permanently."""
+        paper_id = draft_paper.id
+
+        resp = await client.delete(
+            f"/api/v1/cfp/applicants/{applicant.id}?mode=cascade",
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 200
+        assert "deleted" in resp.json()["message"].lower()
+
+        # Applicant gone from list
+        list_resp = await client.get("/api/v1/cfp/applicants", headers=_admin_headers(tenant_admin_user))
+        ids = [item["id"] for item in list_resp.json()["items"]]
+        assert str(applicant.id) not in ids
+
+        # Paper also gone
+        db_session.expire_all()
+        paper_result = await db_session.get(CFPPaper, paper_id)
+        assert paper_result is None
+
+    @pytest.mark.asyncio
+    async def test_cascade_delete_with_multiple_papers(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        applicant: CFPApplicant,
+        cfp: CallForPapers,
+        tenant: "Tenant",
+    ) -> None:
+        """Cascade delete removes all papers owned by the speaker."""
+        paper_ids = []
+        for i in range(3):
+            p = CFPPaper(
+                id=uuid.uuid4(),
+                tenant_id=tenant.id,
+                cfp_id=cfp.id,
+                main_speaker_id=applicant.id,
+                title=f"Paper {i}",
+                status=PaperStatus.DRAFT.value,
+            )
+            db_session.add(p)
+            paper_ids.append(p.id)
+        await db_session.commit()
+
+        resp = await client.delete(
+            f"/api/v1/cfp/applicants/{applicant.id}?mode=cascade",
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 200
+        assert "3 papers" in resp.json()["message"]
+
+        db_session.expire_all()
+        for pid in paper_ids:
+            assert (await db_session.get(CFPPaper, pid)) is None

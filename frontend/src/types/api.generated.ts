@@ -5933,9 +5933,12 @@ export type paths = {
     post?: never;
     /**
      * Delete Applicant
-     * @description Delete an applicant and their attachments.
+     * @description Delete or anonymize an applicant.
      *
-     *     Will fail if the applicant has papers or committee memberships.
+     *     - ``default``: fails with 409 listing dependencies when papers/cospeaker/committee records exist.
+     *     - ``anonymize``: redacts all PII and marks the record as deleted; papers remain with a generic
+     *       "Deleted User" speaker entry that is hidden from all applicant list views.
+     *     - ``cascade``: permanently deletes the speaker together with all their papers (and paper attachments).
      */
     delete: operations['delete_applicant_api_v1_cfp_applicants__applicant_id__delete'];
     options?: never;
@@ -43007,7 +43010,10 @@ export interface operations {
   };
   delete_applicant_api_v1_cfp_applicants__applicant_id__delete: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description default=block if papers exist; anonymize=redact PII keep papers; cascade=delete speaker+papers */
+        mode?: string;
+      };
       header?: {
         authorization?: string | null;
       };
