@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router';
 import api from '../../config/api';
 import CompanyForm from './CompanyForm';
 import EmailSettingsTab from './EmailSettingsTab';
@@ -8,9 +9,24 @@ import UsersTab from './UsersTab';
 import type { Tenant } from '../../types';
 import type { MyCompanyTab } from './types';
 
+const VALID_TABS: MyCompanyTab[] = ['company', 'email', 'users', 'privacy'];
+
+function isValidTab(value: string | null): value is MyCompanyTab {
+  return VALID_TABS.includes(value as MyCompanyTab);
+}
+
 export default function MyCompany() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<MyCompanyTab>('company');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<MyCompanyTab>(
+    isValidTab(tabParam) ? tabParam : 'company'
+  );
+
+  function handleTabChange(tab: MyCompanyTab) {
+    setActiveTab(tab);
+    setSearchParams(tab === 'company' ? {} : { tab }, { replace: true });
+  }
 
   const {
     data: tenant,
@@ -61,7 +77,7 @@ export default function MyCompany() {
           {tabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.key
                   ? 'border-primary-500 text-primary-600 dark:text-primary-400'

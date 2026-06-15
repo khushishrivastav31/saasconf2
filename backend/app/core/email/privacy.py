@@ -27,8 +27,51 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.core.email import send_email
 from app.models.tenant import Tenant
+from app.models.user import User
+from app.models.user_tenant_role import TenantRoleLevel, UserTenantRole
 
 logger = logging.getLogger(__name__)
+
+
+async def resolve_privacy_notify_recipients(db: AsyncSession, tenant_id: UUID) -> list[str]:
+    """Return the de-duped set of emails that should receive admin privacy notifications.
+
+    Combines:
+    1. The tenant's contact_persons / resend_from_email (via _pick_tenant_contact_email).
+    2. All active users with an ADMIN-level (or SUPER_USER-level) UserTenantRole for
+       this tenant.
+
+    No-ops (returns []) when neither source yields an address.
+    """
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if tenant is None:
+        return []
+
+    seen: set[str] = set()
+    recipients: list[str] = []
+
+    contact = _pick_tenant_contact_email(tenant)
+    if contact:
+        seen.add(contact)
+        recipients.append(contact)
+
+    admin_users_result = await db.execute(
+        select(User)
+        .join(UserTenantRole, UserTenantRole.user_id == User.id)
+        .where(
+            User.tenant_id == tenant_id,
+            User.is_active == True,
+            UserTenantRole.level.in_([TenantRoleLevel.ADMIN, TenantRoleLevel.SUPER_USER]),
+        )
+    )
+    for user in admin_users_result.scalars().all():
+        email = user.email
+        if email and email not in seen:
+            seen.add(email)
+            recipients.append(email)
+
+    return recipients
 
 
 def _pick_tenant_contact_email(tenant: Tenant) -> str | None:
@@ -105,13 +148,22 @@ async def send_privacy_request_admin_notification(
     subject_email: str,
     notes: str | None,
 ) -> bool:
-    """Notify the tenant contact that a new privacy request needs review.
+    """Notify all tenant admin users that a new privacy request needs review.
 
-    Resolves the recipient from ``tenant.contact_persons[0].email`` (falls
-    back to ``tenant.resend_from_email``). No-ops when neither is set —
-    the request is still visible in the admin UI.
+    Resolves recipients via ``resolve_privacy_notify_recipients`` — combines
+    contact_persons / resend_from_email with active UserTenantRole ADMIN users.
+    No-ops when the union is empty (request remains visible in the admin UI).
+    Sends one email per recipient.
     """
     settings = get_settings()
+
+    recipients = await resolve_privacy_notify_recipients(db, tenant_id)
+    if not recipients:
+        logger.info(
+            "privacy admin notify: tenant %s has no admins or contact email; skipping",
+            tenant_id,
+        )
+        return False
 
     result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant = result.scalar_one_or_none()
@@ -119,21 +171,13 @@ async def send_privacy_request_admin_notification(
         logger.warning("privacy admin notify: tenant %s not found", tenant_id)
         return False
 
-    admin_email = _pick_tenant_contact_email(tenant)
-    if not admin_email:
-        logger.info(
-            "privacy admin notify: tenant %s has no contact_persons email; skipping",
-            tenant_id,
-        )
-        return False
-
     label = _request_type_label(request_type)
     safe_notes = escape(notes.strip()) if notes and notes.strip() else ""
     notes_block = f"<p><strong>User's note:</strong><br>{safe_notes}</p>" if safe_notes else ""
     tenant_name_safe = escape(tenant.name)
-    admin_link = f"{settings.FRONTEND_BASE_URL}/my-company"
+    admin_link = f"{settings.FRONTEND_BASE_URL}/my-company?tab=privacy"
 
-    subject = f"[{tenant.name}] New privacy request — {label}"
+    email_subject = f"[{tenant.name}] New privacy request — {label}"
     html = f"""\
 <p>A portal user has filed a new privacy request for
 <strong>{tenant_name_safe}</strong>.</p>
@@ -154,12 +198,17 @@ requests require human review before execution.</p>
         + f"\nReview it in the admin portal: {admin_link}\n"
     )
 
-    return await send_email(
-        admin_email,
-        subject,
-        html,
-        text,
-        db=db,
-        tenant_id=tenant_id,
-        email_type="privacy_request_admin_notify",
-    )
+    sent_any = False
+    for recipient in recipients:
+        ok = await send_email(
+            recipient,
+            email_subject,
+            html,
+            text,
+            db=db,
+            tenant_id=tenant_id,
+            email_type="privacy_request_admin_notify",
+        )
+        sent_any = sent_any or ok
+
+    return sent_any

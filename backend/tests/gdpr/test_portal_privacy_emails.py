@@ -178,7 +178,9 @@ class TestAdminNotification:
         assert kwargs["email_type"] == "privacy_request_admin_notify"
 
     @pytest.mark.asyncio
-    async def test_skips_when_tenant_has_no_contact(self, db_session: AsyncSession) -> None:
+    async def test_skips_when_tenant_has_no_contact_and_no_admin_users(
+        self, db_session: AsyncSession
+    ) -> None:
         tenant = Tenant(
             id=uuid.uuid4(),
             name="No Contact Corp",

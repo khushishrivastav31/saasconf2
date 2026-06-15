@@ -222,6 +222,59 @@ function NotificationBell() {
   );
 }
 
+function MyCompanyLink({
+  active,
+  collapsed,
+  onClick,
+}: {
+  active: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  const { data } = useQuery<{ pending_review: number }>({
+    queryKey: queryKeys.privacyRequests.pendingCount,
+    queryFn: () => api.get('/privacy-requests/pending-count').then((r) => r.data),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+
+  const pending = data?.pending_review ?? 0;
+
+  return (
+    <Link
+      to={pending > 0 ? '/my-company?tab=privacy' : '/my-company'}
+      onClick={onClick}
+      title={collapsed ? 'My Company' : undefined}
+      aria-current={active ? 'page' : undefined}
+      className={`flex items-center py-2 text-sm font-medium rounded-md ${
+        collapsed ? 'justify-center px-2' : 'px-3'
+      } ${active ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+    >
+      <span className="relative">
+        <BuildingIcon />
+        {pending > 0 && (
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[14px] h-[14px] px-0.5 text-[9px] font-bold text-white bg-red-500 rounded-full">
+            {pending > 99 ? '99+' : pending}
+          </span>
+        )}
+      </span>
+      {!collapsed && (
+        <span className="ml-3 flex items-center gap-2">
+          My Company
+          {pending > 0 && (
+            <span
+              className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full"
+              data-testid="privacy-pending-badge"
+            >
+              {pending > 99 ? '99+' : pending}
+            </span>
+          )}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export default function AdminLayout() {
   const { user, logout, refreshUser } = useAuth();
   const location = useLocation();
@@ -471,22 +524,11 @@ export default function AdminLayout() {
                 <div className={`${sidebarCollapsed ? '' : 'mt-2'} space-y-1`}>
                   {/* My Company - tenant admin only */}
                   {user?.role === 'tenant_admin' && (
-                    <Link
-                      to="/my-company"
+                    <MyCompanyLink
+                      active={location.pathname === '/my-company'}
+                      collapsed={sidebarCollapsed}
                       onClick={() => setSidebarOpen(false)}
-                      title={sidebarCollapsed ? 'My Company' : undefined}
-                      aria-current={location.pathname === '/my-company' ? 'page' : undefined}
-                      className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
-                      } ${
-                        location.pathname === '/my-company'
-                          ? 'bg-gray-800 text-white'
-                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                      }`}
-                    >
-                      <BuildingIcon />
-                      {!sidebarCollapsed && <span className="ml-3">My Company</span>}
-                    </Link>
+                    />
                   )}
                   {/* Team - tenant admin only (super admin has no tenant, so Team is empty) */}
                   {user?.role === 'tenant_admin' && (

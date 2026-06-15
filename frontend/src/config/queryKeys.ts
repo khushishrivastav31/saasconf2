@@ -90,6 +90,7 @@ export const queryKeys = {
     list: (params: Record<string, unknown>) => ['privacy-requests', 'list', params] as const,
     detail: (id: string) => ['privacy-requests', 'detail', id] as const,
     preview: (id: string) => ['privacy-requests', 'preview', id] as const,
+    pendingCount: ['privacy-requests', 'pending-count'] as const,
   },
 
   // ── Portal self-service privacy ──────────────────────────────────

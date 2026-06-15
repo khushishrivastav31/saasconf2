@@ -1394,6 +1394,26 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/privacy-requests/pending-count': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Privacy Pending Count
+     * @description Return the count of ``pending_review`` privacy requests for the tenant.
+     */
+    get: operations['get_privacy_pending_count_api_v1_privacy_requests_pending_count_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/privacy-requests/{request_id}': {
     parameters: {
       query?: never;
@@ -32660,6 +32680,39 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PrivacyRequestResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_privacy_pending_count_api_v1_privacy_requests_pending_count_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: number;
+          };
         };
       };
       /** @description Validation Error */

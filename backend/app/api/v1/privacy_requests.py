@@ -20,7 +20,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
@@ -158,6 +158,27 @@ async def list_privacy_requests(
         "page_size": page_size,
         "pages": calculate_pages(result.total, page_size),
     }
+
+
+# ---------------------------------------------------------------------------
+# Pending count (in-app badge)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/pending-count")
+async def get_privacy_pending_count(
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict[str, int]:
+    """Return the count of ``pending_review`` privacy requests for the tenant."""
+    tenant_id = _require_tenant(current_user)
+    count = await db.scalar(
+        select(func.count()).where(
+            PrivacyRequest.tenant_id == tenant_id,
+            PrivacyRequest.status == PrivacyRequestStatus.PENDING_REVIEW.value,
+        )
+    )
+    return {"pending_review": count or 0}
 
 
 # ---------------------------------------------------------------------------
