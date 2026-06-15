@@ -526,6 +526,29 @@ class TestCFPCrud:
         assert get_resp.status_code == 404
 
     @pytest.mark.asyncio
+    async def test_create_cfp_with_address_required_speaker_field(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        cfp_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """A CFP with required_speaker_fields=["address"] is accepted (Change 034)."""
+        resp = await client.post(
+            f"{CFP_BASE}/",
+            json={
+                "conference_id": str(conference.id),
+                "title": "CFP with Address Requirement",
+                "required_speaker_fields": ["address"],
+            },
+            headers=auth_headers(cfp_admin_token),
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert "address" in data["required_speaker_fields"]
+
+    @pytest.mark.asyncio
     async def test_create_cfp_invalid_conference_fails(
         self,
         client: AsyncClient,

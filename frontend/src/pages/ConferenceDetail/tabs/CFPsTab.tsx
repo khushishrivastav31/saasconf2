@@ -481,6 +481,7 @@ export default function ConferenceCFPsTab({
             { key: 'phone', label: 'Phone' },
             { key: 'title', label: 'Title / Position' },
             { key: 'company', label: 'Company / Organization' },
+            { key: 'address', label: 'Address' },
           ].map(({ key, label }) => (
             <label
               key={key}

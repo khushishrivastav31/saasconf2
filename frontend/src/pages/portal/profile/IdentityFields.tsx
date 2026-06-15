@@ -1,3 +1,5 @@
+import PhoneNumberInput from './PhoneNumberInput';
+
 interface Props {
   firstName: string;
   lastName: string;
@@ -5,6 +7,7 @@ interface Props {
   phone: string;
   title: string;
   company: string;
+  country?: string;
   pronounOptions: { id: string; name: string }[];
   requiredFields?: string[];
   onFirstNameChange: (v: string) => void;
@@ -27,6 +30,7 @@ export default function IdentityFields({
   phone,
   title,
   company,
+  country,
   pronounOptions,
   requiredFields = [],
   onFirstNameChange,
@@ -84,11 +88,11 @@ export default function IdentityFields({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Phone{req('phone') && <Req />}
         </label>
-        <input
-          type="tel"
+        <PhoneNumberInput
           value={phone}
-          onChange={(e) => onPhoneChange(e.target.value)}
-          className={inputClass}
+          onChange={onPhoneChange}
+          defaultCountry={country ?? ''}
+          required={req('phone')}
         />
       </div>
       <div>

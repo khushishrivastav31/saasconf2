@@ -11,7 +11,7 @@ from app.core.validators import validate_phone
 from app.schemas.cfp_papers import TopicResponse
 
 # Valid values for the configurable required-field arrays
-VALID_SPEAKER_FIELDS = {"bio", "picture", "video", "phone", "title", "company"}
+VALID_SPEAKER_FIELDS = {"bio", "picture", "video", "phone", "title", "company", "address"}
 VALID_PAPER_FIELDS = {
     "abstract_short",
     "abstract_long",

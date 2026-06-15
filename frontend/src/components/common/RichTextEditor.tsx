@@ -164,7 +164,8 @@ function RichTextEditor(
     editable: !disabled,
     editorProps: {
       attributes: {
-        class: `prose prose-sm max-w-none focus:outline-none ${editorClassName}`.trim(),
+        class:
+          `prose prose-sm dark:prose-invert max-w-none focus:outline-none ${editorClassName}`.trim(),
         style: `min-height: ${rows * 1.5}rem`,
       },
       handleDrop: (_view, event, _slice, moved) => {

@@ -228,6 +228,12 @@ function PortalLayout() {
       phone: !!applicant.phone,
       picture: !!applicant.picture_url,
       video: !!applicant.video_url,
+      address: !!(
+        applicant.address_line_1 &&
+        applicant.city &&
+        applicant.postal_code &&
+        applicant.country
+      ),
     };
     return [...required].filter((f) => !present[f]);
   }, [applicant, conferences]);
@@ -902,7 +908,9 @@ function PortalLayout() {
                                 ? 'Profile Picture'
                                 : f === 'video'
                                   ? 'Video'
-                                  : f
+                                  : f === 'address'
+                                    ? 'Address'
+                                    : f
                     )
                     .join(', ')}
                   .

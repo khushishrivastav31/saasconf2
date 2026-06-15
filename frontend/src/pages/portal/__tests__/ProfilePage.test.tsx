@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
@@ -67,17 +67,17 @@ vi.mock('../../../utils/mediaValidation', () => ({
   ACCEPTED_VIDEO_FORMATS: '.mp4,.mov,.webm,.avi,.mkv',
 }));
 
-// Standard mock applicant profile
+// Standard mock applicant profile (bio is empty so bio-length validation doesn't block saves)
 const mockApplicant: ApplicantProfile = {
   id: 'applicant-123',
   email: 'jane.doe@example.com',
   first_name: 'Jane',
   last_name: 'Doe',
   pronouns: 'she/her',
-  phone: '+1 555 000 1234',
+  phone: '+12025550173',
   title: 'Senior Engineer',
   company: 'Acme Corp',
-  bio: '<p>Bio text here</p>',
+  bio: '',
   social_links: {},
   needs_accessibility: false,
   accessibility_details: null,
@@ -437,6 +437,152 @@ describe('ProfilePage', () => {
       const nonAttendeePortalMe: PortalMe = { ...mockPortalMe, is_conference_attendee: false };
       const { container } = renderWithProviders(<ProfilePage />, null, nonAttendeePortalMe);
       expect(container.firstChild).toBeNull();
+    });
+  });
+
+  describe('address required speaker field (Change 034)', () => {
+    function mockConferencesWithAddressRequired() {
+      mockPortalApi.get.mockImplementation((url: string) => {
+        if (url === '/portal/conferences') {
+          return Promise.resolve({
+            data: [
+              {
+                id: 'conf-1',
+                cfps: [
+                  {
+                    id: 'cfp-1',
+                    status: 'open',
+                    required_speaker_fields: ['address'],
+                  },
+                ],
+              },
+            ],
+          });
+        }
+        return Promise.resolve({ data: [] });
+      });
+    }
+
+    it('blocks save and does not call PUT when address is required but blank', async () => {
+      const user = userEvent.setup();
+      mockConferencesWithAddressRequired();
+
+      renderWithProviders(<ProfilePage />);
+
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalledWith('/portal/conferences'));
+
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/please fill in all required fields/i)).toBeInTheDocument();
+      });
+      expect(mockPortalApi.put).not.toHaveBeenCalled();
+    });
+
+    it('lists specific missing address sub-fields in the error banner', async () => {
+      const user = userEvent.setup();
+      mockConferencesWithAddressRequired();
+
+      renderWithProviders(<ProfilePage />);
+
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalledWith('/portal/conferences'));
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/please fill in all required fields/i)).toBeInTheDocument();
+      });
+      const banner = screen.getByText(/please fill in all required fields/i);
+      expect(banner.textContent).toMatch(/City/);
+      expect(banner.textContent).toMatch(/Postal Code/);
+      expect(banner.textContent).toMatch(/Country/);
+    });
+
+    it('allows save when Line 1, City, Postal Code, Country are filled (Line 2 optional)', async () => {
+      const user = userEvent.setup();
+      mockConferencesWithAddressRequired();
+      mockPortalApi.put.mockResolvedValueOnce({ data: mockApplicant });
+
+      renderWithProviders(<ProfilePage />);
+
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalledWith('/portal/conferences'));
+
+      // Fill address sub-fields via label-associated inputs (labels have htmlFor)
+      const line1Input = screen.getByLabelText(/address line 1/i, { exact: false });
+      await user.clear(line1Input);
+      await user.type(line1Input, '123 Main St');
+
+      const cityInput = screen.getByLabelText(/city/i, { exact: false });
+      await user.clear(cityInput);
+      await user.type(cityInput, 'Berlin');
+
+      const postalInput = screen.getByLabelText(/postal code/i, { exact: false });
+      await user.clear(postalInput);
+      await user.type(postalInput, '10115');
+
+      const countrySelect = screen.getByLabelText(/country/i, { exact: false });
+      await user.selectOptions(countrySelect, 'DE');
+
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(mockPortalApi.put).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('bio character limits (Change 034)', () => {
+    it('shows bio length help text', async () => {
+      renderWithProviders(<ProfilePage />);
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
+      expect(screen.getByText(/300.{1,15}2[,.]?000 characters/i)).toBeInTheDocument();
+    });
+
+    it('blocks save when bio exceeds 2,000 characters', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ProfilePage />);
+
+      const bioEditor = screen.getByTestId('rich-text-editor');
+      // Use fireEvent.change for large text to avoid userEvent slowness
+      fireEvent.change(bioEditor, { target: { value: 'a'.repeat(2001) } });
+
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/please fill in all required fields/i)).toBeInTheDocument();
+      });
+      expect(mockPortalApi.put).not.toHaveBeenCalled();
+    });
+
+    it('blocks save when bio is non-empty but under 300 characters', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ProfilePage />);
+
+      const bioEditor = screen.getByTestId('rich-text-editor');
+      fireEvent.change(bioEditor, { target: { value: 'Too short.' } });
+
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/please fill in all required fields/i)).toBeInTheDocument();
+      });
+      expect(mockPortalApi.put).not.toHaveBeenCalled();
+    });
+
+    it('allows save when bio is empty and not required', async () => {
+      const user = userEvent.setup();
+      mockPortalApi.put.mockResolvedValueOnce({ data: mockApplicant });
+
+      const applicantWithEmptyBio: ApplicantProfile = { ...mockApplicant, bio: '' };
+      renderWithProviders(<ProfilePage />, applicantWithEmptyBio);
+
+      const bioEditor = screen.getByTestId('rich-text-editor');
+      fireEvent.change(bioEditor, { target: { value: '' } });
+
+      await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+      await waitFor(() => {
+        expect(mockPortalApi.put).toHaveBeenCalled();
+      });
     });
   });
 

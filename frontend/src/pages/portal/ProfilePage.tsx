@@ -39,6 +39,9 @@ function convertSocialLinks(
 
 type ProfileTab = 'personal-info' | 'program-committee';
 
+const BIO_MIN_CHARS = 300;
+const BIO_MAX_CHARS = 2000;
+
 function ProfilePage() {
   const { applicant, portalMe, refreshApplicant } = useApplicantAuth();
   const isAttendeeOnly = !applicant && !!portalMe?.is_conference_attendee;
@@ -299,10 +302,12 @@ function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const bioTextLen = bio.replace(/<[^>]*>/g, '').trim().length;
+    const missing: string[] = [];
+
     if (!isAttendeeOnly && requiredSpeakerFields.length > 0) {
-      const missing: string[] = [];
       const fieldValues: Record<string, boolean> = {
-        bio: !!bio.replace(/<[^>]*>/g, '').trim(),
+        bio: bioTextLen > 0,
         title: !!title.trim(),
         company: !!company.trim(),
         phone: !!phone.trim(),
@@ -318,12 +323,28 @@ function ProfilePage() {
         video: 'Video',
       };
       for (const field of requiredSpeakerFields) {
-        if (!fieldValues[field]) missing.push(labels[field] ?? field);
+        if (field === 'address') {
+          if (!addressLine1.trim()) missing.push('Address Line 1');
+          if (!profileCity.trim()) missing.push('City');
+          if (!postalCode.trim()) missing.push('Postal Code');
+          if (!profileCountry.trim()) missing.push('Country');
+        } else if (!fieldValues[field]) {
+          missing.push(labels[field] ?? field);
+        }
       }
-      if (missing.length > 0) {
-        setRequiredFieldErrors(missing);
-        return;
+    }
+
+    if (!isAttendeeOnly) {
+      if (bioTextLen > BIO_MAX_CHARS) {
+        if (!missing.includes('Short Bio')) missing.push('Short Bio');
+      } else if (bioTextLen > 0 && bioTextLen < BIO_MIN_CHARS) {
+        if (!missing.includes('Short Bio')) missing.push('Short Bio');
       }
+    }
+
+    if (missing.length > 0) {
+      setRequiredFieldErrors(missing);
+      return;
     }
     setRequiredFieldErrors([]);
 
@@ -549,6 +570,7 @@ function ProfilePage() {
               phone={phone}
               title={title}
               company={company}
+              country={profileCountry}
               pronounOptions={pronounOptions}
               requiredFields={requiredSpeakerFields}
               onFirstNameChange={setFirstName}
@@ -565,6 +587,7 @@ function ProfilePage() {
               city={profileCity}
               postalCode={postalCode}
               country={profileCountry}
+              requiredFields={requiredSpeakerFields}
               onAddressLine1Change={setAddressLine1}
               onAddressLine2Change={setAddressLine2}
               onCityChange={setProfileCity}
@@ -573,15 +596,20 @@ function ProfilePage() {
             />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Short Bio
                 {requiredSpeakerFields.includes('bio') && <span className="text-red-500"> *</span>}
               </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                Write 300–2,000 characters about yourself and your experience.
+              </p>
               <RichTextEditor
                 value={bio}
                 onChange={(html) => setBio(html)}
                 placeholder="Tell us about yourself..."
                 rows={4}
+                minLength={BIO_MIN_CHARS}
+                maxLength={BIO_MAX_CHARS}
               />
             </div>
 
