@@ -399,11 +399,11 @@ function PaperDetailPage() {
 
     const payload: PortalPaperUpdateRequest = {
       title: editTitle,
-      abstract_short: editAbstractShort || undefined,
-      abstract_long: editAbstractLong || undefined,
+      abstract_short: editAbstractShort,
+      abstract_long: editAbstractLong,
       level: editLevel || undefined,
       session_type_id: editSessionTypeId || undefined,
-      learning_objectives: editLearningObjectives || undefined,
+      learning_objectives: editLearningObjectives,
       topic_ids: editTopicIds,
       ...(paper?.is_main_speaker ? { cospeaker_emails: cospeakerEmails } : {}),
       ...(Object.keys(resolvedCustomFieldAnswers).length > 0

@@ -581,6 +581,153 @@ class TestSubmitPaper:
 
 
 # ---------------------------------------------------------------------------
+# 3b. Rich-text required-field validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestSubmitRequiredRichText:
+    """Rich-text built-in fields must be treated as blank when they contain only empty HTML."""
+
+    async def _schema_with_abstract_long_required(
+        self, db: AsyncSession, tenant: Tenant, conference: Conference
+    ) -> None:
+        schema = ConferencePaperFormSchema(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            builtin_fields_config={"abstract_long": {"visible": True, "required": True}},
+        )
+        db.add(schema)
+        await db.commit()
+
+    async def _draft_paper_with_abstract(
+        self,
+        db: AsyncSession,
+        tenant: Tenant,
+        cfp: "CallForPapers",
+        applicant: CFPApplicant,
+        abstract_long: str | None,
+    ) -> CFPPaper:
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Rich-text Test Paper",
+            abstract_long=abstract_long,
+            status=PaperStatus.DRAFT.value,
+        )
+        db.add(paper)
+        await db.commit()
+        return paper
+
+    @pytest.mark.parametrize(
+        "empty_html",
+        ["<p></p>", "<p><br></p>", "<p>&nbsp;</p>"],
+    )
+    async def test_empty_html_variants_block_submission(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        empty_html: str,
+    ) -> None:
+        """Abstract with empty-looking HTML must be treated as missing when required."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+        await self._schema_with_abstract_long_required(db_session, tenant, conference)
+        paper = await self._draft_paper_with_abstract(db_session, tenant, cfp, applicant, empty_html)
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 422
+        missing = resp.json()["detail"]["missing_fields"]
+        assert "paper:abstract_long" in missing
+
+    async def test_real_content_passes_required_check(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+    ) -> None:
+        """Abstract with real content passes the required check."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+        await self._schema_with_abstract_long_required(db_session, tenant, conference)
+        paper = await self._draft_paper_with_abstract(
+            db_session, tenant, cfp, applicant, "<p>Real content here</p>"
+        )
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 200
+
+    async def test_non_required_empty_html_does_not_block(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+    ) -> None:
+        """Empty HTML in a non-required field must not block submission."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+        # abstract_long is optional here
+        schema = ConferencePaperFormSchema(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            builtin_fields_config={"abstract_long": {"visible": True, "required": False}},
+        )
+        db_session.add(schema)
+        await db_session.commit()
+        paper = await self._draft_paper_with_abstract(
+            db_session, tenant, cfp, applicant, "<p></p>"
+        )
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 200
+
+    async def test_legacy_required_paper_fields_with_empty_html_blocks(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+    ) -> None:
+        """Legacy required_paper_fields path also treats empty HTML as missing."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+        cfp.required_paper_fields = ["abstract_long"]
+        await db_session.commit()
+        paper = await self._draft_paper_with_abstract(
+            db_session, tenant, cfp, applicant, "<p></p>"
+        )
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 422
+        missing = resp.json()["detail"]["missing_fields"]
+        assert "paper:abstract_long" in missing
+
+
+# ---------------------------------------------------------------------------
 # 4. Unsubmit (withdraw) paper
 # ---------------------------------------------------------------------------
 

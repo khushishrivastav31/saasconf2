@@ -98,6 +98,15 @@ interface RichTextEditorProps {
 
 const EMPTY_BODY = '<p></p>';
 
+export function isHtmlBlank(html: string): boolean {
+  return (
+    html
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .trim() === ''
+  );
+}
+
 function RichTextEditor(
   {
     value,
@@ -189,7 +198,7 @@ function RichTextEditor(
       // Only notify parent of content changes from actual edits, not from
       // programmatic updates like setEditable or setContent
       if (transaction.docChanged) {
-        onChange(html === EMPTY_BODY ? '' : html);
+        onChange(isHtmlBlank(html) ? '' : html);
       }
     },
     onSelectionUpdate: () => {
@@ -268,7 +277,7 @@ function RichTextEditor(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const html = e.target.value;
       setSourceHtml(html);
-      onChange(html);
+      onChange(isHtmlBlank(html) ? '' : html);
     },
     [onChange]
   );

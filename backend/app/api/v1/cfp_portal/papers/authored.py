@@ -12,7 +12,12 @@ from fastapi import APIRouter
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import selectinload
 
-from app.api.v1.cfp._paper_helpers import sync_paper_topics, validate_topics
+from app.api.v1.cfp._paper_helpers import (
+    paper_field_is_blank,
+    strip_html_for_char_count,
+    sync_paper_topics,
+    validate_topics,
+)
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import AuthorizationError, NotFoundError, SubmissionValidationError, ValidationError
 from app.core.utils import utcnow
@@ -25,6 +30,8 @@ from app.models.cfp import (
     CospeakerInvitationStatus,
     PaperStatus,
 )
+from app.models.form_schema import ConferencePaperFormSchema
+from app.models.paper_form_variant import PaperFormVariant
 from app.schemas.cfp_portal import (
     PortalPaperCreateRequest,
     PortalPaperListResponse,
@@ -203,10 +210,6 @@ async def submit_paper(
         raise ValidationError("Only draft papers can be submitted")
 
     # --- Load form schema config (authoritative source for required + char-limit validation) ---
-    from app.api.v1.cfp._paper_helpers import strip_html_for_char_count
-    from app.models.form_schema import ConferencePaperFormSchema
-    from app.models.paper_form_variant import PaperFormVariant
-
     builtin_cfg: dict = {}
     if paper.form_variant_id:
         fv_result = await db.execute(select(PaperFormVariant).where(PaperFormVariant.id == paper.form_variant_id))
@@ -255,13 +258,13 @@ async def submit_paper(
                 if not cfg.get("required", False):
                     continue
                 val = paper_field_map.get(field_key)
-                if not val:
+                if paper_field_is_blank(field_key, val):
                     missing.append(f"paper:{field_key}")
         else:
             # Legacy fallback: no form schema configured yet
             for field in cfp.required_paper_fields or []:
                 val = paper_field_map.get(field)
-                if not val:
+                if paper_field_is_blank(field, val):
                     missing.append(f"paper:{field}")
 
         # Check required speaker fields

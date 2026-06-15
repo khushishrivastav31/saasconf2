@@ -170,7 +170,7 @@ vi.mock('@tiptap/extension-youtube', () => ({
 }));
 
 // Import after mocks are set up
-import RichTextEditor from '../RichTextEditor';
+import RichTextEditor, { isHtmlBlank } from '../RichTextEditor';
 
 describe('RichTextEditor', () => {
   const defaultProps = {
@@ -301,4 +301,67 @@ describe('RichTextEditor', () => {
     await user.click(screen.getByText('Cancel'));
     expect(screen.queryByText('Enter URL')).not.toBeInTheDocument();
   });
+
+  describe('source-mode normalisation via handleSourceChange', () => {
+    it('calls onChange with empty string when source textarea contains only <p></p>', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<RichTextEditor value="" onChange={onChange} showHtmlToggle />);
+
+      await user.click(screen.getByText('<> HTML'));
+      const textarea = screen.getByRole('textbox');
+      await user.clear(textarea);
+      await user.type(textarea, '<p></p>');
+
+      const calls = onChange.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(lastCall).toBe('');
+    });
+
+    it('calls onChange with empty string when source textarea contains only <p><br></p>', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<RichTextEditor value="" onChange={onChange} showHtmlToggle />);
+
+      await user.click(screen.getByText('<> HTML'));
+      const textarea = screen.getByRole('textbox');
+      await user.clear(textarea);
+      await user.type(textarea, '<p><br></p>');
+
+      const calls = onChange.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(lastCall).toBe('');
+    });
+
+    it('calls onChange with non-empty string when source textarea has real content', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<RichTextEditor value="" onChange={onChange} showHtmlToggle />);
+
+      await user.click(screen.getByText('<> HTML'));
+      const textarea = screen.getByRole('textbox');
+      await user.clear(textarea);
+      await user.type(textarea, '<p>Hello</p>');
+
+      const calls = onChange.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(lastCall).not.toBe('');
+    });
+  });
+});
+
+describe('isHtmlBlank', () => {
+  it.each([['<p></p>'], ['<p><br></p>'], ['<p>&nbsp;</p>'], ['   '], ['']])(
+    'treats %s as blank',
+    (html) => {
+      expect(isHtmlBlank(html)).toBe(true);
+    }
+  );
+
+  it.each([['<p>Hello</p>'], ['<p>Real content</p>'], ['<strong>Bold</strong>']])(
+    'treats %s as non-blank',
+    (html) => {
+      expect(isHtmlBlank(html)).toBe(false);
+    }
+  );
 });

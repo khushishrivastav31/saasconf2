@@ -1,5 +1,6 @@
 """Shared validation and sync helpers for paper create / update endpoints."""
 
+import html as html_lib
 import re
 from uuid import UUID
 
@@ -31,6 +32,28 @@ def strip_html_for_char_count(html: str | None) -> str:
     if not html:
         return ""
     return _HTML_TAG_RE.sub("", html).strip()
+
+
+# Built-in fields whose values are stored as HTML (rendered by RichTextEditor).
+HTML_PAPER_FIELDS: frozenset[str] = frozenset({"abstract_short", "abstract_long", "learning_objectives"})
+
+
+def paper_field_is_blank(field_key: str, value: object) -> bool:
+    """Return True when a paper field value should be considered empty for required-field checks.
+
+    HTML fields can store visually-empty markup like ``<p></p>`` or ``<p>&nbsp;</p>``
+    which are truthy strings but render blank. This helper strips tags and HTML entities
+    before checking emptiness so those variants are correctly treated as missing.
+    """
+    if value is None:
+        return True
+    if field_key in HTML_PAPER_FIELDS:
+        plain = strip_html_for_char_count(str(value))
+        # Decode HTML entities (&nbsp; → \xa0) then strip non-breaking whitespace.
+        return html_lib.unescape(plain).replace("\xa0", " ").strip() == ""
+    if isinstance(value, (list, tuple, set)):
+        return len(value) == 0
+    return not str(value).strip()
 
 
 async def validate_main_speaker(db: AsyncSession, speaker_id: UUID, tenant_id: UUID) -> None:
