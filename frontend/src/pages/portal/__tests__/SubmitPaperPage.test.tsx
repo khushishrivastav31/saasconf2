@@ -112,6 +112,34 @@ function renderWithProviders(
   });
 }
 
+// Standard mock: conferences + detail + form schema all resolve.
+function mockStandardGet() {
+  mockPortalApi.get.mockImplementation((url: string) => {
+    if (url === '/portal/conferences') {
+      return Promise.resolve({ data: mockConferences });
+    }
+    if (url.includes('/conferences/conf-1')) {
+      return Promise.resolve({ data: mockConferenceDetail });
+    }
+    if (url.includes('/cfp/cfp-1/paper-form-schema')) {
+      return Promise.resolve({ data: mockFormSchema });
+    }
+    return Promise.resolve({ data: mockFormSchema });
+  });
+}
+
+// Selects the conference (auto-selecting its open CFP) and waits for the
+// dynamic form to render — the point at which co-speakers + actions appear.
+async function selectConferenceAndWaitForForm(user: ReturnType<typeof userEvent.setup>) {
+  await waitFor(() => {
+    expect(screen.getByText('PyCon 2025 (PyCon)')).toBeInTheDocument();
+  });
+  await user.selectOptions(screen.getByRole('combobox'), 'conf-1');
+  await waitFor(() => {
+    expect(screen.getByPlaceholderText('Your paper title')).toBeInTheDocument();
+  });
+}
+
 // ----- Tests -----
 
 describe('SubmitPaperPage', () => {
@@ -137,24 +165,23 @@ describe('SubmitPaperPage', () => {
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
-    it('renders the co-speakers section', () => {
+    it('does not render the co-speakers section before a conference is selected', () => {
       mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
 
       renderWithProviders(<SubmitPaperPage />);
 
-      expect(screen.getAllByText(/co-speakers/i).length).toBeGreaterThan(0);
-      expect(screen.getByPlaceholderText('First name')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
-      expect(screen.getByText(/don't need an account yet/i)).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('First name')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Email')).not.toBeInTheDocument();
     });
 
-    it('renders Cancel and Save as Draft buttons', () => {
+    it('does not render action buttons before a conference is selected', () => {
       mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
 
       renderWithProviders(<SubmitPaperPage />);
 
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Save as Draft' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next step' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Save as Draft' })).not.toBeInTheDocument();
     });
   });
 
@@ -204,6 +231,20 @@ describe('SubmitPaperPage', () => {
       });
     });
 
+    it('renders co-speakers and Next step + Cancel buttons once an open CFP is selected', async () => {
+      const user = userEvent.setup();
+      mockStandardGet();
+
+      renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
+
+      expect(screen.getByPlaceholderText('First name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Next step' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Save as Draft' })).not.toBeInTheDocument();
+    });
+
     it('shows "No open CFPs" when conference has no open CFPs', async () => {
       const user = userEvent.setup();
 
@@ -233,54 +274,26 @@ describe('SubmitPaperPage', () => {
       await waitFor(() => {
         expect(screen.getByText('No open CFPs for this conference.')).toBeInTheDocument();
       });
+
+      // CFP is closed → no co-speakers section and no action buttons.
+      expect(screen.queryByPlaceholderText('First name')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next step' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     });
   });
 
   describe('title field validation', () => {
-    it('shows error when submitting without selecting a conference or providing a title', async () => {
-      const user = userEvent.setup();
-
-      mockPortalApi.get.mockResolvedValue({ data: mockConferences });
-
-      renderWithProviders(<SubmitPaperPage />);
-
-      await user.click(screen.getByRole('button', { name: 'Save as Draft' }));
-
-      expect(screen.getByText('Please select a CFP and provide a title')).toBeInTheDocument();
-    });
-
     it('shows error when a conference is selected but title is empty', async () => {
       const user = userEvent.setup();
 
-      mockPortalApi.get.mockImplementation((url: string) => {
-        if (url === '/portal/conferences') {
-          return Promise.resolve({ data: mockConferences });
-        }
-        if (url.includes('/conferences/conf-1')) {
-          return Promise.resolve({ data: mockConferenceDetail });
-        }
-        if (url.includes('/cfp/cfp-1/paper-form-schema')) {
-          return Promise.resolve({ data: mockFormSchema });
-        }
-        return Promise.resolve({ data: mockFormSchema });
-      });
+      mockStandardGet();
 
       renderWithProviders(<SubmitPaperPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText('PyCon 2025 (PyCon)')).toBeInTheDocument();
-      });
-
-      const conferenceSelect = screen.getByRole('combobox');
-      await user.selectOptions(conferenceSelect, 'conf-1');
-
-      // Wait for the title field to appear
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Your paper title')).toBeInTheDocument();
-      });
+      await selectConferenceAndWaitForForm(user);
 
       // Try to submit with empty title
-      await user.click(screen.getByRole('button', { name: 'Save as Draft' }));
+      await user.click(screen.getByRole('button', { name: 'Next step' }));
 
       expect(screen.getByText('Please select a CFP and provide a title')).toBeInTheDocument();
     });
@@ -351,7 +364,7 @@ describe('SubmitPaperPage', () => {
 
       await fillAndSubmit(user);
 
-      await user.click(screen.getByRole('button', { name: 'Save as Draft' }));
+      await user.click(screen.getByRole('button', { name: 'Next step' }));
 
       await waitFor(() => {
         expect(mockPortalApi.post).toHaveBeenCalledWith(
@@ -392,7 +405,7 @@ describe('SubmitPaperPage', () => {
 
       await fillAndSubmit(user);
 
-      await user.click(screen.getByRole('button', { name: 'Save as Draft' }));
+      await user.click(screen.getByRole('button', { name: 'Next step' }));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Saving...' })).toBeInTheDocument();
@@ -423,7 +436,7 @@ describe('SubmitPaperPage', () => {
 
       await fillAndSubmit(user);
 
-      await user.click(screen.getByRole('button', { name: 'Save as Draft' }));
+      await user.click(screen.getByRole('button', { name: 'Next step' }));
 
       await waitFor(() => {
         expect(screen.getByText('Submission failed')).toBeInTheDocument();
@@ -435,9 +448,10 @@ describe('SubmitPaperPage', () => {
     it('requires first name and email to add a co-speaker chip', async () => {
       const user = userEvent.setup();
 
-      mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
+      mockStandardGet();
 
       renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
 
       // Clicking Add with only an email and no first name should not add a chip
       const emailInput = screen.getByPlaceholderText('Email');
@@ -450,9 +464,10 @@ describe('SubmitPaperPage', () => {
     it('adds a co-speaker chip with first name and email when Add is clicked', async () => {
       const user = userEvent.setup();
 
-      mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
+      mockStandardGet();
 
       renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
 
       const firstNameInput = screen.getByPlaceholderText('First name');
       const emailInput = screen.getByPlaceholderText('Email');
@@ -466,9 +481,10 @@ describe('SubmitPaperPage', () => {
     it('shows error when adding own email as co-speaker', async () => {
       const user = userEvent.setup();
 
-      mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
+      mockStandardGet();
 
       renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
 
       const firstNameInput = screen.getByPlaceholderText('First name');
       const emailInput = screen.getByPlaceholderText('Email');
@@ -483,9 +499,10 @@ describe('SubmitPaperPage', () => {
     it('removes a co-speaker when the × button is clicked', async () => {
       const user = userEvent.setup();
 
-      mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
+      mockStandardGet();
 
       renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
 
       const firstNameInput = screen.getByPlaceholderText('First name');
       const emailInput = screen.getByPlaceholderText('Email');
@@ -504,9 +521,10 @@ describe('SubmitPaperPage', () => {
     it('shows error when adding a duplicate co-speaker email', async () => {
       const user = userEvent.setup();
 
-      mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
+      mockStandardGet();
 
       renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
 
       const firstNameInput = screen.getByPlaceholderText('First name');
       const emailInput = screen.getByPlaceholderText('Email');
@@ -525,9 +543,10 @@ describe('SubmitPaperPage', () => {
     it('disables the Add button and input after 3 co-speakers are added', async () => {
       const user = userEvent.setup();
 
-      mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
+      mockStandardGet();
 
       renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
 
       const firstNameInput = screen.getByPlaceholderText('First name');
       const emailInput = screen.getByPlaceholderText('Email');
@@ -608,7 +627,7 @@ describe('SubmitPaperPage', () => {
       await user.type(emailInput, 'alice@example.com');
       await user.click(screen.getByRole('button', { name: 'Add' }));
 
-      await user.click(screen.getByRole('button', { name: 'Save as Draft' }));
+      await user.click(screen.getByRole('button', { name: 'Next step' }));
 
       await waitFor(() => {
         expect(mockPortalApi.post).toHaveBeenCalledWith(

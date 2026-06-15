@@ -952,98 +952,102 @@ function SubmitPaperPage() {
             return null;
           })}
 
-        {/* Co-speakers */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Co-speakers (max 3)
-          </label>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              value={cospeakerFirstName}
-              onChange={(e) => setCospeakerFirstName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddCospeaker();
-                }
-              }}
-              className="sm:w-40 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-              placeholder="First name"
-              disabled={cospeakers.length >= 3}
-            />
-            <div className="flex-1">
+        {/* Co-speakers — only relevant once a conference with an open CFP is selected */}
+        {selectedCfpId && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Co-speakers (max 3)
+            </label>
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
-                type="email"
-                value={cospeakerInput}
-                onChange={(e) => setCospeakerInput(e.target.value)}
+                type="text"
+                value={cospeakerFirstName}
+                onChange={(e) => setCospeakerFirstName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     handleAddCospeaker();
                   }
                 }}
-                onBlur={(e) => setEmailError(validateEmail(e.target.value))}
-                className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
-                placeholder="Email"
+                className="sm:w-40 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                placeholder="First name"
                 disabled={cospeakers.length >= 3}
               />
-              {emailError && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
-              )}
+              <div className="flex-1">
+                <input
+                  type="email"
+                  value={cospeakerInput}
+                  onChange={(e) => setCospeakerInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCospeaker();
+                    }
+                  }}
+                  onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+                  className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
+                  placeholder="Email"
+                  disabled={cospeakers.length >= 3}
+                />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleAddCospeaker}
+                disabled={cospeakers.length >= 3 || !!emailError}
+                className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
+              >
+                Add
+              </button>
             </div>
+            {cospeakers.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {cospeakers.map((cs) => (
+                  <span
+                    key={cs.email}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200"
+                  >
+                    {cs.first_name} ({cs.email})
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCospeaker(cs.email)}
+                      className="text-primary-400 hover:text-primary-600"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Co-speakers don't need an account yet — they'll get an email invitation to join and
+              confirm.
+            </p>
+          </div>
+        )}
+
+        {/* Actions — only shown when a CFP is open (selectable); hidden when the CFP is closed */}
+        {selectedCfpId && (
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
-              onClick={handleAddCospeaker}
-              disabled={cospeakers.length >= 3 || !!emailError}
-              className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
+              onClick={() => navigate(`${basePath}/dashboard`)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
-              Add
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={createMutation.isPending}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md disabled:opacity-50 transition-colors"
+            >
+              {createMutation.isPending ? 'Saving...' : 'Next step'}
             </button>
           </div>
-          {cospeakers.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {cospeakers.map((cs) => (
-                <span
-                  key={cs.email}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200"
-                >
-                  {cs.first_name} ({cs.email})
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCospeaker(cs.email)}
-                    className="text-primary-400 hover:text-primary-600"
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Co-speakers don't need an account yet — they'll get an email invitation to join and
-            confirm.
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            type="button"
-            onClick={() => navigate(`${basePath}/dashboard`)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={createMutation.isPending}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md disabled:opacity-50 transition-colors"
-          >
-            {createMutation.isPending ? 'Saving...' : 'Save as Draft'}
-          </button>
-        </div>
+        )}
       </div>
       <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
     </div>
