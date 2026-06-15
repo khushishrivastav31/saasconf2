@@ -918,11 +918,11 @@ class TestPortalPapers:
         second_applicant: CFPApplicant,
         cfp: CallForPapers,
     ) -> None:
-        """Creating a paper with cospeaker_emails adds cospeakers and sends invitations."""
+        """Creating a paper with cospeakers adds cospeakers and sends invitations."""
         payload = {
             "cfp_id": str(cfp.id),
             "title": "Co-authored Paper",
-            "cospeaker_emails": [second_applicant.email],
+            "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
         }
         resp = await client.post(
             f"{PORTAL_BASE}/papers",
@@ -969,7 +969,7 @@ class TestPortalPapers:
         payload = {
             "cfp_id": str(cfp.id),
             "title": "Too Many Co-speakers",
-            "cospeaker_emails": emails,
+            "cospeakers": [{"first_name": f"Extra{i}", "email": e} for i, e in enumerate(emails)],
         }
         resp = await client.post(
             f"{PORTAL_BASE}/papers",
@@ -992,7 +992,7 @@ class TestPortalPapers:
         payload = {
             "cfp_id": str(cfp.id),
             "title": "Self Cospeaker",
-            "cospeaker_emails": [applicant.email],
+            "cospeakers": [{"first_name": "Me", "email": applicant.email}],
         }
         resp = await client.post(
             f"{PORTAL_BASE}/papers",
@@ -1053,7 +1053,7 @@ class TestPortalInvitations:
             json={
                 "cfp_id": str(cfp.id),
                 "title": "Invited Paper",
-                "cospeaker_emails": [second_applicant.email],
+                "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
             },
             headers=auth_headers(applicant_token),
         )
@@ -1091,7 +1091,7 @@ class TestPortalInvitations:
             json={
                 "cfp_id": str(cfp.id),
                 "title": "Accept Me",
-                "cospeaker_emails": [second_applicant.email],
+                "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
             },
             headers=auth_headers(applicant_token),
         )
@@ -1130,7 +1130,7 @@ class TestPortalInvitations:
             json={
                 "cfp_id": str(cfp.id),
                 "title": "Decline Me",
-                "cospeaker_emails": [second_applicant.email],
+                "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
             },
             headers=auth_headers(applicant_token),
         )
@@ -1169,7 +1169,7 @@ class TestPortalInvitations:
             json={
                 "cfp_id": str(cfp.id),
                 "title": "Once Only",
-                "cospeaker_emails": [second_applicant.email],
+                "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
             },
             headers=auth_headers(applicant_token),
         )

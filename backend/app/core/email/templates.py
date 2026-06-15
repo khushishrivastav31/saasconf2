@@ -265,6 +265,7 @@ def build_cospeaker_context(
     company_name: str = "",
     paper_title: str = "",
     main_speaker_name: str = "",
+    main_speaker_email: str = "",
     portal_link: str = "",
     support_email: str = "",
 ) -> dict[str, str]:
@@ -279,6 +280,7 @@ def build_cospeaker_context(
         "Company Name": company_name,
         "Paper Title": paper_title,
         "Main Speaker Name": main_speaker_name,
+        "Main Speaker Email": main_speaker_email,
         "Portal Link": portal_link,
         "Support Email": support_email,
     }

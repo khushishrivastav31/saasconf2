@@ -52,8 +52,10 @@ test.describe('CFP Portal', () => {
     // Check for co-speakers section (may only be visible when form is fully rendered)
     const hasCoSpeakers = await softVisible(page.getByText(/co-speaker/i).first(), 5000);
     if (hasCoSpeakers) {
-      // Should show email input for adding co-speakers
-      const emailInput = page.getByPlaceholder(/co-speaker email/i);
+      // Should show first-name and email inputs for adding co-speakers
+      const firstNameInput = page.getByPlaceholder(/first name/i);
+      const emailInput = page.getByPlaceholder(/^email$/i);
+      await expect(firstNameInput).toBeVisible({ timeout: 3000 });
       await expect(emailInput).toBeVisible({ timeout: 3000 });
     }
   });

@@ -253,6 +253,18 @@ function PortalLayout() {
   });
   const unreadCount = unreadData?.unread_count ?? 0;
 
+  // Pending co-speaker invitation count (for nav badge)
+  const { data: pendingInvitationsData } = useQuery({
+    queryKey: ['portal-pending-invitations'],
+    queryFn: async () => {
+      const res = await portalApi.get('/portal/invitations/pending-count');
+      return res.data as { pending_count: number };
+    },
+    enabled: !!applicant,
+    refetchInterval: 30000,
+  });
+  const pendingInvitations = pendingInvitationsData?.pending_count ?? 0;
+
   // Pending assignment count (for committee badge)
   const { data: pendingData } = useQuery({
     queryKey: ['portal-pending-assignments'],
@@ -410,6 +422,7 @@ function PortalLayout() {
       name: 'Co-Speaker Invitations',
       href: `${basePath}/invitations`,
       icon: MailIcon,
+      badge: pendingInvitations,
     });
   }
 

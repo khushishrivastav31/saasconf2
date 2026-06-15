@@ -13,6 +13,7 @@ import type {
   PortalConferenceDetail,
   PortalPaper,
   PortalPaperCreateRequest,
+  PortalCospeakerInput,
   PortalPaperFormSchema,
   PortalPaperFormField,
   PortalPaperFormVariant,
@@ -210,7 +211,8 @@ function SubmitPaperPage() {
   const [level, setLevel] = useState('');
   const [learningObjectives, setLearningObjectives] = useState('');
   const [topicIds, setTopicIds] = useState<string[]>([]);
-  const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
+  const [cospeakers, setCospeakers] = useState<PortalCospeakerInput[]>([]);
+  const [cospeakerFirstName, setCospeakerFirstName] = useState('');
   const [cospeakerInput, setCospeakerInput] = useState('');
   const [customFieldAnswers, setCustomFieldAnswers] = useState<Record<string, unknown>>({});
   const [customFieldFiles, setCustomFieldFiles] = useState<Record<string, File>>({});
@@ -226,9 +228,9 @@ function SubmitPaperPage() {
         abstractShort.trim() ||
         abstractLong.trim() ||
         learningObjectives.trim() ||
-        cospeakerEmails.length > 0
+        cospeakers.length > 0
       ),
-    [title, abstractShort, abstractLong, learningObjectives, cospeakerEmails]
+    [title, abstractShort, abstractLong, learningObjectives, cospeakers]
   );
   const { showDialog, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
@@ -416,26 +418,28 @@ function SubmitPaperPage() {
 
   const handleAddCospeaker = () => {
     const email = cospeakerInput.trim().toLowerCase();
-    if (!email) return;
+    const firstName = cospeakerFirstName.trim();
+    if (!email || !firstName) return;
     if (applicant && email === applicant.email.toLowerCase()) {
       setError('You cannot add yourself as a co-speaker');
       return;
     }
-    if (cospeakerEmails.length >= 3) {
+    if (cospeakers.length >= 3) {
       setError('Maximum 3 co-speakers allowed');
       return;
     }
-    if (cospeakerEmails.includes(email)) {
+    if (cospeakers.some((cs) => cs.email === email)) {
       setError('This email is already added');
       return;
     }
-    setCospeakerEmails([...cospeakerEmails, email]);
+    setCospeakers([...cospeakers, { first_name: firstName, email }]);
+    setCospeakerFirstName('');
     setCospeakerInput('');
     setError('');
   };
 
   const handleRemoveCospeaker = (email: string) => {
-    setCospeakerEmails(cospeakerEmails.filter((e) => e !== email));
+    setCospeakers(cospeakers.filter((cs) => cs.email !== email));
   };
 
   const handleCustomFieldChange = (fieldKey: string, value: unknown) => {
@@ -486,7 +490,7 @@ function SubmitPaperPage() {
       ...(level ? { level } : {}),
       ...(learningObjectives ? { learning_objectives: learningObjectives } : {}),
       ...(topicIds.length > 0 ? { topic_ids: topicIds } : {}),
-      ...(cospeakerEmails.length > 0 ? { cospeaker_emails: cospeakerEmails } : {}),
+      ...(cospeakers.length > 0 ? { cospeakers } : {}),
       ...(Object.keys(customFieldAnswers).length > 0
         ? { custom_field_answers: customFieldAnswers }
         : {}),
@@ -954,6 +958,20 @@ function SubmitPaperPage() {
             Co-speakers (max 3)
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={cospeakerFirstName}
+              onChange={(e) => setCospeakerFirstName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddCospeaker();
+                }
+              }}
+              className="sm:w-40 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              placeholder="First name"
+              disabled={cospeakers.length >= 3}
+            />
             <div className="flex-1">
               <input
                 type="email"
@@ -966,9 +984,9 @@ function SubmitPaperPage() {
                   }
                 }}
                 onBlur={(e) => setEmailError(validateEmail(e.target.value))}
-                className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500`}
-                placeholder="Co-speaker email"
-                disabled={cospeakerEmails.length >= 3}
+                className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
+                placeholder="Email"
+                disabled={cospeakers.length >= 3}
               />
               {emailError && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
@@ -977,23 +995,23 @@ function SubmitPaperPage() {
             <button
               type="button"
               onClick={handleAddCospeaker}
-              disabled={cospeakerEmails.length >= 3 || !!emailError}
+              disabled={cospeakers.length >= 3 || !!emailError}
               className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
             >
               Add
             </button>
           </div>
-          {cospeakerEmails.length > 0 && (
+          {cospeakers.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
-              {cospeakerEmails.map((email) => (
+              {cospeakers.map((cs) => (
                 <span
-                  key={email}
+                  key={cs.email}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200"
                 >
-                  {email}
+                  {cs.first_name} ({cs.email})
                   <button
                     type="button"
-                    onClick={() => handleRemoveCospeaker(email)}
+                    onClick={() => handleRemoveCospeaker(cs.email)}
                     className="text-primary-400 hover:text-primary-600"
                   >
                     &times;
@@ -1003,7 +1021,8 @@ function SubmitPaperPage() {
             </div>
           )}
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Co-speakers must be registered on this platform. They will receive an invitation.
+            Co-speakers don't need an account yet — they'll get an email invitation to join and
+            confirm.
           </p>
         </div>
 

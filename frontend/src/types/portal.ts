@@ -240,6 +240,11 @@ export interface PortalPaperListResponse {
   total: number;
 }
 
+export interface PortalCospeakerInput {
+  first_name: string;
+  email: string;
+}
+
 export interface PortalPaperCreateRequest {
   cfp_id: string;
   session_type_id?: string;
@@ -250,7 +255,7 @@ export interface PortalPaperCreateRequest {
   level?: string;
   learning_objectives?: string;
   topic_ids?: string[];
-  cospeaker_emails?: string[];
+  cospeakers?: PortalCospeakerInput[];
   custom_field_answers?: Record<string, unknown>;
 }
 
@@ -262,7 +267,7 @@ export interface PortalPaperUpdateRequest {
   level?: string;
   learning_objectives?: string;
   topic_ids?: string[];
-  cospeaker_emails?: string[];
+  cospeakers?: PortalCospeakerInput[];
   custom_field_answers?: Record<string, unknown>;
 }
 

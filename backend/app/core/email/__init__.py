@@ -636,11 +636,13 @@ async def send_cospeaker_invitation_email(
     conference_name: str,
     company_name: str = "",
     main_speaker_name: str,
+    main_speaker_email: str = "",
     first_name: str = "",
     last_name: str = "",
     tenant_slug: str,
     support_email: str = "",
     base_url: str = "",
+    setup_token: str | None = None,
 ) -> bool:
     """Send a co-speaker invitation email."""
     if not await _is_email_enabled_for_conference(db, conference_id):
@@ -649,7 +651,10 @@ async def send_cospeaker_invitation_email(
 
     settings = get_settings()
     base_url = base_url or settings.PORTAL_BASE_URL
-    portal_url = f"{base_url}/{tenant_slug}/portal/invitations"
+    if setup_token:
+        portal_url = f"{base_url}/{tenant_slug}/portal/set-password?token={setup_token}"
+    else:
+        portal_url = f"{base_url}/{tenant_slug}/portal/invitations"
 
     context = build_cospeaker_context(
         first_name=first_name,
@@ -659,6 +664,7 @@ async def send_cospeaker_invitation_email(
         company_name=company_name,
         paper_title=paper_title,
         main_speaker_name=main_speaker_name,
+        main_speaker_email=main_speaker_email,
         portal_link=portal_url,
         support_email=support_email or settings.RESEND_FROM_EMAIL,
     )

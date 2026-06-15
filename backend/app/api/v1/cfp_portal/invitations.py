@@ -1,7 +1,7 @@
 """CFP Applicant Portal - Co-speaker invitation endpoints."""
 
 from fastapi import APIRouter
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError, ValidationError
@@ -94,6 +94,24 @@ async def list_invitations(
         )
 
     return PortalInvitationListResponse(items=items, total=len(items))
+
+
+@router.get("/portal/invitations/pending-count")
+async def get_pending_invitation_count(
+    current: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Return the number of pending co-speaker invitations for the current applicant."""
+    result = await db.execute(
+        select(func.count())
+        .select_from(CFPPaperCospeaker)
+        .where(
+            CFPPaperCospeaker.applicant_id == current.applicant_id,
+            CFPPaperCospeaker.invitation_status == CospeakerInvitationStatus.PENDING.value,
+        )
+    )
+    count = result.scalar() or 0
+    return {"pending_count": count}
 
 
 @router.post("/portal/invitations/{paper_id}/accept")

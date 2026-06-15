@@ -283,6 +283,15 @@ class PortalPaperListResponse(BaseModel):
     total: int
 
 
+class PortalCospeakerInput(BaseModel):
+    """A co-speaker to add to a paper (no account required)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    first_name: str = Field(min_length=1, max_length=255)
+    email: EmailStr
+
+
 class PortalPaperCreateRequest(BaseModel):
     """Create a new paper."""
 
@@ -296,7 +305,7 @@ class PortalPaperCreateRequest(BaseModel):
     learning_objectives: str | None = None
     topic_ids: list[UUID] = Field(default_factory=list)
     custom_field_answers: dict | None = None
-    cospeaker_emails: list[EmailStr] = Field(default_factory=list, max_length=3)
+    cospeakers: list[PortalCospeakerInput] = Field(default_factory=list, max_length=3)
 
 
 class PortalPaperUpdateRequest(BaseModel):
@@ -311,7 +320,7 @@ class PortalPaperUpdateRequest(BaseModel):
     learning_objectives: str | None = None
     topic_ids: list[UUID] | None = None
     custom_field_answers: dict | None = None
-    cospeaker_emails: list[EmailStr] | None = Field(None, max_length=3)
+    cospeakers: list[PortalCospeakerInput] | None = Field(None, max_length=3)
 
 
 # --- Invitation Schemas ---

@@ -1,6 +1,7 @@
 import type {
   PortalPaper,
   PortalConferenceDetail,
+  PortalCospeakerInput,
   PortalPaperFormField,
   PortalTopic,
 } from '../../types/portal';
@@ -55,8 +56,10 @@ interface PaperEditFormProps {
   editCustomFieldFiles: Record<string, File>;
   setEditCustomFieldFiles: React.Dispatch<React.SetStateAction<Record<string, File>>>;
   // Co-speakers
-  cospeakerEmails: string[];
-  setCospeakerEmails: (v: string[]) => void;
+  cospeakers: PortalCospeakerInput[];
+  setCospeakers: (v: PortalCospeakerInput[]) => void;
+  cospeakerFirstName: string;
+  setCospeakerFirstName: (v: string) => void;
   cospeakerInput: string;
   setCospeakerInput: (v: string) => void;
   emailError: string | null;
@@ -104,8 +107,10 @@ export default function PaperEditForm({
   setEditCustomFieldAnswers,
   editCustomFieldFiles,
   setEditCustomFieldFiles,
-  cospeakerEmails,
-  setCospeakerEmails,
+  cospeakers,
+  setCospeakers,
+  cospeakerFirstName,
+  setCospeakerFirstName,
   cospeakerInput,
   setCospeakerInput,
   emailError,
@@ -623,6 +628,20 @@ export default function PaperEditForm({
             <span className="text-gray-400 dark:text-gray-500 font-normal">(max 3)</span>
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={cospeakerFirstName}
+              onChange={(e) => setCospeakerFirstName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  onAddCospeaker();
+                }
+              }}
+              className="sm:w-40 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              placeholder="First name"
+              disabled={cospeakers.length >= 3}
+            />
             <div className="flex-1">
               <input
                 type="email"
@@ -636,8 +655,8 @@ export default function PaperEditForm({
                 }}
                 onBlur={(e) => setEmailError(validateEmail(e.target.value))}
                 className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
-                placeholder="Co-speaker email"
-                disabled={cospeakerEmails.length >= 3}
+                placeholder="Email"
+                disabled={cospeakers.length >= 3}
               />
               {emailError && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
@@ -646,24 +665,25 @@ export default function PaperEditForm({
             <button
               type="button"
               onClick={onAddCospeaker}
-              disabled={cospeakerEmails.length >= 3 || !!emailError}
+              disabled={cospeakers.length >= 3 || !!emailError}
               className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
             >
               Add
             </button>
           </div>
-          {cospeakerEmails.length > 0 && (
+          {cospeakers.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
-              {cospeakerEmails.map((email) => {
-                const existing = paper.cospeakers.find((cs) => cs.email === email);
+              {cospeakers.map((cs) => {
+                const existing = paper.cospeakers.find((p) => p.email === cs.email);
                 return (
                   <span
-                    key={email}
+                    key={cs.email}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200"
                   >
                     {existing
-                      ? `${existing.first_name || ''} ${existing.last_name || ''}`.trim() || email
-                      : email}
+                      ? `${existing.first_name || ''} ${existing.last_name || ''}`.trim() ||
+                        cs.email
+                      : `${cs.first_name} (${cs.email})`}
                     {existing && (
                       <span
                         className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${INVITATION_STATUS_COLORS[existing.invitation_status] || 'bg-gray-100 text-gray-600'}`}
@@ -673,7 +693,7 @@ export default function PaperEditForm({
                     )}
                     <button
                       type="button"
-                      onClick={() => setCospeakerEmails(cospeakerEmails.filter((e) => e !== email))}
+                      onClick={() => setCospeakers(cospeakers.filter((c) => c.email !== cs.email))}
                       className="ml-0.5 text-primary-400 hover:text-primary-700"
                     >
                       <svg
@@ -695,13 +715,14 @@ export default function PaperEditForm({
               })}
             </div>
           )}
-          {cospeakerEmails.length > 0 && (
+          {cospeakers.length > 0 && (
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {cospeakerEmails.length}/3 co-speakers selected
+              {cospeakers.length}/3 co-speakers selected
             </p>
           )}
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Co-speakers must be registered on this platform. They will receive an invitation.
+            Co-speakers don't need an account yet — they'll get an email invitation to join and
+            confirm.
           </p>
         </div>
       )}

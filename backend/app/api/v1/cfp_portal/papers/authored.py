@@ -153,8 +153,8 @@ async def create_paper(
         await validate_topics(db, data.topic_ids, current.tenant_id)
         await sync_paper_topics(db, paper.id, data.topic_ids)
 
-    if data.cospeaker_emails:
-        await _sync_cospeakers(db, paper, data.cospeaker_emails, current)
+    if data.cospeakers:
+        await _sync_cospeakers(db, paper, data.cospeakers, current)
 
     await db.commit()
     paper = await _get_applicant_or_cospeaker_paper(db, str(paper.id), current.applicant_id, current.tenant_id)
@@ -176,7 +176,7 @@ async def update_paper(
 
     is_main = str(paper.main_speaker_id) == str(current.applicant_id)
 
-    update_data = data.model_dump(exclude_unset=True, exclude={"cospeaker_emails", "topic_ids"})
+    update_data = data.model_dump(exclude_unset=True, exclude={"cospeakers", "topic_ids"})
     for field, value in update_data.items():
         setattr(paper, field, value)
 
@@ -187,10 +187,10 @@ async def update_paper(
         await sync_paper_topics(db, paper.id, topic_ids)
 
     # Only main speaker can manage co-speakers
-    if data.cospeaker_emails is not None:
+    if data.cospeakers is not None:
         if not is_main:
             raise AuthorizationError("Only the main speaker can manage co-speakers")
-        await _sync_cospeakers(db, paper, data.cospeaker_emails, current)
+        await _sync_cospeakers(db, paper, data.cospeakers, current)
 
     await db.commit()
     paper = await _get_applicant_or_cospeaker_paper(db, str(paper.id), current.applicant_id, current.tenant_id)

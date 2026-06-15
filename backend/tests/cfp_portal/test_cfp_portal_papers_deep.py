@@ -290,7 +290,10 @@ class TestPaperResponseFields:
         payload = {
             "cfp_id": str(cfp.id),
             "title": "Multi-Speaker Paper",
-            "cospeaker_emails": [second_applicant.email, third_applicant.email],
+            "cospeakers": [
+                {"first_name": "Bob", "email": second_applicant.email},
+                {"first_name": "Carol", "email": third_applicant.email},
+            ],
         }
         resp = await client.post(
             f"{PORTAL_BASE}/papers",
@@ -761,7 +764,7 @@ class TestCospeakerAccess:
 
         resp = await client.put(
             f"{PORTAL_BASE}/papers/{paper.id}",
-            json={"cospeaker_emails": [third_applicant.email]},
+            json={"cospeakers": [{"first_name": "Carol", "email": third_applicant.email}]},
             headers=auth_headers(second_applicant_token),
         )
         assert resp.status_code == 403
@@ -835,7 +838,10 @@ class TestCospeakerSync:
             json={
                 "cfp_id": str(cfp.id),
                 "title": "Remove Cospeaker Paper",
-                "cospeaker_emails": [second_applicant.email, third_applicant.email],
+                "cospeakers": [
+                    {"first_name": "Bob", "email": second_applicant.email},
+                    {"first_name": "Carol", "email": third_applicant.email},
+                ],
             },
             headers=auth_headers(applicant_token),
         )
@@ -846,7 +852,7 @@ class TestCospeakerSync:
         # Update: remove third_applicant, keep only second_applicant
         update_resp = await client.put(
             f"{PORTAL_BASE}/papers/{paper_id}",
-            json={"cospeaker_emails": [second_applicant.email]},
+            json={"cospeakers": [{"first_name": "Bob", "email": second_applicant.email}]},
             headers=auth_headers(applicant_token),
         )
         assert update_resp.status_code == 200
@@ -855,28 +861,64 @@ class TestCospeakerSync:
         assert cospeakers[0]["email"] == second_applicant.email
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
-    async def test_cospeaker_nonexistent_email_fails(
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_email_background")
+    async def test_unknown_cospeaker_email_provisions_account(
         self,
-        mock_email: AsyncMock,
+        mock_bg_email: MagicMock,
         client: AsyncClient,
+        db_session: AsyncSession,
         applicant: CFPApplicant,
         applicant_token: str,
+        tenant: Tenant,
         cfp: CallForPapers,
     ) -> None:
-        """Adding a cospeaker with a non-existent email returns 400."""
+        """Adding an unknown email auto-provisions a CFPApplicant + PortalUser and still saves."""
+        from sqlalchemy import select
+        from app.models.cfp_applicants import CFPApplicant as CFPApplicantModel
+        from app.models.portal_user import PortalUser
+
+        new_email = f"brand-new-{uuid.uuid4().hex[:8]}@nowhere.example.com"
         payload = {
             "cfp_id": str(cfp.id),
-            "title": "Bad Email Paper",
-            "cospeaker_emails": ["nonexistent@nowhere.example.com"],
+            "title": "Provisional Cospeaker Paper",
+            "cospeakers": [{"first_name": "Newbie", "email": new_email}],
         }
         resp = await client.post(
             f"{PORTAL_BASE}/papers",
             json=payload,
             headers=auth_headers(applicant_token),
         )
-        assert resp.status_code == 400
-        assert "no registered applicant" in resp.json()["detail"].lower()
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["cospeakers"]) == 1
+        assert data["cospeakers"][0]["email"] == new_email
+        assert data["cospeakers"][0]["first_name"] == "Newbie"
+        assert data["cospeakers"][0]["invitation_status"] == "pending"
+
+        # The provisioned CFPApplicant must exist in the DB
+        from app.core.security.pii_crypto import hash_email
+        result = await db_session.execute(
+            select(CFPApplicantModel).where(
+                CFPApplicantModel.tenant_id == tenant.id,
+                CFPApplicantModel.email_hash == hash_email(new_email),
+            )
+        )
+        provisioned = result.scalar_one_or_none()
+        assert provisioned is not None
+        assert provisioned.first_name == "Newbie"
+
+        # A PortalUser must also exist
+        pu_result = await db_session.execute(
+            select(PortalUser).where(
+                PortalUser.tenant_id == tenant.id,
+                PortalUser.email_hash == hash_email(new_email),
+            )
+        )
+        portal_user = pu_result.scalar_one_or_none()
+        assert portal_user is not None
+
+        # A background invite email must have been scheduled
+        mock_bg_email.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
@@ -898,7 +940,7 @@ class TestCospeakerSync:
             json={
                 "cfp_id": str(cfp.id),
                 "title": "Preserve Status Paper",
-                "cospeaker_emails": [second_applicant.email],
+                "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
             },
             headers=auth_headers(applicant_token),
         )
@@ -914,7 +956,7 @@ class TestCospeakerSync:
         # Update paper cospeakers - same email but should preserve accepted status
         update_resp = await client.put(
             f"{PORTAL_BASE}/papers/{paper_id}",
-            json={"cospeaker_emails": [second_applicant.email]},
+            json={"cospeakers": [{"first_name": "Bob", "email": second_applicant.email}]},
             headers=auth_headers(applicant_token),
         )
         assert update_resp.status_code == 200
@@ -1877,7 +1919,7 @@ class TestInvitationListDetail:
             json={
                 "cfp_id": str(cfp.id),
                 "title": "Enriched Invitation Paper",
-                "cospeaker_emails": [second_applicant.email],
+                "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
             },
             headers=auth_headers(applicant_token),
         )

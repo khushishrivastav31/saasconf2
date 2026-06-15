@@ -1,4 +1,4 @@
-"""Portal user auto-creation for conference registrations.
+"""Portal user auto-creation for conference registrations and co-speaker provisioning.
 
 Creates PortalUser accounts (not admin User accounts) when a registration is
 submitted through the public portal.  Emits a PortalRefreshToken with
@@ -7,6 +7,7 @@ page rather than the admin reset-password page.
 """
 
 import logging
+import secrets
 from datetime import timedelta
 from uuid import UUID
 
@@ -14,8 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import generate_email_verification_token
+from app.core.security import hash_password
 from app.core.security.pii_crypto import encrypt_pii, hash_email
 from app.core.utils import utcnow
+from app.models.cfp_applicants import CFPApplicant
 from app.models.portal_user import PortalRefreshToken, PortalUser
 from app.models.registration import Registration
 
@@ -95,3 +98,66 @@ async def _create_setup_token(db: AsyncSession, portal_user_id: UUID) -> str:
     )
     await db.flush()
     return raw_token
+
+
+async def provision_cospeaker_applicant(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    first_name: str,
+    email: str,
+) -> tuple[CFPApplicant, str | None]:
+    """Create (or locate) a PortalUser + CFPApplicant for an unregistered co-speaker.
+
+    The applicant is created with a random unusable password so login requires
+    the set-password flow. The raw setup token (or None if the account already
+    has a password) drives the invite link.
+
+    Returns:
+        (CFPApplicant, raw_setup_token | None)
+    """
+    email_lower = email.strip().lower()
+    email_hash = hash_email(email_lower)
+
+    # Find or create the PortalUser
+    existing_pu = await db.execute(
+        select(PortalUser).where(
+            PortalUser.tenant_id == tenant_id,
+            PortalUser.email_hash == email_hash,
+        )
+    )
+    portal_user = existing_pu.scalar_one_or_none()
+    raw_token: str | None = None
+
+    if portal_user is None:
+        portal_user = PortalUser(
+            tenant_id=tenant_id,
+            email_encrypted=encrypt_pii(email_lower),
+            email_hash=email_hash,
+            first_name=first_name,
+            last_name="",
+        )
+        db.add(portal_user)
+        await db.flush()
+        raw_token = await _create_setup_token(db, portal_user.id)
+    elif not portal_user.password_hash:
+        raw_token = await _create_setup_token(db, portal_user.id)
+
+    # Create the CFPApplicant with an unusable placeholder password.
+    # Mark email as already verified: the main speaker provided the address,
+    # and the set-password link in the invitation email serves as identity proof.
+    # This prevents the account from appearing in the pending-verifications queue.
+    applicant = CFPApplicant(
+        tenant_id=tenant_id,
+        first_name=first_name,
+        last_name="",
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        portal_user_id=portal_user.id,
+        email_verified_at=utcnow(),
+    )
+    applicant.email = email_lower
+    db.add(applicant)
+    await db.flush()
+
+    logger.info("Provisioned CFPApplicant %s for co-speaker %s", applicant.id, email_lower)
+    return (applicant, raw_token)

@@ -143,7 +143,9 @@ describe('SubmitPaperPage', () => {
       renderWithProviders(<SubmitPaperPage />);
 
       expect(screen.getAllByText(/co-speakers/i).length).toBeGreaterThan(0);
-      expect(screen.getByPlaceholderText('Co-speaker email')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('First name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
+      expect(screen.getByText(/don't need an account yet/i)).toBeInTheDocument();
     });
 
     it('renders Cancel and Save as Draft buttons', () => {
@@ -430,18 +432,35 @@ describe('SubmitPaperPage', () => {
   });
 
   describe('co-speaker management', () => {
-    it('adds a co-speaker email when Add button is clicked', async () => {
+    it('requires first name and email to add a co-speaker chip', async () => {
       const user = userEvent.setup();
 
       mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
 
       renderWithProviders(<SubmitPaperPage />);
 
-      const emailInput = screen.getByPlaceholderText('Co-speaker email');
+      // Clicking Add with only an email and no first name should not add a chip
+      const emailInput = screen.getByPlaceholderText('Email');
       await user.type(emailInput, 'cospeaker@example.com');
       await user.click(screen.getByRole('button', { name: 'Add' }));
 
-      expect(screen.getByText('cospeaker@example.com')).toBeInTheDocument();
+      expect(screen.queryByText(/cospeaker@example.com/)).not.toBeInTheDocument();
+    });
+
+    it('adds a co-speaker chip with first name and email when Add is clicked', async () => {
+      const user = userEvent.setup();
+
+      mockPortalApi.get.mockImplementation(() => new Promise(() => {}));
+
+      renderWithProviders(<SubmitPaperPage />);
+
+      const firstNameInput = screen.getByPlaceholderText('First name');
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(firstNameInput, 'Alice');
+      await user.type(emailInput, 'alice@example.com');
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+
+      expect(screen.getByText('Alice (alice@example.com)')).toBeInTheDocument();
     });
 
     it('shows error when adding own email as co-speaker', async () => {
@@ -451,7 +470,9 @@ describe('SubmitPaperPage', () => {
 
       renderWithProviders(<SubmitPaperPage />);
 
-      const emailInput = screen.getByPlaceholderText('Co-speaker email');
+      const firstNameInput = screen.getByPlaceholderText('First name');
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(firstNameInput, 'Me');
       // mockApplicant.email is 'speaker@example.com'
       await user.type(emailInput, 'speaker@example.com');
       await user.click(screen.getByRole('button', { name: 'Add' }));
@@ -466,17 +487,18 @@ describe('SubmitPaperPage', () => {
 
       renderWithProviders(<SubmitPaperPage />);
 
-      const emailInput = screen.getByPlaceholderText('Co-speaker email');
-      await user.type(emailInput, 'cospeaker@example.com');
+      const firstNameInput = screen.getByPlaceholderText('First name');
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(firstNameInput, 'Alice');
+      await user.type(emailInput, 'alice@example.com');
       await user.click(screen.getByRole('button', { name: 'Add' }));
 
-      expect(screen.getByText('cospeaker@example.com')).toBeInTheDocument();
+      expect(screen.getByText('Alice (alice@example.com)')).toBeInTheDocument();
 
-      // Click the × remove button (rendered as ×)
       const removeButton = screen.getByRole('button', { name: '×' });
       await user.click(removeButton);
 
-      expect(screen.queryByText('cospeaker@example.com')).not.toBeInTheDocument();
+      expect(screen.queryByText('Alice (alice@example.com)')).not.toBeInTheDocument();
     });
 
     it('shows error when adding a duplicate co-speaker email', async () => {
@@ -486,11 +508,14 @@ describe('SubmitPaperPage', () => {
 
       renderWithProviders(<SubmitPaperPage />);
 
-      const emailInput = screen.getByPlaceholderText('Co-speaker email');
+      const firstNameInput = screen.getByPlaceholderText('First name');
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(firstNameInput, 'Dup');
       await user.type(emailInput, 'dup@example.com');
       await user.click(screen.getByRole('button', { name: 'Add' }));
 
       // Try adding the same email again
+      await user.type(firstNameInput, 'Dup2');
       await user.type(emailInput, 'dup@example.com');
       await user.click(screen.getByRole('button', { name: 'Add' }));
 
@@ -504,14 +529,95 @@ describe('SubmitPaperPage', () => {
 
       renderWithProviders(<SubmitPaperPage />);
 
-      const emailInput = screen.getByPlaceholderText('Co-speaker email');
+      const firstNameInput = screen.getByPlaceholderText('First name');
+      const emailInput = screen.getByPlaceholderText('Email');
 
-      for (const email of ['one@example.com', 'two@example.com', 'three@example.com']) {
+      for (const [name, email] of [
+        ['One', 'one@example.com'],
+        ['Two', 'two@example.com'],
+        ['Three', 'three@example.com'],
+      ]) {
+        await user.type(firstNameInput, name);
         await user.type(emailInput, email);
         await user.click(screen.getByRole('button', { name: 'Add' }));
       }
 
       expect(emailInput).toBeDisabled();
+    });
+
+    it('includes cospeakers in the submission payload', async () => {
+      const user = userEvent.setup();
+
+      mockPortalApi.get.mockImplementation((url: string) => {
+        if (url === '/portal/conferences') {
+          return Promise.resolve({ data: mockConferences });
+        }
+        if (url.includes('/conferences/conf-1')) {
+          return Promise.resolve({ data: mockConferenceDetail });
+        }
+        if (url.includes('/cfp/cfp-1/paper-form-schema')) {
+          return Promise.resolve({ data: mockFormSchema });
+        }
+        return Promise.resolve({ data: mockFormSchema });
+      });
+
+      mockPortalApi.post.mockResolvedValueOnce({
+        data: {
+          id: 'paper-new',
+          cfp_id: 'cfp-1',
+          title: 'My Test Paper',
+          status: 'draft',
+          cospeakers: [],
+          is_main_speaker: true,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+          submitted_at: null,
+          conference_id: 'conf-1',
+          conference_name: 'PyCon 2025',
+          cfp_title: 'PyCon 2025 CFP',
+          session_type_id: null,
+          session_type_name: null,
+          abstract_short: null,
+          abstract_long: null,
+          level: null,
+          learning_objectives: null,
+          video_url: null,
+          main_speaker_first_name: null,
+          main_speaker_last_name: null,
+          custom_field_answers: null,
+        },
+      });
+
+      renderWithProviders(<SubmitPaperPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PyCon 2025 (PyCon)')).toBeInTheDocument();
+      });
+      const conferenceSelect = screen.getByRole('combobox');
+      await user.selectOptions(conferenceSelect, 'conf-1');
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Your paper title')).toBeInTheDocument();
+      });
+      await user.type(screen.getByPlaceholderText('Your paper title'), 'My Test Paper');
+
+      // Add a co-speaker
+      const firstNameInput = screen.getByPlaceholderText('First name');
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(firstNameInput, 'Alice');
+      await user.type(emailInput, 'alice@example.com');
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+
+      await user.click(screen.getByRole('button', { name: 'Save as Draft' }));
+
+      await waitFor(() => {
+        expect(mockPortalApi.post).toHaveBeenCalledWith(
+          '/portal/papers',
+          expect.objectContaining({
+            cospeakers: [{ first_name: 'Alice', email: 'alice@example.com' }],
+          })
+        );
+      });
     });
   });
 

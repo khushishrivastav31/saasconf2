@@ -21,6 +21,7 @@ from app.core.applicant_dependencies import CurrentApplicantDep
 from app.core.attachment_urls import PORTAL_PREFIX, batch_get_attachment_urls
 from app.core.email import send_cospeaker_invitation_email, send_email_background
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.portal_user_auto_creation import provision_cospeaker_applicant
 from app.core.security.pii_crypto import hash_email
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
@@ -39,6 +40,7 @@ from app.models.settings import SessionType
 from app.models.tenant import Tenant
 from app.schemas.cfp_portal import (
     PortalAssignedPaperResponse,
+    PortalCospeakerInput,
     PortalCospeakerResponse,
     PortalPaperResponse,
     PortalTopicResponse,
@@ -260,24 +262,35 @@ async def _build_portal_paper_response(
 async def _sync_cospeakers(
     db: AsyncSession,
     paper: CFPPaper,
-    cospeaker_emails: list[str],
+    cospeakers: list[PortalCospeakerInput],
     current: CurrentApplicantDep,
 ) -> None:
-    """Sync co-speakers for a paper based on email list.
+    """Sync co-speakers for a paper based on structured list.
 
     Preserves invitation status for existing co-speakers and only sends
-    invitation emails to newly added ones.
+    invitation emails to newly added ones. Unknown emails are auto-provisioned
+    rather than rejected.
     """
-    if len(cospeaker_emails) > 3:
+    if len(cospeakers) > 3:
         raise ValidationError("Maximum 3 co-speakers allowed")
 
     existing_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id))
     existing_by_applicant: dict = {row.applicant_id: row for row in existing_result.scalars().all()}
 
-    # Resolve all emails to applicant IDs first
-    new_applicants: list[tuple[int, CFPApplicant]] = []
-    for i, email in enumerate(cospeaker_emails):
-        normalized = email.strip().lower()
+    main_speaker_email = current.applicant.email or ""
+
+    # Deduplicate by normalised email and resolve each to a CFPApplicant (provisioning if needed)
+    seen_emails: set[str] = set()
+    new_applicants: list[tuple[int, CFPApplicant, str | None]] = []  # (sort_order, applicant, setup_token)
+    for i, cs in enumerate(cospeakers):
+        normalized = str(cs.email).strip().lower()
+        if normalized in seen_emails:
+            continue
+        seen_emails.add(normalized)
+
+        if normalized == main_speaker_email.lower():
+            raise ValidationError("You cannot add yourself as a co-speaker")
+
         app_result = await db.execute(
             select(CFPApplicant).where(
                 CFPApplicant.tenant_id == current.tenant_id,
@@ -285,16 +298,22 @@ async def _sync_cospeakers(
             )
         )
         applicant = app_result.scalar_one_or_none()
-        if not applicant:
-            raise ValidationError(f"No registered applicant found with email: {email}")
+        setup_token: str | None = None
 
-        if applicant.id == current.applicant_id:
+        if applicant is None:
+            applicant, setup_token = await provision_cospeaker_applicant(
+                db,
+                tenant_id=current.tenant_id,
+                first_name=cs.first_name,
+                email=normalized,
+            )
+        elif applicant.id == current.applicant_id:
             raise ValidationError("You cannot add yourself as a co-speaker")
 
-        new_applicants.append((i, applicant))
+        new_applicants.append((i, applicant, setup_token))
 
     # Determine which applicant IDs to keep
-    new_applicant_ids = {a.id for _, a in new_applicants}
+    new_applicant_ids = {a.id for _, a, _ in new_applicants}
 
     # Delete co-speakers that are no longer in the list
     for applicant_id, row in existing_by_applicant.items():
@@ -308,7 +327,7 @@ async def _sync_cospeakers(
     tenant_slug: str | None = None
     company_name: str | None = None
 
-    for sort_order, applicant in new_applicants:
+    for sort_order, applicant, setup_token in new_applicants:
         existing_row = existing_by_applicant.get(applicant.id)
 
         if existing_row:
@@ -354,11 +373,13 @@ async def _sync_cospeakers(
                 conference_name=conference_name,
                 company_name=company_name,
                 main_speaker_name=f"{current.applicant.first_name} {current.applicant.last_name}",
+                main_speaker_email=main_speaker_email,
                 first_name=applicant.first_name,
                 last_name=applicant.last_name,
                 tenant_slug=tenant_slug,
                 support_email=conf_support_email or "",
                 base_url=cospeaker_settings.PORTAL_BASE_URL,
+                setup_token=setup_token,
             )
 
     await db.flush()

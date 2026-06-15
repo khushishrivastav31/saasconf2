@@ -12482,6 +12482,26 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/portal/invitations/pending-count': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Pending Invitation Count
+     * @description Return the number of pending co-speaker invitations for the current applicant.
+     */
+    get: operations['get_pending_invitation_count_api_v1_portal_invitations_pending_count_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/portal/invitations/{paper_id}/accept': {
     parameters: {
       query?: never;
@@ -22162,6 +22182,19 @@ export type components = {
       expenses_enabled?: boolean;
     };
     /**
+     * PortalCospeakerInput
+     * @description A co-speaker to add to a paper (no account required).
+     */
+    PortalCospeakerInput: {
+      /** First Name */
+      first_name: string;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+    };
+    /**
      * PortalCospeakerResponse
      * @description Co-speaker info in portal paper response.
      */
@@ -22454,8 +22487,8 @@ export type components = {
       custom_field_answers?: {
         [key: string]: unknown;
       } | null;
-      /** Cospeaker Emails */
-      cospeaker_emails?: string[];
+      /** Cospeakers */
+      cospeakers?: components['schemas']['PortalCospeakerInput'][];
     };
     /**
      * PortalPaperListResponse
@@ -22571,8 +22604,8 @@ export type components = {
       custom_field_answers?: {
         [key: string]: unknown;
       } | null;
-      /** Cospeaker Emails */
-      cospeaker_emails?: string[] | null;
+      /** Cospeakers */
+      cospeakers?: components['schemas']['PortalCospeakerInput'][] | null;
     };
     /**
      * PortalPrivacyRequestCreate
@@ -57909,6 +57942,39 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PortalInvitationListResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_pending_invitation_count_api_v1_portal_invitations_pending_count_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
         };
       };
       /** @description Validation Error */

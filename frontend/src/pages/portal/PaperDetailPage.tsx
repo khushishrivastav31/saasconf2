@@ -7,6 +7,7 @@ import { usePortalBasePath } from '../../hooks/usePortalBasePath';
 import type {
   PortalPaper,
   PortalPaperUpdateRequest,
+  PortalCospeakerInput,
   PortalConferenceDetail,
   PortalSpeakerFeedbackListResponse,
   PortalPaperFormSchema,
@@ -68,7 +69,8 @@ function PaperDetailPage() {
   const [editLearningObjectives, setEditLearningObjectives] = useState('');
   const [editTopicIds, setEditTopicIds] = useState<string[]>([]);
   const [editCustomFieldAnswers, setEditCustomFieldAnswers] = useState<Record<string, unknown>>({});
-  const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
+  const [cospeakers, setCospeakers] = useState<PortalCospeakerInput[]>([]);
+  const [cospeakerFirstName, setCospeakerFirstName] = useState('');
   const [cospeakerInput, setCospeakerInput] = useState('');
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -343,7 +345,7 @@ function PaperDetailPage() {
     setEditSessionTypeId(paper.session_type_id || '');
     setEditLearningObjectives(paper.learning_objectives || '');
     setEditTopicIds(paper.topics.map((t) => t.id));
-    setCospeakerEmails(paper.cospeakers.map((cs) => cs.email));
+    setCospeakers(paper.cospeakers.map((cs) => ({ first_name: cs.first_name, email: cs.email })));
     setEditCustomFieldAnswers(paper.custom_field_answers || {});
     setVideoFile(null);
     if (videoPreview) URL.revokeObjectURL(videoPreview);
@@ -405,7 +407,7 @@ function PaperDetailPage() {
       session_type_id: editSessionTypeId || undefined,
       learning_objectives: editLearningObjectives,
       topic_ids: editTopicIds,
-      ...(paper?.is_main_speaker ? { cospeaker_emails: cospeakerEmails } : {}),
+      ...(paper?.is_main_speaker ? { cospeakers } : {}),
       ...(Object.keys(resolvedCustomFieldAnswers).length > 0
         ? { custom_field_answers: resolvedCustomFieldAnswers }
         : {}),
@@ -432,20 +434,22 @@ function PaperDetailPage() {
 
   const handleAddCospeaker = () => {
     const email = cospeakerInput.trim().toLowerCase();
-    if (!email) return;
+    const firstName = cospeakerFirstName.trim();
+    if (!email || !firstName) return;
     if (applicant && email === applicant.email.toLowerCase()) {
       setError('You cannot add yourself as a co-speaker');
       return;
     }
-    if (cospeakerEmails.length >= 3) {
+    if (cospeakers.length >= 3) {
       setError('Maximum 3 co-speakers allowed');
       return;
     }
-    if (cospeakerEmails.includes(email)) {
+    if (cospeakers.some((cs) => cs.email === email)) {
       setError('This email is already added');
       return;
     }
-    setCospeakerEmails([...cospeakerEmails, email]);
+    setCospeakers([...cospeakers, { first_name: firstName, email }]);
+    setCospeakerFirstName('');
     setCospeakerInput('');
     setError('');
   };
@@ -574,8 +578,10 @@ function PaperDetailPage() {
             setEditCustomFieldAnswers={setEditCustomFieldAnswers}
             editCustomFieldFiles={editCustomFieldFiles}
             setEditCustomFieldFiles={setEditCustomFieldFiles}
-            cospeakerEmails={cospeakerEmails}
-            setCospeakerEmails={setCospeakerEmails}
+            cospeakers={cospeakers}
+            setCospeakers={setCospeakers}
+            cospeakerFirstName={cospeakerFirstName}
+            setCospeakerFirstName={setCospeakerFirstName}
             cospeakerInput={cospeakerInput}
             setCospeakerInput={setCospeakerInput}
             emailError={emailError}

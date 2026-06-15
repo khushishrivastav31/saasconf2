@@ -24,6 +24,7 @@ function InvitationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.portal.invitations });
       queryClient.invalidateQueries({ queryKey: queryKeys.portal.papers });
+      queryClient.invalidateQueries({ queryKey: ['portal-pending-invitations'] });
     },
   });
 
@@ -34,6 +35,7 @@ function InvitationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.portal.invitations });
       queryClient.invalidateQueries({ queryKey: queryKeys.portal.papers });
+      queryClient.invalidateQueries({ queryKey: ['portal-pending-invitations'] });
     },
   });
 

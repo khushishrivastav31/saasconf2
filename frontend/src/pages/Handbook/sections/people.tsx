@@ -92,6 +92,8 @@ export const peopleCategory: HandbookCategory = {
 </ul>
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">User Address</h4>
 <p class="text-gray-700 dark:text-gray-300 my-2">Each portal user can have an address stored on their profile. The address is editable by both the admin (in the user form) and the user themselves (in the portal profile page). When a user registers for a conference via the authenticated registration form, their profile address is used to pre-fill the billing address fields. <strong>Note:</strong> Invoice addresses are frozen at creation time and are never affected by later profile changes.</p>
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Co-speaker invitations</h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">When a main speaker adds a co-speaker by <strong>first name + email</strong> on the paper submission form, the paper saves immediately regardless of whether the co-speaker already has an account. If the email is not yet registered, a placeholder account is automatically created and the co-speaker receives a set-password invitation link (7-day TTL). Once they set a password they log in and accept or decline the pending invitation from the Invitations page.</p>
 <strong>Dependencies:</strong> CFP must be configured and open for submissions.
 <strong>Consequences:</strong> User accounts persist across conferences within the tenant. Portal users can submit papers, register for events, and view their history.`,
           }}
