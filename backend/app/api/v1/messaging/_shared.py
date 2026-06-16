@@ -93,7 +93,7 @@ async def _notify_participants(
             if not user or not user.message_notifications_enabled:
                 continue
             messages_link = (
-                f"{_s.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
+                f"{_s.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?tab=messaging&thread={thread.id}"
             )
             send_email_background(
                 send_new_message_notification,

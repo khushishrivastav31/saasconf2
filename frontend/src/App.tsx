@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import UpdateBanner from './components/UpdateBanner';
-import { Routes, Route, Navigate, useSearchParams, useParams } from 'react-router';
+import { Routes, Route, Navigate, useSearchParams, useParams, useLocation } from 'react-router';
 import { useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -148,6 +148,7 @@ function LegacyTrainingPortalPrivacyRedirect() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -158,7 +159,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   return <>{children}</>;

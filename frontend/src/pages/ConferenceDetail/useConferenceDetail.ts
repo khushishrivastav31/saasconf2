@@ -109,8 +109,30 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
 
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
 
-  // Sync URL ?tab= param whenever activeSection changes (in an effect, not during render)
+  // Tracks activeSection in a ref so the URL→state effect can read it without
+  // needing it as a dep (which would cause a loop).
+  const activeSectionRef = useRef(initialSection);
+  activeSectionRef.current = activeSection;
+  // When the URL→state effect updates state it sets this to true so the
+  // state→URL effect below knows to skip that one cycle (URL is already right).
+  const skipUrlSyncRef = useRef(false);
+
+  // URL → state: fires when external navigation changes ?tab= (e.g. bell dropdown)
   useEffect(() => {
+    const wanted: SectionId =
+      tabFromUrl && validSectionIds.has(tabFromUrl) ? (tabFromUrl as SectionId) : 'details';
+    if (wanted !== activeSectionRef.current) {
+      skipUrlSyncRef.current = true;
+      setActiveSection(wanted);
+    }
+  }, [tabFromUrl, validSectionIds]);
+
+  // State → URL: fires when activeSection changes (sidebar clicks)
+  useEffect(() => {
+    if (skipUrlSyncRef.current) {
+      skipUrlSyncRef.current = false;
+      return;
+    }
     const currentTab = searchParams.get('tab');
     const expectedTab = activeSection === 'details' ? null : activeSection;
     if (currentTab !== expectedTab) {

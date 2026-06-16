@@ -115,7 +115,7 @@ async def _notify_other_participants(
         admin_link = f"{settings.FRONTEND_BASE_URL}/modules/trainings?section=messages&thread={thread.id}"
     else:
         admin_link = (
-            f"{settings.FRONTEND_BASE_URL}/modules/conferences/{domain_anchor_id}?section=messaging&thread={thread.id}"
+            f"{settings.FRONTEND_BASE_URL}/modules/conferences/{domain_anchor_id}?tab=messaging&thread={thread.id}"
         )
     portal_link = f"{settings.PORTAL_BASE_URL}/{tenant_slug}/portal/messages/{thread.id}"
 

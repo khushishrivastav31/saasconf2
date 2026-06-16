@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import PortalLayout from '../PortalLayout';
 import {
   renderWithPortalProviders,
@@ -161,6 +162,81 @@ describe('PortalLayout — Trainings sidebar entry', () => {
     // PortalLayout.tsx:643, so when activeTrainingsCount is 0 the link's
     // textContent is just the label — no digits.
     expect(link.textContent).not.toMatch(/\d/);
+  });
+});
+
+describe('PortalLayout — notification bell dropdown', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows summary text and a "View all messages" link when unread > 0', async () => {
+    const user = userEvent.setup();
+
+    mockPortalApi.get.mockImplementation((url: string) => {
+      if (url === '/portal/conferences') return Promise.resolve({ data: [] });
+      if (url.startsWith('/portal/tenant/'))
+        return Promise.resolve({ data: { name: 'Acme', logo_url: null } });
+      if (url === '/portal/messages/unread-count')
+        return Promise.resolve({ data: { unread_count: 3 } });
+      if (url === '/portal/assigned-papers/pending-count')
+        return Promise.resolve({ data: { pending_count: 0 } });
+      if (url === '/portal/me/committee-memberships')
+        return Promise.resolve({ data: { items: [] } });
+      if (url === '/portal/invoices') return Promise.resolve({ data: { items: [], total: 0 } });
+      if (url === '/portal/unified/my-trainings') return Promise.resolve({ data: { items: [] } });
+      if (url === '/portal/registration-questions/pending')
+        return Promise.resolve({
+          data: { conferences: [], has_any_mandatory_pending: false },
+        });
+      return Promise.resolve({ data: null });
+    });
+
+    renderWithPortalProviders(<PortalLayout />, {
+      route: '/acme/portal/news',
+      path: '/:companySlug/portal/*',
+    });
+
+    const bell = await screen.findByRole('button', { name: 'Notifications' });
+    await user.click(bell);
+
+    await screen.findByText(/you have 3 unread message/i);
+
+    const viewAllLink = screen.getByRole('menuitem', { name: /view all messages/i });
+    expect(viewAllLink).toHaveAttribute('href', '/acme/portal/messages');
+  });
+
+  it('shows "No new notifications" when unread count is zero', async () => {
+    const user = userEvent.setup();
+
+    mockPortalApi.get.mockImplementation((url: string) => {
+      if (url === '/portal/conferences') return Promise.resolve({ data: [] });
+      if (url.startsWith('/portal/tenant/'))
+        return Promise.resolve({ data: { name: 'Acme', logo_url: null } });
+      if (url === '/portal/messages/unread-count')
+        return Promise.resolve({ data: { unread_count: 0 } });
+      if (url === '/portal/assigned-papers/pending-count')
+        return Promise.resolve({ data: { pending_count: 0 } });
+      if (url === '/portal/me/committee-memberships')
+        return Promise.resolve({ data: { items: [] } });
+      if (url === '/portal/invoices') return Promise.resolve({ data: { items: [], total: 0 } });
+      if (url === '/portal/unified/my-trainings') return Promise.resolve({ data: { items: [] } });
+      if (url === '/portal/registration-questions/pending')
+        return Promise.resolve({
+          data: { conferences: [], has_any_mandatory_pending: false },
+        });
+      return Promise.resolve({ data: null });
+    });
+
+    renderWithPortalProviders(<PortalLayout />, {
+      route: '/acme/portal/news',
+      path: '/:companySlug/portal/*',
+    });
+
+    const bell = await screen.findByRole('button', { name: 'Notifications' });
+    await user.click(bell);
+
+    expect(screen.getByText('No new notifications')).toBeInTheDocument();
   });
 });
 

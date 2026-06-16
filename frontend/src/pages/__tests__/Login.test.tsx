@@ -10,9 +10,11 @@ vi.mock('../../components/ThemeToggle', () => ({
 
 // Mock react-router
 const mockNavigate = vi.fn();
+let mockLocationState: unknown = null;
 
 vi.mock('react-router', () => ({
   useNavigate: () => mockNavigate,
+  useLocation: () => ({ state: mockLocationState, pathname: '/login', search: '', hash: '' }),
   Link: ({ children, to, ...props }: Record<string, unknown>) => (
     <a href={to as string} {...props}>
       {children as React.ReactNode}
@@ -35,6 +37,7 @@ describe('Login', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUser = null;
+    mockLocationState = null;
   });
 
   describe('rendering', () => {
@@ -106,7 +109,31 @@ describe('Login', () => {
       await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      });
+    });
+
+    it('redirects to the original URL including search params after login', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockResolvedValue(undefined);
+      mockLocationState = {
+        from: {
+          pathname: '/modules/conferences/abc-123',
+          search: '?tab=messaging&thread=def-456',
+        },
+      };
+
+      render(<Login />);
+
+      await user.type(screen.getByLabelText('Email address'), 'test@example.com');
+      await user.type(screen.getByLabelText('Password'), 'password123');
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(
+          '/modules/conferences/abc-123?tab=messaging&thread=def-456',
+          { replace: true }
+        );
       });
     });
   });

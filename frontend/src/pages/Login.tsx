@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { MFARequiredError } from '../contexts/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
@@ -18,6 +18,9 @@ export default function Login() {
 
   const { login, verifyMFA } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromLocation = (location.state as { from?: Location })?.from;
+  const from = fromLocation ? `${fromLocation.pathname}${fromLocation.search}` : '/dashboard';
 
   // Auto-dismiss error after 5 seconds
   useEffect(() => {
@@ -33,7 +36,7 @@ export default function Login() {
 
     try {
       await login({ email, password });
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       if (err instanceof MFARequiredError) {
         setMfaToken(err.mfaToken);
@@ -54,7 +57,7 @@ export default function Login() {
 
     try {
       await verifyMFA(mfaToken, mfaCode);
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       setError(error.response?.data?.detail || 'Invalid code. Please try again.');

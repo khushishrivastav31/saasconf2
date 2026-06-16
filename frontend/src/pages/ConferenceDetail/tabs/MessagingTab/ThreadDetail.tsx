@@ -365,8 +365,8 @@ export default function ThreadDetail({
                     {formatTimestamp(msg.created_at)}
                   </span>
                 </div>
-                <div className={isMe ? 'prose-invert' : ''}>
-                  <RichTextDisplay content={msg.body_html} />
+                <div>
+                  <RichTextDisplay content={msg.body_html} className={isMe ? 'prose-invert' : ''} />
                 </div>
                 {/* Attachments */}
                 {msg.attachments && msg.attachments.length > 0 && (

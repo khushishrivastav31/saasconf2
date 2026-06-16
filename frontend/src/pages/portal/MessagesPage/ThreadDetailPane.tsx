@@ -132,8 +132,8 @@ export default function ThreadDetailPane({
                     {formatDateTime(msg.created_at)}
                   </span>
                 </div>
-                <div className={`text-sm ${isMe ? 'prose-invert' : ''}`}>
-                  <RichTextDisplay content={msg.body_html} />
+                <div className="text-sm">
+                  <RichTextDisplay content={msg.body_html} className={isMe ? 'prose-invert' : ''} />
                 </div>
                 {/* Attachments */}
                 {msg.attachments && msg.attachments.length > 0 && (

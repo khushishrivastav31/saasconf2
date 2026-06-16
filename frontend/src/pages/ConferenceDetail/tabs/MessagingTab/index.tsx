@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { useAuth } from '../../../../hooks/useAuth';
@@ -26,7 +27,25 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const threadParam = searchParams.get('thread');
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(threadParam);
+
+  // Auto-open thread from URL param (e.g. from email notification link), then
+  // clear the param so back-navigation doesn't re-select it.
+  useEffect(() => {
+    if (threadParam) {
+      setSelectedThreadId(threadParam);
+      setSearchParams(
+        (p) => {
+          const next = new URLSearchParams(p);
+          next.delete('thread');
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [threadParam, setSearchParams]);
   const [showCompose, setShowCompose] = useState(false);
   const [showBulkCompose, setShowBulkCompose] = useState(false);
   const [search, setSearch] = useState('');

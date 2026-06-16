@@ -238,7 +238,7 @@ describe('MessagesPage', () => {
       // The unread dot is a <span> sized w-2 h-2. The selector pins those
       // two classes so it doesn't accidentally match the new domain filter
       // chip (button.rounded-full.bg-blue-600 — different element + size).
-      const dot = container.querySelector('span.w-2.h-2.rounded-full.bg-blue-600');
+      const dot = container.querySelector('span.w-2.h-2.rounded-full.bg-red-500');
       expect(dot).toBeTruthy();
     });
 
@@ -252,7 +252,7 @@ describe('MessagesPage', () => {
         expect(screen.getByText('Read Thread')).toBeInTheDocument();
       });
 
-      expect(container.querySelector('span.w-2.h-2.rounded-full.bg-blue-600')).toBeNull();
+      expect(container.querySelector('span.w-2.h-2.rounded-full.bg-red-500')).toBeNull();
     });
 
     it('renders the Archived toggle button', async () => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import portalApi from '../../../config/portalApi';
@@ -49,6 +49,24 @@ export default function MessagesPage() {
     },
     refetchInterval: 30000,
   });
+
+  // Keep thread-list unread dots in sync with the sidebar unread badge.
+  // Both queries poll at 30 s independently, so the badge can update up to
+  // 30 s before the thread list. Subscribing here (enabled:false means we
+  // just read the cache PortalLayout already keeps warm) and invalidating
+  // whenever the count changes closes that gap without an extra network call.
+  const { data: unreadSync } = useQuery<{ unread_count: number }>({
+    queryKey: ['portal-unread-count'],
+    enabled: false,
+  });
+  const prevUnreadRef = useRef<number | null>(null);
+  useEffect(() => {
+    const count = unreadSync?.unread_count ?? 0;
+    if (prevUnreadRef.current !== null && count !== prevUnreadRef.current) {
+      queryClient.invalidateQueries({ queryKey: ['portal-messages'] });
+    }
+    prevUnreadRef.current = count;
+  }, [unreadSync?.unread_count, queryClient]);
 
   // Thread detail
   const { data: threadDetail } = useQuery({
@@ -205,14 +223,14 @@ export default function MessagesPage() {
                       onClick={() => handleSelectThread(thread.id)}
                       className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                         selectedThreadId === thread.id
-                          ? 'bg-blue-50 border-l-2 border-l-blue-600'
+                          ? 'bg-blue-50 dark:bg-blue-900/30 border-l-2 border-l-blue-600'
                           : ''
-                      } ${thread.unread ? 'bg-blue-50/40' : ''}`}
+                      } ${thread.unread ? 'bg-red-50/40 dark:bg-red-900/20' : ''}`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-0.5">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           {thread.unread && (
-                            <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                            <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
                           )}
                           <span
                             className={`text-sm truncate ${

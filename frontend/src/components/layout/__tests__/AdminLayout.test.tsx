@@ -531,6 +531,112 @@ describe('AdminLayout', () => {
     });
   });
 
+  describe('notification dropdown', () => {
+    function setupUnread(
+      total: number,
+      conferences: Array<{ conference_id: string; conference_name: string; unread_count: number }>
+    ) {
+      vi.mocked(api.get).mockImplementation((url: string) => {
+        if (url === '/messaging/unread-count') {
+          return Promise.resolve({
+            data: { total_unread_count: total, conferences },
+          });
+        }
+        return Promise.resolve({ data: { items: [], total_unread_count: 0, conferences: [] } });
+      });
+    }
+
+    it('bell click opens the notifications panel', async () => {
+      const user = userEvent.setup();
+      setupUnread(0, []);
+      renderWithProviders();
+
+      const bell = screen.getByRole('button', { name: 'Notifications' });
+      await user.click(bell);
+
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
+    it('renders one row per conference with name, count badge, and correct link', async () => {
+      const user = userEvent.setup();
+      setupUnread(3, [
+        { conference_id: 'c1', conference_name: 'PyCon 2025', unread_count: 2 },
+        { conference_id: 'c2', conference_name: 'JSConf', unread_count: 1 },
+      ]);
+      renderWithProviders();
+
+      const bell = await screen.findByRole('button', { name: 'Notifications' });
+      await user.click(bell);
+
+      await waitFor(() => {
+        expect(screen.getByRole('menuitem', { name: /PyCon 2025/i })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /JSConf/i })).toBeInTheDocument();
+      });
+
+      const pyconLink = screen.getByRole('menuitem', { name: /PyCon 2025/i });
+      expect(pyconLink).toHaveAttribute('href', '/modules/conferences/c1?tab=messaging');
+      const jsconfLink = screen.getByRole('menuitem', { name: /JSConf/i });
+      expect(jsconfLink).toHaveAttribute('href', '/modules/conferences/c2?tab=messaging');
+    });
+
+    it('shows summary text when count > 0 but conferences list is empty (no dead click)', async () => {
+      const user = userEvent.setup();
+      setupUnread(5, []);
+      renderWithProviders();
+
+      const bell = await screen.findByRole('button', { name: 'Notifications' });
+      await user.click(bell);
+
+      await waitFor(() => {
+        expect(screen.getByText(/you have 5 unread message/i)).toBeInTheDocument();
+      });
+
+      // Clicking the summary does NOT navigate
+      const summaryItem = screen
+        .getByText(/you have 5 unread message/i)
+        .closest('[role="menuitem"]')!;
+      await user.click(summaryItem);
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it('shows "No new notifications" when unread count is zero', async () => {
+      const user = userEvent.setup();
+      setupUnread(0, []);
+      renderWithProviders();
+
+      const bell = screen.getByRole('button', { name: 'Notifications' });
+      await user.click(bell);
+
+      expect(screen.getByText('No new notifications')).toBeInTheDocument();
+    });
+
+    it('closes the panel on outside click', async () => {
+      const user = userEvent.setup();
+      setupUnread(0, []);
+      renderWithProviders();
+
+      const bell = screen.getByRole('button', { name: 'Notifications' });
+      await user.click(bell);
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+
+      await user.click(document.body);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it('closes the panel on Escape', async () => {
+      const user = userEvent.setup();
+      setupUnread(0, []);
+      renderWithProviders();
+
+      const bell = screen.getByRole('button', { name: 'Notifications' });
+      await user.click(bell);
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+  });
+
   describe('active link highlighting', () => {
     it('highlights Welcome link when on dashboard path', () => {
       mockLocation.pathname = '/dashboard';
