@@ -312,7 +312,9 @@ async def submit_paper(
             plain = strip_html_for_char_count(value) if is_html else (value or "").strip()
             min_c = cfg.get("min_chars")
             max_c = cfg.get("max_chars")
-            if min_c is not None and len(plain) < min_c:
+            # Minimum length constrains content, not emptiness. An empty optional field is
+            # allowed; an empty required field is already caught by the required-field pass above.
+            if plain and min_c is not None and len(plain) < min_c:
                 char_errors.append(f"{label} must be at least {min_c} characters (currently {len(plain)})")
             if max_c is not None and len(plain) > max_c:
                 char_errors.append(f"{label} must be at most {max_c} characters (currently {len(plain)})")

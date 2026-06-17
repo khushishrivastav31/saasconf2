@@ -728,6 +728,134 @@ class TestSubmitRequiredRichText:
 
 
 # ---------------------------------------------------------------------------
+# 3c. min_chars must not block empty optional fields (MAIN-13316)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestSubmitCharLimitOptional:
+    """min_chars should only apply when the field has content.
+
+    An empty optional field must not be blocked by a min_chars constraint;
+    emptiness of a required field is caught by the required-field pass, not
+    the char-limit pass.
+    """
+
+    async def _schema(
+        self,
+        db: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        required: bool,
+        min_chars: int,
+    ) -> None:
+        schema = ConferencePaperFormSchema(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            builtin_fields_config={
+                "abstract_long": {
+                    "visible": True,
+                    "required": required,
+                    "min_chars": min_chars,
+                }
+            },
+        )
+        db.add(schema)
+        await db.commit()
+
+    async def _paper(
+        self,
+        db: AsyncSession,
+        tenant: Tenant,
+        cfp: "CallForPapers",
+        applicant: CFPApplicant,
+        abstract_long: str | None,
+    ) -> CFPPaper:
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp.id,
+            main_speaker_id=applicant.id,
+            title="Char Limit Test Paper",
+            abstract_long=abstract_long,
+            status=PaperStatus.DRAFT.value,
+        )
+        db.add(paper)
+        await db.commit()
+        return paper
+
+    async def test_empty_optional_with_min_chars_submits_ok(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+    ) -> None:
+        """Empty optional field with min_chars set must not block submission (MAIN-13316 bug)."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+        await self._schema(db_session, tenant, conference, required=False, min_chars=500)
+        paper = await self._paper(db_session, tenant, cfp, applicant, abstract_long=None)
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 200
+
+    async def test_short_content_optional_with_min_chars_is_blocked(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+    ) -> None:
+        """A non-empty but too-short optional field must still be rejected with a char error."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+        await self._schema(db_session, tenant, conference, required=False, min_chars=500)
+        paper = await self._paper(
+            db_session, tenant, cfp, applicant, abstract_long="<p>Too short</p>"
+        )
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 422
+        detail = resp.json()["detail"]
+        assert "char_errors" in detail
+        assert any("at least 500" in e for e in detail["char_errors"])
+
+    async def test_empty_required_with_min_chars_blocked_via_required_path(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+    ) -> None:
+        """Empty required field with min_chars must be blocked via missing_fields, not char_errors."""
+        applicant = await _create_verified_applicant(db_session, tenant)
+        cfp = await _create_cfp(db_session, tenant, conference)
+        await self._schema(db_session, tenant, conference, required=True, min_chars=500)
+        paper = await self._paper(db_session, tenant, cfp, applicant, abstract_long=None)
+
+        resp = await client.post(
+            f"/api/v1/portal/papers/{paper.id}/submit",
+            headers=_auth_headers(_token_for(applicant)),
+        )
+
+        assert resp.status_code == 422
+        detail = resp.json()["detail"]
+        assert "missing_fields" in detail
+        assert "paper:abstract_long" in detail["missing_fields"]
+        assert "char_errors" not in detail or not detail.get("char_errors")
+
+
+# ---------------------------------------------------------------------------
 # 4. Unsubmit (withdraw) paper
 # ---------------------------------------------------------------------------
 

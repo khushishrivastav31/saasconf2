@@ -72,11 +72,9 @@ interface PaperEditFormProps {
   submitError?: string;
   // Pending states
   isUpdatePending: boolean;
-  isSubmitPending: boolean;
   isDeletePending: boolean;
   // Handlers
   onSave: () => void;
-  onSubmit: () => void;
   onCancel: () => void;
   onDelete: () => void;
   onAddCospeaker: () => void;
@@ -120,10 +118,8 @@ export default function PaperEditForm({
   saveStatus,
   submitError,
   isUpdatePending,
-  isSubmitPending,
   isDeletePending,
   onSave,
-  onSubmit,
   onCancel,
   onDelete,
   onAddCospeaker,
@@ -761,13 +757,6 @@ export default function PaperEditForm({
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
-          </button>
-          <button
-            onClick={onSubmit}
-            disabled={isSubmitPending || isUpdatePending}
-            className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 transition-colors"
-          >
-            {isSubmitPending ? 'Submitting...' : 'Submit Paper'}
           </button>
           <button
             onClick={onSave}

@@ -524,7 +524,7 @@ function PaperDetailPage() {
               disabled={submitMutation.isPending}
               className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {submitMutation.isPending ? 'Submitting...' : 'Submit'}
+              {submitMutation.isPending ? 'Submitting...' : 'Submit Paper'}
             </button>
           </div>
         )}
@@ -590,11 +590,9 @@ function PaperDetailPage() {
             videoError={videoError}
             saveStatus={saveStatus}
             isUpdatePending={updateMutation.isPending}
-            isSubmitPending={submitMutation.isPending}
             isDeletePending={deleteMutation.isPending}
             submitError={error || undefined}
             onSave={handleSave}
-            onSubmit={() => submitMutation.mutate()}
             onCancel={() => setIsEditing(false)}
             onDelete={() => setShowDeleteConfirm(true)}
             onAddCospeaker={handleAddCospeaker}
