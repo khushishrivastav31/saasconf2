@@ -30,7 +30,7 @@ Follow this sweep before asking to merge. **Every step is mandatory** — CI rej
 5. `cd backend && venv/bin/python -m mypy app/ --config-file=pyproject.toml` — type-check **the whole `app/` tree**, not just the file you touched.
 6. `cd backend && ruff check app/ && ruff format --check app/` — lint + format **the whole `app/` tree**.
 7. `cd frontend && pnpm exec tsc --noEmit && pnpm exec eslint src/` — type-check + lint **the whole `src/` tree**. Targeted per-file lint is a debugging convenience, not a substitute.
-8. Full sweep: `cd backend && venv/bin/python -m pytest tests/ -v` and `cd frontend && pnpm test`.
+8. Full sweep: `cd backend && venv/bin/python -m pytest tests/ -n 4 -q` and `cd frontend && pnpm test`. Use `-n 4` workers — `-n 8`+ causes SQLAlchemy race conditions in `test_trainings.py` and `test_user_update_address.py` that are flaky at high parallelism but pass cleanly at 4 workers or in serial.
 9. **OpenAPI schema drift** — if you added/changed any backend endpoint, route prefix, request/response schema, or response code, run `cd frontend && JWT_SECRET_KEY=test-secret-key-for-ci-pipeline-minimum-32-chars SUPER_ADMIN_PASSWORD=TestPassword123! pnpm gen:api` and commit the updated `frontend/src/types/api.generated.ts`. CI's "OpenAPI schema drift" check will fail the PR otherwise. Verify locally with `pnpm gen:api:check` — it must print no output.
 10. For UI or user-visible changes, update the in-app handbook at `frontend/src/pages/Handbook/handbookSections.tsx`.
 
@@ -93,11 +93,13 @@ CI must gate the merge. Never run `gh pr merge` without `--auto`. Red CI leaves 
 
 ## OpenSpec change lifecycle
 
-Change specs live under `openspec/changes/<NNN>-<slug>/` while in flight.
-When a change merges to `main`, move its folder to `openspec/shipped/` in the
-same PR or a follow-up chore commit. `openspec/changes/` should only contain
-work that has not yet shipped. `openspec/specs/` holds the source-of-truth
-feature specs and is never pruned.
+Change specs live under `openspec/changes/<JIRA-KEY>-<slug>/` while in flight,
+where `<JIRA-KEY>` is the Jira ticket identifier (e.g. `main-12345`). There is
+no sequential numbering — the Jira key is the sole identifier.
+Before a PR merges, move the spec folder from `openspec/changes/` to
+`openspec/shipped/` as part of that same PR. `openspec/changes/` should only
+contain work that has not yet shipped. `openspec/specs/` holds the
+source-of-truth feature specs and is never pruned.
 
 ## Local dev
 

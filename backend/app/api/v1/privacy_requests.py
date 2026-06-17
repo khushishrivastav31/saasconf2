@@ -23,6 +23,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, func, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
+from app.core.email import send_email_background
+from app.core.email.privacy import send_privacy_erasure_completed, send_privacy_erasure_rejected
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.gdpr.erasure import build_preview, execute_erasure
 from app.core.gdpr.export import build_export
@@ -35,6 +37,7 @@ from app.models.privacy_request import (
     PrivacyRequestStatus,
     PrivacyRequestType,
 )
+from app.models.tenant import Tenant
 from app.schemas.privacy_request import (
     ErasureExecuteRequest,
     ErasureExecuteResponse,
@@ -345,6 +348,18 @@ async def reject_privacy_request(
     )
     await db.commit()
     await db.refresh(pr)
+
+    tenant_name = await db.scalar(select(Tenant.name).where(Tenant.id == tenant_id)) or ""
+    for email in pr.subject_emails:
+        send_email_background(
+            send_privacy_erasure_rejected,
+            db,
+            tenant_id=tenant_id,
+            recipient_email=email,
+            rejection_reason=payload.rejection_reason,
+            tenant_name=tenant_name,
+        )
+
     return _to_response(pr)
 
 
@@ -521,6 +536,16 @@ async def execute_privacy_erasure(
 
     await db.commit()
     await db.refresh(pr)
+
+    tenant_name = await db.scalar(select(Tenant.name).where(Tenant.id == tenant_id)) or ""
+    for email in pr.subject_emails:
+        send_email_background(
+            send_privacy_erasure_completed,
+            db,
+            tenant_id=tenant_id,
+            recipient_email=email,
+            tenant_name=tenant_name,
+        )
 
     return ErasureExecuteResponse(
         executed_at=now,

@@ -140,6 +140,80 @@ month.</p>
     )
 
 
+async def send_privacy_erasure_completed(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    recipient_email: str,
+    tenant_name: str,
+) -> bool:
+    """Notify the subject that their Art. 17 erasure request was executed."""
+    tenant_name_safe = escape(tenant_name)
+    subject = f"Your data deletion request has been completed — {tenant_name}"
+    html = f"""\
+<p>Hi,</p>
+<p>This is to confirm that <strong>{tenant_name_safe}</strong> has completed
+your data deletion (Art. 17) request.</p>
+<p>All personal data associated with your account has been permanently deleted
+from our systems. No personal data related to your request is retained.</p>
+<p>If you have any questions, please contact {tenant_name_safe} directly.</p>
+<p>— {tenant_name_safe}</p>
+"""
+    text = (
+        f"Your data deletion request with {tenant_name} has been completed.\n"
+        "All personal data associated with your account has been permanently deleted.\n"
+        f"If you have questions, please contact {tenant_name} directly.\n"
+    )
+    return await send_email(
+        recipient_email,
+        subject,
+        html,
+        text,
+        db=db,
+        tenant_id=tenant_id,
+        email_type="privacy_erasure_completed",
+    )
+
+
+async def send_privacy_erasure_rejected(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    recipient_email: str,
+    rejection_reason: str,
+    tenant_name: str,
+) -> bool:
+    """Notify the subject that their Art. 17 erasure request was rejected."""
+    tenant_name_safe = escape(tenant_name)
+    safe_reason = escape(rejection_reason.strip())
+    subject = f"Your data deletion request was not approved — {tenant_name}"
+    html = f"""\
+<p>Hi,</p>
+<p><strong>{tenant_name_safe}</strong> has reviewed your data deletion
+(Art. 17) request and has decided not to fulfill it at this time.</p>
+<p><strong>Reason:</strong><br>{safe_reason}</p>
+<p>Your personal data remains on file. If you believe this decision is
+incorrect, or would like more information, please contact
+{tenant_name_safe} directly.</p>
+<p>— {tenant_name_safe}</p>
+"""
+    text = (
+        f"Your data deletion request with {tenant_name} was not approved.\n"
+        f"Reason: {rejection_reason.strip()}\n"
+        "Your personal data remains on file.\n"
+        f"Please contact {tenant_name} if you have questions.\n"
+    )
+    return await send_email(
+        recipient_email,
+        subject,
+        html,
+        text,
+        db=db,
+        tenant_id=tenant_id,
+        email_type="privacy_erasure_rejected",
+    )
+
+
 async def send_privacy_request_admin_notification(
     db: AsyncSession,
     *,

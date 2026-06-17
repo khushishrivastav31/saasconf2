@@ -108,8 +108,8 @@ LOOKUPS: list[LookupSpec] = [
         "cfp_applicants",
         CFPApplicant,
         "email_hash",
-        erasure_default="delete",
-        allowed_actions=frozenset({"delete"}),
+        erasure_default="anonymize",
+        allowed_actions=frozenset({"anonymize"}),
     ),
     LookupSpec(
         "training_attendees",
