@@ -243,6 +243,65 @@ describe('PaperDetailPage', () => {
     });
   });
 
+  describe('Add button affordance', () => {
+    it('Add button is grey when both co-speaker fields are empty', async () => {
+      mockApiGet();
+      renderPaperDetail();
+      await waitForEditMode();
+
+      const addButton = screen.getByRole('button', { name: 'Add' });
+      expect(addButton).toHaveClass('bg-gray-100');
+      expect(addButton).not.toHaveClass('bg-primary-600');
+    });
+
+    it('Add button turns blue when first name is typed', async () => {
+      const user = userEvent.setup();
+      mockApiGet();
+      renderPaperDetail();
+      await waitForEditMode();
+
+      await user.type(screen.getByPlaceholderText('First name'), 'Alice');
+
+      const addButton = screen.getByRole('button', { name: 'Add' });
+      expect(addButton).toHaveClass('bg-primary-600');
+      expect(addButton).not.toHaveClass('bg-gray-100');
+    });
+  });
+
+  describe('unadded co-speaker guard', () => {
+    it('blocks Save Changes and shows error when first name typed but Add not pressed', async () => {
+      const user = userEvent.setup();
+      mockApiGet();
+      renderPaperDetail();
+      await waitForEditMode();
+
+      await user.type(screen.getByPlaceholderText('First name'), 'Alice');
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      const errorMessages = screen.getAllByText(
+        /you've typed a co-speaker but haven't added them/i
+      );
+      expect(errorMessages.length).toBeGreaterThan(0);
+      expect(mockPortalApi.put).not.toHaveBeenCalled();
+    });
+
+    it('blocks Save Changes and shows error when email typed but Add not pressed', async () => {
+      const user = userEvent.setup();
+      mockApiGet();
+      renderPaperDetail();
+      await waitForEditMode();
+
+      await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      const errorMessages = screen.getAllByText(
+        /you've typed a co-speaker but haven't added them/i
+      );
+      expect(errorMessages.length).toBeGreaterThan(0);
+      expect(mockPortalApi.put).not.toHaveBeenCalled();
+    });
+  });
+
   describe('submitted paper', () => {
     it('shows Revert to Draft button, not Submit Paper', async () => {
       mockApiGet(makePaper({ status: 'submitted', submitted_at: '2025-01-02T00:00:00Z' }));

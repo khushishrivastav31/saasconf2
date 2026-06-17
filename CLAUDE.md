@@ -101,6 +101,13 @@ Before a PR merges, move the spec folder from `openspec/changes/` to
 contain work that has not yet shipped. `openspec/specs/` holds the
 source-of-truth feature specs and is never pruned.
 
+**Review gate — always stop after writing the spec.** When a task starts with
+OpenSpec, write the `openspec/changes/<JIRA-KEY>-<slug>/` folder
+(`proposal.md`, `design.md`, `tasks.md`) and then **stop and wait for the user
+to review and approve it before making any code or test changes**. Do not begin
+the RED/GREEN implementation (including tests) until the user has approved the
+spec folder.
+
 ## Local dev
 
 `docker compose up` runs the full stack (Postgres, Redis, FastAPI, React). For native backend/frontend workflows, see the **Development Setup** section of `README.md`. Secrets live in `.env` (template: `.env.example`).

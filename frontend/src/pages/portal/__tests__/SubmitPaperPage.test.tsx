@@ -640,6 +640,84 @@ describe('SubmitPaperPage', () => {
     });
   });
 
+  describe('Add button affordance', () => {
+    it('Add button is grey when both co-speaker fields are empty', async () => {
+      const user = userEvent.setup();
+      mockStandardGet();
+
+      renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
+
+      const addButton = screen.getByRole('button', { name: 'Add' });
+      expect(addButton).toHaveClass('bg-gray-100');
+      expect(addButton).not.toHaveClass('bg-primary-600');
+    });
+
+    it('Add button turns blue when first name is typed', async () => {
+      const user = userEvent.setup();
+      mockStandardGet();
+
+      renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
+
+      await user.type(screen.getByPlaceholderText('First name'), 'Alice');
+
+      const addButton = screen.getByRole('button', { name: 'Add' });
+      expect(addButton).toHaveClass('bg-primary-600');
+      expect(addButton).not.toHaveClass('bg-gray-100');
+    });
+
+    it('Add button turns blue when email is typed', async () => {
+      const user = userEvent.setup();
+      mockStandardGet();
+
+      renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
+
+      await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+
+      const addButton = screen.getByRole('button', { name: 'Add' });
+      expect(addButton).toHaveClass('bg-primary-600');
+      expect(addButton).not.toHaveClass('bg-gray-100');
+    });
+  });
+
+  describe('unadded co-speaker guard', () => {
+    it('blocks Next step and shows error when first name is typed but Add not pressed', async () => {
+      const user = userEvent.setup();
+      mockStandardGet();
+
+      renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
+
+      await user.type(screen.getByPlaceholderText('Your paper title'), 'My Paper');
+      await user.type(screen.getByPlaceholderText('First name'), 'Alice');
+      await user.click(screen.getByRole('button', { name: 'Next step' }));
+
+      expect(
+        screen.getByText(/you've typed a co-speaker but haven't added them/i)
+      ).toBeInTheDocument();
+      expect(mockPortalApi.post).not.toHaveBeenCalled();
+    });
+
+    it('blocks Next step and shows error when email is typed but Add not pressed', async () => {
+      const user = userEvent.setup();
+      mockStandardGet();
+
+      renderWithProviders(<SubmitPaperPage />);
+      await selectConferenceAndWaitForForm(user);
+
+      await user.type(screen.getByPlaceholderText('Your paper title'), 'My Paper');
+      await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+      await user.click(screen.getByRole('button', { name: 'Next step' }));
+
+      expect(
+        screen.getByText(/you've typed a co-speaker but haven't added them/i)
+      ).toBeInTheDocument();
+      expect(mockPortalApi.post).not.toHaveBeenCalled();
+    });
+  });
+
   describe('missing speaker profile fields warning', () => {
     it('shows warning when CFP requires speaker bio and applicant has none', async () => {
       const user = userEvent.setup();

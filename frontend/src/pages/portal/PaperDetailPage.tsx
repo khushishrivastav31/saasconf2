@@ -25,6 +25,7 @@ import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
 import PaperEditForm from './PaperEditForm';
 import PaperViewDisplay, { type ViewCustomField } from './PaperViewDisplay';
+import { COSPEAKER_UNADDED_MESSAGE } from './cospeakerMessages';
 
 const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean }[] = [
   { key: 'title', label: 'Title', alwaysRequired: true },
@@ -368,6 +369,11 @@ function PaperDetailPage() {
 
   const handleSave = async () => {
     if (videoError) return;
+
+    if (paper?.is_main_speaker && (cospeakerFirstName.trim() || cospeakerInput.trim())) {
+      setError(COSPEAKER_UNADDED_MESSAGE);
+      return;
+    }
 
     setSaving();
 

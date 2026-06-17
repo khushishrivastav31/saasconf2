@@ -126,6 +126,9 @@ export default function PaperEditForm({
   onVideoChange,
   onMediaPreview,
 }: PaperEditFormProps) {
+  const hasPendingCospeaker = cospeakerFirstName.trim() !== '' || cospeakerInput.trim() !== '';
+  const canAddCospeaker = hasPendingCospeaker && !emailError && cospeakers.length < 3;
+
   return (
     <div className="space-y-5">
       {/* Dynamic Form Fields - rendered in form schema display_order */}
@@ -662,7 +665,11 @@ export default function PaperEditForm({
               type="button"
               onClick={onAddCospeaker}
               disabled={cospeakers.length >= 3 || !!emailError}
-              className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
+              className={`px-3 py-2 rounded-md text-sm disabled:opacity-50 ${
+                canAddCospeaker
+                  ? 'bg-primary-600 text-white hover:bg-primary-700'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
             >
               Add
             </button>

@@ -21,6 +21,7 @@ import type {
 } from '../../types/portal';
 import { parseApiError } from '../../utils/apiError';
 import { validateEmail } from '../../utils/validators';
+import { COSPEAKER_UNADDED_MESSAGE } from './cospeakerMessages';
 
 const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean }[] = [
   { key: 'title', label: 'Title', alwaysRequired: true },
@@ -446,9 +447,17 @@ function SubmitPaperPage() {
     setCustomFieldAnswers((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
+  const hasPendingCospeaker = cospeakerFirstName.trim() !== '' || cospeakerInput.trim() !== '';
+  const canAddCospeaker = hasPendingCospeaker && !emailError && cospeakers.length < 3;
+
   const handleSubmit = async () => {
     if (!selectedCfpId || !title.trim()) {
       setError('Please select a CFP and provide a title');
+      return;
+    }
+
+    if (cospeakerFirstName.trim() || cospeakerInput.trim()) {
+      setError(COSPEAKER_UNADDED_MESSAGE);
       return;
     }
 
@@ -997,7 +1006,11 @@ function SubmitPaperPage() {
                 type="button"
                 onClick={handleAddCospeaker}
                 disabled={cospeakers.length >= 3 || !!emailError}
-                className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
+                className={`px-3 py-2 rounded-md text-sm disabled:opacity-50 ${
+                  canAddCospeaker
+                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
               >
                 Add
               </button>
