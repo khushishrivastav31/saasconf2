@@ -43,7 +43,7 @@ export default function SpeakerDeleteDialog({
   onCancel,
 }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const [step, setStep] = useState<'choose' | 'confirm-cascade'>('choose');
+  const [step, setStep] = useState<'choose' | 'confirm-anonymize' | 'confirm-cascade'>('choose');
 
   useEffect(() => {
     if (open) {
@@ -108,7 +108,11 @@ export default function SpeakerDeleteDialog({
               id="speaker-delete-dialog-title"
               className="text-lg font-medium text-gray-900 dark:text-gray-100"
             >
-              {step === 'choose' ? 'Delete Speaker' : 'Confirm: Delete Speaker & Papers'}
+              {step === 'choose'
+                ? 'Delete Speaker'
+                : step === 'confirm-anonymize'
+                  ? 'Confirm: Anonymize Speaker'
+                  : 'Confirm: Delete Speaker & Papers'}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               <strong className="text-gray-700 dark:text-gray-300">{speakerName}</strong> has{' '}
@@ -126,7 +130,7 @@ export default function SpeakerDeleteDialog({
             {/* Option 1: Anonymize */}
             <button
               type="button"
-              onClick={onAnonymize}
+              onClick={() => setStep('confirm-anonymize')}
               disabled={isLoading}
               className="w-full text-left mb-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -163,6 +167,39 @@ export default function SpeakerDeleteDialog({
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'confirm-anonymize' && (
+          <>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              All personal data for this speaker will be replaced with{' '}
+              <strong className="text-gray-800 dark:text-gray-200">"Deleted User"</strong>. Their
+              papers are kept in the system and reassigned to the anonymized profile.
+            </p>
+
+            <p className="text-sm text-red-600 dark:text-red-400 font-medium mb-4">
+              This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setStep('choose')}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={onAnonymize}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Anonymizing…' : 'Anonymize Speaker'}
               </button>
             </div>
           </>
