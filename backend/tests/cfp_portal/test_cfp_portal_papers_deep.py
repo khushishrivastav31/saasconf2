@@ -921,6 +921,116 @@ class TestCospeakerSync:
         mock_bg_email.assert_called_once()
 
     @pytest.mark.asyncio
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_email_background")
+    async def test_existing_passwordless_cospeaker_gets_setup_token(
+        self,
+        mock_bg_email: MagicMock,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        tenant: Tenant,
+        cfp: CallForPapers,
+    ) -> None:
+        """Adding an existing CFPApplicant whose PortalUser has no password sends setup_token."""
+        import secrets
+        from app.models.portal_user import PortalUser
+        from app.core.security.pii_crypto import encrypt_pii, hash_email
+
+        # Create a PortalUser with NO password (never finished setup)
+        passwordless_email = f"passwordless-{uuid.uuid4().hex[:8]}@example.com"
+        portal_user = PortalUser(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            first_name="Penny",
+            last_name="Less",
+        )
+        portal_user.email = passwordless_email
+        db_session.add(portal_user)
+        await db_session.flush()
+
+        # Create a CFPApplicant linked to that PortalUser
+        from app.core.security import hash_password as hp
+        passwordless_applicant = CFPApplicant(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            first_name="Penny",
+            last_name="Less",
+            email=passwordless_email,
+            password_hash=hp(secrets.token_urlsafe(32)),
+            portal_user_id=portal_user.id,
+        )
+        db_session.add(passwordless_applicant)
+        await db_session.commit()
+
+        resp = await client.post(
+            f"{PORTAL_BASE}/papers",
+            json={
+                "cfp_id": str(cfp.id),
+                "title": "Passwordless Cospeaker Paper",
+                "cospeakers": [{"first_name": "Penny", "email": passwordless_email}],
+            },
+            headers=auth_headers(applicant_token),
+        )
+        assert resp.status_code == 200
+
+        # send_email_background must have been called with a non-None setup_token
+        mock_bg_email.assert_called_once()
+        call_kwargs = mock_bg_email.call_args[1]
+        assert call_kwargs["setup_token"] is not None, (
+            "Expected a setup_token for a passwordless PortalUser, got None"
+        )
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.cfp_portal.papers._helpers.send_email_background")
+    async def test_existing_cospeaker_with_password_gets_no_setup_token(
+        self,
+        mock_bg_email: MagicMock,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        applicant: CFPApplicant,
+        applicant_token: str,
+        second_applicant: CFPApplicant,
+        tenant: Tenant,
+        cfp: CallForPapers,
+    ) -> None:
+        """Adding an existing CFPApplicant whose PortalUser has a password sends no setup_token."""
+        from app.models.portal_user import PortalUser
+        from app.core.security import hash_password as hp
+
+        # Create a PortalUser WITH a password for second_applicant
+        portal_user = PortalUser(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            first_name=second_applicant.first_name,
+            last_name=second_applicant.last_name or "",
+            password_hash=hp("Password123!"),
+        )
+        portal_user.email = second_applicant.email
+        db_session.add(portal_user)
+        await db_session.flush()
+
+        second_applicant.portal_user_id = portal_user.id
+        await db_session.commit()
+
+        resp = await client.post(
+            f"{PORTAL_BASE}/papers",
+            json={
+                "cfp_id": str(cfp.id),
+                "title": "Has Password Cospeaker Paper",
+                "cospeakers": [{"first_name": "Bob", "email": second_applicant.email}],
+            },
+            headers=auth_headers(applicant_token),
+        )
+        assert resp.status_code == 200
+
+        mock_bg_email.assert_called_once()
+        call_kwargs = mock_bg_email.call_args[1]
+        assert call_kwargs["setup_token"] is None, (
+            "Expected no setup_token for a PortalUser that already has a password"
+        )
+
+    @pytest.mark.asyncio
     @patch("app.api.v1.cfp_portal.papers._helpers.send_cospeaker_invitation_email", new_callable=AsyncMock)
     async def test_existing_cospeaker_preserves_status_on_update(
         self,

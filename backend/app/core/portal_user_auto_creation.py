@@ -100,6 +100,21 @@ async def _create_setup_token(db: AsyncSession, portal_user_id: UUID) -> str:
     return raw_token
 
 
+async def ensure_cospeaker_setup_token(
+    db: AsyncSession,
+    applicant: CFPApplicant,
+) -> str | None:
+    """Return a fresh setup token for an existing co-speaker whose portal account
+    has not set a password yet; None if the account can already log in or has no
+    linked PortalUser."""
+    if applicant.portal_user_id is None:
+        return None
+    portal_user = await db.get(PortalUser, applicant.portal_user_id)
+    if portal_user is None or portal_user.password_hash:
+        return None
+    return await _create_setup_token(db, portal_user.id)
+
+
 async def provision_cospeaker_applicant(
     db: AsyncSession,
     *,

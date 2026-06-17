@@ -21,7 +21,7 @@ from app.core.applicant_dependencies import CurrentApplicantDep
 from app.core.attachment_urls import PORTAL_PREFIX, batch_get_attachment_urls
 from app.core.email import send_cospeaker_invitation_email, send_email_background
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.portal_user_auto_creation import provision_cospeaker_applicant
+from app.core.portal_user_auto_creation import ensure_cospeaker_setup_token, provision_cospeaker_applicant
 from app.core.security.pii_crypto import hash_email
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
@@ -335,6 +335,11 @@ async def _sync_cospeakers(
             existing_row.sort_order = sort_order
         else:
             # New co-speaker: create record and send invitation
+            if setup_token is None:
+                # Existing applicant: issue a token iff their portal account
+                # has no password yet so the invite link lands on set-password.
+                setup_token = await ensure_cospeaker_setup_token(db, applicant)
+
             cospeaker = CFPPaperCospeaker(
                 paper_id=paper.id,
                 applicant_id=applicant.id,
