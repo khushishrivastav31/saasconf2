@@ -1,0 +1,35 @@
+name: Get Staging PII Encryption Key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  get-key:
+    name: Fetch PII_ENCRYPTION_KEY from staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Fetch key and write to summary
+        run: |
+          KEY=$(ssh -i ~/.ssh/id_ed25519 ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} \
+            "grep '^PII_ENCRYPTION_KEY=' /opt/saasconf/app/deploy/staging/.env | cut -d= -f2-")
+
+          if [ -z "$KEY" ]; then
+            echo "::error::PII_ENCRYPTION_KEY not found in staging .env"
+            exit 1
+          fi
+
+          echo "### PII_ENCRYPTION_KEY (staging)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "$KEY" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "> Set this as \`PII_ENCRYPTION_KEY\` in your local \`backend/.env\`." >> "$GITHUB_STEP_SUMMARY"
