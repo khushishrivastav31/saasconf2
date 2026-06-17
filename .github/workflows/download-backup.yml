@@ -1,0 +1,78 @@
+name: Download Staging Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_file:
+        description: 'Backup filename to download (leave empty for latest)'
+        required: false
+        default: ''
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  BACKUPS_DIR: /opt/saasconf/backups
+
+jobs:
+  download:
+    name: Download Backup from Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Resolve backup file
+        id: resolve
+        run: |
+          if [ -n "${{ github.event.inputs.backup_file }}" ]; then
+            echo "target=${{ env.BACKUPS_DIR }}/${{ github.event.inputs.backup_file }}" >> "$GITHUB_OUTPUT"
+            echo "filename=${{ github.event.inputs.backup_file }}" >> "$GITHUB_OUTPUT"
+          else
+            LATEST=$(ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+              "ls -t ${{ env.BACKUPS_DIR }}/db_*.sql.gz* 2>/dev/null | head -1")
+            if [ -z "$LATEST" ]; then
+              echo "::error::No backup files found in ${{ env.BACKUPS_DIR }}"
+              exit 1
+            fi
+            echo "target=$LATEST" >> "$GITHUB_OUTPUT"
+            echo "filename=$(basename $LATEST)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: List available backups
+        run: |
+          echo "### Available backups on staging" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+            "ls -lht ${{ env.BACKUPS_DIR }}/db_*.sql.gz* 2>/dev/null | head -20 || echo 'No backups found'"  \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Download backup file
+        run: |
+          echo "Downloading: ${{ steps.resolve.outputs.target }}"
+          scp -i ~/.ssh/id_ed25519 \
+            ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ steps.resolve.outputs.target }} \
+            ./${{ steps.resolve.outputs.filename }}
+
+      - name: Upload as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-backup-${{ steps.resolve.outputs.filename }}
+          path: ./${{ steps.resolve.outputs.filename }}
+          retention-days: 1
+
+      - name: Summary
+        run: |
+          SIZE=$(du -sh ./${{ steps.resolve.outputs.filename }} | cut -f1)
+          echo "### Backup Downloaded ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "**File:** \`${{ steps.resolve.outputs.filename }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Size:** $SIZE" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Artifact retention:** 7 days" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "> ⚠️ This artifact contains a full database dump. Download only on a trusted machine." >> "$GITHUB_STEP_SUMMARY"
