@@ -124,3 +124,49 @@ describe('EmailTemplatesTab — editor wrapper padding', () => {
     expect(editorWrapper.className).toContain('px-4');
   });
 });
+
+describe('EmailTemplatesTab — sticky actions layout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGet.mockResolvedValue({ data: { items: [sampleTemplate], total: 1 } });
+  });
+
+  it('wraps the table in an overflow-x-auto container', async () => {
+    render(<EmailTemplatesTab conference={mockConference} isAdmin={true} />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => screen.getByText('Verify your email'));
+
+    const table = screen.getByRole('table');
+    const tableContainer = table.parentElement!;
+    expect(tableContainer.className).toMatch(/overflow-x-auto/);
+  });
+
+  it('applies sticky right-0 to the Actions <th>', async () => {
+    render(<EmailTemplatesTab conference={mockConference} isAdmin={true} />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => screen.getByText('Verify your email'));
+
+    const actionsTh = screen.getByRole('columnheader', { name: /actions/i });
+    expect(actionsTh.className).toMatch(/sticky/);
+    expect(actionsTh.className).toMatch(/right-0/);
+    expect(actionsTh.className).toMatch(/z-\[1\]/);
+  });
+
+  it('applies sticky right-0 to every Actions <td>', async () => {
+    render(<EmailTemplatesTab conference={mockConference} isAdmin={true} />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => screen.getByText('Verify your email'));
+
+    const editBtn = screen.getByRole('button', { name: /edit/i });
+    const actionsTd = editBtn.closest('td')!;
+    expect(actionsTd.className).toMatch(/sticky/);
+    expect(actionsTd.className).toMatch(/right-0/);
+    expect(actionsTd.className).toMatch(/z-\[1\]/);
+  });
+});
