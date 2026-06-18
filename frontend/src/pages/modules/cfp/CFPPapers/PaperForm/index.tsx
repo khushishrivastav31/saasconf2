@@ -21,7 +21,11 @@ interface PaperFormProps {
   paper: Paper | null;
   conferenceId: string;
   fallbackCfpId?: string;
-  onSave: (data: PaperFormData, videoFile: File | null) => void;
+  onSave: (
+    data: PaperFormData,
+    videoFile: File | null,
+    customFieldFiles: Record<string, File>
+  ) => void;
   onCancel: () => void;
   onDelete?: () => void;
   onSubmit?: () => void;
@@ -100,15 +104,36 @@ export function PaperForm({
     setCustomFieldAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
+  const [customFieldFiles, setCustomFieldFiles] = useState<Record<string, File>>({});
+  const handleFileSelect = (fieldKey: string, file: File | null) => {
+    setCustomFieldFiles((prev) => {
+      if (!file) {
+        const next = { ...prev };
+        delete next[fieldKey];
+        return next;
+      }
+      return { ...prev, [fieldKey]: file };
+    });
+  };
+
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Reset form when the paper changes
   useEffect(() => {
     reset(paper ? paperToFormData(paper) : { ...emptyForm, cfp_id: conferenceCfpId || '' });
     setCustomFieldAnswers(paper?.custom_field_answers ?? {});
+    setCustomFieldFiles({});
     setValidationErrors([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paper?.id]);
+
+  // Sync custom field answers when backend data is refreshed on the same paper
+  // (e.g., after a file upload patches custom_field_answers without changing paper.id)
+  const customFieldAnswersJson = JSON.stringify(paper?.custom_field_answers ?? null);
+  useEffect(() => {
+    setCustomFieldAnswers(paper?.custom_field_answers ?? {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customFieldAnswersJson]);
 
   // Auto-assign CFP when data loads (for new papers)
   const currentCfpId = watch('cfp_id');
@@ -160,7 +185,7 @@ export function PaperForm({
       return;
     }
     setValidationErrors([]);
-    onSave({ ...data, cfp_id: resolvedCfpId }, videoFile);
+    onSave({ ...data, cfp_id: resolvedCfpId }, videoFile, customFieldFiles);
   };
 
   const onFormInvalid = () => {
@@ -218,6 +243,10 @@ export function PaperForm({
           sessionTypes={sessionTypes}
           customFieldAnswers={customFieldAnswers}
           setCustomFieldAnswer={setCustomFieldAnswer}
+          onFileSelect={handleFileSelect}
+          pendingFileNames={Object.fromEntries(
+            Object.entries(customFieldFiles).map(([k, f]) => [k, f.name])
+          )}
         />
 
         {unifiedFormFields.some((f) => f.key === 'video' && f.is_visible) && (

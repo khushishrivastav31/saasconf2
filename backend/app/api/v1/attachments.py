@@ -30,6 +30,7 @@ ALLOWED_ENTITY_TYPES = {
     "applicant_picture",
     "applicant_video",
     "paper_video",
+    "paper_file",
     "sponsor_logo",
     "sponsor_package_contract",
     "screen_overlay_image",
@@ -125,6 +126,19 @@ async def upload_attachment(
         file_data = strip_image_metadata(file_data, verified_type)
         file_size = len(file_data)
     safe_filename = sanitize_filename(file.filename or "unnamed")
+
+    # For paper_file, replace any existing attachment for the same (paper, field_key)
+    # to prevent orphan rows on re-upload — one file per custom field.
+    if entity_type == "paper_file":
+        stmt = select(Attachment).where(
+            Attachment.tenant_id == tenant_id,
+            Attachment.entity_type == "paper_file",
+            Attachment.entity_id == entity_id,
+        )
+        if description is not None:
+            stmt = stmt.where(Attachment.description == description)
+        for old in (await db.execute(stmt)).scalars().all():
+            await db.delete(old)
 
     attachment = Attachment(
         tenant_id=tenant_id,

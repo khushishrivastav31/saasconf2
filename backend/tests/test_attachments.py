@@ -110,6 +110,139 @@ async def test_admin_download_preserves_mp4_content_type(
     assert response.headers["content-type"].startswith("video/mp4")
 
 
+async def test_admin_upload_paper_file_succeeds(
+    client: AsyncClient,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    tenant: Tenant,
+) -> None:
+    """Admin upload with entity_type='paper_file' must be accepted (was 4xx before fix)."""
+    paper_id = uuid.uuid4()
+    response = await client.post(
+        "/api/v1/attachments",
+        headers=auth_headers(tenant_admin_token),
+        data={
+            "entity_type": "paper_file",
+            "entity_id": str(paper_id),
+            "description": "custom_field_key",
+        },
+        files={"file": ("video.mp4", _QT_MP4_BYTES, "video/mp4")},
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["entity_type"] == "paper_file"
+    assert body["description"] == "custom_field_key"
+
+
+async def test_admin_upload_paper_file_replace_same_field(
+    client: AsyncClient,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    db_session: AsyncSession,
+    tenant: Tenant,
+) -> None:
+    """Re-uploading to the same (paper, description) must leave exactly one row."""
+    paper_id = uuid.uuid4()
+
+    for _ in range(2):
+        resp = await client.post(
+            "/api/v1/attachments",
+            headers=auth_headers(tenant_admin_token),
+            data={
+                "entity_type": "paper_file",
+                "entity_id": str(paper_id),
+                "description": "field_a",
+            },
+            files={"file": ("video.mp4", _QT_MP4_BYTES, "video/mp4")},
+        )
+        assert resp.status_code == 201, resp.text
+
+    from sqlalchemy import func, select as sa_select
+    from app.models.attachment import Attachment as AttachmentModel
+
+    count = await db_session.scalar(
+        sa_select(func.count()).where(
+            AttachmentModel.tenant_id == tenant.id,
+            AttachmentModel.entity_type == "paper_file",
+            AttachmentModel.entity_id == paper_id,
+            AttachmentModel.description == "field_a",
+        )
+    )
+    assert count == 1, f"expected 1 attachment, got {count}"
+
+
+async def test_admin_upload_paper_file_different_descriptions_kept(
+    client: AsyncClient,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    db_session: AsyncSession,
+    tenant: Tenant,
+) -> None:
+    """Uploading to two different field keys must keep two separate rows."""
+    paper_id = uuid.uuid4()
+
+    for field_key in ("field_a", "field_b"):
+        resp = await client.post(
+            "/api/v1/attachments",
+            headers=auth_headers(tenant_admin_token),
+            data={
+                "entity_type": "paper_file",
+                "entity_id": str(paper_id),
+                "description": field_key,
+            },
+            files={"file": ("video.mp4", _QT_MP4_BYTES, "video/mp4")},
+        )
+        assert resp.status_code == 201, resp.text
+
+    from sqlalchemy import func, select as sa_select
+    from app.models.attachment import Attachment as AttachmentModel
+
+    count = await db_session.scalar(
+        sa_select(func.count()).where(
+            AttachmentModel.tenant_id == tenant.id,
+            AttachmentModel.entity_type == "paper_file",
+            AttachmentModel.entity_id == paper_id,
+        )
+    )
+    assert count == 2, f"expected 2 attachments, got {count}"
+
+
+async def test_admin_upload_non_paper_file_does_not_replace(
+    client: AsyncClient,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    db_session: AsyncSession,
+    tenant: Tenant,
+) -> None:
+    """Other entity types must NOT trigger the replace-by-field-key logic (regression guard)."""
+    paper_id = uuid.uuid4()
+
+    for _ in range(2):
+        resp = await client.post(
+            "/api/v1/attachments",
+            headers=auth_headers(tenant_admin_token),
+            data={
+                "entity_type": "paper_video",
+                "entity_id": str(paper_id),
+                "description": "Paper video",
+            },
+            files={"file": ("video.mp4", _QT_MP4_BYTES, "video/mp4")},
+        )
+        assert resp.status_code == 201, resp.text
+
+    from sqlalchemy import func, select as sa_select
+    from app.models.attachment import Attachment as AttachmentModel
+
+    count = await db_session.scalar(
+        sa_select(func.count()).where(
+            AttachmentModel.tenant_id == tenant.id,
+            AttachmentModel.entity_type == "paper_video",
+            AttachmentModel.entity_id == paper_id,
+        )
+    )
+    assert count == 2, f"expected 2 paper_video attachments, got {count}"
+
+
 async def test_portal_download_serves_quicktime_as_mp4(
     client: AsyncClient,
     applicant: CFPApplicant,

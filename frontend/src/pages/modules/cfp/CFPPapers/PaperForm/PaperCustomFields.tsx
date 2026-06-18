@@ -7,6 +7,8 @@ interface Props {
   canEdit: boolean;
   value: unknown;
   onChange: (value: unknown) => void;
+  onFileSelect?: (file: File | null) => void;
+  pendingFileName?: string | null;
 }
 
 async function downloadAdminAttachment(attachmentId: string, filename: string) {
@@ -23,7 +25,14 @@ async function downloadAdminAttachment(attachmentId: string, filename: string) {
   }
 }
 
-export default function PaperCustomField({ field, canEdit, value, onChange }: Props) {
+export default function PaperCustomField({
+  field,
+  canEdit,
+  value,
+  onChange,
+  onFileSelect,
+  pendingFileName,
+}: Props) {
   const cf = field.customField;
   if (!cf) return null;
 
@@ -123,35 +132,58 @@ export default function PaperCustomField({ field, canEdit, value, onChange }: Pr
           const fileVal = value as { attachment_id?: string; filename?: string } | undefined;
           const filename = fileVal?.filename;
           const attachmentId = fileVal?.attachment_id;
-          if (!filename) {
-            return (
-              <p className="text-sm text-gray-400 dark:text-gray-500 italic">No file uploaded</p>
-            );
-          }
+
+          const acceptAttr = cf.validation_rules?.allowed_file_types?.map((t) => `.${t}`).join(',');
+
           return (
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-gray-400 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+            <div className="space-y-2">
+              {/* Existing saved file */}
+              {filename ? (
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-gray-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                    />
+                  </svg>
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                    {filename}
+                  </span>
+                  {attachmentId && (
+                    <button
+                      type="button"
+                      onClick={() => downloadAdminAttachment(attachmentId, filename)}
+                      className="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                    >
+                      Download
+                    </button>
+                  )}
+                </div>
+              ) : !canEdit ? (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No file uploaded</p>
+              ) : null}
+
+              {/* Pending upload badge */}
+              {pendingFileName && (
+                <p className="text-sm text-amber-700 dark:text-amber-400">{pendingFileName}</p>
+              )}
+
+              {/* File input — edit mode only */}
+              {canEdit && (
+                <input
+                  type="file"
+                  data-testid="paper-file-input"
+                  accept={acceptAttr}
+                  onChange={(e) => onFileSelect?.(e.target.files?.[0] ?? null)}
+                  className="block text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-900/30 dark:file:text-primary-300"
                 />
-              </svg>
-              <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{filename}</span>
-              {attachmentId && (
-                <button
-                  type="button"
-                  onClick={() => downloadAdminAttachment(attachmentId, filename)}
-                  className="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
-                >
-                  Download
-                </button>
               )}
             </div>
           );

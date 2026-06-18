@@ -10,6 +10,8 @@ interface Props {
   sessionTypes: SessionType[];
   customFieldAnswers: Record<string, unknown>;
   setCustomFieldAnswer: (key: string, value: unknown) => void;
+  onFileSelect?: (fieldKey: string, file: File | null) => void;
+  pendingFileNames?: Record<string, string>;
 }
 
 export default function PaperFieldRenderer({
@@ -19,6 +21,8 @@ export default function PaperFieldRenderer({
   sessionTypes,
   customFieldAnswers,
   setCustomFieldAnswer,
+  onFileSelect,
+  pendingFileNames,
 }: Props) {
   return (
     <>
@@ -43,6 +47,8 @@ export default function PaperFieldRenderer({
               canEdit={canEdit}
               value={customFieldAnswers[field.key]}
               onChange={(v) => setCustomFieldAnswer(field.key, v)}
+              onFileSelect={(file) => onFileSelect?.(field.key, file)}
+              pendingFileName={pendingFileNames?.[field.key] ?? null}
             />
           );
         }

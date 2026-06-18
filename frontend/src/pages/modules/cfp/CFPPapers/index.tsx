@@ -146,6 +146,29 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     [queryClient]
   );
 
+  const uploadPaperFiles = useCallback(
+    async (paper: Paper, files: Record<string, File>) => {
+      const answers: Record<string, unknown> = {
+        ...(paper.custom_field_answers ?? {}),
+      };
+      for (const [fieldKey, file] of Object.entries(files)) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('entity_type', 'paper_file');
+        form.append('entity_id', paper.id);
+        form.append('description', fieldKey);
+        const resp = await api.post<{ id: string; filename: string }>('/attachments', form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        answers[fieldKey] = { attachment_id: resp.data.id, filename: resp.data.filename };
+      }
+      await api.put(`/cfp/papers/${paper.id}`, { custom_field_answers: answers });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
+    },
+    [queryClient]
+  );
+
   const createMutation = useMutation({
     mutationFn: async (data: PaperFormData) => {
       const payload: PaperCreate = {
@@ -260,12 +283,23 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     }
   };
 
-  const handleCreate = async (formData: PaperFormData, videoFile: File | null) => {
+  const handleCreate = async (
+    formData: PaperFormData,
+    videoFile: File | null,
+    customFieldFiles: Record<string, File>
+  ) => {
     try {
       const paper = await createMutation.mutateAsync(formData);
       if (videoFile) {
         try {
           await uploadVideo(paper.id, videoFile);
+        } catch {
+          // non-fatal
+        }
+      }
+      if (Object.keys(customFieldFiles).length > 0) {
+        try {
+          await uploadPaperFiles(paper, customFieldFiles);
         } catch {
           // non-fatal
         }
@@ -283,13 +317,24 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     }
   };
 
-  const handleUpdate = async (formData: PaperFormData, videoFile: File | null) => {
+  const handleUpdate = async (
+    formData: PaperFormData,
+    videoFile: File | null,
+    customFieldFiles: Record<string, File>
+  ) => {
     if (!selectedPaperId) return;
     try {
       const paper = await updateMutation.mutateAsync({ id: selectedPaperId, data: formData });
       if (videoFile) {
         try {
           await uploadVideo(paper.id, videoFile);
+        } catch {
+          // non-fatal
+        }
+      }
+      if (Object.keys(customFieldFiles).length > 0) {
+        try {
+          await uploadPaperFiles(paper, customFieldFiles);
         } catch {
           // non-fatal
         }
