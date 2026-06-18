@@ -3,7 +3,7 @@
 import pytest
 
 from app.core.exceptions import ValidationError
-from app.core.file_validation import sanitize_filename, validate_upload
+from app.core.file_validation import playback_content_type, sanitize_filename, validate_upload
 
 # Minimal valid JPEG (SOI marker + minimal data)
 JPEG_MAGIC = b"\xff\xd8\xff\xe0" + b"\x00" * 20
@@ -100,3 +100,20 @@ class TestValidateUpload:
         """Magic bytes should override claimed content type."""
         result = validate_upload(JPEG_MAGIC, "image/png", "location")
         assert result == "image/jpeg"
+
+
+class TestPlaybackContentType:
+    def test_quicktime_maps_to_mp4(self):
+        assert playback_content_type("video/quicktime") == "video/mp4"
+
+    def test_mp4_passes_through(self):
+        assert playback_content_type("video/mp4") == "video/mp4"
+
+    def test_webm_passes_through(self):
+        assert playback_content_type("video/webm") == "video/webm"
+
+    def test_image_jpeg_passes_through(self):
+        assert playback_content_type("image/jpeg") == "image/jpeg"
+
+    def test_pdf_passes_through(self):
+        assert playback_content_type("application/pdf") == "application/pdf"

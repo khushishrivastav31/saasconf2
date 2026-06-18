@@ -9,7 +9,13 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
+from app.core.file_validation import (
+    playback_content_type,
+    safe_content_disposition,
+    sanitize_filename,
+    strip_image_metadata,
+    validate_upload,
+)
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.schemas.attachment import AttachmentListResponse, AttachmentResponse
@@ -192,7 +198,7 @@ async def download_attachment(
 
     return Response(
         content=attachment.file_data,
-        media_type=attachment.content_type,
+        media_type=playback_content_type(attachment.content_type),
         headers={
             "Content-Disposition": safe_content_disposition(attachment.filename),
             "Content-Length": str(attachment.file_size),

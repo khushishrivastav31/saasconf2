@@ -1131,3 +1131,13 @@ async def test_permissions_policy_restricts_apis(client: AsyncClient) -> None:
     assert "camera=()" in pp
     assert "microphone=()" in pp
     assert "geolocation=()" in pp
+
+
+async def test_csp_media_src_allows_blob(client: AsyncClient) -> None:
+    """CSP must include media-src 'self' blob: so <video> blob sources play."""
+    response = await client.get("/health")
+    csp = response.headers.get("Content-Security-Policy", "")
+    assert "media-src" in csp, "CSP is missing media-src directive"
+    assert "blob:" in csp.split("media-src")[1].split(";")[0], (
+        "media-src directive must include blob:"
+    )

@@ -107,6 +107,22 @@ _FALLBACK_MIME_TYPES = {
 }
 
 # Extensions commonly associated with executable/script types — stripped from filenames
+_VIDEO_PLAYBACK_MIME_OVERRIDES = {
+    "video/quicktime": "video/mp4",
+}
+
+
+def playback_content_type(content_type: str) -> str:
+    """Map a stored attachment MIME to a browser-playable one for inline serving.
+
+    macOS/iOS .MP4/.MOV files carry the ISO-BMFF major brand ``qt  `` and are
+    stored as ``video/quicktime``, which Chromium refuses to decode even though
+    the H.264/AAC streams play fine when labelled ``video/mp4``. Returns the
+    input unchanged when no override applies.
+    """
+    return _VIDEO_PLAYBACK_MIME_OVERRIDES.get(content_type, content_type)
+
+
 _DANGEROUS_EXTENSIONS = {
     ".php",
     ".phtml",
