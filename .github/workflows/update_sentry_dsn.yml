@@ -1,0 +1,89 @@
+name: Update Sentry DSN — Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      sentry_dsn_backend:
+        description: 'Backend Sentry DSN (https://...@....ingest.sentry.io/...)'
+        required: true
+        type: string
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_PATH: ${{ secrets.STAGING_PATH }}
+
+permissions:
+  contents: read
+
+jobs:
+  update-dsn:
+    name: Update SENTRY_DSN_BACKEND on staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+
+    steps:
+      - name: Mask DSN in logs
+        run: echo "::add-mask::${{ inputs.sentry_dsn_backend }}"
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Update DSN and restart backend
+        env:
+          NEW_DSN: ${{ inputs.sentry_dsn_backend }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
+            "export NEW_DSN='$NEW_DSN' && bash -s" << 'EOF'
+            set -e
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            cp .env .env.bak
+
+            if grep -q '^SENTRY_DSN_BACKEND=' .env; then
+              sed -i "s|^SENTRY_DSN_BACKEND=.*|SENTRY_DSN_BACKEND=$NEW_DSN|" .env
+              echo "SENTRY_DSN_BACKEND updated in .env"
+            else
+              echo "SENTRY_DSN_BACKEND=$NEW_DSN" >> .env
+              echo "SENTRY_DSN_BACKEND appended to .env"
+            fi
+
+            echo "Restarting backend..."
+            docker compose up -d --force-recreate --no-deps backend
+
+            echo "Waiting for backend to become healthy..."
+            for i in $(seq 1 12); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' saasconf_backend_staging 2>/dev/null || echo "unknown")
+              echo "  attempt $i/12 — health: $STATUS"
+              [ "$STATUS" = "healthy" ] && break
+              sleep 5
+            done
+          EOF
+
+      - name: Verify and write summary
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF' >> $GITHUB_STEP_SUMMARY
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            echo "## SENTRY_DSN_BACKEND Update — Staging"
+            echo "_$(date -u)_"
+            echo ""
+
+            DSN=$(docker exec saasconf_backend_staging printenv SENTRY_DSN 2>/dev/null || true)
+            if [ -n "$DSN" ]; then
+              echo "✅ **SENTRY_DSN is set in the container** (${#DSN} chars)"
+            else
+              echo "❌ **SENTRY_DSN is NOT in the container** — check restart logs above"
+            fi
+
+            echo ""
+            echo "### Backend container status"
+            echo '```'
+            docker compose ps backend
+            echo '```'
+          EOF
