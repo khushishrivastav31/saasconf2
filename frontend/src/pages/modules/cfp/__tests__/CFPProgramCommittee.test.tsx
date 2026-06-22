@@ -179,6 +179,80 @@ describe('CFPProgramCommittee — topic assignment', () => {
   });
 });
 
+// ── Phase 3c: Role descriptions legend ────────────────────────────────────────
+
+describe('CFPProgramCommittee — role descriptions', () => {
+  const roles = [
+    {
+      id: 'r-1',
+      name: 'Chair',
+      description: 'Overall program committee leadership',
+      is_active: true,
+    },
+    {
+      id: 'r-2',
+      name: 'Co-Chair',
+      description: 'Assists the chair with program decisions',
+      is_active: true,
+    },
+    {
+      id: 'r-3',
+      name: 'Reviewer',
+      description: 'Reviews and scores paper submissions',
+      is_active: true,
+    },
+    { id: 'r-4', name: 'Track Lead', description: 'Leads a specific topic track', is_active: true },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes('/committee-members')) return Promise.resolve({ data: emptyListResponse });
+      if (url.includes('/committee-roles'))
+        return Promise.resolve({ data: { items: roles, total: roles.length } });
+      return Promise.resolve({ data: { items: [], total: 0 } });
+    });
+  });
+
+  it('add form lists every role name with its description', async () => {
+    renderComponent();
+    fireEvent.click(await screen.findByRole('button', { name: /add member/i }));
+    // Wait for the async committee-roles query to resolve and the legend to render.
+    await screen.findByText(roles[0].description);
+    for (const r of roles) {
+      expect(screen.getByText(r.name, { selector: 'dt' })).toBeTruthy();
+      expect(screen.getByText(r.description)).toBeTruthy();
+    }
+  });
+
+  it('shows a note that roles do not change member access', async () => {
+    renderComponent();
+    fireEvent.click(await screen.findByRole('button', { name: /add member/i }));
+    expect(await screen.findByText(/don't change a member's access/i)).toBeTruthy();
+  });
+
+  it('does not render a description entry for inactive roles', async () => {
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes('/committee-members')) return Promise.resolve({ data: emptyListResponse });
+      if (url.includes('/committee-roles'))
+        return Promise.resolve({
+          data: {
+            items: [
+              ...roles,
+              { id: 'r-5', name: 'Retired', description: 'Should not show', is_active: false },
+            ],
+            total: roles.length + 1,
+          },
+        });
+      return Promise.resolve({ data: { items: [], total: 0 } });
+    });
+    renderComponent();
+    fireEvent.click(await screen.findByRole('button', { name: /add member/i }));
+    await screen.findByText('Add Committee Member');
+    expect(screen.queryByText('Should not show')).toBeNull();
+  });
+});
+
 // ── Phase 3b: Topic chips in member list row ──────────────────────────────────
 
 describe('CFPProgramCommittee — topic chips in list', () => {

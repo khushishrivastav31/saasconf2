@@ -372,6 +372,26 @@ function MemberForm({
             </option>
           ))}
         </select>
+        {availableRoles.some((r) => r.description) && (
+          <>
+            <dl className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+              {availableRoles
+                .filter((r) => r.description)
+                .map((r) => (
+                  <div key={r.id} className="flex gap-1.5">
+                    <dt className="font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                      {r.name}
+                    </dt>
+                    <dd>{r.description}</dd>
+                  </div>
+                ))}
+            </dl>
+            <p className="mt-1.5 text-xs italic text-gray-400 dark:text-gray-500">
+              Roles are labels for organization and messaging; they don&apos;t change a
+              member&apos;s access.
+            </p>
+          </>
+        )}
       </div>
 
       {/* Topics */}
