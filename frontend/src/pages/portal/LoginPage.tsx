@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
+import type { Location } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
@@ -61,7 +62,10 @@ function LoginPage() {
     try {
       const me = await login({ email, password });
       sessionStorage.setItem('just_logged_in', 'true');
-      if (!me.has_conference_account && me.has_training_account) {
+      const from = (location.state as { from?: Location } | null)?.from;
+      if (from && from.pathname?.startsWith(basePath)) {
+        navigate(`${from.pathname}${from.search ?? ''}`);
+      } else if (!me.has_conference_account && me.has_training_account) {
         // Training-only user — land them on the unified portal's trainings list.
         navigate(`${basePath}/trainings`);
       } else {

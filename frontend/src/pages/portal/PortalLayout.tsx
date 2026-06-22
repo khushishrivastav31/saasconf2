@@ -426,7 +426,7 @@ function PortalLayout() {
   // subtree is gone now and the unified portal renders for them with the
   // CFP-specific sections (Papers, Program Committee, Conferences) hidden.
   if (!applicant && !portalMe?.has_training_account && !portalMe?.is_conference_attendee) {
-    return <Navigate to={`${basePath}/user/login`} replace />;
+    return <Navigate to={`${basePath}/user/login`} state={{ from: location }} replace />;
   }
 
   type NavItem = {

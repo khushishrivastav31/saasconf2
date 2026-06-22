@@ -383,7 +383,7 @@ async def _dispatch_broadcast_emails(
                     conference_id=None,
                     conference_name=training_name,
                     message_subject=r.subject,
-                    messages_link=f"{portal_base}/{tenant_slug}/portal/messages/{r.thread_id}",
+                    messages_link=f"{portal_base}/{tenant_slug}/portal/messages?thread={r.thread_id}",
                 )
             except Exception:
                 logger.exception("Training broadcast: failed to notify %s", r.email)

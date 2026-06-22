@@ -117,7 +117,7 @@ async def _notify_other_participants(
         admin_link = (
             f"{settings.FRONTEND_BASE_URL}/modules/conferences/{domain_anchor_id}?tab=messaging&thread={thread.id}"
         )
-    portal_link = f"{settings.PORTAL_BASE_URL}/{tenant_slug}/portal/messages/{thread.id}"
+    portal_link = f"{settings.PORTAL_BASE_URL}/{tenant_slug}/portal/messages?thread={thread.id}"
 
     conference_id_for_email = domain_anchor_id if domain == "conference" else None
 

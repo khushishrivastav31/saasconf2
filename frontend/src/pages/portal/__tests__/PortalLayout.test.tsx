@@ -1,12 +1,17 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { QueryClientProvider } from '@tanstack/react-query';
 import PortalLayout from '../PortalLayout';
 import {
   renderWithPortalProviders,
   makeApplicantAuthContext,
   mockPortalMe,
+  createTestQueryClient,
 } from '../../../test-utils';
+import { ApplicantAuthContext } from '../../../contexts/ApplicantAuthContext';
 
 // Mock portalApi — the layout fires ~8 GETs at mount; we route them by URL
 // here and only customize ``/portal/unified/my-trainings`` per test. Everything
@@ -275,5 +280,51 @@ describe('PortalLayout — Registrations sidebar entry', () => {
     await screen.findByText(/my profile/i);
 
     expect(screen.queryByRole('link', { name: /registrations/i })).not.toBeInTheDocument();
+  });
+});
+
+// ── Auth gate redirect-back (MAIN-13342) ──────────────────────────────────────
+
+function LoginCapture() {
+  const loc = useLocation();
+  const from = (loc.state as { from?: { pathname: string; search: string } } | null)?.from;
+  return (
+    <div>
+      <div data-testid="login-page">login</div>
+      {from && <div data-testid="from-pathname">{from.pathname}</div>}
+      {from && <div data-testid="from-search">{from.search}</div>}
+    </div>
+  );
+}
+
+describe('PortalLayout — auth gate preserves destination in state.from (MAIN-13342)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPortalApi.get.mockImplementation(() => Promise.resolve({ data: null }));
+  });
+
+  it('redirects unauthenticated user to portal login with state.from = requested location', async () => {
+    const authContext = makeApplicantAuthContext(null); // not logged in
+
+    render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <ApplicantAuthContext.Provider value={authContext}>
+          <MemoryRouter initialEntries={['/acme/portal/messages?thread=abc123']}>
+            <Routes>
+              <Route path="/:companySlug/portal/user/login" element={<LoginCapture />} />
+              <Route path="/:companySlug/portal/*" element={<PortalLayout />} />
+            </Routes>
+          </MemoryRouter>
+        </ApplicantAuthContext.Provider>
+      </QueryClientProvider>
+    );
+
+    // After the auth-gate Navigate, we should be on the login page
+    const loginEl = await screen.findByTestId('login-page');
+    expect(loginEl).toBeInTheDocument();
+
+    // state.from must contain the original pathname + search
+    expect(screen.getByTestId('from-pathname')).toHaveTextContent('/acme/portal/messages');
+    expect(screen.getByTestId('from-search')).toHaveTextContent('?thread=abc123');
   });
 });

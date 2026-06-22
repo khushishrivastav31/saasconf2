@@ -77,7 +77,7 @@ async def _notify_participants(
             applicant = applicants_by_id.get(p.participant_id)
             if not applicant or not applicant.message_notifications_enabled:
                 continue
-            messages_link = f"{base_url}/{tenant_slug}/portal/messages/{thread.id}"
+            messages_link = f"{base_url}/{tenant_slug}/portal/messages?thread={thread.id}"
             send_email_background(
                 send_new_message_notification,
                 db,
