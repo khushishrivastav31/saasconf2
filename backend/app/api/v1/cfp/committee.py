@@ -215,18 +215,10 @@ async def create_committee_member(
         db.add(applicant)
         await db.flush()
 
-    # Create committee member record
-    member = CFPCommitteeMember(
-        tenant_id=current_user.tenant_id,
-        conference_id=member_data.conference_id,
-        applicant_id=applicant.id,
-        role=member_data.role,
-        expertise_areas=member_data.expertise_areas,
-    )
-    db.add(member)
-    await db.flush()
-
-    # Assign topics
+    # Resolve topics before constructing the member so we can pass them into
+    # the constructor. Assigning to topics on a post-flush persistent object
+    # with an unloaded collection triggers a sync lazy load → MissingGreenlet.
+    topics: list[CFPTopic] = []
     if member_data.topic_ids:
         topic_result = await db.execute(
             select(CFPTopic).where(
@@ -234,7 +226,19 @@ async def create_committee_member(
                 CFPTopic.tenant_id == current_user.tenant_id,
             )
         )
-        member.topics = list(topic_result.scalars().all())
+        topics = list(topic_result.scalars().all())
+
+    # Create committee member record
+    member = CFPCommitteeMember(
+        tenant_id=current_user.tenant_id,
+        conference_id=member_data.conference_id,
+        applicant_id=applicant.id,
+        role=member_data.role,
+        expertise_areas=member_data.expertise_areas,
+        topics=topics,
+    )
+    db.add(member)
+    await db.flush()
 
     # Auto-assign the "Program Committee" user role to this applicant
     role_result = await db.execute(

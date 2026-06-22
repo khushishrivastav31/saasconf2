@@ -1139,6 +1139,107 @@ class TestCommitteeMembers:
         )
         assert resp.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_create_committee_member_with_topics(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        cfp_admin_token: str,
+        conference: Conference,
+        second_applicant: CFPApplicant,
+        topic: CFPTopic,
+    ) -> None:
+        """Create a committee member (link-existing) with excluded topics — must not 500."""
+        resp = await client.post(
+            COMMITTEE_URL,
+            json={
+                "conference_id": str(conference.id),
+                "applicant_id": str(second_applicant.id),
+                "role": "reviewer",
+                "topic_ids": [str(topic.id)],
+            },
+            headers=auth_headers(cfp_admin_token),
+        )
+        assert resp.status_code == 201, resp.text
+        data = resp.json()
+        assert len(data["topics"]) == 1
+        assert data["topics"][0]["id"] == str(topic.id)
+
+    @pytest.mark.asyncio
+    async def test_create_committee_member_new_user_with_topics(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        cfp_admin_token: str,
+        conference: Conference,
+        topic: CFPTopic,
+    ) -> None:
+        """Create a committee member (inline new applicant) with excluded topics — must not 500."""
+        unique_email = f"newreviewer-{uuid.uuid4().hex[:8]}@example.com"
+        resp = await client.post(
+            COMMITTEE_URL,
+            json={
+                "conference_id": str(conference.id),
+                "first_name": "New",
+                "last_name": "Reviewer",
+                "email": unique_email,
+                "password": "Password123!",
+                "role": "reviewer",
+                "topic_ids": [str(topic.id)],
+            },
+            headers=auth_headers(cfp_admin_token),
+        )
+        assert resp.status_code == 201, resp.text
+        data = resp.json()
+        assert len(data["topics"]) == 1
+        assert data["topics"][0]["id"] == str(topic.id)
+
+    @pytest.mark.asyncio
+    async def test_create_committee_member_no_topics_still_works(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        cfp_admin_token: str,
+        conference: Conference,
+        second_applicant: CFPApplicant,
+    ) -> None:
+        """Create without topics still returns 201 with topics == []."""
+        resp = await client.post(
+            COMMITTEE_URL,
+            json={
+                "conference_id": str(conference.id),
+                "applicant_id": str(second_applicant.id),
+                "role": "reviewer",
+            },
+            headers=auth_headers(cfp_admin_token),
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["topics"] == []
+
+    @pytest.mark.asyncio
+    async def test_update_committee_member_with_topics(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        cfp_admin_token: str,
+        committee_member: CFPCommitteeMember,
+        topic: CFPTopic,
+    ) -> None:
+        """Update with topic_ids returns 200 with topics set (guard for already-correct path)."""
+        resp = await client.put(
+            f"{COMMITTEE_URL}/{committee_member.id}",
+            json={"topic_ids": [str(topic.id)]},
+            headers=auth_headers(cfp_admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert len(data["topics"]) == 1
+        assert data["topics"][0]["id"] == str(topic.id)
+
 
 # =====================================================================
 # TestPaperAssignments

@@ -129,7 +129,7 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = False  # False for MailHog, True for real SMTP
 
     # Portal URL — used for email verification, password reset, and other portal links
-    PORTAL_BASE_URL: str = "http://localhost:3002"
+    PORTAL_BASE_URL: str = "http://localhost:3000"
 
     # Admin frontend URL — used for conference dashboard links in team invitation emails
     FRONTEND_BASE_URL: str = "http://localhost:3000"
