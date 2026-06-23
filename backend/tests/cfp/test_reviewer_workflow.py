@@ -552,7 +552,7 @@ class TestReviewSubmission:
                     "comment": "Final comment",
                 }
             ],
-            "speaker_feedback": "Great contribution",
+            "speaker_feedback": VALID_FEEDBACK,
             "internal_comment": "",
             "must_have": True,
         }
@@ -578,7 +578,7 @@ class TestReviewSubmission:
         """Submitting an empty answers list is allowed; score will be None."""
         payload = {
             "answers": [],
-            "speaker_feedback": "No detailed scoring provided",
+            "speaker_feedback": VALID_FEEDBACK,
             "must_have": False,
         }
         resp = await client.post(
@@ -603,7 +603,7 @@ class TestReviewSubmission:
         _scale, option, _criterion, question = review_setup
         payload = {
             "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
-            "speaker_feedback": "Done",
+            "speaker_feedback": VALID_FEEDBACK,
         }
         # First submission
         resp1 = await client.post(
@@ -999,7 +999,7 @@ class TestDraftUpdateCycle:
         # Step 3: submit final version
         final_payload = {
             "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
-            "speaker_feedback": "Final feedback",
+            "speaker_feedback": VALID_FEEDBACK,
             "must_have": True,
         }
         resp3 = await client.post(
@@ -1023,7 +1023,7 @@ class TestDraftUpdateCycle:
         _scale, option, _criterion, question = review_setup
         payload = {
             "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
-            "speaker_feedback": "Submitted",
+            "speaker_feedback": VALID_FEEDBACK,
         }
         # Submit
         submit_resp = await client.post(
@@ -1222,7 +1222,7 @@ class TestPendingCount:
         _scale, option, _criterion, question = review_setup
         payload = {
             "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
-            "speaker_feedback": "Pending count test",
+            "speaker_feedback": VALID_FEEDBACK,
         }
         submit_resp = await client.post(
             f"{PORTAL_BASE}/assignments/{assignment.id}/review",
@@ -1274,3 +1274,187 @@ class TestPendingCount:
         )
         # Draft should not change pending count
         assert after.json()["pending_count"] == count_before
+
+
+# ── 9. Speaker feedback validation ───────────────────────────────────────────
+
+VALID_FEEDBACK = "A" * 200  # exactly 200 plain-text chars — meets minimum
+
+
+@pytest.mark.asyncio
+class TestSpeakerFeedbackValidation:
+    """Verifies that speaker feedback is required and >= 200 chars on final submit."""
+
+    async def test_submit_with_no_feedback_when_enabled_returns_422(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Final submit with speaker_feedback=None and the field enabled → 422."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": None,
+            "must_have": False,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 422
+
+    async def test_submit_with_short_feedback_returns_422(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Final submit with speaker_feedback < 200 plain-text chars → 422."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "Too short",
+            "must_have": False,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 422
+
+    async def test_submit_with_199_char_feedback_returns_422(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Exactly 199 plain-text chars is still too short → 422."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "A" * 199,
+            "must_have": False,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 422
+
+    async def test_submit_with_exactly_200_char_feedback_passes(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Exactly 200 plain-text chars is the minimum and should pass → 200."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+            "must_have": False,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "submitted"
+
+    async def test_submit_with_html_feedback_counts_plain_text(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """HTML tags are stripped before length check; 200 plain-text chars in HTML passes."""
+        _scale, option, _criterion, question = review_setup
+        html_feedback = f"<p>{'A' * 200}</p>"
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": html_feedback,
+            "must_have": False,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+
+    async def test_save_draft_with_short_feedback_passes(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Draft save with short feedback is always allowed; validation only fires on submit."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "Short draft",
+            "must_have": False,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "false"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "draft"
+
+    async def test_submit_with_feedback_disabled_and_no_feedback_passes(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """When enable_speaker_feedback=False, feedback is not required on submit."""
+        from app.models.review import ReviewFormSettings
+
+        settings = ReviewFormSettings(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            enable_speaker_feedback=False,
+            enable_internal_comment=True,
+            enable_must_have=True,
+        )
+        db_session.add(settings)
+        await db_session.commit()
+
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": None,
+            "must_have": False,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "submitted"

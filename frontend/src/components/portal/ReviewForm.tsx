@@ -13,6 +13,10 @@ import RichTextDisplay from '../../components/common/RichTextDisplay';
 import RichTextEditor from '../../components/common/RichTextEditor';
 import { parseApiError } from '../../utils/apiError';
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, '');
+}
+
 interface ReviewFormProps {
   assignmentId: string;
   onReviewSubmitted?: () => void;
@@ -46,6 +50,8 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   const [internalComment, setInternalComment] = useState<string>('');
   const [mustHave, setMustHave] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [questionErrors, setQuestionErrors] = useState<Map<string, string>>(new Map());
+  const [speakerFeedbackError, setSpeakerFeedbackError] = useState<string | null>(null);
 
   // Initialize form state from existing review or empty defaults
   useEffect(() => {
@@ -150,6 +156,33 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     return [...config.criteria].sort((a, b) => a.display_order - b.display_order);
   }, [config]);
 
+  const validateForSubmit = useCallback((): boolean => {
+    const qErrors = new Map<string, string>();
+
+    for (const criterion of sortedCriteria) {
+      for (const question of criterion.questions) {
+        const answer = answers.get(question.id);
+        if (!answer?.selected_option_id) {
+          qErrors.set(question.id, 'Please select an option.');
+        }
+      }
+    }
+
+    let fbError: string | null = null;
+    if (config?.form_settings.enable_speaker_feedback) {
+      const plain = stripHtml(speakerFeedback).trim();
+      if (plain.length === 0) {
+        fbError = 'Feedback for the speaker(s) is required.';
+      } else if (plain.length < 200) {
+        fbError = `Feedback must be at least 200 characters (currently ${plain.length}).`;
+      }
+    }
+
+    setQuestionErrors(qErrors);
+    setSpeakerFeedbackError(fbError);
+    return qErrors.size === 0 && fbError === null;
+  }, [sortedCriteria, answers, config, speakerFeedback]);
+
   // --- Loading state ---
   if (isLoading) {
     return (
@@ -252,6 +285,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
           criterion={criterion}
           answers={answers}
           onUpdateAnswer={updateAnswer}
+          questionErrors={questionErrors}
         />
       ))}
 
@@ -260,6 +294,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
         <div>
           <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Feedback for the speaker(s)
+            <span className="text-red-500 ml-0.5">*</span>
           </label>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             This feedback will be shared anonymously with the speaker(s) when the CFP is completed.
@@ -270,7 +305,11 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
             placeholder="Provide constructive feedback for the speaker(s)..."
             rows={4}
             maxLength={2000}
+            minLength={200}
           />
+          {speakerFeedbackError && (
+            <p className="mt-1 text-xs text-red-500">{speakerFeedbackError}</p>
+          )}
         </div>
       )}
 
@@ -344,7 +383,14 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
         </button>
         <button
           type="button"
-          onClick={() => submitMutation.mutate()}
+          onClick={() => {
+            if (!validateForSubmit()) {
+              setFormError('Please fix the errors above before submitting.');
+              return;
+            }
+            setFormError(null);
+            submitMutation.mutate();
+          }}
           disabled={isSubmitting}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -368,10 +414,12 @@ function EditableCriterionSection({
   criterion,
   answers,
   onUpdateAnswer,
+  questionErrors,
 }: {
   criterion: PortalReviewCriterion;
   answers: Map<string, AnswerState>;
   onUpdateAnswer: (questionId: string, patch: Partial<AnswerState>) => void;
+  questionErrors: Map<string, string>;
 }) {
   const sortedQuestions = useMemo(
     () => [...criterion.questions].sort((a, b) => a.display_order - b.display_order),
@@ -398,6 +446,7 @@ function EditableCriterionSection({
           question={question}
           answer={answers.get(question.id) ?? { selected_option_id: null, comment: '' }}
           onUpdate={(patch) => onUpdateAnswer(question.id, patch)}
+          error={questionErrors.get(question.id)}
         />
       ))}
     </div>
@@ -408,10 +457,12 @@ function EditableQuestion({
   question,
   answer,
   onUpdate,
+  error,
 }: {
   question: PortalReviewQuestion;
   answer: AnswerState;
   onUpdate: (patch: Partial<AnswerState>) => void;
+  error?: string;
 }) {
   const sortedOptions = useMemo(() => {
     if (!question.scale?.options) return [];
@@ -429,6 +480,7 @@ function EditableQuestion({
     <div className="pl-3 border-l-2 border-gray-200 dark:border-gray-700 space-y-2">
       <label className="block text-sm font-medium text-gray-800 dark:text-gray-200">
         {question.text}
+        <span className="text-red-500 ml-0.5">*</span>
       </label>
       {question.help_text && (
         <p className="text-xs text-gray-500 dark:text-gray-400">{question.help_text}</p>
@@ -466,6 +518,7 @@ function EditableQuestion({
           ))}
         </div>
       )}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
 
       {/* Comment textarea */}
       {showComment && (

@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError
+from app.core.text_utils import strip_html
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
@@ -362,6 +363,25 @@ async def submit_or_save_review(
         db.add(answer)
 
     if submit:
+        # Validate required fields: speaker feedback is required and must be >= 200 plain-text chars
+        submit_form_settings_result = await db.execute(
+            select(ReviewFormSettings).where(
+                ReviewFormSettings.conference_id == conference_id,
+                ReviewFormSettings.tenant_id == current.tenant_id,
+            )
+        )
+        submit_form_settings_row = submit_form_settings_result.scalar_one_or_none()
+        enable_speaker_feedback = submit_form_settings_row.enable_speaker_feedback if submit_form_settings_row else True
+        if enable_speaker_feedback:
+            plain_feedback = strip_html(data.speaker_feedback or "").strip()
+            if len(plain_feedback) == 0:
+                raise HTTPException(status_code=422, detail="Speaker feedback is required")
+            if len(plain_feedback) < 200:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Speaker feedback must be at least 200 characters (currently {len(plain_feedback)})",
+                )
+
         # Compute total score: Σ(score × weight) / Σ(weight) for count_in_score questions
         total_weighted_score = 0.0
         total_weight = 0.0

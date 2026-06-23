@@ -1488,7 +1488,7 @@ class TestPortalReviews:
                     "comment": "Solid paper",
                 }
             ],
-            "speaker_feedback": "Well done",
+            "speaker_feedback": "A" * 200,
             "internal_comment": "",
             "must_have": True,
         }
@@ -1523,7 +1523,7 @@ class TestPortalReviews:
                     "selected_option_id": str(option.id),
                 }
             ],
-            "speaker_feedback": "",
+            "speaker_feedback": "A" * 200,
         }
 
         # Submit the review

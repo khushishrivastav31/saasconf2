@@ -1825,7 +1825,7 @@ class TestPortalSubmitReview:
                         "comment": "Excellent work",
                     }
                 ],
-                "speaker_feedback": "Outstanding paper",
+                "speaker_feedback": "A" * 200,
                 "internal_comment": "Must accept",
                 "must_have": True,
             },
@@ -1937,7 +1937,7 @@ class TestPortalSubmitReview:
                 "answers": [
                     {"question_id": str(question.id), "selected_option_id": str(option5.id)},
                 ],
-                "speaker_feedback": "Final feedback",
+                "speaker_feedback": "A" * 200,
                 "must_have": True,
             },
             headers=auth_headers(token),
