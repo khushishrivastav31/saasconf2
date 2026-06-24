@@ -54,19 +54,13 @@ async def _notify_participants(
     if not other_participants:
         return
 
-    # Batch-load applicants + users referenced by participants (avoids per-participant SELECT).
+    # Batch-load applicants referenced by participants.
     applicant_ids = [p.participant_id for p in other_participants if p.participant_type == "applicant"]
-    user_ids = [p.participant_id for p in other_participants if p.participant_type == "user"]
 
     applicants_by_id: dict[UUID, CFPApplicant] = {}
     if applicant_ids:
         app_rows = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids)))
         applicants_by_id = {a.id: a for a in app_rows.scalars()}
-
-    users_by_id: dict[UUID, User] = {}
-    if user_ids:
-        user_rows = await db.execute(select(User).where(User.id.in_(user_ids)))
-        users_by_id = {u.id: u for u in user_rows.scalars()}
 
     from app.config import get_settings as _get_settings
 
@@ -88,23 +82,7 @@ async def _notify_participants(
                 message_subject=thread.subject,
                 messages_link=messages_link,
             )
-        elif p.participant_type == "user":
-            user = users_by_id.get(p.participant_id)
-            if not user or not user.message_notifications_enabled:
-                continue
-            messages_link = (
-                f"{_s.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?tab=messaging&thread={thread.id}"
-            )
-            send_email_background(
-                send_new_message_notification,
-                db,
-                email=read_pii(user, "email") or "",
-                first_name=user.first_name or "",
-                conference_id=conference_id,
-                conference_name=conference_name,
-                message_subject=thread.subject,
-                messages_link=messages_link,
-            )
+        # "user" participants (other admins) receive no email — they monitor via the dashboard.
 
 
 async def _check_messaging_access(db, current_user, conference_id: UUID) -> None:

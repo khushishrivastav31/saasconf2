@@ -619,9 +619,13 @@ function ConferenceDetailsTab({
                 }
                 disabled={!isAdmin}
               />
-              {emailErrors.support_email && (
+              {emailErrors.support_email ? (
                 <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                   {emailErrors.support_email}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Message notifications from speakers will be sent to this address.
                 </p>
               )}
             </div>

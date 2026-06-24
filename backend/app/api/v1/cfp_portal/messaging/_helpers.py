@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.core.security.pii_crypto import hash_email, read_pii
 from app.models.attachment import Attachment
 from app.models.cfp import CFPApplicant
+from app.models.conference import Conference
 from app.models.messaging import MessageParticipant
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining
@@ -127,8 +128,13 @@ async def _notify_other_participants(
             ~((MessageParticipant.participant_type == sender_type) & (MessageParticipant.participant_id == sender_id)),
         )
     )
+    found_user_participants = False
     for p in result.scalars():
         if p.participant_type == "user":
+            if domain == "conference":
+                # Conference threads: consolidate admin notifications to support_email below.
+                found_user_participants = True
+                continue
             user_result = await db.execute(select(User).where(User.id == p.participant_id))
             user = user_result.scalar_one_or_none()
             if not user or not user.message_notifications_enabled:
@@ -180,6 +186,24 @@ async def _notify_other_participants(
                 conference_name=context_name,
                 message_subject=thread.subject,
                 messages_link=portal_link,
+            )
+
+    if found_user_participants and conference_id_for_email:
+        conf_result = await db.execute(select(Conference).where(Conference.id == conference_id_for_email))
+        conf = conf_result.scalar_one_or_none()
+        support_addr = (conf.support_email or conf.contact_email) if conf else None
+        if support_addr:
+            send_email_background(
+                send_new_message_notification,
+                db,
+                email=support_addr,
+                first_name="",
+                domain=domain,
+                tenant_id=tenant_id,
+                conference_id=conference_id_for_email,
+                conference_name=context_name,
+                message_subject=thread.subject,
+                messages_link=admin_link,
             )
 
 
