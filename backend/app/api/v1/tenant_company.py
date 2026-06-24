@@ -4,7 +4,7 @@ import time
 from typing import cast
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, UploadFile
+from fastapi import APIRouter, File, Query, Request, UploadFile
 from sqlalchemy import CursorResult, func, select, update
 
 from app.config import get_settings
@@ -34,6 +34,7 @@ def _build_tenant_response(tenant: Tenant) -> TenantResponse:
         postal_code=tenant.postal_code,
         city=tenant.city,
         country=tenant.country,
+        phone=tenant.phone,
         vat_number=tenant.vat_number,
         website=tenant.website,
         logo_url=tenant.logo_url,
@@ -127,6 +128,7 @@ async def upload_my_company_logo(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
+    file: UploadFile = File(...),
 ) -> dict:
     """
     Upload a logo for the current tenant's company.
@@ -135,14 +137,6 @@ async def upload_my_company_logo(
     """
     if current_user.is_super_admin or current_user.tenant_id is None:
         raise ValidationError("This endpoint is for tenant admins only")
-
-    # Get form data
-    form = await request.form()
-    raw_file = form.get("file")
-
-    if not isinstance(raw_file, UploadFile):
-        raise ValidationError("No file provided")
-    file: UploadFile = raw_file
 
     result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
     tenant = result.scalar_one_or_none()

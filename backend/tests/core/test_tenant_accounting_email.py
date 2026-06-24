@@ -1,4 +1,4 @@
-"""Tests for ``tenants.accounting_email`` — the finance CC address.
+"""Tests for the My Company API — accounting email, phone, and logo upload.
 
 Covers the column itself (migration landed, API reads/writes it) plus the
 validation contract (invalid emails rejected). The invoice-send guard + CC
@@ -105,6 +105,27 @@ async def test_put_my_company_invalid_email_rejected(
 
 
 @pytest.mark.asyncio
+async def test_put_my_company_persists_phone(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    ae_tenant_with_modules: Tenant,
+    ae_admin: User,
+) -> None:
+    """PUT persists ``phone``; subsequent GET returns it (regression: was missing from response builder)."""
+    resp = await client.put(
+        MY_COMPANY_URL,
+        json={"phone": "+49123456789"},
+        headers=auth_headers(_token(ae_admin)),
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["phone"] == "+49123456789"
+
+    get_resp = await client.get(MY_COMPANY_URL, headers=auth_headers(_token(ae_admin)))
+    assert get_resp.status_code == 200
+    assert get_resp.json()["phone"] == "+49123456789"
+
+
+@pytest.mark.asyncio
 async def test_put_my_company_null_clears_accounting_email(
     client: AsyncClient,
     db_session: AsyncSession,
@@ -128,3 +149,37 @@ async def test_put_my_company_null_clears_accounting_email(
     )
     assert clear_resp.status_code == 200, clear_resp.text
     assert clear_resp.json()["accounting_email"] is None
+
+
+@pytest.mark.asyncio
+async def test_upload_my_company_logo_succeeds(
+    client: AsyncClient,
+    ae_tenant_with_modules: Tenant,
+    ae_admin: User,
+) -> None:
+    """Logo upload returns 200 and sets logo_url.
+
+    Regression guard: if the endpoint reverts to request.form() + isinstance(raw_file,
+    fastapi.UploadFile), the check silently fails (starlette.UploadFile is not a subclass
+    of fastapi.UploadFile) and returns 400 "No file provided" instead.
+    """
+    import io
+
+    from PIL import Image
+
+    img = Image.new("RGB", (1, 1), color=(255, 0, 0))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
+
+    resp = await client.post(
+        f"{MY_COMPANY_URL}/logo",
+        files={"file": ("logo.png", png_bytes, "image/png")},
+        headers=auth_headers(_token(ae_admin)),
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["logo_url"] is not None
+
+    get_resp = await client.get(MY_COMPANY_URL, headers=auth_headers(_token(ae_admin)))
+    assert get_resp.status_code == 200
+    assert get_resp.json()["logo_url"] is not None

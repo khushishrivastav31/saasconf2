@@ -3,7 +3,7 @@
 import time
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy import select
 
@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.core.dependencies import DbSessionDep, SuperAdminDep
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
+from app.models.attachment import Attachment
 from app.models.tenant import Tenant
 
 router = APIRouter()
@@ -22,24 +23,13 @@ async def upload_tenant_logo(
     current_user: SuperAdminDep,
     db: DbSessionDep,
     request: Request,
+    file: UploadFile = File(...),
 ) -> dict:
     """
     Upload a logo for a tenant.
 
     Only accessible by super admins.
     """
-    from fastapi import UploadFile
-
-    from app.models.attachment import Attachment
-
-    # Get form data
-    form = await request.form()
-    raw_file = form.get("file")
-
-    if not isinstance(raw_file, UploadFile):
-        raise ValidationError("No file provided")
-    file: UploadFile = raw_file
-
     # Verify tenant exists
     result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant = result.scalar_one_or_none()
