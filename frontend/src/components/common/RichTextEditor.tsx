@@ -319,49 +319,6 @@ function RichTextEditor(
     });
   }, [editor]);
 
-  const addImage = useCallback(() => {
-    if (!editor) return;
-    setPromptState({
-      open: true,
-      title: 'Image URL',
-      defaultValue: 'https://',
-      onSubmit: (url: string) => {
-        if (!url) return;
-        try {
-          const parsed = new URL(url);
-          if (!['https:', 'http:'].includes(parsed.protocol)) return;
-        } catch {
-          return;
-        }
-        editor.chain().focus().setImage({ src: url }).run();
-      },
-    });
-  }, [editor]);
-
-  const addYoutubeVideo = useCallback(() => {
-    if (!editor) return;
-    setPromptState({
-      open: true,
-      title: 'YouTube URL',
-      defaultValue: 'https://www.youtube.com/watch?v=',
-      onSubmit: (url: string) => {
-        if (!url) return;
-        try {
-          const parsed = new URL(url);
-          if (
-            !['www.youtube.com', 'youtube.com', 'youtu.be', 'm.youtube.com'].includes(
-              parsed.hostname
-            )
-          )
-            return;
-        } catch {
-          return;
-        }
-        editor.commands.setYoutubeVideo({ src: url });
-      },
-    });
-  }, [editor]);
-
   const insertTable = useCallback(() => {
     if (!editor) return;
     editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
@@ -408,8 +365,6 @@ function RichTextEditor(
           editor={editor}
           disabled={disabled}
           onSetLink={setLink}
-          onAddImage={addImage}
-          onAddYoutubeVideo={addYoutubeVideo}
           onInsertTable={insertTable}
           onSetTextColor={setTextColor}
           onSetHighlightColor={setHighlightColor}

@@ -7,8 +7,6 @@ interface EditorToolbarProps {
   editor: Editor;
   disabled: boolean;
   onSetLink: () => void;
-  onAddImage: () => void;
-  onAddYoutubeVideo: () => void;
   onInsertTable: () => void;
   onSetTextColor: (color: string) => void;
   onSetHighlightColor: (color: string) => void;
@@ -19,8 +17,6 @@ export default function EditorToolbar({
   editor,
   disabled,
   onSetLink,
-  onAddImage,
-  onAddYoutubeVideo,
   onInsertTable,
   onSetTextColor,
   onSetHighlightColor,
@@ -425,46 +421,6 @@ export default function EditorToolbar({
             strokeLinecap="round"
             strokeLinejoin="round"
             d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-          />
-        </svg>
-      </ToolbarButton>
-      <ToolbarButton active={false} onClick={onAddImage} disabled={disabled} title="Insert Image">
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-      </ToolbarButton>
-      <ToolbarButton
-        active={false}
-        onClick={onAddYoutubeVideo}
-        disabled={disabled}
-        title="YouTube Video"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
       </ToolbarButton>
