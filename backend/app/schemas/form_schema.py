@@ -70,6 +70,7 @@ class BuiltinFieldConfig(BaseModel):
 
     visible: bool = True
     required: bool = False
+    visible_to_reviewer: bool = True
     display_order: int | None = None
     help_text: str | None = None
     min_chars: int | None = Field(None, ge=0, description="Minimum character count for text/richtext fields")
@@ -95,6 +96,7 @@ class PaperFormFieldCreate(BaseModel):
     display_order: int = Field(0, ge=0)
     is_visible: bool = True
     is_required: bool = False
+    visible_to_reviewer: bool = True
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = Field(None, description="Required for dropdown/checkbox_group")
 
@@ -113,6 +115,7 @@ class PaperFormFieldUpdate(BaseModel):
     display_order: int | None = Field(None, ge=0)
     is_visible: bool | None = None
     is_required: bool | None = None
+    visible_to_reviewer: bool | None = None
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = None
 
@@ -136,6 +139,7 @@ class PaperFormFieldResponse(BaseModel):
     display_order: int
     is_visible: bool
     is_required: bool
+    visible_to_reviewer: bool
     validation_rules: dict | None
     options: list[FieldOption] | None
     created_at: datetime
@@ -211,6 +215,7 @@ class VariantFieldResponse(BaseModel):
     display_order: int
     is_visible: bool
     is_required: bool
+    visible_to_reviewer: bool
     validation_rules: dict | None
     options: list[FieldOption] | None
     created_at: datetime
@@ -284,6 +289,7 @@ class VariantFieldCreate(BaseModel):
     display_order: int = Field(0, ge=0)
     is_visible: bool = True
     is_required: bool = False
+    visible_to_reviewer: bool = True
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = Field(None, description="Required for dropdown/checkbox_group")
 
@@ -302,6 +308,7 @@ class VariantFieldUpdate(BaseModel):
     display_order: int | None = Field(None, ge=0)
     is_visible: bool | None = None
     is_required: bool | None = None
+    visible_to_reviewer: bool | None = None
     validation_rules: ValidationRules | None = None
     options: list[FieldOption] | None = None
 

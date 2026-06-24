@@ -16000,6 +16000,11 @@ export type components = {
        * @default false
        */
       required?: boolean;
+      /**
+       * Visible To Reviewer
+       * @default true
+       */
+      visible_to_reviewer?: boolean;
       /** Display Order */
       display_order?: number | null;
       /** Help Text */
@@ -21015,6 +21020,11 @@ export type components = {
        * @default false
        */
       is_required?: boolean;
+      /**
+       * Visible To Reviewer
+       * @default true
+       */
+      visible_to_reviewer?: boolean;
       validation_rules?: components['schemas']['ValidationRules'] | null;
       /**
        * Options
@@ -21060,6 +21070,8 @@ export type components = {
       is_visible: boolean;
       /** Is Required */
       is_required: boolean;
+      /** Visible To Reviewer */
+      visible_to_reviewer: boolean;
       /** Validation Rules */
       validation_rules: {
         [key: string]: unknown;
@@ -21099,6 +21111,8 @@ export type components = {
       is_visible?: boolean | null;
       /** Is Required */
       is_required?: boolean | null;
+      /** Visible To Reviewer */
+      visible_to_reviewer?: boolean | null;
       validation_rules?: components['schemas']['ValidationRules'] | null;
       /** Options */
       options?: components['schemas']['FieldOption'][] | null;
@@ -22062,6 +22076,10 @@ export type components = {
       level?: string | null;
       /** Learning Objectives */
       learning_objectives?: string | null;
+      /** Custom Field Answers */
+      custom_field_answers?: {
+        [key: string]: unknown;
+      } | null;
       /** Status */
       status: string;
       /** Session Type Name */
@@ -22084,6 +22102,16 @@ export type components = {
       cospeakers?: components['schemas']['PortalCospeakerResponse'][];
       /** Review Status */
       review_status?: string | null;
+      /**
+       * Reviewer Visible Builtin Keys
+       * @default []
+       */
+      reviewer_visible_builtin_keys?: string[];
+      /**
+       * Reviewer Visible Custom Fields
+       * @default []
+       */
+      reviewer_visible_custom_fields?: components['schemas']['ReviewerVisibleCustomField'][];
     };
     /**
      * PortalCFPResponse
@@ -25350,6 +25378,25 @@ export type components = {
       is_active?: boolean | null;
       /** Options */
       options?: components['schemas']['ReviewScaleOptionCreate'][] | null;
+    };
+    /**
+     * ReviewerVisibleCustomField
+     * @description A custom field visible to the reviewer, with its current value.
+     */
+    ReviewerVisibleCustomField: {
+      /** Field Key */
+      field_key: string;
+      /** Label */
+      label: string;
+      /** Field Type */
+      field_type: string;
+      /** Value */
+      value?:
+        | string
+        | {
+            [key: string]: unknown;
+          }
+        | null;
     };
     /**
      * RoleAssignmentCreate
@@ -29175,6 +29222,11 @@ export type components = {
        * @default false
        */
       is_required?: boolean;
+      /**
+       * Visible To Reviewer
+       * @default true
+       */
+      visible_to_reviewer?: boolean;
       validation_rules?: components['schemas']['ValidationRules'] | null;
       /**
        * Options
@@ -29228,6 +29280,8 @@ export type components = {
       is_visible: boolean;
       /** Is Required */
       is_required: boolean;
+      /** Visible To Reviewer */
+      visible_to_reviewer: boolean;
       /** Validation Rules */
       validation_rules: {
         [key: string]: unknown;
@@ -29267,6 +29321,8 @@ export type components = {
       is_visible?: boolean | null;
       /** Is Required */
       is_required?: boolean | null;
+      /** Visible To Reviewer */
+      visible_to_reviewer?: boolean | null;
       validation_rules?: components['schemas']['ValidationRules'] | null;
       /** Options */
       options?: components['schemas']['FieldOption'][] | null;

@@ -97,6 +97,7 @@ class PaperFormVariantField(Base):
     help_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    visible_to_reviewer: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true", default=True)
 
     # Validation
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

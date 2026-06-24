@@ -116,8 +116,9 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
         key: bf.key,
         label: bf.label,
         display_order: config.display_order ?? defaultIdx,
-        is_visible: config.visible ?? true,
+        is_visible: bf.alwaysRequired || (config.visible ?? true),
         is_required: bf.alwaysRequired || (config.required ?? false),
+        is_visible_to_reviewer: bf.alwaysRequired || (config.visible_to_reviewer ?? true),
         alwaysRequired: bf.alwaysRequired,
         builtinConfig: config,
       };
@@ -137,6 +138,7 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
         display_order: order,
         is_visible: f.is_visible,
         is_required: f.is_required,
+        is_visible_to_reviewer: f.visible_to_reviewer,
         customField: f,
       };
     });
@@ -211,7 +213,7 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
 
   const handleBuiltinFieldToggle = (
     fieldKey: string,
-    property: 'visible' | 'required',
+    property: 'visible' | 'required' | 'visible_to_reviewer',
     value: boolean
   ) => {
     const existing = variant.builtin_fields_config[fieldKey] || { visible: true, required: false };
@@ -524,6 +526,11 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
                         onToggleRequired={
                           field.type === 'builtin' && !field.alwaysRequired
                             ? (v) => handleBuiltinFieldToggle(field.key, 'required', v)
+                            : undefined
+                        }
+                        onToggleReviewerVisible={
+                          field.type === 'builtin' && !field.alwaysRequired
+                            ? (v) => handleBuiltinFieldToggle(field.key, 'visible_to_reviewer', v)
                             : undefined
                         }
                         isAdmin={isAdmin}

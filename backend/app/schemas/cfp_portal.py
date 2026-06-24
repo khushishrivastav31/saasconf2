@@ -377,6 +377,15 @@ class PortalCommitteeMembershipUpdate(BaseModel):
 # --- Assigned Paper Schemas (for committee member portal) ---
 
 
+class ReviewerVisibleCustomField(BaseModel):
+    """A custom field visible to the reviewer, with its current value."""
+
+    field_key: str
+    label: str
+    field_type: str
+    value: str | dict | None = None
+
+
 class PortalAssignedPaperResponse(BaseModel):
     """A paper assigned to the current committee member for review."""
 
@@ -393,6 +402,7 @@ class PortalAssignedPaperResponse(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
+    custom_field_answers: dict | None = None
     status: str
     session_type_name: str | None = None
     topics: list[PortalTopicResponse] = []
@@ -401,6 +411,8 @@ class PortalAssignedPaperResponse(BaseModel):
     main_speaker_last_name: str | None = None
     cospeakers: list[PortalCospeakerResponse] = []
     review_status: str | None = None  # null | "draft" | "submitted"
+    reviewer_visible_builtin_keys: list[str] = []
+    reviewer_visible_custom_fields: list[ReviewerVisibleCustomField] = []
 
 
 class PortalAssignedPaperListResponse(BaseModel):

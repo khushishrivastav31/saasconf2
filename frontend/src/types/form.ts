@@ -23,6 +23,7 @@ export interface ValidationRules {
 export interface BuiltinFieldConfig {
   visible: boolean;
   required: boolean;
+  visible_to_reviewer?: boolean;
   display_order?: number;
   help_text?: string | null;
   min_chars?: number | null;
@@ -43,6 +44,7 @@ export interface PaperFormField {
   display_order: number;
   is_visible: boolean;
   is_required: boolean;
+  visible_to_reviewer: boolean;
   validation_rules: ValidationRules | null;
   options: FieldOption[] | null;
   created_at: string;
@@ -59,6 +61,7 @@ export interface PaperFormFieldCreate {
   display_order?: number;
   is_visible?: boolean;
   is_required?: boolean;
+  visible_to_reviewer?: boolean;
   validation_rules?: ValidationRules;
   options?: FieldOption[];
 }
@@ -73,6 +76,7 @@ export interface PaperFormFieldUpdate {
   display_order?: number;
   is_visible?: boolean;
   is_required?: boolean;
+  visible_to_reviewer?: boolean;
   validation_rules?: ValidationRules;
   options?: FieldOption[];
 }
@@ -90,6 +94,7 @@ export interface PaperFormVariantField {
   display_order: number;
   is_visible: boolean;
   is_required: boolean;
+  visible_to_reviewer: boolean;
   validation_rules: ValidationRules | null;
   options: FieldOption[] | null;
   created_at: string;

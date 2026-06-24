@@ -94,6 +94,7 @@ export default function FieldPropertyEditor({
       help_text: localField.help_text || undefined,
       is_visible: localField.is_visible,
       is_required: localField.is_required,
+      visible_to_reviewer: localField.visible_to_reviewer,
       validation_rules: localField.validation_rules || undefined,
       options: localField.options || undefined,
     };
@@ -245,7 +246,7 @@ export default function FieldPropertyEditor({
         </div>
 
         {/* Visibility & Required */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -254,7 +255,7 @@ export default function FieldPropertyEditor({
               disabled={!isAdmin}
               className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Visible</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Visible for speaker</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -264,7 +265,17 @@ export default function FieldPropertyEditor({
               disabled={!isAdmin}
               className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Required</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Required for speaker</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={localField.visible_to_reviewer}
+              onChange={(e) => handleChange('visible_to_reviewer', e.target.checked)}
+              disabled={!isAdmin}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">Visible for reviewer</span>
           </label>
         </div>
 

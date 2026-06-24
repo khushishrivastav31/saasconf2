@@ -38,6 +38,7 @@ def _build_field_response(f: object) -> PaperFormFieldResponse:
         display_order=f.display_order,  # type: ignore[attr-defined]
         is_visible=f.is_visible,  # type: ignore[attr-defined]
         is_required=f.is_required,  # type: ignore[attr-defined]
+        visible_to_reviewer=f.visible_to_reviewer,  # type: ignore[attr-defined]
         validation_rules=f.validation_rules,  # type: ignore[attr-defined]
         options=f.options,  # type: ignore[attr-defined]
         created_at=f.created_at,  # type: ignore[attr-defined]
@@ -155,6 +156,7 @@ async def get_cfp_paper_form_schema(
                                 display_order=f.display_order,
                                 is_visible=f.is_visible,
                                 is_required=f.is_required,
+                                visible_to_reviewer=f.visible_to_reviewer,
                                 validation_rules=f.validation_rules,
                                 options=f.options,
                                 created_at=f.created_at,

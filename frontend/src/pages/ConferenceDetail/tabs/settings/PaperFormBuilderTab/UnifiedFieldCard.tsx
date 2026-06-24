@@ -15,6 +15,7 @@ export interface UnifiedField {
   display_order: number;
   is_visible: boolean;
   is_required: boolean;
+  is_visible_to_reviewer: boolean;
   alwaysRequired?: boolean;
   // Only for custom fields
   customField?: PaperFormField | PaperFormVariantField;
@@ -49,6 +50,7 @@ interface UnifiedFieldCardProps {
   onDelete?: () => void;
   onToggleVisible?: (visible: boolean) => void;
   onToggleRequired?: (required: boolean) => void;
+  onToggleReviewerVisible?: (visible: boolean) => void;
   isAdmin: boolean;
   isDragging?: boolean;
 }
@@ -60,6 +62,7 @@ export default function UnifiedFieldCard({
   onDelete,
   onToggleVisible,
   onToggleRequired,
+  onToggleReviewerVisible,
   isAdmin,
   isDragging = false,
 }: UnifiedFieldCardProps) {
@@ -180,7 +183,7 @@ export default function UnifiedFieldCard({
               disabled={field.alwaysRequired}
               className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50 h-3.5 w-3.5"
             />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Visible</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Visible for speaker</span>
           </label>
           <label className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <input
@@ -190,7 +193,17 @@ export default function UnifiedFieldCard({
               disabled={field.alwaysRequired}
               className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50 h-3.5 w-3.5"
             />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Required</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Required for speaker</span>
+          </label>
+          <label className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={field.is_visible_to_reviewer}
+              onChange={(e) => onToggleReviewerVisible?.(e.target.checked)}
+              disabled={field.alwaysRequired}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50 h-3.5 w-3.5"
+            />
+            <span className="text-xs text-gray-500 dark:text-gray-400">Visible for reviewer</span>
           </label>
         </div>
       )}

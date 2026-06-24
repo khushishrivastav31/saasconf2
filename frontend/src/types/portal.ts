@@ -314,6 +314,13 @@ export interface PortalCommitteeMembershipListResponse {
 
 // --- Assigned Paper (committee member view) ---
 
+export interface ReviewerVisibleCustomField {
+  field_key: string;
+  label: string;
+  field_type: string;
+  value: string | Record<string, unknown> | null;
+}
+
 export interface PortalAssignedPaper {
   id: string;
   assignment_id: string;
@@ -336,6 +343,8 @@ export interface PortalAssignedPaper {
   main_speaker_last_name: string | null;
   cospeakers: PortalCospeaker[];
   review_status: string | null;
+  reviewer_visible_builtin_keys: string[];
+  reviewer_visible_custom_fields: ReviewerVisibleCustomField[];
 }
 
 export interface PortalAssignedPaperListResponse {

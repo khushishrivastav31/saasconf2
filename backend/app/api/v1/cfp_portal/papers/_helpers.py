@@ -35,6 +35,8 @@ from app.models.cfp import (
     PaperStatus,
 )
 from app.models.conference import Conference
+from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
+from app.models.paper_form_variant import PaperFormVariant, PaperFormVariantField
 from app.models.review import PaperReview
 from app.models.settings import SessionType
 from app.models.tenant import Tenant
@@ -44,7 +46,9 @@ from app.schemas.cfp_portal import (
     PortalCospeakerResponse,
     PortalPaperResponse,
     PortalTopicResponse,
+    ReviewerVisibleCustomField,
 )
+from app.schemas.form_schema import BuiltinFieldConfig
 
 from ..shared import _get_paper_video_url
 
@@ -403,6 +407,88 @@ async def _sync_cospeakers(
 
 
 # ──────────────────────────────────────────────
+#  Reviewer field-visibility helpers
+# ──────────────────────────────────────────────
+
+# Built-in field key → PortalAssignedPaperResponse attribute name.
+# title is always shown (non-hideable).
+_BUILTIN_KEY_TO_ATTR: dict[str, str] = {
+    "abstract_short": "abstract_short",
+    "abstract_long": "abstract_long",
+    "level": "level",
+    "learning_objectives": "learning_objectives",
+    "session_type": "session_type_name",
+    "video": "video_url",
+}
+
+
+async def _load_reviewer_schema(
+    db: AsyncSession,
+    conference_id: UUID,
+    variant_id: UUID | None,
+) -> tuple[dict[str, BuiltinFieldConfig], list[tuple[str, str, str, int]]]:
+    """Return (builtin_config, visible_custom_fields) for reviewer visibility filtering.
+
+    builtin_config: key → BuiltinFieldConfig (defaults to visible_to_reviewer=True when absent).
+    visible_custom_fields: list of (field_key, label, field_type, display_order) for custom
+        fields where is_visible=True AND visible_to_reviewer=True, sorted by display_order.
+    """
+    schema_result = await db.execute(
+        select(ConferencePaperFormSchema).where(ConferencePaperFormSchema.conference_id == conference_id)
+    )
+    schema = schema_result.scalar_one_or_none()
+    if not schema:
+        return {}, []
+
+    # Resolve builtin config — prefer variant's config if paper has a variant
+    raw_builtin: dict = dict(schema.builtin_fields_config)
+    if variant_id:
+        variant_result = await db.execute(select(PaperFormVariant).where(PaperFormVariant.id == variant_id))
+        variant = variant_result.scalar_one_or_none()
+        if variant and variant.builtin_fields_config:
+            raw_builtin = dict(variant.builtin_fields_config)
+
+    builtin_config: dict[str, BuiltinFieldConfig] = {
+        k: BuiltinFieldConfig.model_validate(v) for k, v in raw_builtin.items()
+    }
+
+    # Resolve custom field visibility — use variant fields when paper has a variant
+    if variant_id:
+        custom_result = await db.execute(
+            select(
+                PaperFormVariantField.field_key,
+                PaperFormVariantField.label,
+                PaperFormVariantField.field_type,
+                PaperFormVariantField.display_order,
+            ).where(
+                PaperFormVariantField.variant_id == variant_id,
+                PaperFormVariantField.is_visible.is_(True),
+                PaperFormVariantField.visible_to_reviewer.is_(True),
+            )
+        )
+    else:
+        custom_result = await db.execute(
+            select(
+                PaperFormField.field_key,
+                PaperFormField.label,
+                PaperFormField.field_type,
+                PaperFormField.display_order,
+            ).where(
+                PaperFormField.schema_id == schema.id,
+                PaperFormField.is_visible.is_(True),
+                PaperFormField.visible_to_reviewer.is_(True),
+            )
+        )
+
+    visible_custom: list[tuple[str, str, str, int]] = sorted(
+        [tuple(r) for r in custom_result.all()],  # type: ignore[misc]
+        key=lambda r: r[3],
+    )
+
+    return builtin_config, visible_custom
+
+
+# ──────────────────────────────────────────────
 #  Assigned-paper response builder
 # ──────────────────────────────────────────────
 
@@ -512,6 +598,56 @@ async def _build_assigned_paper_response(
         if cfp_status != CFPStatus.COMPLETED.value:
             portal_status = PaperStatus.FINAL_CONSIDERATION.value
 
+    # Apply reviewer field-visibility filtering
+    abstract_short = paper.abstract_short
+    abstract_long = paper.abstract_long
+    level = paper.level
+    learning_objectives = paper.learning_objectives
+    custom_field_answers: dict | None = dict(paper.custom_field_answers) if paper.custom_field_answers else None
+    reviewer_visible_builtin_keys: list[str] = []
+    reviewer_visible_custom_fields: list[ReviewerVisibleCustomField] = []
+
+    if conf_id:
+        builtin_config, visible_custom = await _load_reviewer_schema(db, conf_id, paper.form_variant_id)
+
+        # Strip builtin fields hidden from reviewer and track which are visible
+        for builtin_key, attr in _BUILTIN_KEY_TO_ATTR.items():
+            cfg = builtin_config.get(builtin_key)
+            hidden = cfg is not None and not cfg.visible_to_reviewer
+            if hidden:
+                if attr == "abstract_short":
+                    abstract_short = None
+                elif attr == "abstract_long":
+                    abstract_long = None
+                elif attr == "level":
+                    level = None
+                elif attr == "learning_objectives":
+                    learning_objectives = None
+                elif attr == "session_type_name":
+                    session_type_name = None
+                elif attr == "video_url":
+                    video_url = None
+            else:
+                reviewer_visible_builtin_keys.append(builtin_key)
+
+        # Build visible custom fields list with values
+        answers = paper.custom_field_answers or {}
+        for field_key, label, field_type, _ in visible_custom:
+            raw_value = answers.get(field_key)
+            value: str | dict | None = raw_value if isinstance(raw_value, (str, dict)) else None
+            reviewer_visible_custom_fields.append(
+                ReviewerVisibleCustomField(
+                    field_key=field_key,
+                    label=label,
+                    field_type=field_type,
+                    value=value,
+                )
+            )
+        # Keep custom_field_answers for backward compat but strip hidden keys
+        if custom_field_answers:
+            visible_keys = {f.field_key for f in reviewer_visible_custom_fields}
+            custom_field_answers = {k: v for k, v in custom_field_answers.items() if k in visible_keys}
+
     return PortalAssignedPaperResponse(
         id=paper.id,
         assignment_id=assignment.id,
@@ -522,10 +658,11 @@ async def _build_assigned_paper_response(
         cfp_id=paper.cfp_id,
         cfp_title=cfp.title if cfp else None,
         title=paper.title,
-        abstract_short=paper.abstract_short,
-        abstract_long=paper.abstract_long,
-        level=paper.level,
-        learning_objectives=paper.learning_objectives,
+        abstract_short=abstract_short,
+        abstract_long=abstract_long,
+        level=level,
+        learning_objectives=learning_objectives,
+        custom_field_answers=custom_field_answers,
         status=portal_status,
         session_type_name=session_type_name,
         topics=topics,
@@ -534,4 +671,6 @@ async def _build_assigned_paper_response(
         main_speaker_last_name=main_speaker_last_name,
         cospeakers=cospeakers,
         review_status=review_status,
+        reviewer_visible_builtin_keys=reviewer_visible_builtin_keys,
+        reviewer_visible_custom_fields=reviewer_visible_custom_fields,
     )

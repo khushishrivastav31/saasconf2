@@ -137,7 +137,7 @@ function SortableBuiltinField({
               disabled={!isAdmin || field.alwaysRequired}
               className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
             />
-            <span className="text-xs text-gray-600 dark:text-gray-300">Visible</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300">Visible for speaker</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -152,7 +152,22 @@ function SortableBuiltinField({
               disabled={!isAdmin || field.alwaysRequired}
               className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
             />
-            <span className="text-xs text-gray-600 dark:text-gray-300">Required</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300">Required for speaker</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={fieldConfig.visible_to_reviewer ?? true}
+              onChange={(e) =>
+                onChange({
+                  ...fieldConfig,
+                  visible_to_reviewer: e.target.checked,
+                })
+              }
+              disabled={!isAdmin || field.alwaysRequired}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+            />
+            <span className="text-xs text-gray-600 dark:text-gray-300">Visible for reviewer</span>
           </label>
         </div>
       </div>

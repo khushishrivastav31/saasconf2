@@ -110,6 +110,7 @@ def _build_field_response(f: PaperFormField) -> PaperFormFieldResponse:
         display_order=f.display_order,
         is_visible=f.is_visible,
         is_required=f.is_required,
+        visible_to_reviewer=f.visible_to_reviewer,
         validation_rules=f.validation_rules,
         options=f.options,
         created_at=f.created_at,
@@ -131,6 +132,7 @@ def _build_variant_field_response(f: PaperFormVariantField) -> VariantFieldRespo
         display_order=f.display_order,
         is_visible=f.is_visible,
         is_required=f.is_required,
+        visible_to_reviewer=f.visible_to_reviewer,
         validation_rules=f.validation_rules,
         options=f.options,
         created_at=f.created_at,
@@ -288,6 +290,7 @@ async def create_paper_form_field(
         display_order=data.display_order,
         is_visible=data.is_visible,
         is_required=data.is_required,
+        visible_to_reviewer=data.visible_to_reviewer,
         validation_rules=data.validation_rules.model_dump() if data.validation_rules else None,
         options=[opt.model_dump() for opt in data.options] if data.options else None,
     )
@@ -383,6 +386,8 @@ async def update_paper_form_field(
         field.is_visible = data.is_visible
     if data.is_required is not None:
         field.is_required = data.is_required
+    if data.visible_to_reviewer is not None:
+        field.visible_to_reviewer = data.visible_to_reviewer
     if data.validation_rules is not None:
         field.validation_rules = data.validation_rules.model_dump()
     if data.options is not None:
@@ -747,6 +752,7 @@ async def create_variant_field(
         display_order=data.display_order,
         is_visible=data.is_visible,
         is_required=data.is_required,
+        visible_to_reviewer=data.visible_to_reviewer,
         validation_rules=data.validation_rules.model_dump() if data.validation_rules else None,
         options=[opt.model_dump() for opt in data.options] if data.options else None,
     )
@@ -849,6 +855,8 @@ async def update_variant_field(
         field.is_visible = data.is_visible
     if data.is_required is not None:
         field.is_required = data.is_required
+    if data.visible_to_reviewer is not None:
+        field.visible_to_reviewer = data.visible_to_reviewer
     if data.validation_rules is not None:
         field.validation_rules = data.validation_rules.model_dump()
     if data.options is not None:

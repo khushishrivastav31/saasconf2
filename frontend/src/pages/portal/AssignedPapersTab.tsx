@@ -117,99 +117,155 @@ function PaperCard({
 
         {expanded && (
           <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 space-y-4 bg-gray-50 dark:bg-gray-900">
-            {paper.level && (
+            {/* Builtin fields — show each visible field with value or placeholder */}
+            {paper.reviewer_visible_builtin_keys.includes('session_type') && (
+              <div>
+                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
+                  Session Type
+                </h4>
+                {paper.session_type_name ? (
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                    {paper.session_type_name}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">—</p>
+                )}
+              </div>
+            )}
+
+            {paper.reviewer_visible_builtin_keys.includes('level') && (
               <div>
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                   Level
                 </h4>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {LEVEL_LABELS[paper.level] || paper.level}
-                </p>
+                {paper.level ? (
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                    {LEVEL_LABELS[paper.level] || paper.level}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">—</p>
+                )}
               </div>
             )}
 
-            {paper.abstract_short && (
+            {paper.reviewer_visible_builtin_keys.includes('abstract_short') && (
               <div>
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                   Short Abstract
                 </h4>
-                <RichTextDisplay
-                  content={paper.abstract_short}
-                  className="text-sm text-gray-700 dark:text-gray-300"
-                />
+                {paper.abstract_short ? (
+                  <RichTextDisplay
+                    content={paper.abstract_short}
+                    className="text-sm text-gray-700 dark:text-gray-300"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">—</p>
+                )}
               </div>
             )}
 
-            {paper.abstract_long && (
+            {paper.reviewer_visible_builtin_keys.includes('abstract_long') && (
               <div>
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                   Detailed Abstract
                 </h4>
-                <RichTextDisplay
-                  content={paper.abstract_long}
-                  className="text-sm text-gray-700 dark:text-gray-300"
-                />
+                {paper.abstract_long ? (
+                  <RichTextDisplay
+                    content={paper.abstract_long}
+                    className="text-sm text-gray-700 dark:text-gray-300"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">—</p>
+                )}
               </div>
             )}
 
-            {paper.learning_objectives && (
+            {paper.reviewer_visible_builtin_keys.includes('learning_objectives') && (
               <div>
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                   Learning Objectives
                 </h4>
-                <RichTextDisplay
-                  content={paper.learning_objectives}
-                  className="text-sm text-gray-700 dark:text-gray-300"
-                />
+                {paper.learning_objectives ? (
+                  <RichTextDisplay
+                    content={paper.learning_objectives}
+                    className="text-sm text-gray-700 dark:text-gray-300"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">—</p>
+                )}
               </div>
             )}
 
-            {paper.video_url && (
+            {paper.reviewer_visible_builtin_keys.includes('video') && (
               <div>
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                   Video
                 </h4>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (videoSrc) setMediaPreview({ open: true, src: videoSrc });
-                  }}
-                  disabled={!videoSrc}
-                  className={`w-32 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-100 dark:bg-gray-800 relative ${
-                    videoSrc
-                      ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
-                      : ''
-                  }`}
-                  title={videoSrc ? 'Click to play video' : 'Loading video...'}
-                >
-                  {videoSrc ? (
-                    <>
-                      <video
-                        src={videoSrc}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                          <svg
-                            className="w-4 h-4 text-gray-700 ml-0.5"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
+                {paper.video_url ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (videoSrc) setMediaPreview({ open: true, src: videoSrc });
+                    }}
+                    disabled={!videoSrc}
+                    className={`w-32 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-100 dark:bg-gray-800 relative ${
+                      videoSrc
+                        ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
+                        : ''
+                    }`}
+                    title={videoSrc ? 'Click to play video' : 'Loading video...'}
+                  >
+                    {videoSrc ? (
+                      <>
+                        <video
+                          src={videoSrc}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
+                            <svg
+                              className="w-4 h-4 text-gray-700 ml-0.5"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
                         </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400" />
                       </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400" />
-                    </div>
-                  )}
-                </button>
+                    )}
+                  </button>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">—</p>
+                )}
               </div>
             )}
+
+            {/* Custom fields visible to reviewer */}
+            {paper.reviewer_visible_custom_fields.map((cf) => (
+              <div key={cf.field_key}>
+                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
+                  {cf.label}
+                </h4>
+                {cf.value && typeof cf.value === 'string' ? (
+                  <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                    {cf.value}
+                  </p>
+                ) : cf.value && typeof cf.value === 'object' && 'filename' in cf.value ? (
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    📎 {(cf.value as { filename: string }).filename}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">—</p>
+                )}
+              </div>
+            ))}
 
             {!paper.is_anonymous && paper.cospeakers.length > 0 && (
               <div>
