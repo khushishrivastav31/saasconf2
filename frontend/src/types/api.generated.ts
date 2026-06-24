@@ -15294,6 +15294,11 @@ export type components = {
       /** File */
       file: string;
     };
+    /** Body_upload_my_company_logo_api_v1_my_company_logo_post */
+    Body_upload_my_company_logo_api_v1_my_company_logo_post: {
+      /** File */
+      file: string;
+    };
     /** Body_upload_offer_template_file_api_v1_trainings_offer_templates__template_id__upload_post */
     Body_upload_offer_template_file_api_v1_trainings_offer_templates__template_id__upload_post: {
       /** File */
@@ -15332,6 +15337,11 @@ export type components = {
     };
     /** Body_upload_qr_logo_api_v1_conferences__conference_id__settings_badge_settings_qr_logo_post */
     Body_upload_qr_logo_api_v1_conferences__conference_id__settings_badge_settings_qr_logo_post: {
+      /** File */
+      file: string;
+    };
+    /** Body_upload_tenant_logo_api_v1_admin_tenants__tenant_id__logo_post */
+    Body_upload_tenant_logo_api_v1_admin_tenants__tenant_id__logo_post: {
       /** File */
       file: string;
     };
@@ -31020,7 +31030,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_upload_tenant_logo_api_v1_admin_tenants__tenant_id__logo_post'];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
@@ -32391,7 +32405,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_upload_my_company_logo_api_v1_my_company_logo_post'];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
