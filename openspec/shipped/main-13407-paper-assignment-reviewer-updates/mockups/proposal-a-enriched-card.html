@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<!--
+  MAIN-13407 · Proposal A — Enriched card, FIXED reviewer rail + massive assign
+  Standalone throwaway mockup for the design conversation (Brandon → Uwe).
+  Not app code. Demonstrates:
+    - Fixed (non-scrolling) reviewer rail on the left.
+    - Filter papers by session type / topic / status.
+    - Massive assign: "arm" a reviewer, filter papers, assign to ALL filtered at
+      once (skips + reports conflicts / excluded topics / already-assigned).
+    - Single drag & drop still works, with the "can't assign" reason tooltip.
+    - Enriched card: session type, speaker + country, co-speaker names + country
+      + invitation status (all states shown, declined included).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Proposal A — Enriched card + massive assign</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#f3f4f6; color:#111827; }
+  header { padding:16px 24px; background:#fff; border-bottom:1px solid #e5e7eb; position:sticky; top:0; z-index:30; }
+  header h1 { margin:0; font-size:18px; } header p { margin:4px 0 0; font-size:13px; color:#6b7280; }
+
+  .layout { display:flex; gap:16px; padding:16px 24px; align-items:flex-start; }
+
+  /* FIXED reviewer rail — pinned, has its own scroll, never moves with the page */
+  .rail { position:sticky; top:88px; align-self:flex-start; width:288px; flex:0 0 288px;
+          height:calc(100vh - 104px); overflow-y:auto;
+          background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px; }
+  .rail h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; margin:0 0 4px; }
+  .rail .sub { font-size:11px; color:#9ca3af; margin:0 0 10px; }
+  .member { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:6px; cursor:grab; background:#fff; }
+  .member:active { cursor:grabbing; } .member.dragging { opacity:.4; }
+  .member.armed { border-color:#1d4ed8; box-shadow:0 0 0 2px #bfdbfe; background:#eff6ff; }
+  .member .dot6 { color:#d1d5db; font-size:10px; line-height:8px; letter-spacing:1px; }
+  .member .who { min-width:0; } .member .name { font-size:13px; font-weight:600; }
+  .member .load { font-size:11px; }
+  .member .load .over { color:#b45309; } .member .load .under { color:#15803d; } .member .load .ok { color:#6b7280; }
+  .member .state { margin-left:auto; font-size:10px; color:#9ca3af; }
+  .member.armed .state { color:#1d4ed8; font-weight:600; }
+  .avg { font-size:11px; color:#6b7280; margin-top:8px; padding-top:8px; border-top:1px dashed #e5e7eb; }
+
+  .main { flex:1 1 auto; min-width:0; }
+
+  /* Filter + bulk bar */
+  .toolbar { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; margin-bottom:10px; position:sticky; top:88px; z-index:20; }
+  .filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .filters label { font-size:11px; color:#6b7280; }
+  select, .seg { font-size:12px; border:1px solid #d1d5db; border-radius:8px; padding:5px 8px; background:#fff; color:#111827; }
+  .seg-group { display:inline-flex; border:1px solid #d1d5db; border-radius:8px; overflow:hidden; }
+  .seg-group button { font-size:12px; border:0; background:#fff; padding:5px 10px; cursor:pointer; color:#374151; border-left:1px solid #e5e7eb; }
+  .seg-group button:first-child { border-left:0; } .seg-group button.active { background:#1d4ed8; color:#fff; }
+  .count { font-size:12px; color:#6b7280; margin-left:auto; }
+
+  .bulkbar { margin-top:10px; padding:9px 11px; border-radius:8px; background:#eff6ff; border:1px solid #bfdbfe; display:flex; align-items:center; gap:10px; font-size:13px; }
+  .bulkbar.hidden { display:none; }
+  .bulkbar b { color:#1d4ed8; }
+  .bulkbar .spacer { margin-left:auto; }
+  .btn { font-size:13px; font-weight:600; border-radius:8px; padding:7px 12px; cursor:pointer; border:1px solid transparent; }
+  .btn.primary { background:#1d4ed8; color:#fff; } .btn.primary:hover { background:#1e40af; }
+  .btn.ghost { background:#fff; color:#374151; border-color:#d1d5db; }
+  .result { margin-top:10px; padding:9px 11px; border-radius:8px; font-size:13px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .result.hidden { display:none; } .result .skip { color:#b45309; }
+
+  .papers { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+  .card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; transition:border-color .15s, box-shadow .15s; }
+  .card.over-ok { border-color:#60a5fa; box-shadow:0 0 0 3px #bfdbfe; }
+  .card.over-bad { border-color:#fca5a5; box-shadow:0 0 0 3px #fecaca; }
+  .card.bulk-ok { box-shadow: inset 3px 0 0 #22c55e; } .card.bulk-bad { box-shadow: inset 3px 0 0 #f59e0b; opacity:.7; }
+  .ctop { display:flex; justify-content:space-between; gap:12px; }
+  .title { font-size:14px; font-weight:600; color:#1d4ed8; }
+  .badges { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+  .badge { font-size:10px; font-weight:600; padding:2px 7px; border-radius:999px; }
+  .badge.session { background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
+  .badge.status { background:#f3f4f6; color:#374151; }
+  .rev { font-size:11px; color:#6b7280; margin-top:6px; } .rev .full { color:#16a34a; } .rev .partial { color:#ca8a04; }
+  .people { margin-top:8px; display:flex; flex-direction:column; gap:3px; }
+  .person { font-size:12px; display:flex; align-items:center; gap:6px; }
+  .person .role { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#9ca3af; width:64px; }
+  .person .pname { font-weight:500; } .flag { font-size:11px; color:#6b7280; }
+  .inv { font-size:10px; padding:1px 6px; border-radius:999px; }
+  .inv.accepted { background:#dcfce7; color:#15803d; } .inv.pending { background:#f3f4f6; color:#6b7280; } .inv.declined { background:#fee2e2; color:#b91c1c; }
+  .topics { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; } .topic { font-size:10px; padding:1px 6px; border-radius:6px; background:#f3f4f6; color:#4b5563; }
+  .chips { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; } .chip { font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+
+  .tooltip { position:fixed; z-index:60; background:#111827; color:#fff; font-size:12px; padding:6px 9px; border-radius:6px; max-width:240px; pointer-events:none; display:none; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+
+  /* Confirm dialog */
+  .overlay { position:fixed; inset:0; background:rgba(17,24,39,.45); display:none; align-items:center; justify-content:center; z-index:70; }
+  .overlay.show { display:flex; }
+  .dialog { background:#fff; border-radius:12px; width:420px; max-width:92vw; padding:18px 20px; box-shadow:0 12px 40px rgba(0,0,0,.25); }
+  .dialog h3 { margin:0 0 6px; font-size:16px; }
+  .dialog p { margin:0 0 12px; font-size:13px; color:#374151; }
+  .dialog .summary { font-size:13px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; margin-bottom:14px; }
+  .dialog .summary .ok { color:#15803d; font-weight:600; } .dialog .summary .skip { color:#b45309; font-weight:600; }
+  .dialog .skiplist { margin:6px 0 0; padding-left:18px; color:#6b7280; font-size:12px; }
+  .dialog .actions { display:flex; justify-content:flex-end; gap:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Paper Assignment — Proposal A · fixed rail + massive assign</h1>
+  <p>The reviewer rail stays pinned. <b>Click a reviewer card</b> to arm them, filter the papers (session type / topic / status), then "Assign to all filtered" — a confirm dialog previews how many will be assigned vs skipped before anything is saved. Drag a reviewer instead for a single assign; hover an invalid paper for the reason.</p>
+</header>
+
+<div class="layout">
+  <!-- FIXED reviewer rail -->
+  <aside class="rail">
+    <h2>Program committee</h2>
+    <p class="sub">5 reviewers · target ≈ <span id="target">0</span> papers each</p>
+    <div id="members"></div>
+    <div class="avg" id="avg"></div>
+  </aside>
+
+  <div class="main">
+    <div class="toolbar">
+      <div class="filters">
+        <label>Session type
+          <select id="fSession"><option value="">All</option></select>
+        </label>
+        <label>Topic
+          <select id="fTopic"><option value="">All</option></select>
+        </label>
+        <label>Status
+          <span class="seg-group" id="fStatus">
+            <button data-v="all" class="active">All</button>
+            <button data-v="needs">Needs reviewers</button>
+            <button data-v="complete">Complete</button>
+          </span>
+        </label>
+        <span class="count" id="count"></span>
+      </div>
+
+      <div class="bulkbar hidden" id="bulkbar">
+        <span>Armed: <b id="armedName"></b></span>
+        <span class="spacer"></span>
+        <button class="btn primary" id="assignAll"></button>
+        <button class="btn ghost" id="clearArmed">Clear</button>
+      </div>
+      <div class="result hidden" id="result"></div>
+    </div>
+
+    <div class="papers" id="papers"></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Confirm-before-apply dialog -->
+<div class="overlay" id="overlay">
+  <div class="dialog">
+    <h3 id="dlgTitle">Confirm bulk assignment</h3>
+    <p id="dlgIntro"></p>
+    <div class="summary" id="dlgSummary"></div>
+    <div class="actions">
+      <button class="btn ghost" id="dlgCancel">Cancel</button>
+      <button class="btn primary" id="dlgConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- Mock data ----
+const members = [
+  { id:'m1', name:'Anja Köhler',  load:18, excludedTopics:['Security'] },
+  { id:'m2', name:'Marco Rossi',  load:9,  excludedTopics:[] },
+  { id:'m3', name:'Priya Nair',   load:22, excludedTopics:['Frontend'] },
+  { id:'m4', name:'David Okoro',  load:14, excludedTopics:[] },
+  { id:'m5', name:'Sven Larsson', load:11, excludedTopics:['Databases'] },
+];
+// session types + topics drive the filters
+const SESSION = { Talk:45, Workshop:90, Lightning:10 };
+function P(id,title,stype,dur,topics,speaker,cospeakers,reviewers,speakerIds){
+  return { id,title,stype,dur,topics,speaker,cospeakers,reviewers,speakerIds };
+}
+const papers = [
+  P('p1','Scaling Postgres RLS to 10k tenants','Talk',45,['Backend','Databases'],{name:'Lena Fischer',country:'DE'},[{name:'Tom Becker',country:'AT',inv:'accepted'},{name:'Sara Vidal',country:'ES',inv:'pending'}],['Marco Rossi'],['s_lena']),
+  P('p2','Threat modeling for multi-tenant SaaS','Workshop',90,['Security'],{name:'Marco Rossi',country:'IT'},[{name:'Yuki Tanaka',country:'JP',inv:'declined'}],[],['m2']),
+  P('p3','Design systems that survive dark mode','Talk',30,['Frontend'],{name:'Omar Haddad',country:'MA'},[{name:'Grace Liu',country:'SG',inv:'accepted'}],['Anja Köhler','Priya Nair'],['s_omar']),
+  P('p4','Streaming CSV exports without melting the event loop','Talk',45,['Backend','Performance'],{name:'Nadia Brooks',country:'GB'},[],['Priya Nair'],['s_nadia']),
+  P('p5','Accessible drag & drop in React','Lightning',10,['Frontend','Accessibility'],{name:'Felix Wagner',country:'DE'},[{name:'Ivan Petrov',country:'BG',inv:'pending'}],[],['s_felix']),
+  P('p6','Indexing strategies for tenant-scoped queries','Talk',45,['Databases','Performance'],{name:'Sofia Almeida',country:'PT'},[{name:'Lena Fischer',country:'DE',inv:'accepted'}],[],['s_sofia']),
+  P('p7','Zero-downtime migrations at scale','Workshop',90,['Databases','Backend'],{name:'Hiro Sato',country:'JP'},[],[],['s_hiro']),
+  P('p8','Pen-testing your own RLS policies','Workshop',90,['Security','Databases'],{name:'Eva Novak',country:'CZ'},[{name:'Marco Rossi',country:'IT',inv:'pending'}],[],['s_eva']),
+  P('p9','Building a design token pipeline','Talk',30,['Frontend'],{name:'Ana Costa',country:'BR'},[],[],['s_ana']),
+  P('p10','Lightning intro to event-loop profiling','Lightning',10,['Performance'],{name:'Jonas Weber',country:'DE'},[],[],['s_jonas']),
+];
+const RPP = 3;
+
+// ---- Eligibility + reason ----
+function reasonCantAssign(m, paper){
+  if (paper.speakerIds.includes(m.id)) return 'Conflict of interest — this member is the main speaker on this paper.';
+  if (paper.reviewers.includes(m.name)) return 'Already assigned to this paper.';
+  const t = m.excludedTopics.find(t => paper.topics.includes(t));
+  if (t) return 'Excluded topic — this member opted out of reviewing "'+t+'" papers.';
+  if (paper.reviewers.length >= RPP) return 'This paper already has the full set of reviewers.';
+  return null;
+}
+
+// ---- State ----
+let armedId = null;
+let dragMemberId = null;
+const filters = { session:'', topic:'', status:'all' };
+const tooltip = document.getElementById('tooltip');
+
+// ---- Derived ----
+function expectedTarget(){ return Math.round(papers.length * RPP / members.length); }
+function filteredPapers(){
+  return papers.filter(p => {
+    if (filters.session && p.stype !== filters.session) return false;
+    if (filters.topic && !p.topics.includes(filters.topic)) return false;
+    if (filters.status === 'needs' && p.reviewers.length >= RPP) return false;
+    if (filters.status === 'complete' && p.reviewers.length < RPP) return false;
+    return true;
+  });
+}
+
+// ---- Render rail ----
+function renderMembers(){
+  const target = expectedTarget();
+  document.getElementById('target').textContent = target;
+  const w = document.getElementById('members'); w.innerHTML='';
+  members.forEach(m=>{
+    const el=document.createElement('div'); el.className='member'+(m.id===armedId?' armed':''); el.draggable=true; el.dataset.id=m.id;
+    const delta = m.load - target;
+    const cls = delta>2?'over':delta<-2?'under':'ok';
+    const sign = delta>0?('+'+delta):delta;
+    el.title = 'Click to arm for bulk assign · drag to assign a single paper';
+    el.innerHTML = `<span class="dot6">⠿</span>
+      <span class="who"><div class="name">${m.name}</div>
+      <div class="load"><span class="${cls}">${m.load} papers (${sign} vs target)</span></div></span>
+      <span class="state">${m.id===armedId?'● armed':'click to arm'}</span>`;
+    // Arm by clicking the whole card; disambiguate click from drag-start.
+    el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',m.id);dragMemberId=m.id;el.classList.add('dragging');el.dataset.dragged='1';});
+    el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragMemberId=null;hideTip();clearBulkPreview();setTimeout(()=>{delete el.dataset.dragged;},0);});
+    el.addEventListener('click',()=>{ if(el.dataset.dragged) return; armedId = (armedId===m.id?null:m.id); document.getElementById('result').classList.add('hidden'); renderAll(); });
+    w.appendChild(el);
+  });
+  const loads = members.map(m=>m.load);
+  document.getElementById('avg').textContent =
+    `Load spread: ${Math.min(...loads)}–${Math.max(...loads)} papers · target ${target}. Use bulk assign to even it out.`;
+}
+
+// ---- Render toolbar ----
+function fillFilterOptions(){
+  const s = document.getElementById('fSession');
+  Object.keys(SESSION).forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=`${k} · ${SESSION[k]} min`; s.appendChild(o); });
+  const topics=[...new Set(papers.flatMap(p=>p.topics))].sort();
+  const t=document.getElementById('fTopic');
+  topics.forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=k; t.appendChild(o); });
+  s.addEventListener('change',e=>{filters.session=e.target.value;renderAll();});
+  t.addEventListener('change',e=>{filters.topic=e.target.value;renderAll();});
+  document.getElementById('fStatus').querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{filters.status=b.dataset.v;renderAll();});
+  });
+}
+function renderToolbar(){
+  document.getElementById('fStatus').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.v===filters.status));
+  const fp = filteredPapers();
+  document.getElementById('count').textContent = `${fp.length} of ${papers.length} papers shown`;
+
+  const bar = document.getElementById('bulkbar');
+  const armed = members.find(m=>m.id===armedId);
+  if (!armed){ bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  document.getElementById('armedName').textContent = armed.name;
+  const eligible = fp.filter(p=>!reasonCantAssign(armed,p));
+  const btn = document.getElementById('assignAll');
+  btn.textContent = `Assign ${armed.name.split(' ')[0]} to all ${eligible.length} eligible (of ${fp.length} filtered)`;
+  btn.disabled = eligible.length===0;
+  btn.style.opacity = eligible.length===0 ? .5 : 1;
+}
+
+// ---- Render papers ----
+function person(role,p,inv){ return `<div class="person"><span class="role">${role}</span><span class="pname">${p.name}</span><span class="flag">· ${p.country}</span>${inv?`<span class="inv ${inv}">${inv}</span>`:''}</div>`; }
+function renderPapers(){
+  const w=document.getElementById('papers'); w.innerHTML='';
+  const armed = members.find(m=>m.id===armedId);
+  filteredPapers().forEach(paper=>{
+    const card=document.createElement('div'); card.className='card'; card.dataset.id=paper.id;
+    const full=paper.reviewers.length>=RPP;
+    // bulk preview stripe when a reviewer is armed
+    if (armed){ const r=reasonCantAssign(armed,paper); card.classList.add(r?'bulk-bad':'bulk-ok'); }
+    card.innerHTML=`
+      <div class="ctop">
+        <div class="title">${paper.title}</div>
+        <div class="badges"><span class="badge session">${paper.stype} · ${paper.dur} min</span><span class="badge status">${full?'complete':paper.reviewers.length?'partial':'unassigned'}</span></div>
+      </div>
+      <div class="people">${person('Speaker',paper.speaker,null)}${paper.cospeakers.map(c=>person('Co-speaker',c,c.inv)).join('')}</div>
+      <div class="topics">${paper.topics.map(t=>`<span class="topic">${t}</span>`).join('')}</div>
+      <div class="rev">Reviewers <span class="${full?'full':'partial'}">${paper.reviewers.length}/${RPP}</span></div>
+      ${paper.reviewers.length?`<div class="chips">${paper.reviewers.map(r=>`<span class="chip">${r} ✕</span>`).join('')}</div>`:''}
+    `;
+    card.addEventListener('dragover',e=>{e.preventDefault();const m=members.find(x=>x.id===dragMemberId);if(!m)return;const r=reasonCantAssign(m,paper);card.classList.toggle('over-ok',!r);card.classList.toggle('over-bad',!!r);r?showTip(r,e):hideTip();});
+    card.addEventListener('dragleave',()=>{card.classList.remove('over-ok','over-bad');hideTip();});
+    card.addEventListener('drop',e=>{e.preventDefault();card.classList.remove('over-ok','over-bad');hideTip();const m=members.find(x=>x.id===e.dataTransfer.getData('text/plain'));const r=reasonCantAssign(m,paper);if(r)return;paper.reviewers.push(m.name);m.load++;renderAll();});
+    w.appendChild(card);
+  });
+}
+function clearBulkPreview(){ document.querySelectorAll('.card').forEach(c=>c.classList.remove('bulk-ok','bulk-bad')); }
+
+// ---- Bulk assign: preview the plan, CONFIRM, then apply ----
+function planBulk(armed){
+  const fp = filteredPapers(); const toAssign=[]; const skips={};
+  fp.forEach(p=>{ const r=reasonCantAssign(armed,p); if(r){ const k=r.split('—')[0].trim(); skips[k]=(skips[k]||0)+1; } else toAssign.push(p); });
+  return { toAssign, skips };
+}
+function openConfirm(){
+  const armed = members.find(m=>m.id===armedId); if(!armed) return;
+  const { toAssign, skips } = planBulk(armed);
+  document.getElementById('dlgIntro').innerHTML =
+    `Reviewer <b>${armed.name}</b> will be assigned to the papers in the current filter. Nothing is saved until you confirm.`;
+  const skipCount = Object.values(skips).reduce((a,b)=>a+b,0);
+  const skipList = Object.entries(skips).map(([k,v])=>`<li>${v} — ${k.toLowerCase()}</li>`).join('');
+  document.getElementById('dlgSummary').innerHTML =
+    `<span class="ok">Assign: ${toAssign.length}</span> &nbsp;·&nbsp; <span class="skip">Skip: ${skipCount}</span>` +
+    (skipCount?`<ul class="skiplist">${skipList}</ul>`:'');
+  document.getElementById('dlgConfirm').disabled = toAssign.length===0;
+  document.getElementById('overlay').classList.add('show');
+}
+function applyBulk(){
+  const armed = members.find(m=>m.id===armedId); if(!armed){ closeConfirm(); return; }
+  const { toAssign, skips } = planBulk(armed);
+  toAssign.forEach(p=>{ p.reviewers.push(armed.name); armed.load++; });
+  const res=document.getElementById('result'); res.classList.remove('hidden');
+  const skipCount = Object.values(skips).reduce((a,b)=>a+b,0);
+  const skipText = skipCount? ` · <span class="skip">skipped ${skipCount} (${Object.entries(skips).map(([k,v])=>`${v} ${k.toLowerCase()}`).join(', ')})</span>` : '';
+  res.innerHTML = `Assigned <b>${armed.name}</b> to <b>${toAssign.length}</b> paper(s)${skipText}.`;
+  closeConfirm(); renderAll();
+}
+function closeConfirm(){ document.getElementById('overlay').classList.remove('show'); }
+
+// ---- Tooltip ----
+function showTip(t,e){tooltip.textContent=t;tooltip.style.display='block';tooltip.style.left=(e.clientX+12)+'px';tooltip.style.top=(e.clientY-40)+'px';}
+function hideTip(){tooltip.style.display='none';}
+
+function renderAll(){ renderMembers(); renderToolbar(); renderPapers(); }
+
+// ---- Wire up ----
+fillFilterOptions();
+document.getElementById('assignAll').addEventListener('click',openConfirm);
+document.getElementById('dlgConfirm').addEventListener('click',applyBulk);
+document.getElementById('dlgCancel').addEventListener('click',closeConfirm);
+document.getElementById('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeConfirm(); });
+document.getElementById('clearArmed').addEventListener('click',()=>{armedId=null;document.getElementById('result').classList.add('hidden');renderAll();});
+renderAll();
+</script>
+</body>
+</html>

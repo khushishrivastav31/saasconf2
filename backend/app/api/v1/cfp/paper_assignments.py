@@ -25,6 +25,9 @@ from app.models.review import PaperReview, ReviewStatus
 from app.schemas.cfp import (
     AutoAssignRequest,
     AutoAssignResponse,
+    BulkAssignRequest,
+    BulkAssignResponse,
+    BulkAssignSkippedItem,
     PaperAssignmentCreate,
     PaperAssignmentListResponse,
     PaperAssignmentResponse,
@@ -183,6 +186,127 @@ async def create_paper_assignment(
         is_anonymous=assignment.is_anonymous,
         assigned_at=assignment.assigned_at,
     )
+
+
+@router.post(
+    "/paper-assignments/bulk",
+    response_model=BulkAssignResponse,
+    status_code=200,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def bulk_assign_papers(
+    data: BulkAssignRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> BulkAssignResponse:
+    """Assign a committee member to multiple papers in one request.
+
+    Skips papers that have a conflict of interest, excluded-topic overlap, or
+    are already assigned. Returns the created assignments and the skipped items
+    with the reason for each skip.
+    """
+    member_result = await db.execute(
+        select(CFPCommitteeMember)
+        .options(selectinload(CFPCommitteeMember.applicant), selectinload(CFPCommitteeMember.topics))
+        .where(
+            CFPCommitteeMember.id == data.committee_member_id,
+            CFPCommitteeMember.tenant_id == current_user.tenant_id,
+        )
+    )
+    member = member_result.scalar_one_or_none()
+    if not member:
+        raise NotFoundError(f"Committee member with ID '{data.committee_member_id}' not found")
+
+    member_excluded_topic_ids = {t.id for t in member.topics}
+
+    # Load all requested papers in one query
+    papers_result = await db.execute(
+        select(CFPPaper)
+        .options(selectinload(CFPPaper.topics), selectinload(CFPPaper.cospeaker_associations))
+        .where(
+            CFPPaper.id.in_(data.paper_ids),
+            CFPPaper.tenant_id == current_user.tenant_id,
+        )
+    )
+    papers_by_id = {p.id: p for p in papers_result.scalars().unique().all()}
+
+    # Load existing assignments for this member to detect duplicates in one query
+    existing_result = await db.execute(
+        select(CFPPaperAssignment.paper_id).where(
+            CFPPaperAssignment.committee_member_id == data.committee_member_id,
+            CFPPaperAssignment.paper_id.in_(data.paper_ids),
+        )
+    )
+    already_assigned_paper_ids = {row[0] for row in existing_result}
+
+    new_assignments: list[tuple[CFPPaperAssignment, CFPPaper]] = []
+    skipped: list[BulkAssignSkippedItem] = []
+
+    for paper_id in data.paper_ids:
+        paper = papers_by_id.get(paper_id)
+        if not paper:
+            skipped.append(BulkAssignSkippedItem(paper_id=paper_id, reason="not_found"))
+            continue
+
+        if paper_id in already_assigned_paper_ids:
+            skipped.append(BulkAssignSkippedItem(paper_id=paper_id, reason="already_assigned"))
+            continue
+
+        # Conflict of interest: main speaker or co-speaker
+        conflict_applicant_ids = {paper.main_speaker_id}
+        for assoc in paper.cospeaker_associations:
+            conflict_applicant_ids.add(assoc.applicant_id)
+
+        if member.applicant_id in conflict_applicant_ids:
+            skip_reason = "is_speaker" if paper.main_speaker_id == member.applicant_id else "is_cospeaker"
+            skipped.append(BulkAssignSkippedItem(paper_id=paper_id, reason=skip_reason))
+            continue
+
+        # Excluded-topic overlap
+        paper_topic_ids = {t.id for t in paper.topics}
+        if member_excluded_topic_ids and paper_topic_ids & member_excluded_topic_ids:
+            skipped.append(BulkAssignSkippedItem(paper_id=paper_id, reason="excluded_topic"))
+            continue
+
+        assignment = CFPPaperAssignment(
+            tenant_id=current_user.tenant_id,
+            paper_id=paper_id,
+            committee_member_id=data.committee_member_id,
+            is_anonymous=data.is_anonymous,
+        )
+        db.add(assignment)
+        already_assigned_paper_ids.add(paper_id)
+
+        if paper.status == PaperStatus.SUBMITTED.value:
+            paper.status = PaperStatus.IN_EVALUATION.value
+
+        new_assignments.append((assignment, paper))
+
+    if new_assignments:
+        # Flush to populate server-defaults (assigned_at = func.now()) before reading
+        await db.flush()
+
+    member_first = member.applicant.first_name if member.applicant else ""
+    member_last = member.applicant.last_name if member.applicant else ""
+
+    assigned = [
+        PaperAssignmentResponse(
+            id=a.id,
+            paper_id=a.paper_id,
+            paper_title=p.title,
+            committee_member_id=a.committee_member_id,
+            committee_member_first_name=member_first,
+            committee_member_last_name=member_last,
+            is_anonymous=a.is_anonymous,
+            assigned_at=a.assigned_at,
+        )
+        for a, p in new_assignments
+    ]
+
+    if new_assignments:
+        await db.commit()
+
+    return BulkAssignResponse(assigned=assigned, skipped=skipped)
 
 
 @router.post(

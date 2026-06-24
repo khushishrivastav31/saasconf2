@@ -292,3 +292,25 @@ class AutoAssignResponse(BaseModel):
     papers_processed: int
     papers_skipped: int
     skipped_details: list[str] = Field(default_factory=list)
+
+
+class BulkAssignRequest(BaseModel):
+    """Schema for bulk-assigning a reviewer to multiple papers."""
+
+    committee_member_id: UUID
+    paper_ids: list[UUID]
+    is_anonymous: bool = False
+
+
+class BulkAssignSkippedItem(BaseModel):
+    """A paper that was skipped during bulk assignment with the reason."""
+
+    paper_id: UUID
+    reason: str
+
+
+class BulkAssignResponse(BaseModel):
+    """Response from a bulk paper assignment operation."""
+
+    assigned: list[PaperAssignmentResponse]
+    skipped: list[BulkAssignSkippedItem]

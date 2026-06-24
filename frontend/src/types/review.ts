@@ -21,6 +21,22 @@ export interface PaperAssignmentListResponse {
   total: number;
 }
 
+export interface BulkAssignRequest {
+  committee_member_id: string;
+  paper_ids: string[];
+  is_anonymous?: boolean;
+}
+
+export interface BulkAssignSkippedItem {
+  paper_id: string;
+  reason: 'is_speaker' | 'is_cospeaker' | 'already_assigned' | 'excluded_topic' | 'not_found';
+}
+
+export interface BulkAssignResponse {
+  assigned: PaperAssignment[];
+  skipped: BulkAssignSkippedItem[];
+}
+
 export interface AutoAssignRequest {
   conference_id: string;
   reviewers_per_paper: number;
@@ -50,7 +66,7 @@ export interface ReviewScoreScale {
   tenant_id: string;
   conference_id: string;
   name: string;
-  scale_type: "numeric_range" | "custom" | "binary";
+  scale_type: 'numeric_range' | 'custom' | 'binary';
   is_active: boolean;
   options: ReviewScaleOption[];
   created_at: string;
@@ -59,16 +75,16 @@ export interface ReviewScoreScale {
 
 export interface ReviewScoreScaleCreate {
   name: string;
-  scale_type: "numeric_range" | "custom" | "binary";
+  scale_type: 'numeric_range' | 'custom' | 'binary';
   is_active?: boolean;
-  options: Omit<ReviewScaleOption, "id">[];
+  options: Omit<ReviewScaleOption, 'id'>[];
 }
 
 export interface ReviewScoreScaleUpdate {
   name?: string;
-  scale_type?: "numeric_range" | "custom" | "binary";
+  scale_type?: 'numeric_range' | 'custom' | 'binary';
   is_active?: boolean;
-  options?: Omit<ReviewScaleOption, "id">[];
+  options?: Omit<ReviewScaleOption, 'id'>[];
 }
 
 // --- Review Criteria & Questions ---
@@ -78,11 +94,11 @@ export interface ReviewQuestion {
   criterion_id: string;
   text: string;
   help_text: string | null;
-  question_type: "scored" | "non_scored";
+  question_type: 'scored' | 'non_scored';
   score_scale_id: string | null;
   score_scale: ReviewScoreScale | null;
   weight: number;
-  comment_requirement: "optional" | "required" | "required_if_low_score";
+  comment_requirement: 'optional' | 'required' | 'required_if_low_score';
   low_score_threshold: number | null;
   show_to_reviewers: boolean;
   count_in_score: boolean;
@@ -95,10 +111,10 @@ export interface ReviewQuestion {
 export interface ReviewQuestionCreate {
   text: string;
   help_text?: string;
-  question_type?: "scored" | "non_scored";
+  question_type?: 'scored' | 'non_scored';
   score_scale_id?: string;
   weight?: number;
-  comment_requirement?: "optional" | "required" | "required_if_low_score";
+  comment_requirement?: 'optional' | 'required' | 'required_if_low_score';
   low_score_threshold?: number;
   show_to_reviewers?: boolean;
   count_in_score?: boolean;
@@ -109,10 +125,10 @@ export interface ReviewQuestionCreate {
 export interface ReviewQuestionUpdate {
   text?: string;
   help_text?: string;
-  question_type?: "scored" | "non_scored";
+  question_type?: 'scored' | 'non_scored';
   score_scale_id?: string;
   weight?: number;
-  comment_requirement?: "optional" | "required" | "required_if_low_score";
+  comment_requirement?: 'optional' | 'required' | 'required_if_low_score';
   low_score_threshold?: number;
   show_to_reviewers?: boolean;
   count_in_score?: boolean;

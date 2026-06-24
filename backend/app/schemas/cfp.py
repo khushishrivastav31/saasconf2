@@ -417,6 +417,9 @@ from app.schemas.cfp_applicants import (  # noqa: E402, F401
 from app.schemas.cfp_papers import (  # noqa: E402, F401
     AutoAssignRequest,
     AutoAssignResponse,
+    BulkAssignRequest,
+    BulkAssignResponse,
+    BulkAssignSkippedItem,
     CospeakerInvitationListResponse,
     CospeakerInvitationResponse,
     CospeakerInvitationStatus,

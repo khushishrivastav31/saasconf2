@@ -5990,6 +5990,30 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/cfp/paper-assignments/bulk': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Bulk Assign Papers
+     * @description Assign a committee member to multiple papers in one request.
+     *
+     *     Skips papers that have a conflict of interest, excluded-topic overlap, or
+     *     are already assigned. Returns the created assignments and the skipped items
+     *     with the reason for each skip.
+     */
+    post: operations['bulk_assign_papers_api_v1_cfp_paper_assignments_bulk_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/cfp/paper-assignments/auto-assign': {
     parameters: {
       query?: never;
@@ -15999,6 +16023,47 @@ export type components = {
             [key: string]: string;
           }[]
         | null;
+    };
+    /**
+     * BulkAssignRequest
+     * @description Schema for bulk-assigning a reviewer to multiple papers.
+     */
+    BulkAssignRequest: {
+      /**
+       * Committee Member Id
+       * Format: uuid
+       */
+      committee_member_id: string;
+      /** Paper Ids */
+      paper_ids: string[];
+      /**
+       * Is Anonymous
+       * @default false
+       */
+      is_anonymous?: boolean;
+    };
+    /**
+     * BulkAssignResponse
+     * @description Response from a bulk paper assignment operation.
+     */
+    BulkAssignResponse: {
+      /** Assigned */
+      assigned: components['schemas']['PaperAssignmentResponse'][];
+      /** Skipped */
+      skipped: components['schemas']['BulkAssignSkippedItem'][];
+    };
+    /**
+     * BulkAssignSkippedItem
+     * @description A paper that was skipped during bulk assignment with the reason.
+     */
+    BulkAssignSkippedItem: {
+      /**
+       * Paper Id
+       * Format: uuid
+       */
+      paper_id: string;
+      /** Reason */
+      reason: string;
     };
     /**
      * BulkAttendeeData
@@ -43210,6 +43275,41 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PaperAssignmentResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  bulk_assign_papers_api_v1_cfp_paper_assignments_bulk_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BulkAssignRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BulkAssignResponse'];
         };
       };
       /** @description Validation Error */

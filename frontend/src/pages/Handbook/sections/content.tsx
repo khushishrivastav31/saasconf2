@@ -42,10 +42,13 @@ export const contentCategory: HandbookCategory = {
 </ul>
 <strong>Phase 3 — Assignment:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">Admin assigns papers to committee reviewers in the Assignments sub-tab</li>
-<li class="text-gray-700 dark:text-gray-300">The system respects COI declarations — conflicted reviewers cannot be assigned</li>
-<li class="text-gray-700 dark:text-gray-300">Each paper can have multiple reviewers for balanced evaluation</li>
-<li class="text-gray-700 dark:text-gray-300">Reviewers receive email notification with their assigned papers</li>
+<li class="text-gray-700 dark:text-gray-300">Admin assigns papers to committee reviewers in the Assignments sub-tab — use drag-and-drop for individual assignments or click a reviewer card to arm them for bulk assignment.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Paper cards now show</strong>: session type &amp; duration, main speaker + country, all co-speakers (name, country, invitation status — pending/accepted/declined), and the reviewer progress indicator.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Conflict reasons</strong>: hovering an invalid drop target shows exactly why a reviewer cannot be assigned (speaker/co-speaker conflict of interest, excluded-topic overlap, or already assigned).</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Bulk assign</strong>: click a reviewer card in the left rail to arm them, then filter papers by session type / topic / review status, preview which papers will be assigned vs. skipped, and confirm with a single click.</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Auto-assign</strong> (toolbar button) distributes reviewers across all eligible papers load-balanced by topic; use it first, then drag-and-drop to fine-tune.</li>
+<li class="text-gray-700 dark:text-gray-300">The system respects COI declarations — conflicted reviewers cannot be assigned manually or via bulk/auto-assign.</li>
+<li class="text-gray-700 dark:text-gray-300">Each paper can have multiple reviewers for balanced evaluation (configured in CFP Settings).</li>
 </ul>
 <strong>Phase 4 — Review (portal-side):</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
