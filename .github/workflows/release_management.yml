@@ -121,7 +121,7 @@ jobs:
           REPOSITORY_URL="https://github.com/${{ github.repository }}"
 
           if [[ -n "$LAST_RELEASE_TAG" ]]; then
-            COMMITS="$(git log --pretty=format:"%s|%h|%an|%ae" "${LAST_RELEASE_TAG}..HEAD" | \
+            COMMITS="$(git log --reverse --pretty=format:"%s|%h|%an|%ae" "${LAST_RELEASE_TAG}..HEAD" | \
               while IFS='|' read -r subject hash author email; do
                 subject="$(echo "$subject" | sed -E "s|#([0-9]+)|[#\1](${REPOSITORY_URL}/pull/\1)|g")"
 
@@ -138,11 +138,11 @@ jobs:
                 fi
 
                 echo "* $subject ([${hash}](${REPOSITORY_URL}/commit/${hash})) by $author"
-              done | sort)"
+              done)"
             COMPARE_URL="${REPOSITORY_URL}/compare/${LAST_RELEASE_TAG}...${TAG}"
           else
             LAST_RELEASE_TAG="No previous release tag"
-            COMMITS="$(git log --pretty=format:"%s|%h|%an" HEAD | \
+            COMMITS="$(git log --reverse --pretty=format:"%s|%h|%an" HEAD | \
               while IFS='|' read -r subject hash author; do
                 subject="$(echo "$subject" | sed -E "s|#([0-9]+)|[#\1](${REPOSITORY_URL}/pull/\1)|g")"
                 echo "* $subject ([${hash}](${REPOSITORY_URL}/commit/${hash})) by $author"
