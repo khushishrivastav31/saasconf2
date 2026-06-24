@@ -345,13 +345,13 @@ async def _build_paper_responses_batch(
             for q in questions:
                 if not q.score_scale or not q.score_scale.options:
                     continue
-                max_val = max(
-                    (o.numeric_value for o in q.score_scale.options if o.numeric_value is not None and not o.is_unsure),
-                    default=None,
-                )
-                if max_val is not None:
-                    total_max_weighted += max_val * q.weight
-                    total_weight += q.weight
+                option_values = [
+                    o.numeric_value for o in q.score_scale.options if o.numeric_value is not None and not o.is_unsure
+                ]
+                if not option_values:
+                    continue
+                total_max_weighted += 5.0 * q.weight
+                total_weight += q.weight
             max_score_by_conference[conf_id] = total_max_weighted / total_weight if total_weight > 0 else None
 
     # 8. Batch-count must_have per paper
@@ -642,13 +642,13 @@ async def _build_paper_response(
         for q in questions_result.scalars().all():
             if not q.score_scale or not q.score_scale.options:
                 continue
-            max_val = max(
-                (o.numeric_value for o in q.score_scale.options if o.numeric_value is not None and not o.is_unsure),
-                default=None,
-            )
-            if max_val is not None:
-                total_max_weighted += max_val * q.weight
-                total_weight += q.weight
+            option_values = [
+                o.numeric_value for o in q.score_scale.options if o.numeric_value is not None and not o.is_unsure
+            ]
+            if not option_values:
+                continue
+            total_max_weighted += 5.0 * q.weight
+            total_weight += q.weight
         if total_weight > 0:
             max_review_score = total_max_weighted / total_weight
 

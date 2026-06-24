@@ -536,6 +536,84 @@ class TestPaperListFilters:
         assert data["total"] >= 1
 
     @pytest.mark.asyncio
+    async def test_max_review_score_uses_normalized_mixed_scales(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_cfp: Tenant,
+        tenant: Tenant,
+        conference: Conference,
+        submitted_paper: CFPPaper,
+        review_setup: dict,
+    ) -> None:
+        recommendation_scale = ReviewScoreScale(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            name="Overall Recommendation",
+            scale_type="custom",
+            is_active=True,
+        )
+        db_session.add(recommendation_scale)
+        await db_session.flush()
+
+        for display_order, (label, value) in enumerate(
+            [
+                ("Strong Reject", -2.0),
+                ("Reject", -1.0),
+                ("Borderline", 0.0),
+                ("Accept", 1.0),
+                ("Strong Accept", 2.0),
+            ]
+        ):
+            db_session.add(
+                ReviewScaleOption(
+                    id=uuid.uuid4(),
+                    scale_id=recommendation_scale.id,
+                    label=label,
+                    numeric_value=value,
+                    is_unsure=False,
+                    display_order=display_order,
+                )
+            )
+
+        db_session.add(
+            ReviewQuestion(
+                id=uuid.uuid4(),
+                criterion_id=review_setup["criterion"].id,
+                tenant_id=tenant.id,
+                conference_id=conference.id,
+                text="Overall Recommendation",
+                question_type="scored",
+                score_scale_id=recommendation_scale.id,
+                weight=1.0,
+                show_to_reviewers=True,
+                count_in_score=True,
+                display_order=2,
+                is_active=True,
+            )
+        )
+        await db_session.commit()
+
+        headers = _admin_headers(tenant_admin_user)
+        list_resp = await client.get(
+            f"/api/v1/cfp/papers?conference_id={conference.id}",
+            headers=headers,
+        )
+        assert list_resp.status_code == 200
+        list_data = list_resp.json()
+        paper_item = next(item for item in list_data["items"] if item["id"] == str(submitted_paper.id))
+        assert paper_item["max_review_score"] == 5.0
+
+        detail_resp = await client.get(
+            f"/api/v1/cfp/papers/{submitted_paper.id}",
+            headers=headers,
+        )
+        assert detail_resp.status_code == 200
+        assert detail_resp.json()["max_review_score"] == 5.0
+
+    @pytest.mark.asyncio
     async def test_list_papers_filter_by_main_speaker_id(
         self,
         client: AsyncClient,

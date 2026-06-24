@@ -126,16 +126,21 @@ async def _create_scale_with_option(
     db.add(scale)
     await db.flush()
 
-    option = ReviewScaleOption(
-        id=uuid.uuid4(),
-        scale_id=scale.id,
-        label=f"{int(numeric_value)} - Score",
-        numeric_value=numeric_value,
-        is_unsure=False,
-        display_order=0,
-    )
-    db.add(option)
+    option = None
+    for display_order, value in enumerate([1.0, 2.0, 3.0, 4.0, 5.0]):
+        scale_option = ReviewScaleOption(
+            id=uuid.uuid4(),
+            scale_id=scale.id,
+            label=f"{int(value)} - Score",
+            numeric_value=value,
+            is_unsure=False,
+            display_order=display_order,
+        )
+        db.add(scale_option)
+        if value == numeric_value:
+            option = scale_option
     await db.flush()
+    assert option is not None
 
     criterion = ReviewCriterion(
         id=uuid.uuid4(),
@@ -567,6 +572,97 @@ class TestReviewSubmission:
         assert data["status"] == "submitted"
         # The fixture creates a scale option with numeric_value=4.0, weight=1.0
         assert data["total_score"] == 4.0
+
+    async def test_submit_review_normalizes_recommendation_scale(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Recommendation values on a -2 to +2 scale are normalized before averaging."""
+        _scale, option, criterion, question = review_setup
+        recommendation_scale = ReviewScoreScale(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            name=f"Recommendation-{uuid.uuid4().hex[:4]}",
+            scale_type="custom",
+            is_active=True,
+        )
+        db_session.add(recommendation_scale)
+        await db_session.flush()
+
+        selected_recommendation = None
+        for display_order, (label, value) in enumerate(
+            [
+                ("Strong Reject", -2.0),
+                ("Reject", -1.0),
+                ("Borderline", 0.0),
+                ("Accept", 1.0),
+                ("Strong Accept", 2.0),
+            ]
+        ):
+            recommendation_option = ReviewScaleOption(
+                id=uuid.uuid4(),
+                scale_id=recommendation_scale.id,
+                label=label,
+                numeric_value=value,
+                is_unsure=False,
+                display_order=display_order,
+            )
+            db_session.add(recommendation_option)
+            if value == 2.0:
+                selected_recommendation = recommendation_option
+
+        recommendation_question = ReviewQuestion(
+            id=uuid.uuid4(),
+            criterion_id=criterion.id,
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            text="Overall Recommendation",
+            question_type="scored",
+            score_scale_id=recommendation_scale.id,
+            weight=1.0,
+            show_to_reviewers=True,
+            count_in_score=True,
+            is_active=True,
+            display_order=1,
+        )
+        db_session.add(recommendation_question)
+        await db_session.commit()
+        assert selected_recommendation is not None
+
+        payload = {
+            "answers": [
+                {
+                    "question_id": str(question.id),
+                    "selected_option_id": str(option.id),
+                    "comment": "Quality comment",
+                },
+                {
+                    "question_id": str(recommendation_question.id),
+                    "selected_option_id": str(selected_recommendation.id),
+                    "comment": "Recommendation comment",
+                },
+            ],
+            "speaker_feedback": VALID_FEEDBACK,
+            "internal_comment": "",
+            "must_have": True,
+        }
+        resp = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "submitted"
+        assert data["total_score"] == 4.5
 
     async def test_submit_review_without_answers_still_saves(
         self,

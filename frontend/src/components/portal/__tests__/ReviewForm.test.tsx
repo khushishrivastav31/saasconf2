@@ -233,6 +233,49 @@ describe('ReviewForm', () => {
       expect(excellentLabels.length).toBeGreaterThan(0);
     });
 
+    it('renders normalized display scores for recommendation scales', async () => {
+      const recommendationQuestion = createQuestion(
+        'q-recommendation',
+        'Would you recommend accepting this submission?',
+        1
+      );
+      recommendationQuestion.scale = {
+        id: 'scale-recommendation',
+        name: 'Overall Recommendation',
+        scale_type: 'custom',
+        options: [
+          createScaleOption('opt-strong-accept', 'Strong Accept', 2, 1),
+          createScaleOption('opt-accept', 'Accept', 1, 2),
+          createScaleOption('opt-borderline', 'Borderline', 0, 3),
+          createScaleOption('opt-reject', 'Reject', -1, 4),
+          createScaleOption('opt-strong-reject', 'Strong Reject', -2, 5),
+        ],
+      };
+      mockPortalApi.get.mockResolvedValueOnce({
+        data: {
+          ...mockReviewConfig,
+          criteria: [
+            createCriterion('crit-recommendation', 'Recommendation', 1, [recommendationQuestion]),
+          ],
+        },
+      });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Strong Accept')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('(5)')).toBeInTheDocument();
+      expect(screen.getByText('(4)')).toBeInTheDocument();
+      expect(screen.getByText('(3)')).toBeInTheDocument();
+      expect(screen.getByText('(2)')).toBeInTheDocument();
+      expect(screen.getByText('(1)')).toBeInTheDocument();
+      expect(screen.queryByText('(0)')).not.toBeInTheDocument();
+      expect(screen.queryByText('(-1)')).not.toBeInTheDocument();
+      expect(screen.queryByText('(-2)')).not.toBeInTheDocument();
+    });
+
     it('renders help text for questions', async () => {
       mockPortalApi.get.mockResolvedValueOnce({ data: mockReviewConfig });
 

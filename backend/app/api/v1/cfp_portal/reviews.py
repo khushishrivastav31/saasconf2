@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError
+from app.core.score_utils import normalize_to_5
 from app.core.text_utils import strip_html
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
@@ -399,7 +400,19 @@ async def submit_or_save_review(
             opt = opt_result.scalar_one_or_none()
             if not opt or opt.is_unsure or opt.numeric_value is None:
                 continue
-            total_weighted_score += opt.numeric_value * question.weight
+            option_values = (
+                [
+                    option.numeric_value
+                    for option in question.score_scale.options
+                    if option.numeric_value is not None and not option.is_unsure
+                ]
+                if question.score_scale
+                else []
+            )
+            min_val = min(option_values, default=opt.numeric_value)
+            max_val = max(option_values, default=opt.numeric_value)
+            normalized_score = normalize_to_5(opt.numeric_value, min_val, max_val)
+            total_weighted_score += normalized_score * question.weight
             total_weight += question.weight
 
         review.total_score = (total_weighted_score / total_weight) if total_weight > 0 else None

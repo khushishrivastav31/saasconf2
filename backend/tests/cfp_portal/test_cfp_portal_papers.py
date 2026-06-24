@@ -229,7 +229,7 @@ async def review_criterion_with_question(
     tenant: Tenant,
     conference: Conference,
 ) -> tuple[ReviewCriterion, ReviewQuestion, ReviewScoreScale, ReviewScaleOption]:
-    """Create a review criterion with one scored question and a scale option."""
+    """Create a review criterion with one scored question and a 1-5 scale."""
     scale = ReviewScoreScale(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -241,16 +241,21 @@ async def review_criterion_with_question(
     db_session.add(scale)
     await db_session.flush()
 
-    option = ReviewScaleOption(
-        id=uuid.uuid4(),
-        scale_id=scale.id,
-        label="4 - Good",
-        numeric_value=4.0,
-        is_unsure=False,
-        display_order=0,
-    )
-    db_session.add(option)
+    option = None
+    for display_order, value in enumerate([1.0, 2.0, 3.0, 4.0, 5.0]):
+        scale_option = ReviewScaleOption(
+            id=uuid.uuid4(),
+            scale_id=scale.id,
+            label=f"{int(value)} - Score",
+            numeric_value=value,
+            is_unsure=False,
+            display_order=display_order,
+        )
+        db_session.add(scale_option)
+        if value == 4.0:
+            option = scale_option
     await db_session.flush()
+    assert option is not None
 
     criterion = ReviewCriterion(
         id=uuid.uuid4(),

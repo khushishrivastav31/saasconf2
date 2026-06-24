@@ -7,6 +7,7 @@ import type {
   PortalReviewConfig,
   PortalReviewCriterion,
   PortalReviewQuestion,
+  PortalReviewScaleOption,
   PortalReviewSubmitRequest,
 } from '../../types/portal';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
@@ -15,6 +16,30 @@ import { parseApiError } from '../../utils/apiError';
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, '');
+}
+
+function normalizeTo5(raw: number, minValue: number, maxValue: number): number {
+  if (maxValue === minValue) return 3;
+  return ((raw - minValue) / (maxValue - minValue)) * 4 + 1;
+}
+
+function formatScoreValue(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function getDisplayScoreValue(
+  option: PortalReviewScaleOption,
+  options: PortalReviewScaleOption[]
+): string | null {
+  if (option.numeric_value === null || option.is_unsure) return null;
+
+  const numericValues = options
+    .filter((scaleOption) => scaleOption.numeric_value !== null && !scaleOption.is_unsure)
+    .map((scaleOption) => scaleOption.numeric_value as number);
+
+  const minValue = Math.min(...numericValues);
+  const maxValue = Math.max(...numericValues);
+  return formatScoreValue(normalizeTo5(option.numeric_value, minValue, maxValue));
 }
 
 interface ReviewFormProps {
@@ -489,33 +514,36 @@ function EditableQuestion({
       {/* Scale options (radio buttons) */}
       {question.scale && sortedOptions.length > 0 && (
         <div className="space-y-1.5 mt-1">
-          {sortedOptions.map((option) => (
-            <label
-              key={option.id}
-              className={`flex items-center gap-2 text-sm cursor-pointer ${
-                option.is_unsure
-                  ? 'italic text-gray-500 dark:text-gray-400'
-                  : 'text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name={`question-${question.id}`}
-                value={option.id}
-                checked={answer.selected_option_id === option.id}
-                onChange={() => onUpdate({ selected_option_id: option.id })}
-                className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 focus:ring-primary-500"
-              />
-              <span>
-                {option.label}
-                {option.numeric_value !== null && (
-                  <span className="text-gray-400 dark:text-gray-500 ml-1">
-                    ({option.numeric_value})
-                  </span>
-                )}
-              </span>
-            </label>
-          ))}
+          {sortedOptions.map((option) => {
+            const displayScoreValue = getDisplayScoreValue(option, sortedOptions);
+            return (
+              <label
+                key={option.id}
+                className={`flex items-center gap-2 text-sm cursor-pointer ${
+                  option.is_unsure
+                    ? 'italic text-gray-500 dark:text-gray-400'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`question-${question.id}`}
+                  value={option.id}
+                  checked={answer.selected_option_id === option.id}
+                  onChange={() => onUpdate({ selected_option_id: option.id })}
+                  className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 focus:ring-primary-500"
+                />
+                <span>
+                  {option.label}
+                  {displayScoreValue !== null && (
+                    <span className="text-gray-400 dark:text-gray-500 ml-1">
+                      ({displayScoreValue})
+                    </span>
+                  )}
+                </span>
+              </label>
+            );
+          })}
         </div>
       )}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
@@ -597,6 +625,7 @@ function ReadOnlyQuestion({
         <div className="space-y-1 mt-1">
           {sortedOptions.map((option) => {
             const isSelected = answer?.selected_option_id === option.id;
+            const displayScoreValue = getDisplayScoreValue(option, sortedOptions);
             return (
               <div
                 key={option.id}
@@ -617,8 +646,8 @@ function ReadOnlyQuestion({
                 />
                 <span>
                   {option.label}
-                  {option.numeric_value !== null && (
-                    <span className="ml-1">({option.numeric_value})</span>
+                  {displayScoreValue !== null && (
+                    <span className="ml-1">({displayScoreValue})</span>
                   )}
                 </span>
               </div>
