@@ -279,7 +279,13 @@ async def _build_paper_responses_batch(
     session_type_ids = list({p.session_type_id for p in papers if p.session_type_id})
     session_type_map: dict[UUID, tuple[str, int | None]] = {}
     if session_type_ids:
-        st_result = await db.execute(select(SessionType).where(SessionType.id.in_(session_type_ids)))
+        st_result = await db.execute(
+            select(SessionType).where(
+                SessionType.id.in_(session_type_ids),
+                SessionType.is_active.is_(True),
+                SessionType.cfp_eligible.is_(True),
+            )
+        )
         for st in st_result.scalars().all():
             session_type_map[st.id] = (st.name, st.duration_minutes)
 
@@ -559,7 +565,13 @@ async def _build_paper_response(
     session_type_name = None
     session_type_duration = None
     if paper.session_type_id:
-        st_result = await db.execute(select(SessionType).where(SessionType.id == paper.session_type_id))
+        st_result = await db.execute(
+            select(SessionType).where(
+                SessionType.id == paper.session_type_id,
+                SessionType.is_active.is_(True),
+                SessionType.cfp_eligible.is_(True),
+            )
+        )
         st = st_result.scalar_one_or_none()
         if st:
             session_type_name = st.name

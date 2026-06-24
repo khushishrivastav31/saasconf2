@@ -142,7 +142,13 @@ async def _load_paper_list_context(db: AsyncSession, papers: list[CFPPaper], ten
     session_type_ids = {p.session_type_id for p in papers if p.session_type_id}
     st_by_id: dict = {}
     if session_type_ids:
-        st_rows = await db.execute(select(SessionType).where(SessionType.id.in_(session_type_ids)))
+        st_rows = await db.execute(
+            select(SessionType).where(
+                SessionType.id.in_(session_type_ids),
+                SessionType.is_active.is_(True),
+                SessionType.cfp_eligible.is_(True),
+            )
+        )
         st_by_id = {st.id: st.name for st in st_rows.scalars().all()}
 
     video_by_paper = await batch_get_attachment_urls(
@@ -240,7 +246,13 @@ async def _build_portal_paper_response(
 
     session_type_name: str | None = None
     if paper.session_type_id:
-        st_result = await db.execute(select(SessionType.name).where(SessionType.id == paper.session_type_id))
+        st_result = await db.execute(
+            select(SessionType.name).where(
+                SessionType.id == paper.session_type_id,
+                SessionType.is_active.is_(True),
+                SessionType.cfp_eligible.is_(True),
+            )
+        )
         session_type_name = st_result.scalar_one_or_none()
 
     video_url = await _get_paper_video_url(db, paper.id, paper.tenant_id)
@@ -428,7 +440,13 @@ async def _build_assigned_paper_response(
 
     session_type_name = None
     if paper.session_type_id:
-        st_result = await db.execute(select(SessionType).where(SessionType.id == paper.session_type_id))
+        st_result = await db.execute(
+            select(SessionType).where(
+                SessionType.id == paper.session_type_id,
+                SessionType.is_active.is_(True),
+                SessionType.cfp_eligible.is_(True),
+            )
+        )
         st = st_result.scalar_one_or_none()
         if st:
             session_type_name = st.name

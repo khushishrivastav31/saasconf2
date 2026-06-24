@@ -1554,3 +1554,191 @@ class TestSpeakerFeedbackValidation:
         )
         assert resp.status_code == 200
         assert resp.json()["status"] == "submitted"
+
+
+# ── Session type validity in reviewer view ───────────────────────────────────
+
+
+@pytest.mark.asyncio
+class TestAssignedPaperSessionTypeDisplay:
+    """Reviewer-facing session_type_name must only show valid CFP session types.
+
+    A paper can have a stale session_type_id pointing to an inactive or
+    non-cfp-eligible session type. The reviewer should see session_type_name=None
+    in that case, matching what the management form shows.
+    """
+
+    async def test_invalid_session_type_hidden_from_reviewer(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        reviewer_token: str,
+        cfp_obj: CallForPapers,
+        reviewer_applicant: CFPApplicant,
+        committee_member: CFPCommitteeMember,
+    ) -> None:
+        """Paper linked to non-cfp-eligible session type → session_type_name is null."""
+        from app.models.settings import SessionType
+
+        invalid_st = SessionType(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            name="Masterclass",
+            slug="masterclass",
+            duration_minutes=360,
+            cfp_eligible=False,
+            is_active=True,
+        )
+        db_session.add(invalid_st)
+        await db_session.flush()
+
+        author = _make_applicant(tenant, "Author", "Smith")
+        db_session.add(author)
+        await db_session.flush()
+
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp_obj.id,
+            main_speaker_id=author.id,
+            title="Paper With Invalid Type",
+            abstract_short="Short abstract",
+            status=PaperStatus.IN_EVALUATION.value,
+            session_type_id=invalid_st.id,
+        )
+        db_session.add(paper)
+        await db_session.flush()
+
+        assignment = CFPPaperAssignment(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            paper_id=paper.id,
+            committee_member_id=committee_member.id,
+            is_anonymous=False,
+        )
+        db_session.add(assignment)
+        await db_session.commit()
+
+        resp = await client.get(
+            f"{PORTAL_BASE}/assigned-papers",
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+        items = resp.json()["items"]
+        match = next((i for i in items if i["id"] == str(paper.id)), None)
+        assert match is not None
+        assert match["session_type_name"] is None
+
+    async def test_valid_session_type_shown_to_reviewer(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        reviewer_token: str,
+        cfp_obj: CallForPapers,
+        reviewer_applicant: CFPApplicant,
+        committee_member: CFPCommitteeMember,
+    ) -> None:
+        """Paper linked to active, cfp-eligible session type → session_type_name resolves."""
+        from app.models.settings import SessionType
+
+        valid_st = SessionType(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            name="Talk",
+            slug="talk",
+            duration_minutes=45,
+            cfp_eligible=True,
+            is_active=True,
+        )
+        db_session.add(valid_st)
+        await db_session.flush()
+
+        author = _make_applicant(tenant, "Author2", "Jones")
+        db_session.add(author)
+        await db_session.flush()
+
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp_obj.id,
+            main_speaker_id=author.id,
+            title="Paper With Valid Type",
+            abstract_short="Short abstract",
+            status=PaperStatus.IN_EVALUATION.value,
+            session_type_id=valid_st.id,
+        )
+        db_session.add(paper)
+        await db_session.flush()
+
+        assignment = CFPPaperAssignment(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            paper_id=paper.id,
+            committee_member_id=committee_member.id,
+            is_anonymous=False,
+        )
+        db_session.add(assignment)
+        await db_session.commit()
+
+        resp = await client.get(
+            f"{PORTAL_BASE}/assigned-papers",
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+        items = resp.json()["items"]
+        match = next((i for i in items if i["id"] == str(paper.id)), None)
+        assert match is not None
+        assert match["session_type_name"] == "Talk"
+
+    async def test_no_session_type_returns_null(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        reviewer_token: str,
+        cfp_obj: CallForPapers,
+        committee_member: CFPCommitteeMember,
+    ) -> None:
+        """Paper with no session_type_id → session_type_name is null."""
+        author = _make_applicant(tenant, "Author3", "Brown")
+        db_session.add(author)
+        await db_session.flush()
+
+        paper = CFPPaper(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            cfp_id=cfp_obj.id,
+            main_speaker_id=author.id,
+            title="Paper With No Type",
+            abstract_short="Short abstract",
+            status=PaperStatus.IN_EVALUATION.value,
+        )
+        db_session.add(paper)
+        await db_session.flush()
+
+        assignment = CFPPaperAssignment(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            paper_id=paper.id,
+            committee_member_id=committee_member.id,
+            is_anonymous=False,
+        )
+        db_session.add(assignment)
+        await db_session.commit()
+
+        resp = await client.get(
+            f"{PORTAL_BASE}/assigned-papers",
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp.status_code == 200
+        items = resp.json()["items"]
+        match = next((i for i in items if i["id"] == str(paper.id)), None)
+        assert match is not None
+        assert match["session_type_name"] is None
