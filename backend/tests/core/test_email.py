@@ -250,12 +250,49 @@ class TestSendEmail:
             )
 
         assert result is True
-        assert "Tenant Resend API key invalid" in caplog.text
+        assert "falling back to Mailgun" in caplog.text
         mock_mailgun.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_transient_resend_error_does_not_fall_back(self):
-        """Non-auth Resend errors return False without trying Mailgun."""
+    async def test_resend_domain_not_verified_falls_back_to_mailgun(self):
+        """Resend 'domain is not verified' error falls back to Mailgun and returns True."""
+        from app.config import Settings
+
+        settings_with_mailgun = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+        )
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.side_effect = Exception(
+            "The sender domain agiletestingdays.com is not verified."
+        )
+
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings", return_value=settings_with_mailgun),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+        ):
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test",
+                html="<p>x</p>",
+                tenant_api_key="re_valid_key",
+            )
+
+        assert result is True
+        mock_mailgun.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_any_resend_error_falls_back_to_mailgun(self):
+        """Any Resend error (rate limit, transient, etc.) falls back to Mailgun."""
         from app.config import Settings
 
         settings_with_mailgun = Settings(
@@ -285,8 +322,186 @@ class TestSendEmail:
                 tenant_api_key="re_valid_key",
             )
 
+        assert result is True
+        mock_mailgun.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_sentry_capture_on_resend_failure(self):
+        """A Resend failure triggers one Sentry capture_exception with email.provider=resend."""
+        from app.config import Settings
+
+        settings_with_sentry = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+            SENTRY_DSN="https://fake@sentry.io/123",
+        )
+        mock_resend = MagicMock()
+        resend_exc = Exception("The sender domain is not verified.")
+        mock_resend.Emails.send.side_effect = resend_exc
+
+        mock_sentry = MagicMock()
+        mock_scope = MagicMock()
+        mock_sentry.push_scope.return_value.__enter__ = MagicMock(return_value=mock_scope)
+        mock_sentry.push_scope.return_value.__exit__ = MagicMock(return_value=False)
+
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings", return_value=settings_with_sentry),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock),
+            patch.dict("sys.modules", {"sentry_sdk": mock_sentry}),
+        ):
+            result = await send_email(
+                to="speaker@example.com",
+                subject="Test",
+                html="<p>x</p>",
+                tenant_api_key="re_key",
+                email_type="speaker_notification",
+            )
+
+        assert result is True
+        mock_sentry.capture_exception.assert_called_once_with(resend_exc)
+        mock_scope.set_tag.assert_any_call("email.provider", "resend")
+
+    @pytest.mark.asyncio
+    async def test_resend_fails_mailgun_fails_both_reported(self):
+        """When both Resend and Mailgun fail, returns False with a failed email_logs row."""
+        from app.config import Settings
+        from unittest.mock import AsyncMock as AM
+
+        settings_v = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+            SENTRY_DSN="https://fake@sentry.io/123",
+        )
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.side_effect = Exception("Resend error")
+        mock_sentry = MagicMock()
+        mock_scope = MagicMock()
+        mock_sentry.push_scope.return_value.__enter__ = MagicMock(return_value=mock_scope)
+        mock_sentry.push_scope.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_db = AsyncMock()
+        mock_db.execute = AM()
+        mock_db.add = MagicMock()
+        mock_db.flush = AM()
+
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings", return_value=settings_v),
+            patch(
+                "app.core.email._send_via_mailgun",
+                new_callable=AsyncMock,
+                side_effect=Exception("Mailgun error"),
+            ),
+            patch("app.core.email._log_email_failure", new_callable=AsyncMock) as mock_log,
+            patch.dict("sys.modules", {"sentry_sdk": mock_sentry}),
+        ):
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test",
+                html="<p>x</p>",
+                tenant_api_key="re_key",
+                db=mock_db,
+                email_type="speaker_notification",
+            )
+
         assert result is False
-        mock_mailgun.assert_not_awaited()
+        mock_log.assert_awaited_once()
+        assert mock_log.call_args[1]["status"] == "failed"
+        # Sentry should have been called for at least the Mailgun failure
+        assert mock_sentry.capture_exception.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_resend_fails_mailgun_not_configured(self):
+        """Resend fails + no Mailgun config → returns False, not_configured email_logs."""
+        from app.config import Settings
+
+        settings_no_mailgun = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="",
+            MAILGUN_DOMAIN="",
+        )
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.side_effect = Exception("Resend error")
+
+        mock_db = AsyncMock()
+
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings", return_value=settings_no_mailgun),
+            patch("app.core.email._log_email_failure", new_callable=AsyncMock) as mock_log,
+        ):
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test",
+                html="<p>x</p>",
+                tenant_api_key="re_key",
+                db=mock_db,
+                email_type="general",
+            )
+
+        assert result is False
+        mock_log.assert_awaited_once()
+        assert mock_log.call_args[1]["status"] == "not_configured"
+
+    @pytest.mark.asyncio
+    async def test_no_sentry_dsn_no_capture_fallback_still_works(self):
+        """When SENTRY_DSN is unset, _capture_email_error is a no-op and fallback still works."""
+        from app.config import Settings
+
+        settings_no_sentry = Settings(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@example.com",
+            RESEND_FROM_NAME="SaaSConf",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@example.com",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+            SENTRY_DSN="",
+        )
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.side_effect = Exception("Resend domain not verified")
+        mock_sentry = MagicMock()
+
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings", return_value=settings_no_sentry),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+            patch.dict("sys.modules", {"sentry_sdk": mock_sentry}),
+        ):
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test",
+                html="<p>x</p>",
+                tenant_api_key="re_key",
+            )
+
+        assert result is True
+        mock_mailgun.assert_awaited_once()
+        mock_sentry.capture_exception.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_no_tenant_key_sends_via_mailgun_directly(self):

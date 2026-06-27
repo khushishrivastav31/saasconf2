@@ -86,7 +86,7 @@ export function getEditorExtensions(): Extensions {
       },
     }),
     Underline,
-    Link.configure({
+    Link.extend({ inclusive: false }).configure({
       openOnClick: false,
       HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
     }),

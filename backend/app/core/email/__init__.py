@@ -5,8 +5,10 @@ System fallback: Mailgun (MAILGUN_API_KEY + MAILGUN_DOMAIN env vars).
 
 Flow:
   1. Tenant has a Resend key → send via Resend.
-  2. Tenant key missing or invalid → send via Mailgun system account.
-  3. Mailgun also unconfigured → console-log (development only).
+  2. Resend fails for any reason → degrade to Mailgun system account and
+     report the failure to Sentry (guarded on SENTRY_DSN).
+  3. Tenant key missing → send via Mailgun system account directly.
+  4. Mailgun also unconfigured → console-log (development only).
 
 Failures are logged to the email_logs table for admin visibility.
 """
@@ -267,6 +269,35 @@ async def _get_tenant_email_settings(db: AsyncSession, tenant_id: UUID | None) -
     return _TenantEmailSettings(api_key, from_email, from_name)
 
 
+def _capture_email_error(
+    exc: Exception,
+    *,
+    provider: str,
+    tenant_id: UUID | None,
+    recipient: str,
+    email_type: str,
+) -> None:
+    """Report an email delivery failure to Sentry. Never raises.
+
+    Guarded on SENTRY_DSN so it is a no-op in dev/test.
+    """
+    settings = get_settings()
+    if not settings.SENTRY_DSN:
+        return
+    try:
+        import sentry_sdk
+
+        with sentry_sdk.push_scope() as scope:
+            scope.set_tag("email.provider", provider)
+            scope.set_tag("email.type", email_type)
+            if tenant_id:
+                scope.set_tag("tenant_id", str(tenant_id))
+            scope.set_extra("recipient", recipient)
+            sentry_sdk.capture_exception(exc)
+    except Exception:
+        logger.warning("Failed to report email failure to Sentry", exc_info=True)
+
+
 async def _send_via_smtp(
     *,
     to: str,
@@ -397,34 +428,33 @@ async def send_email(
             logger.info(f"Email sent to {to} via tenant Resend key: {subject}")
             return True
         except Exception as e:
-            if "API key is invalid" in str(e):
-                logger.warning(
-                    "Tenant Resend API key invalid (tenant %s); falling back to Mailgun for %s",
-                    tenant_id,
-                    to,
-                )
-                # use_mailgun_fallback stays True → continue below
-            else:
-                # Transient / non-auth error — don't silently swap provider
-                use_mailgun_fallback = False
-                logger.error(f"Failed to send email to {to} via tenant Resend key: {e}")
-                if db is not None:
-                    await _log_email_failure(
-                        db,
-                        tenant_id=tenant_id,
-                        conference_id=conference_id,
-                        recipient=to,
-                        subject=subject,
-                        email_type=email_type,
-                        status="failed",
-                        error=str(e),
-                    )
-                return False
+            logger.warning(
+                "Tenant Resend send failed (tenant %s) for %s: %s — falling back to Mailgun",
+                tenant_id,
+                to,
+                e,
+            )
+            _capture_email_error(
+                e,
+                provider="resend",
+                tenant_id=tenant_id,
+                recipient=to,
+                email_type=email_type,
+            )
+            # use_mailgun_fallback stays True for every error → fall through to Step 2
 
     # ── Step 2: Mailgun system fallback (no tenant key, or tenant key invalid) ─
     if use_mailgun_fallback:
         if not settings.MAILGUN_API_KEY or not settings.MAILGUN_DOMAIN:
             _log_email(to, subject, text or html)
+            not_configured_err = RuntimeError("No Mailgun config — set MAILGUN_API_KEY and MAILGUN_DOMAIN")
+            _capture_email_error(
+                not_configured_err,
+                provider="mailgun",
+                tenant_id=tenant_id,
+                recipient=to,
+                email_type=email_type,
+            )
             if db is not None:
                 await _log_email_failure(
                     db,
@@ -434,7 +464,7 @@ async def send_email(
                     subject=subject,
                     email_type=email_type,
                     status="not_configured",
-                    error="No Mailgun config — set MAILGUN_API_KEY and MAILGUN_DOMAIN",
+                    error=str(not_configured_err),
                 )
             return False
 
@@ -454,6 +484,13 @@ async def send_email(
             return True
         except Exception as e:
             logger.error(f"Failed to send email to {to} via Mailgun: {e}")
+            _capture_email_error(
+                e,
+                provider="mailgun",
+                tenant_id=tenant_id,
+                recipient=to,
+                email_type=email_type,
+            )
             if db is not None:
                 await _log_email_failure(
                     db,

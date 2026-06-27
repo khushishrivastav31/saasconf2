@@ -303,6 +303,7 @@ export default function PaperEditForm({
                     rows={3}
                     minLength={field.min_chars ?? undefined}
                     maxLength={field.max_chars ?? undefined}
+                    toolbarVariant="speaker"
                   />
                   {field.help_text && (
                     <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -326,6 +327,7 @@ export default function PaperEditForm({
                     rows={6}
                     minLength={field.min_chars ?? undefined}
                     maxLength={field.max_chars ?? undefined}
+                    toolbarVariant="speaker"
                   />
                   {field.help_text && (
                     <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -349,6 +351,7 @@ export default function PaperEditForm({
                     rows={4}
                     minLength={field.min_chars ?? undefined}
                     maxLength={field.max_chars ?? undefined}
+                    toolbarVariant="speaker"
                   />
                   {field.help_text && (
                     <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -488,6 +491,7 @@ export default function PaperEditForm({
                   }
                   placeholder={cf.placeholder || ''}
                   rows={4}
+                  toolbarVariant="speaker"
                 />
               )}
               {cf.field_type === 'dropdown' && (

@@ -117,7 +117,16 @@ jobs:
             exit 1
           fi
 
-          LAST_RELEASE_TAG="$(git tag --sort=-v:refname | grep -v -- "-rc." | head -n 1 || true)"
+          if [[ "$ACTION" == "create_rc" && "$RC_NUMBER" -gt 1 ]]; then
+            PREV_RC_TAG="${VERSION}-rc.$((RC_NUMBER - 1))"
+            if git rev-parse "$PREV_RC_TAG" >/dev/null 2>&1; then
+              LAST_RELEASE_TAG="$PREV_RC_TAG"
+            else
+              LAST_RELEASE_TAG="$(git tag --sort=-v:refname | grep -v -- "-rc." | head -n 1 || true)"
+            fi
+          else
+            LAST_RELEASE_TAG="$(git tag --sort=-v:refname | grep -v -- "-rc." | head -n 1 || true)"
+          fi
           REPOSITORY_URL="https://github.com/${{ github.repository }}"
 
           if [[ -n "$LAST_RELEASE_TAG" ]]; then

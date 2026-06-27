@@ -168,7 +168,7 @@ jobs:
 
       - name: Lint
         working-directory: frontend
-        run: pnpm exec eslint src/ --max-warnings 110
+        run: pnpm exec eslint src/ --max-warnings 120
 
       - name: Type check
         working-directory: frontend

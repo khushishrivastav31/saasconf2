@@ -6,21 +6,29 @@ import ToolbarButton from './ToolbarButton';
 interface EditorToolbarProps {
   editor: Editor;
   disabled: boolean;
+  variant: 'full' | 'speaker';
   onSetLink: () => void;
+  onUnsetLink: () => void;
   onInsertTable: () => void;
   onSetTextColor: (color: string) => void;
   onSetHighlightColor: (color: string) => void;
   onClearFormatting: () => void;
+  onInsertImage: () => void;
+  onInsertYouTube: () => void;
 }
 
 export default function EditorToolbar({
   editor,
   disabled,
+  variant,
   onSetLink,
+  onUnsetLink,
   onInsertTable,
   onSetTextColor,
   onSetHighlightColor,
   onClearFormatting,
+  onInsertImage,
+  onInsertYouTube,
 }: EditorToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-0.5 px-2 py-1 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
@@ -83,93 +91,95 @@ export default function EditorToolbar({
       </ToolbarButton>
       <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
-      {/* Font Family */}
-      <select
-        value={editor.getAttributes('textStyle').fontFamily || ''}
-        onChange={(e) => {
-          if (e.target.value) {
-            editor.chain().focus().setFontFamily(e.target.value).run();
-          } else {
-            editor.chain().focus().unsetFontFamily().run();
-          }
-        }}
-        disabled={disabled}
-        className="h-7 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 bg-white dark:bg-gray-800 dark:text-gray-300 disabled:opacity-50"
-        title="Font Family"
-      >
-        <option value="">Default</option>
-        <option value="Arial, sans-serif">Arial</option>
-        <option value="Georgia, serif">Georgia</option>
-        <option value="Times New Roman, serif">Times</option>
-        <option value="Courier New, monospace">Courier</option>
-        <option value="Verdana, sans-serif">Verdana</option>
-      </select>
-
-      {/* Font Size */}
-      <select
-        value={editor.getAttributes('textStyle').fontSize || ''}
-        onChange={(e) => {
-          if (e.target.value) {
-            (
-              editor.chain().focus() as ReturnType<Editor['chain']> & {
-                setFontSize: (size: string) => ReturnType<Editor['chain']>;
+      {/* Font Family + Font Size + Headings — full variant only */}
+      {variant === 'full' && (
+        <>
+          <select
+            value={editor.getAttributes('textStyle').fontFamily || ''}
+            onChange={(e) => {
+              if (e.target.value) {
+                editor.chain().focus().setFontFamily(e.target.value).run();
+              } else {
+                editor.chain().focus().unsetFontFamily().run();
               }
-            )
-              .setFontSize(e.target.value)
-              .run();
-          } else {
-            (
-              editor.chain().focus() as ReturnType<Editor['chain']> & {
-                unsetFontSize: () => ReturnType<Editor['chain']>;
-              }
-            )
-              .unsetFontSize()
-              .run();
-          }
-        }}
-        disabled={disabled}
-        className="h-7 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 bg-white dark:bg-gray-800 dark:text-gray-300 disabled:opacity-50"
-        title="Font Size"
-      >
-        <option value="">Default</option>
-        <option value="6px">XXX-Small</option>
-        <option value="8px">XX-Small</option>
-        <option value="10px">X-Small</option>
-        <option value="12px">Small</option>
-        <option value="16px">Normal</option>
-        <option value="20px">Large</option>
-        <option value="24px">X-Large</option>
-        <option value="32px">XX-Large</option>
-        <option value="40px">XXX-Large</option>
-      </select>
-      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+            }}
+            disabled={disabled}
+            className="h-7 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 bg-white dark:bg-gray-800 dark:text-gray-300 disabled:opacity-50"
+            title="Font Family"
+          >
+            <option value="">Default</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Times New Roman, serif">Times</option>
+            <option value="Courier New, monospace">Courier</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+          </select>
 
-      {/* Headings */}
-      <ToolbarButton
-        active={editor.isActive('heading', { level: 1 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        disabled={disabled}
-        title="Heading 1"
-      >
-        <span className="font-bold text-xs">H1</span>
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive('heading', { level: 2 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        disabled={disabled}
-        title="Heading 2"
-      >
-        <span className="font-bold text-xs">H2</span>
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive('heading', { level: 3 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        disabled={disabled}
-        title="Heading 3"
-      >
-        <span className="font-bold text-xs">H3</span>
-      </ToolbarButton>
-      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+          <select
+            value={editor.getAttributes('textStyle').fontSize || ''}
+            onChange={(e) => {
+              if (e.target.value) {
+                (
+                  editor.chain().focus() as ReturnType<Editor['chain']> & {
+                    setFontSize: (size: string) => ReturnType<Editor['chain']>;
+                  }
+                )
+                  .setFontSize(e.target.value)
+                  .run();
+              } else {
+                (
+                  editor.chain().focus() as ReturnType<Editor['chain']> & {
+                    unsetFontSize: () => ReturnType<Editor['chain']>;
+                  }
+                )
+                  .unsetFontSize()
+                  .run();
+              }
+            }}
+            disabled={disabled}
+            className="h-7 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 bg-white dark:bg-gray-800 dark:text-gray-300 disabled:opacity-50"
+            title="Font Size"
+          >
+            <option value="">Default</option>
+            <option value="6px">XXX-Small</option>
+            <option value="8px">XX-Small</option>
+            <option value="10px">X-Small</option>
+            <option value="12px">Small</option>
+            <option value="16px">Normal</option>
+            <option value="20px">Large</option>
+            <option value="24px">X-Large</option>
+            <option value="32px">XX-Large</option>
+            <option value="40px">XXX-Large</option>
+          </select>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+          <ToolbarButton
+            active={editor.isActive('heading', { level: 1 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            disabled={disabled}
+            title="Heading 1"
+          >
+            <span className="font-bold text-xs">H1</span>
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive('heading', { level: 2 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            disabled={disabled}
+            title="Heading 2"
+          >
+            <span className="font-bold text-xs">H2</span>
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive('heading', { level: 3 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            disabled={disabled}
+            title="Heading 3"
+          >
+            <span className="font-bold text-xs">H3</span>
+          </ToolbarButton>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+        </>
+      )}
 
       {/* Basic formatting */}
       <ToolbarButton
@@ -196,58 +206,65 @@ export default function EditorToolbar({
       >
         <span className="underline">U</span>
       </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive('strike')}
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        disabled={disabled}
-        title="Strikethrough"
-      >
-        <span className="line-through">S</span>
-      </ToolbarButton>
-      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+      {/* Strikethrough + Subscript/Superscript — full variant only */}
+      {variant === 'full' && (
+        <>
+          <ToolbarButton
+            active={editor.isActive('strike')}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            disabled={disabled}
+            title="Strikethrough"
+          >
+            <span className="line-through">S</span>
+          </ToolbarButton>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
-      {/* Subscript/Superscript */}
-      <ToolbarButton
-        active={editor.isActive('subscript')}
-        onClick={() => editor.chain().focus().toggleSubscript().run()}
-        disabled={disabled}
-        title="Subscript"
-      >
-        <span className="text-xs">
-          X<sub>2</sub>
-        </span>
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive('superscript')}
-        onClick={() => editor.chain().focus().toggleSuperscript().run()}
-        disabled={disabled}
-        title="Superscript"
-      >
-        <span className="text-xs">
-          X<sup>2</sup>
-        </span>
-      </ToolbarButton>
-      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+          <ToolbarButton
+            active={editor.isActive('subscript')}
+            onClick={() => editor.chain().focus().toggleSubscript().run()}
+            disabled={disabled}
+            title="Subscript"
+          >
+            <span className="text-xs">
+              X<sub>2</sub>
+            </span>
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive('superscript')}
+            onClick={() => editor.chain().focus().toggleSuperscript().run()}
+            disabled={disabled}
+            title="Superscript"
+          >
+            <span className="text-xs">
+              X<sup>2</sup>
+            </span>
+          </ToolbarButton>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+        </>
+      )}
 
-      {/* Text Color */}
-      <ColorPicker
-        onChange={onSetTextColor}
-        disabled={disabled}
-        title="Text Color"
-        activeColor={editor.getAttributes('textStyle').color}
-        mode="text"
-      />
-      {/* Highlight */}
-      <ColorPicker
-        onChange={onSetHighlightColor}
-        disabled={disabled}
-        title="Highlight Color"
-        activeColor={
-          editor.isActive('highlight') ? editor.getAttributes('highlight').color : undefined
-        }
-        mode="highlight"
-      />
-      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+      {/* Text Color + Highlight — full variant only */}
+      {variant === 'full' && (
+        <>
+          <ColorPicker
+            onChange={onSetTextColor}
+            disabled={disabled}
+            title="Text Color"
+            activeColor={editor.getAttributes('textStyle').color}
+            mode="text"
+          />
+          <ColorPicker
+            onChange={onSetHighlightColor}
+            disabled={disabled}
+            title="Highlight Color"
+            activeColor={
+              editor.isActive('highlight') ? editor.getAttributes('highlight').color : undefined
+            }
+            mode="highlight"
+          />
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+        </>
+      )}
 
       {/* Lists */}
       <ToolbarButton
@@ -308,38 +325,6 @@ export default function EditorToolbar({
             strokeLinejoin="round"
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
           />
-        </svg>
-      </ToolbarButton>
-      <ToolbarButton
-        active={false}
-        onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
-        disabled={disabled || !editor.can().sinkListItem('listItem')}
-        title="Indent (Nested List)"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-        </svg>
-      </ToolbarButton>
-      <ToolbarButton
-        active={false}
-        onClick={() => editor.chain().focus().liftListItem('listItem').run()}
-        disabled={disabled || !editor.can().liftListItem('listItem')}
-        title="Outdent (Lift List)"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
         </svg>
       </ToolbarButton>
       <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
@@ -424,6 +409,76 @@ export default function EditorToolbar({
           />
         </svg>
       </ToolbarButton>
+      <ToolbarButton
+        active={false}
+        onClick={onUnsetLink}
+        disabled={disabled || !editor.isActive('link')}
+        title="Remove Link"
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+          />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />
+        </svg>
+      </ToolbarButton>
+      {variant === 'full' && (
+        <>
+          <ToolbarButton
+            active={false}
+            onClick={onInsertImage}
+            disabled={disabled}
+            title="Insert Image"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive('youtube')}
+            onClick={onInsertYouTube}
+            disabled={disabled}
+            title="Insert YouTube"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </ToolbarButton>
+        </>
+      )}
       <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
       {/* Table */}
@@ -566,54 +621,58 @@ export default function EditorToolbar({
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M3 12h12M3 18h18" />
         </svg>
       </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive({ textAlign: 'center' })}
-        onClick={() => editor.chain().focus().setTextAlign('center').run()}
-        disabled={disabled}
-        title="Align Center"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M6 12h12M3 18h18" />
-        </svg>
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive({ textAlign: 'right' })}
-        onClick={() => editor.chain().focus().setTextAlign('right').run()}
-        disabled={disabled}
-        title="Align Right"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M9 12h12M3 18h18" />
-        </svg>
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive({ textAlign: 'justify' })}
-        onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-        disabled={disabled}
-        title="Justify"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M3 12h18M3 18h18" />
-        </svg>
-      </ToolbarButton>
+      {variant === 'full' && (
+        <>
+          <ToolbarButton
+            active={editor.isActive({ textAlign: 'center' })}
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            disabled={disabled}
+            title="Align Center"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M6 12h12M3 18h18" />
+            </svg>
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive({ textAlign: 'right' })}
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            disabled={disabled}
+            title="Align Right"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M9 12h12M3 18h18" />
+            </svg>
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive({ textAlign: 'justify' })}
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            disabled={disabled}
+            title="Justify"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </ToolbarButton>
+        </>
+      )}
     </div>
   );
 }

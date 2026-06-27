@@ -1,5 +1,6 @@
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { createPortal } from 'react-dom';
 import { getEditorExtensions } from './richtext/extensions';
 import EditorToolbar from './richtext/EditorToolbar';
 
@@ -17,6 +18,7 @@ interface PromptDialogState {
   title: string;
   defaultValue: string;
   onSubmit: (value: string) => void;
+  onRemove?: () => void;
 }
 
 function PromptDialog({ state, onClose }: { state: PromptDialogState; onClose: () => void }) {
@@ -34,11 +36,19 @@ function PromptDialog({ state, onClose }: { state: PromptDialogState; onClose: (
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // React replays submit events up the component tree even across a portal,
+    // so stop propagation to keep an enclosing form (e.g. the paper creation
+    // form) from also submitting and navigating the user away (MAIN-13413).
+    e.stopPropagation();
     state.onSubmit(value);
     onClose();
   };
 
-  return (
+  // Render via a portal to document.body so the dialog's <form> never nests
+  // inside a parent <form> (e.g. the paper creation form). Browsers flatten
+  // DOM-nested forms, which would route this dialog's submit to the outer form
+  // and navigate the user away instead of inserting the link (MAIN-13413).
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={onClose}
@@ -59,23 +69,40 @@ function PromptDialog({ state, onClose }: { state: PromptDialogState; onClose: (
           className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           placeholder="https://"
         />
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-3 py-1.5 text-sm text-white bg-primary-600 rounded-md hover:bg-primary-700"
-          >
-            OK
-          </button>
+        <div className="flex items-center justify-between mt-4">
+          {state.onRemove ? (
+            <button
+              type="button"
+              onClick={() => {
+                state.onRemove!();
+                onClose();
+              }}
+              className="px-3 py-1.5 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
+            >
+              Remove link
+            </button>
+          ) : (
+            <div />
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-3 py-1.5 text-sm text-white bg-primary-600 rounded-md hover:bg-primary-700"
+            >
+              OK
+            </button>
+          </div>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -94,6 +121,12 @@ interface RichTextEditorProps {
   editorClassName?: string;
   /** Show a toggle button to switch between visual editing and raw HTML source */
   showHtmlToggle?: boolean;
+  /**
+   * 'full' (default) — complete toolbar including image, YouTube, colours, fonts.
+   * 'speaker' — restricted toolbar for portal/speaker submission forms: basic
+   *   formatting only, no images, no video, no colours, no font controls, left-align only.
+   */
+  toolbarVariant?: 'full' | 'speaker';
 }
 
 const EMPTY_BODY = '<p></p>';
@@ -120,6 +153,7 @@ function RichTextEditor(
     maxLength,
     editorClassName = '',
     showHtmlToggle = false,
+    toolbarVariant = 'full',
   }: RichTextEditorProps,
   ref: React.Ref<RichTextEditorHandle>
 ) {
@@ -296,13 +330,51 @@ function RichTextEditor(
 
   // ---- Toolbar callbacks ----
 
+  const insertImage = useCallback(() => {
+    if (!editor) return;
+    setPromptState({
+      open: true,
+      title: 'Enter image URL',
+      defaultValue: 'https://',
+      onSubmit: (url: string) => {
+        if (!url || url === 'https://') return;
+        try {
+          const parsed = new URL(url);
+          if (!['https:', 'http:'].includes(parsed.protocol)) return;
+        } catch {
+          return;
+        }
+        editor.chain().focus().setImage({ src: url }).run();
+      },
+    });
+  }, [editor]);
+
+  const insertYouTube = useCallback(() => {
+    if (!editor) return;
+    setPromptState({
+      open: true,
+      title: 'Enter YouTube URL',
+      defaultValue: 'https://www.youtube.com/watch?v=',
+      onSubmit: (url: string) => {
+        if (!url) return;
+        editor.commands.setYoutubeVideo({ src: url });
+      },
+    });
+  }, [editor]);
+
   const setLink = useCallback(() => {
     if (!editor) return;
     const previousUrl = editor.getAttributes('link').href;
+    const isOnLink = editor.isActive('link');
+    const hasSelection = !editor.state.selection.empty;
+
     setPromptState({
       open: true,
       title: 'Enter URL',
       defaultValue: previousUrl || 'https://',
+      onRemove: isOnLink
+        ? () => editor.chain().focus().extendMarkRange('link').unsetLink().run()
+        : undefined,
       onSubmit: (url: string) => {
         if (url === '') {
           editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -314,9 +386,26 @@ function RichTextEditor(
         } catch {
           return;
         }
+        if (!isOnLink && !hasSelection) {
+          editor
+            .chain()
+            .focus()
+            .insertContent({
+              type: 'text',
+              text: url,
+              marks: [{ type: 'link', attrs: { href: url } }],
+            })
+            .run();
+          return;
+        }
         editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
       },
     });
+  }, [editor]);
+
+  const unsetLink = useCallback(() => {
+    if (!editor) return;
+    editor.chain().focus().extendMarkRange('link').unsetLink().run();
   }, [editor]);
 
   const insertTable = useCallback(() => {
@@ -364,11 +453,15 @@ function RichTextEditor(
         <EditorToolbar
           editor={editor}
           disabled={disabled}
+          variant={toolbarVariant}
           onSetLink={setLink}
+          onUnsetLink={unsetLink}
           onInsertTable={insertTable}
           onSetTextColor={setTextColor}
           onSetHighlightColor={setHighlightColor}
           onClearFormatting={clearFormatting}
+          onInsertImage={insertImage}
+          onInsertYouTube={insertYouTube}
         />
       )}
 

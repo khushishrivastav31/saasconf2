@@ -82,6 +82,7 @@ function DynamicField({
           onChange={(html) => onChange(html)}
           placeholder={field.placeholder || ''}
           rows={4}
+          toolbarVariant="speaker"
         />
       );
 
@@ -760,6 +761,7 @@ function SubmitPaperPage() {
                         rows={3}
                         minLength={field.min_chars ?? undefined}
                         maxLength={field.max_chars ?? undefined}
+                        toolbarVariant="speaker"
                       />
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -783,6 +785,7 @@ function SubmitPaperPage() {
                         rows={6}
                         minLength={field.min_chars ?? undefined}
                         maxLength={field.max_chars ?? undefined}
+                        toolbarVariant="speaker"
                       />
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -841,6 +844,7 @@ function SubmitPaperPage() {
                         rows={3}
                         minLength={field.min_chars ?? undefined}
                         maxLength={field.max_chars ?? undefined}
+                        toolbarVariant="speaker"
                       />
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
