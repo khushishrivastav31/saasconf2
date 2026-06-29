@@ -193,27 +193,27 @@ export const peopleCategory: HandbookCategory = {
       content: () => (
         <div
           dangerouslySetInnerHTML={{
-            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Track past conference attendees across all conferences. Core feature — no module required.</p>
-<strong>What you can do:</strong>
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Read-only tenant-wide list of people who attended, spoke at, or served on the committee of <strong>past conferences</strong> (conferences with an end date in the past). The list stays current automatically — no manual entry or import required.</p>
+<strong>What you can see:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">View alumni with source badges: Manual (gray), Import (blue), Registration (green)</li>
-<li class="text-gray-700 dark:text-gray-300">Add alumni manually (first name, last name, email, company, notes)</li>
-<li class="text-gray-700 dark:text-gray-300">Import via CSV (up to 50,000 rows; supports German column headers like "Vorname", "Nachname")</li>
-<li class="text-gray-700 dark:text-gray-300">Export full alumni list to CSV</li>
-<li class="text-gray-700 dark:text-gray-300">Search and filter alumni</li>
-<li class="text-gray-700 dark:text-gray-300">Edit alumni records (email changes propagate to linked registration and portal records)</li>
-<li class="text-gray-700 dark:text-gray-300">Cross-conference lookup: check if an email exists in other conferences</li>
+<li class="text-gray-700 dark:text-gray-300">Name, email, role badges (Attendee / Speaker / Committee), and conference badges for each alumnus</li>
+<li class="text-gray-700 dark:text-gray-300">People who held multiple roles collapse to a single row with all their roles listed</li>
 </ul>
-<strong>Automatic alumni creation:</strong> When a registration is paid, an alumni record is automatically created from the billing profile. No admin action required.
-<strong>Alumni discount in portal registration:</strong> If a discount code with code "ALUMNI" exists and is active, it auto-applies when returning attendees register through the authenticated portal. If no ALUMNI code exists, a warning modal shows their attendance history.
-<strong>Constraints:</strong>
+<strong>Filters:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">Email must be unique per conference (case-insensitive)</li>
-<li class="text-gray-700 dark:text-gray-300">Deleting alumni does NOT delete linked registrations</li>
-<li class="text-gray-700 dark:text-gray-300">Only paid registrations create alumni records automatically</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Conference</strong> — restrict to one past conference</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Role</strong> — show only Attendees, Speakers, or Committee members</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Name search</strong> — accent-insensitive search on first and last name</li>
 </ul>
-<strong>Dependencies:</strong> None.
-<strong>Consequences:</strong> Alumni records enable cross-conference attendee tracking and automatic discount application during portal registration.`,
+<strong>Export:</strong> "Export CSV" downloads the filtered list (up to 50,000 rows) with columns: first_name, last_name, email, roles, conferences.
+<strong>Sources and inclusion rules:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Attendees</strong> — non-cancelled registrations (Pending Invoice, Invoiced, or Paid) from past conferences</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Speakers</strong> — main speakers and accepted co-speakers of accepted CFP papers</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Committee</strong> — CFP committee members assigned to past conferences</li>
+</ul>
+<strong>"Past" definition:</strong> A conference must have a non-null <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">end_date</code> that is earlier than today. Conferences with no end date set are excluded.
+<strong>Alumni discount:</strong> The legacy per-conference alumni discount list (for the "ALUMNI" code at portal registration) is managed separately via the conference-scoped Alumni import — this tenant-wide read-only tab does not affect discount eligibility.`,
           }}
         />
       ),

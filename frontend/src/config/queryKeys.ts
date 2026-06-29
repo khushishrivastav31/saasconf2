@@ -308,6 +308,8 @@ export const queryKeys = {
   alumni: {
     byConference: (conferenceId: string) => ['conference-alumni', conferenceId] as const,
     check: (conferenceId: string, email: string) => ['alumni-check', conferenceId, email] as const,
+    // Tenant-wide aggregated list (past conferences)
+    list: (...params: unknown[]) => ['alumni-list', ...params] as const,
   },
 
   // ── Portal ──────────────────────────────────────────────────────

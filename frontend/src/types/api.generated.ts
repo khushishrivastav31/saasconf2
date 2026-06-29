@@ -7977,6 +7977,40 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/alumni': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Alumni */
+    get: operations['list_alumni_api_v1_alumni_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/alumni/export.csv': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Export Alumni Csv */
+    get: operations['export_alumni_csv_api_v1_alumni_export_csv_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/conferences/{conference_id}/alumni': {
     parameters: {
       query?: never;
@@ -14023,6 +14057,21 @@ export type components = {
       /** Notes */
       notes?: string | null;
     };
+    /** AlumniEntry */
+    AlumniEntry: {
+      /** Email Hash */
+      email_hash: string;
+      /** First Name */
+      first_name: string | null;
+      /** Last Name */
+      last_name: string | null;
+      /** Email */
+      email: string | null;
+      /** Roles */
+      roles: string[];
+      /** Conferences */
+      conferences: components['schemas']['ConferenceRef'][];
+    };
     /**
      * AlumniImportResult
      * @description Result of a CSV bulk import.
@@ -14034,16 +14083,6 @@ export type components = {
       skipped: number;
       /** Errors */
       errors: string[];
-    };
-    /**
-     * AlumniListResponse
-     * @description Paginated alumni list.
-     */
-    AlumniListResponse: {
-      /** Items */
-      items: components['schemas']['AlumniResponse'][];
-      /** Total */
-      total: number;
     };
     /**
      * AlumniResponse
@@ -17097,6 +17136,18 @@ export type components = {
       questions: components['schemas']['PendingQuestion'][];
       /** Has Mandatory Pending */
       has_mandatory_pending: boolean;
+    };
+    /** ConferenceRef */
+    ConferenceRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Year */
+      year: number | null;
     };
     /**
      * ConferenceResponse
@@ -29816,6 +29867,13 @@ export type components = {
        */
       currency?: string;
     };
+    /** AlumniListResponse */
+    app__api__v1__alumni_list__AlumniListResponse: {
+      /** Items */
+      items: components['schemas']['AlumniEntry'][];
+      /** Total */
+      total: number;
+    };
     /**
      * CreatePaymentIntentRequest
      * @description Request to create Stripe PaymentIntent.
@@ -29897,6 +29955,16 @@ export type components = {
       vat_number?: string | null;
       /** Subtotal */
       subtotal: number;
+    };
+    /**
+     * AlumniListResponse
+     * @description Paginated alumni list.
+     */
+    app__schemas__alumni__AlumniListResponse: {
+      /** Items */
+      items: components['schemas']['AlumniResponse'][];
+      /** Total */
+      total: number;
     };
     /**
      * ForgotPasswordRequest
@@ -48541,6 +48609,78 @@ export interface operations {
       };
     };
   };
+  list_alumni_api_v1_alumni_get: {
+    parameters: {
+      query?: {
+        conference_id?: string | null;
+        role?: ('attendee' | 'speaker' | 'committee') | null;
+        search?: string | null;
+        skip?: number;
+        limit?: number;
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['app__api__v1__alumni_list__AlumniListResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  export_alumni_csv_api_v1_alumni_export_csv_get: {
+    parameters: {
+      query?: {
+        conference_id?: string | null;
+        role?: ('attendee' | 'speaker' | 'committee') | null;
+        search?: string | null;
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   list_alumni_api_v1_conferences__conference_id__alumni_get: {
     parameters: {
       query?: {
@@ -48564,7 +48704,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['AlumniListResponse'];
+          'application/json': components['schemas']['app__schemas__alumni__AlumniListResponse'];
         };
       };
       /** @description Validation Error */

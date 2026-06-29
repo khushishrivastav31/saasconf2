@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     admin_settings,
     alumni,
+    alumni_list,
     analytics,
     applicant_activity,
     attachments,
@@ -115,6 +116,9 @@ api_router.include_router(
 api_router.include_router(
     service_providers.router, prefix="/locations/{location_id}/service-providers", tags=["Service Providers"]
 )
+
+# Alumni — tenant-wide aggregation (read-only, from past conferences)
+api_router.include_router(alumni_list.router, prefix="/alumni", tags=["Alumni"])
 
 # Alumni (conference-scoped)
 api_router.include_router(alumni.router, prefix="/conferences/{conference_id}/alumni", tags=["Alumni"])
