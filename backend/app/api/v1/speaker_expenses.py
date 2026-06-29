@@ -405,6 +405,7 @@ async def reject_expense(
         tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         expense_id=expense_id,
+        user_id=current_user.user_id,
         data=data,
     )
 
@@ -424,5 +425,6 @@ async def mark_expense_paid(
         tenant_id=current_user.require_tenant_id(),
         conference_id=conference_id,
         expense_id=expense_id,
+        user_id=current_user.user_id,
         data=data,
     )

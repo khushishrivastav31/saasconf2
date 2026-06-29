@@ -11,6 +11,7 @@ Routers parse params and verify admin access, then delegate here.
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Literal
@@ -20,7 +21,9 @@ from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.email.speaker_expenses import send_expense_approved, send_expense_paid, send_expense_rejected
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.messaging.speaker_expenses import create_expense_outcome_thread
 from app.models.attachment import Attachment
 from app.models.cfp_applicants import CFPApplicant
 from app.models.speaker_expense import SpeakerExpense
@@ -33,6 +36,8 @@ from app.schemas.speaker_expense import (
     SpeakerExpenseListResponse,
     SpeakerExpenseResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 ExpenseStatusFilter = Literal["draft", "submitted", "approved", "rejected", "paid"]
 
@@ -77,7 +82,9 @@ async def _get_expense_or_404(
     db: AsyncSession, *, tenant_id: UUID, conference_id: UUID, expense_id: UUID
 ) -> SpeakerExpense:
     result = await db.execute(
-        select(SpeakerExpense).where(
+        select(SpeakerExpense)
+        .options(selectinload(SpeakerExpense.applicant), selectinload(SpeakerExpense.conference))
+        .where(
             SpeakerExpense.id == expense_id,
             SpeakerExpense.conference_id == conference_id,
             SpeakerExpense.tenant_id == tenant_id,
@@ -275,6 +282,48 @@ async def approve_expense(
     expense.approved_at = datetime.now(UTC)
     expense.rejection_reason = None
     await db.commit()
+
+    try:
+        from app.models.tenant import Tenant
+
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = tenant_result.scalar_one_or_none()
+        recipient_email = expense.applicant.email if expense.applicant else None
+        if recipient_email:
+            await send_expense_approved(
+                db,
+                tenant_id=tenant_id,
+                recipient_email=recipient_email,
+                speaker_name=expense.speaker_name or "",
+                expense_title=expense.title,
+                expense_amount=f"{expense.original_amount} {expense.original_currency}",
+                conference_name=expense.conference.name if expense.conference else "",
+                tenant_name=tenant.name if tenant else "",
+            )
+    except Exception:
+        logger.exception("send_expense_approved failed for expense %s; ignoring", expense_id)
+
+    try:
+        conf_name = expense.conference.name if expense.conference else ""
+        amount_str = f"{expense.original_amount} {expense.original_currency}"
+        from html import escape
+
+        await create_expense_outcome_thread(
+            db,
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            applicant_id=expense.cfp_applicant_id,
+            admin_user_id=user_id,
+            subject=f"Your expense has been approved: {expense.title}",
+            body_html=(
+                f"<p>Your expense <strong>{escape(expense.title)}</strong> "
+                f"({escape(amount_str)}) for <strong>{escape(conf_name)}</strong> "
+                f"has been <strong>approved</strong>. Payment will be arranged shortly.</p>"
+            ),
+        )
+    except Exception:
+        logger.exception("create_expense_outcome_thread (approve) failed for expense %s; ignoring", expense_id)
+
     return {"success": True, "message": "Expense approved"}
 
 
@@ -284,6 +333,7 @@ async def reject_expense(
     tenant_id: UUID,
     conference_id: UUID,
     expense_id: UUID,
+    user_id: UUID,
     data: RejectRequest,
 ) -> dict:
     expense = await _get_expense_or_404(db, tenant_id=tenant_id, conference_id=conference_id, expense_id=expense_id)
@@ -293,6 +343,49 @@ async def reject_expense(
     expense.status = "rejected"
     expense.rejection_reason = data.reason
     await db.commit()
+
+    try:
+        from app.models.tenant import Tenant
+
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = tenant_result.scalar_one_or_none()
+        recipient_email = expense.applicant.email if expense.applicant else None
+        if recipient_email:
+            await send_expense_rejected(
+                db,
+                tenant_id=tenant_id,
+                recipient_email=recipient_email,
+                speaker_name=expense.speaker_name or "",
+                expense_title=expense.title,
+                conference_name=expense.conference.name if expense.conference else "",
+                review_notes=data.reason,
+                tenant_name=tenant.name if tenant else "",
+            )
+    except Exception:
+        logger.exception("send_expense_rejected failed for expense %s; ignoring", expense_id)
+
+    try:
+        conf_name = expense.conference.name if expense.conference else ""
+        from html import escape
+
+        await create_expense_outcome_thread(
+            db,
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            applicant_id=expense.cfp_applicant_id,
+            admin_user_id=user_id,
+            subject=f"Your expense was not approved: {expense.title}",
+            body_html=(
+                f"<p>Your expense <strong>{escape(expense.title)}</strong> "
+                f"for <strong>{escape(conf_name)}</strong> was "
+                f"<strong>not approved</strong>.</p>"
+                f"<p><strong>Reason:</strong> {escape(data.reason)}</p>"
+                f"<p>You may update and resubmit the expense, or reply here if you have questions.</p>"
+            ),
+        )
+    except Exception:
+        logger.exception("create_expense_outcome_thread (reject) failed for expense %s; ignoring", expense_id)
+
     return {"success": True, "message": "Expense rejected"}
 
 
@@ -302,6 +395,7 @@ async def mark_expense_paid(
     tenant_id: UUID,
     conference_id: UUID,
     expense_id: UUID,
+    user_id: UUID,
     data: MarkPaidRequest,
 ) -> dict:
     expense = await _get_expense_or_404(db, tenant_id=tenant_id, conference_id=conference_id, expense_id=expense_id)
@@ -312,4 +406,51 @@ async def mark_expense_paid(
     expense.paid_at = datetime.now(UTC)
     expense.payment_reference = data.payment_reference
     await db.commit()
+
+    try:
+        from app.models.tenant import Tenant
+
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = tenant_result.scalar_one_or_none()
+        recipient_email = expense.applicant.email if expense.applicant else None
+        if recipient_email:
+            await send_expense_paid(
+                db,
+                tenant_id=tenant_id,
+                recipient_email=recipient_email,
+                speaker_name=expense.speaker_name or "",
+                expense_title=expense.title,
+                expense_amount=f"{expense.original_amount} {expense.original_currency}",
+                conference_name=expense.conference.name if expense.conference else "",
+                payment_reference=data.payment_reference,
+                tenant_name=tenant.name if tenant else "",
+            )
+    except Exception:
+        logger.exception("send_expense_paid failed for expense %s; ignoring", expense_id)
+
+    try:
+        conf_name = expense.conference.name if expense.conference else ""
+        amount_str = f"{expense.original_amount} {expense.original_currency}"
+        from html import escape
+
+        ref_line = (
+            f"<p><strong>Reference:</strong> {escape(data.payment_reference)}</p>" if data.payment_reference else ""
+        )
+        await create_expense_outcome_thread(
+            db,
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            applicant_id=expense.cfp_applicant_id,
+            admin_user_id=user_id,
+            subject=f"Your expense has been paid: {expense.title}",
+            body_html=(
+                f"<p>Your expense <strong>{escape(expense.title)}</strong> "
+                f"({escape(amount_str)}) for <strong>{escape(conf_name)}</strong> "
+                f"has been <strong>paid</strong>.</p>"
+                f"{ref_line}"
+            ),
+        )
+    except Exception:
+        logger.exception("create_expense_outcome_thread (paid) failed for expense %s; ignoring", expense_id)
+
     return {"success": True, "message": "Expense marked as paid"}

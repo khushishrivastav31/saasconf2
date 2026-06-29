@@ -16,10 +16,12 @@ import os
 import uuid
 from datetime import date
 from decimal import Decimal
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf@localhost:5432/saasconf_test")
@@ -1471,3 +1473,205 @@ class TestExpenseStats:
     ) -> None:
         resp = await client.get(_url(conference.id, "stats"))
         assert resp.status_code == 401
+
+
+# ===================================================================
+# 10. Email notifications on workflow transitions
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestExpenseWorkflowEmails:
+    """approve / reject / mark-paid fire the right speaker-facing email helpers."""
+
+    async def test_approve_sends_expense_approved_email(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        tenant_admin_token: str,
+        expense: SpeakerExpense,
+    ) -> None:
+        mock_send = AsyncMock(return_value=True)
+        with patch("app.services.speaker_expense_workflow_service.send_expense_approved", mock_send):
+            resp = await client.post(
+                _url(conference.id, f"{expense.id}/approve"),
+                headers=auth_headers(tenant_admin_token),
+            )
+        assert resp.status_code == 200
+        mock_send.assert_awaited_once()
+
+    async def test_reject_sends_expense_rejected_email_with_note(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        tenant_admin_token: str,
+        expense: SpeakerExpense,
+    ) -> None:
+        mock_send = AsyncMock(return_value=True)
+        with patch("app.services.speaker_expense_workflow_service.send_expense_rejected", mock_send):
+            resp = await client.post(
+                _url(conference.id, f"{expense.id}/reject"),
+                json={"reason": "Receipt is illegible"},
+                headers=auth_headers(tenant_admin_token),
+            )
+        assert resp.status_code == 200
+        mock_send.assert_awaited_once()
+        call_kwargs = mock_send.await_args.kwargs
+        assert call_kwargs.get("review_notes") == "Receipt is illegible"
+
+    async def test_mark_paid_sends_expense_paid_email(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        tenant_admin_token: str,
+        expense: SpeakerExpense,
+    ) -> None:
+        # First approve
+        with patch("app.services.speaker_expense_workflow_service.send_expense_approved", AsyncMock(return_value=True)):
+            await client.post(
+                _url(conference.id, f"{expense.id}/approve"),
+                headers=auth_headers(tenant_admin_token),
+            )
+
+        mock_send = AsyncMock(return_value=True)
+        with patch("app.services.speaker_expense_workflow_service.send_expense_paid", mock_send):
+            resp = await client.post(
+                _url(conference.id, f"{expense.id}/mark-paid"),
+                json={"payment_reference": "WIRE-2026-0042"},
+                headers=auth_headers(tenant_admin_token),
+            )
+        assert resp.status_code == 200
+        mock_send.assert_awaited_once()
+
+    async def test_email_failure_does_not_roll_back_status_transition(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        tenant_admin_token: str,
+        expense: SpeakerExpense,
+    ) -> None:
+        """Email errors must not roll back the approval."""
+        mock_send = AsyncMock(side_effect=Exception("SMTP down"))
+        with patch("app.services.speaker_expense_workflow_service.send_expense_approved", mock_send):
+            resp = await client.post(
+                _url(conference.id, f"{expense.id}/approve"),
+                headers=auth_headers(tenant_admin_token),
+            )
+        # Status transition succeeded despite email failure
+        assert resp.status_code == 200
+        detail = await client.get(
+            _url(conference.id, str(expense.id)),
+            headers=auth_headers(tenant_admin_token),
+        )
+        assert detail.json()["status"] == "approved"
+
+
+# ===================================================================
+# 11. In-app thread creation on workflow transitions
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestExpenseWorkflowThreads:
+    """approve / reject / mark-paid each create a MessageThread for the speaker."""
+
+    async def test_approve_creates_message_thread_for_speaker(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        tenant_admin_token: str,
+        expense: SpeakerExpense,
+        db_session: AsyncSession,
+    ) -> None:
+        from app.models.messaging import MessageParticipant, MessageThread
+
+        resp = await client.post(
+            _url(conference.id, f"{expense.id}/approve"),
+            headers=auth_headers(tenant_admin_token),
+        )
+        assert resp.status_code == 200
+
+        threads = (
+            await db_session.execute(
+                select(MessageThread).where(
+                    MessageThread.conference_id == conference.id,
+                    MessageThread.tenant_id == conference.tenant_id,
+                )
+            )
+        ).scalars().all()
+        assert len(threads) == 1
+        assert "approved" in threads[0].subject.lower() or "expense" in threads[0].subject.lower()
+
+        participants = (
+            await db_session.execute(
+                select(MessageParticipant).where(MessageParticipant.thread_id == threads[0].id)
+            )
+        ).scalars().all()
+        applicant_parts = [p for p in participants if p.participant_type == "applicant"]
+        assert len(applicant_parts) == 1
+        assert applicant_parts[0].last_read_at is None  # unread for speaker
+
+    async def test_reject_creates_message_thread_for_speaker(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        tenant_admin_token: str,
+        expense: SpeakerExpense,
+        db_session: AsyncSession,
+    ) -> None:
+        from app.models.messaging import MessageThread
+
+        resp = await client.post(
+            _url(conference.id, f"{expense.id}/reject"),
+            json={"reason": "Receipt is illegible"},
+            headers=auth_headers(tenant_admin_token),
+        )
+        assert resp.status_code == 200
+
+        threads = (
+            await db_session.execute(
+                select(MessageThread).where(
+                    MessageThread.conference_id == conference.id,
+                    MessageThread.tenant_id == conference.tenant_id,
+                )
+            )
+        ).scalars().all()
+        assert len(threads) == 1
+
+    async def test_mark_paid_creates_message_thread_for_speaker(
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        tenant_with_modules: Tenant,
+        tenant_admin_token: str,
+        expense: SpeakerExpense,
+        db_session: AsyncSession,
+    ) -> None:
+        from app.models.messaging import MessageThread
+
+        await client.post(
+            _url(conference.id, f"{expense.id}/approve"),
+            headers=auth_headers(tenant_admin_token),
+        )
+        resp = await client.post(
+            _url(conference.id, f"{expense.id}/mark-paid"),
+            json={"payment_reference": "WIRE-42"},
+            headers=auth_headers(tenant_admin_token),
+        )
+        assert resp.status_code == 200
+
+        threads = (
+            await db_session.execute(
+                select(MessageThread).where(
+                    MessageThread.conference_id == conference.id,
+                    MessageThread.tenant_id == conference.tenant_id,
+                )
+            )
+        ).scalars().all()
+        assert len(threads) == 2  # one from approve, one from paid

@@ -1,5 +1,6 @@
 """Portal speaker expense endpoints — speakers submit and track their own expenses."""
 
+import logging
 from datetime import date
 from decimal import Decimal
 from uuid import UUID
@@ -10,12 +11,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
+from app.core.email.speaker_expenses import send_expense_submitted
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.messaging.speaker_expenses import create_expense_submitted_thread
 from app.models.speaker_expense import (
     ExpenseCategory,
     SpeakerExpense,
     SpeakerExpenseAllowance,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -363,13 +368,61 @@ async def submit_my_expense(
     db: DbSessionDep,
 ) -> dict:
     """Submit an expense for admin approval."""
-    expense = await _get_own_expense(expense_id, current_applicant, db)
+    from sqlalchemy.orm import selectinload as _sil
+
+    result = await db.execute(
+        select(SpeakerExpense)
+        .options(_sil(SpeakerExpense.conference), _sil(SpeakerExpense.applicant))
+        .where(
+            SpeakerExpense.id == expense_id,
+            SpeakerExpense.cfp_applicant_id == current_applicant.applicant_id,
+            SpeakerExpense.tenant_id == current_applicant.tenant_id,
+        )
+    )
+    expense = result.scalar_one_or_none()
+    if not expense:
+        raise NotFoundError("Expense not found")
 
     if expense.status != "draft":
         raise ValidationError("Can only submit expenses in draft status")
 
     expense.status = "submitted"
     await db.commit()
+
+    # Best-effort email — failure must not surface to the caller
+    try:
+        from app.models.tenant import Tenant
+
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == current_applicant.tenant_id))
+        tenant = tenant_result.scalar_one_or_none()
+        tenant_name = tenant.name if tenant else ""
+        speaker_name = expense.speaker_name or ""
+        conference_name = expense.conference.name if expense.conference else ""
+        amount_str = f"{expense.original_amount} {expense.original_currency}"
+        await send_expense_submitted(
+            db,
+            tenant_id=current_applicant.tenant_id,
+            conference_name=conference_name,
+            speaker_name=speaker_name,
+            expense_title=expense.title,
+            expense_amount=amount_str,
+            tenant_name=tenant_name,
+        )
+    except Exception:
+        logger.exception("send_expense_submitted failed for expense %s; ignoring", expense_id)
+
+    try:
+        await create_expense_submitted_thread(
+            db,
+            tenant_id=current_applicant.tenant_id,
+            conference_id=expense.conference_id,
+            applicant_id=current_applicant.applicant_id,
+            expense_title=expense.title,
+            expense_amount_str=amount_str,
+        )
+    except Exception:
+        logger.exception("create_expense_submitted_thread failed for expense %s; ignoring", expense_id)
+
     return {"id": str(expense.id), "status": "submitted"}
 
 
