@@ -1,6 +1,8 @@
 """FastAPI application entry point."""
 
+import logging
 import secrets
+import time
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -212,6 +214,62 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def _client_ip(request: Request) -> str | None:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else None
+
+
+def _content_length(response: Response | None) -> int | None:
+    if response is None:
+        return None
+    raw = response.headers.get("content-length")
+    if raw and raw.isdigit():
+        return int(raw)
+    return None
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Emit one structured access-log line per request after the response is produced."""
+
+    _logger = logging.getLogger("saasconf.access")
+
+    async def dispatch(self, request: Request, call_next):
+        start = time.perf_counter()
+        status_code = 500
+        response = None
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            duration_ms = round((time.perf_counter() - start) * 1000, 2)
+            user = getattr(request.state, "current_user", None)
+            route = request.scope.get("route")
+            self._logger.info(
+                "%s %s -> %s (%sms)",
+                request.method,
+                request.url.path,
+                status_code,
+                duration_ms,
+                extra={
+                    "request_id": getattr(request.state, "correlation_id", None),
+                    "method": request.method,
+                    "path": request.url.path,
+                    "route": getattr(route, "path", request.url.path),
+                    "status_code": status_code,
+                    "duration_ms": duration_ms,
+                    "tenant_id": str(user.tenant_id) if user and user.tenant_id else None,
+                    "user_id": str(user.user_id) if user else None,
+                    "client_ip": _client_ip(request),
+                    "response_size": _content_length(response),
+                    "user_agent": request.headers.get("user-agent"),
+                    "query_keys": sorted(request.query_params.keys()),
+                },
+            )
+
+
 # ---------------------------------------------------------------------------
 # Middleware registration
 # Order matters: middleware is applied in REVERSE order of registration.
@@ -232,6 +290,9 @@ app.add_middleware(OriginValidationMiddleware)
 
 # Request size limits
 app.add_middleware(RequestSizeLimitMiddleware)
+
+# Access logging — must be inside CorrelationIDMiddleware so request_id_ctx is set when logged
+app.add_middleware(RequestLoggingMiddleware)
 
 # Correlation ID for request tracing
 app.add_middleware(CorrelationIDMiddleware)
