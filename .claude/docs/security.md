@@ -103,3 +103,15 @@ If you add a new column that holds an IP, MAC address, device fingerprint, or si
 ## Dependency Security
 - Pin exact versions in `requirements.txt` / `package.json` — CI runs `pip-audit` and `npm audit`
 - Dockerfile images pinned to SHA digest
+
+## Post-quantum posture
+
+See the full audit report and ADR for details:
+- `docs/security/2026-06-crypto-audit.md` — inventory, threat model, Shor/Grover analysis, findings.
+- `docs/adr/0006-post-quantum-kem-evaluation.md` — decision record: defer in-application ML-KEM; address PQC at TLS edge.
+
+**Summary:** SaaSConf's application-layer crypto is symmetric (Argon2id, HS256, Fernet/AES-128). Symmetric primitives are Grover-only and remain computationally secure. The quantum-vulnerable surface — TLS key exchange (ECDHE/X25519) — is owned by the reverse proxy/LB, not application code. No in-application KEM is warranted; the follow-up action is enabling hybrid X25519 + ML-KEM-768 at the TLS terminator once the infrastructure provider supports it.
+
+Two lower-priority hardening items from the audit:
+- AES-128 (Fernet PII) reaches ~64-bit post-Grover effective strength — evaluate AES-256-GCM migration in a future ticket.
+- TOTP Fernet key is derived from `JWT_SECRET_KEY` rather than an independent key — reduce blast radius by adding a dedicated `TOTP_ENCRYPTION_KEY` in a future ticket.
