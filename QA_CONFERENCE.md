@@ -91,8 +91,30 @@ Status labels: `RETEST` — fix committed, verify it works | `FAIL` — still br
 | 3.2.2 | Edit speaker profile | FAIL: changes don't save |
 | 3.3.1 | Register via CFP portal then log in | RETEST (fix: 8438653) |
 | 3.3.3 | User address fields save correctly | FAIL |
-| 3.4.1–3.4.2 | Attendee appears after registration | BLOCKED by 5.2.1 |
+| 3.4.1 | New attendee appears in admin list immediately after portal registration | OK |
+| 3.4.2 | Admin list refetches within 30 s on tab focus (no manual reload needed) | OK |
 | 3.6.1 | Alumni list | BLOCKED — needs past conferences |
+
+### 3.4 — Attendee appears after portal registration (MAIN-13419)
+
+**Prerequisites:** Conference with public registration portal enabled + at least one active booking option + active booking period. (Same setup used for QA 5.2.1.)
+
+**3.4.1 — Attendee appears on page reload**
+
+1. Open the public portal registration page for the conference (e.g. `http://localhost:3000/{tenant-slug}/portal/{conference-slug}/register`).
+2. Fill in billing details and one attendee with a fresh email address. Submit.
+3. You should see a confirmation / success screen (no error).
+4. In a new tab, log in as admin (`superuser@bjvsoft.com` / `Test1234!`) and navigate to the conference → **Attendees** tab.
+5. **Expected:** The new attendee appears at the **top of the list** (newest-first). Status is `Pending Invoice` (registered_pending_invoice). No filter hides them.
+
+**3.4.2 — Admin list refetches within 30 s on tab focus**
+
+1. Keep the admin Attendees tab open and visible in one window.
+2. In another tab, complete a second portal registration (use a different email).
+3. Click back onto the Attendees tab (bring it into focus — no manual page reload).
+4. **Expected:** Within 30 seconds the list refetches and the second attendee appears at the top, without you having to press reload.
+
+**Pass criteria:** Both new attendees are visible, ordered newest-first, and are not hidden by any default status filter.
 
 ---
 

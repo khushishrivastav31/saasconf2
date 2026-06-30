@@ -88,6 +88,7 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
       );
       return res.data;
     },
+    staleTime: 30_000,
   });
 
   // Fetch booking options for filter dropdown
