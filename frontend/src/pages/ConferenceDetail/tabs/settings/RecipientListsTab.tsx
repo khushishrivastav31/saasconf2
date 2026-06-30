@@ -59,7 +59,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
       ) : lists.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">No recipient lists yet.</p>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
@@ -72,7 +72,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Members
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                <th className="sticky right-0 z-[1] bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Actions
                 </th>
               </tr>
@@ -91,7 +91,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {list.member_count}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="sticky right-0 z-[1] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right">
                     {isAdmin && (
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -158,7 +158,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
         ) : dynamicLists.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">No dynamic lists yet.</p>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
@@ -171,7 +171,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Recipients
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="sticky right-0 z-[1] bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Actions
                   </th>
                 </tr>
@@ -197,7 +197,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {dl.recipient_count}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="sticky right-0 z-[1] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right">
                       {isAdmin && (
                         <div className="flex items-center justify-end gap-2">
                           <button

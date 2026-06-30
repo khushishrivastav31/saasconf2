@@ -304,7 +304,7 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                   Active
                 </th>
                 {isAdmin && (
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="sticky right-0 z-[1] bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Actions
                   </th>
                 )}

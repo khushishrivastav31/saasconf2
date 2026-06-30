@@ -82,7 +82,7 @@ export function OverlayCard({
         </button>
       </td>
       {isAdmin && (
-        <td className="px-4 py-3 text-right">
+        <td className="sticky right-0 z-[1] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right">
           <div className="flex justify-end gap-1">
             <button
               onClick={() => onPreview(overlay)}

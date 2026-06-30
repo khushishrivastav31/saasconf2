@@ -110,7 +110,7 @@ export default function InvoiceListTable({
               Total
             </th>
             {isAdmin && (
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="sticky right-0 z-[1] bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             )}
@@ -187,7 +187,10 @@ export default function InvoiceListTable({
                     : '-'}
                 </td>
                 {isAdmin && (
-                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="sticky right-0 z-[1] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"

@@ -661,7 +661,7 @@ function ConferenceSponsorsTab({
           {isLoading ? (
             <LoadingSpinner />
           ) : data?.items && data.items.length > 0 ? (
-            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
@@ -681,7 +681,7 @@ function ConferenceSponsorsTab({
                       Visible
                     </th>
                     {isAdmin && (
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="sticky right-0 z-[1] bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     )}
@@ -726,7 +726,10 @@ function ConferenceSponsorsTab({
                         </span>
                       </td>
                       {isAdmin && (
-                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td
+                          className="sticky right-0 z-[1] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-4 py-3 text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="flex justify-end gap-2">
                             {sponsor.has_invoices ? (
                               <button
