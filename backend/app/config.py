@@ -113,6 +113,11 @@ class Settings(BaseSettings):
     # Email — per-tenant Resend keys (tenants can configure their own)
     RESEND_FROM_EMAIL: str = "noreply@sonrisa.ventures"
     RESEND_FROM_NAME: str = "SaaSConf"
+    # Platform-level Resend key — distinct from per-tenant Tenant.resend_api_key.
+    # Used as the system sender for platform emails sent before a tenant has
+    # configured its own key (e.g. the tenant-creation welcome email). Sends from
+    # the verified RESEND_FROM_EMAIL. Empty by default → step is skipped.
+    RESEND_API_KEY: str = ""
 
     # Email — Mailgun (system-level fallback when no tenant Resend key is set,
     # or when the tenant key is invalid)

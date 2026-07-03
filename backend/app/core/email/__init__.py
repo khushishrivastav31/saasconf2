@@ -443,6 +443,45 @@ async def send_email(
             )
             # use_mailgun_fallback stays True for every error → fall through to Step 2
 
+    # ── Step 2a: platform Resend key (system sender for keyless tenants) ───────
+    # Used when there is no per-tenant key (e.g. the tenant-creation welcome email
+    # sent before the tenant configures its own key). Always sends from the
+    # platform's own verified sender (RESEND_FROM_EMAIL) — the caller's from_email
+    # (which may be an unverified tenant domain) is deliberately ignored here.
+    if use_mailgun_fallback and settings.RESEND_API_KEY:
+        resend = _get_resend(api_key=settings.RESEND_API_KEY)
+        platform_payload: dict = {
+            "from": f"{settings.RESEND_FROM_NAME} <{settings.RESEND_FROM_EMAIL}>",
+            "to": [to],
+            "subject": subject,
+            "html": html,
+            "text": text,
+        }
+        if reply_to:
+            platform_payload["reply_to"] = reply_to
+        if cc:
+            platform_payload["cc"] = cc
+        if attachments:
+            platform_payload["attachments"] = attachments
+        try:
+            await asyncio.to_thread(resend.Emails.send, platform_payload)
+            logger.info(f"Email sent to {to} via platform Resend key: {subject}")
+            return True
+        except Exception as e:
+            logger.warning(
+                "Platform Resend send failed for %s: %s — falling back to Mailgun",
+                to,
+                e,
+            )
+            _capture_email_error(
+                e,
+                provider="resend",
+                tenant_id=tenant_id,
+                recipient=to,
+                email_type=email_type,
+            )
+            # fall through to Mailgun
+
     # ── Step 2: Mailgun system fallback (no tenant key, or tenant key invalid) ─
     if use_mailgun_fallback:
         if not settings.MAILGUN_API_KEY or not settings.MAILGUN_DOMAIN:

@@ -184,7 +184,11 @@ async def create_tenant(
     if admin_user:
         settings = get_settings()
         frontend_base = settings.FRONTEND_BASE_URL
-        from_email = f"noreply@{tenant.email_domain}" if tenant.email_domain else None
+        # A brand-new tenant has no Resend key yet, and its email_domain is not
+        # verified on any platform sending account. Forward tenant_id so delivery
+        # failures are logged with tenant context, and leave from_email unset so
+        # the platform verified sender is used rather than the unverified domain
+        # (MAIN-13423 / GitHub #314).
         # Use first contact person's email as support email
         tenant_support_email = ""
         if tenant.contact_persons:
@@ -197,13 +201,13 @@ async def create_tenant(
             db,
             email=read_pii(admin_user, "email") or "",
             token=raw_token,
+            tenant_id=tenant.id,
             company_name=tenant.name,
             user_type="Administrator",
             first_name=admin_user.first_name or "",
             last_name=admin_user.last_name or "",
             support_email=tenant_support_email,
             base_url=frontend_base,
-            from_email=from_email,
         )
 
     return _build_tenant_response(

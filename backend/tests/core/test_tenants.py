@@ -193,6 +193,43 @@ class TestTenantCRUD:
         assert data["user_count"] == 1
 
     @pytest.mark.asyncio
+    async def test_create_tenant_welcome_email_uses_platform_sender(
+        self,
+        client: AsyncClient,
+        super_admin_user: User,
+        super_admin_token: str,
+    ) -> None:
+        """The welcome email is dispatched with the new tenant's ``tenant_id`` (so
+        failures are logged with tenant context) and without a forced
+        ``from_email`` of the tenant's unverified domain — letting the platform
+        verified sender be used (MAIN-13423 / GitHub #314)."""
+        from unittest.mock import patch
+
+        slug = f"welcome-{uuid.uuid4().hex[:8]}"
+        payload = {
+            "name": "Welcome Corp",
+            "slug": slug,
+            "email_domain": "welcomecorp.example",
+            "admin_email": f"admin-{uuid.uuid4().hex[:8]}@test.com",
+            "admin_first_name": "Admin",
+            "admin_last_name": "User",
+        }
+        with patch("app.api.v1.tenants.core.send_email_background") as mock_send:
+            response = await client.post(
+                BASE_URL,
+                json=payload,
+                headers=auth_headers(super_admin_token),
+            )
+
+        assert response.status_code == 201
+        mock_send.assert_called_once()
+        kwargs = mock_send.call_args.kwargs
+        # tenant_id must be forwarded so delivery failures are logged with context
+        assert kwargs.get("tenant_id") is not None
+        # the unverified tenant domain must NOT be forced as the sender
+        assert not kwargs.get("from_email")
+
+    @pytest.mark.asyncio
     async def test_create_tenant_duplicate_slug_fails(
         self,
         client: AsyncClient,

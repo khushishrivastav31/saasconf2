@@ -535,6 +535,135 @@ class TestSendEmail:
         mock_get_resend.assert_not_called()
 
 
+class TestPlatformResendFallback:
+    """Tests for the platform-level Resend key (MAIN-13423).
+
+    When no per-tenant key is available (e.g. the super-admin tenant-creation
+    welcome email, sent before the tenant configures its own key), a configured
+    platform ``RESEND_API_KEY`` should send the email from the platform's own
+    verified sender before falling back to Mailgun.
+    """
+
+    def _settings(self, **overrides):
+        from app.config import Settings
+
+        base = dict(
+            JWT_SECRET_KEY="test-secret-key-for-unit-tests-minimum-32-chars",
+            SUPER_ADMIN_PASSWORD="testpassword123",
+            SMTP_HOST="",
+            RESEND_FROM_EMAIL="noreply@platform.example",
+            RESEND_FROM_NAME="SaaSConf",
+        )
+        base.update(overrides)
+        return Settings(**base)
+
+    @pytest.mark.asyncio
+    async def test_platform_resend_used_when_no_tenant_key(self):
+        """With RESEND_API_KEY set and no tenant key, send via the platform key."""
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.return_value = {"id": "email-1"}
+
+        settings = self._settings(
+            RESEND_API_KEY="re_platform_key",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+        )
+        with (
+            patch("app.core.email.get_settings", return_value=settings),
+            patch("app.core.email._get_resend", return_value=mock_resend) as mock_get_resend,
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+        ):
+            result = await send_email(
+                to="admin@newtenant.example",
+                subject="Welcome",
+                html="<p>Welcome</p>",
+                text="Welcome",
+            )
+
+        assert result is True
+        mock_get_resend.assert_called_once_with(api_key="re_platform_key")
+        mock_resend.Emails.send.assert_called_once()
+        mock_mailgun.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_platform_resend_ignores_caller_from_email(self):
+        """The platform send must use the platform verified sender, not an
+        unverified tenant domain passed by the caller."""
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.return_value = {"id": "email-2"}
+
+        settings = self._settings(RESEND_API_KEY="re_platform_key")
+        with (
+            patch("app.core.email.get_settings", return_value=settings),
+            patch("app.core.email._get_resend", return_value=mock_resend),
+        ):
+            result = await send_email(
+                to="admin@newtenant.example",
+                subject="Welcome",
+                html="<p>Welcome</p>",
+                from_email="noreply@newtenant.example",  # unverified tenant domain
+            )
+
+        assert result is True
+        payload = mock_resend.Emails.send.call_args[0][0]
+        assert payload["from"] == "SaaSConf <noreply@platform.example>"
+        assert "newtenant.example" not in payload["from"]
+
+    @pytest.mark.asyncio
+    async def test_platform_resend_failure_falls_back_to_mailgun(self):
+        """When the platform Resend send raises, fall through to Mailgun."""
+        mock_resend = MagicMock()
+        mock_resend.Emails.send.side_effect = Exception("platform resend down")
+
+        settings = self._settings(
+            RESEND_API_KEY="re_platform_key",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@platform.example",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+        )
+        with (
+            patch("app.core.email.get_settings", return_value=settings),
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+        ):
+            result = await send_email(
+                to="admin@newtenant.example",
+                subject="Welcome",
+                html="<p>Welcome</p>",
+            )
+
+        assert result is True
+        mock_mailgun.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_platform_resend_unset_skips_to_mailgun(self):
+        """With RESEND_API_KEY unset, the platform step is skipped (regression)."""
+        settings = self._settings(
+            RESEND_API_KEY="",
+            MAILGUN_API_KEY="key-test",
+            MAILGUN_DOMAIN="mg.example.com",
+            MAILGUN_FROM_EMAIL="noreply@platform.example",
+            MAILGUN_FROM_NAME="SaaSConf",
+            MAILGUN_BASE_URL="https://api.mailgun.net",
+        )
+        with (
+            patch("app.core.email.get_settings", return_value=settings),
+            patch("app.core.email._get_resend") as mock_get_resend,
+            patch("app.core.email._send_via_mailgun", new_callable=AsyncMock) as mock_mailgun,
+        ):
+            result = await send_email(
+                to="admin@newtenant.example",
+                subject="Welcome",
+                html="<p>Welcome</p>",
+            )
+
+        assert result is True
+        mock_get_resend.assert_not_called()
+        mock_mailgun.assert_awaited_once()
+
+
 # ---------------------------------------------------------------------------
 # Template placeholder replacement tests
 # ---------------------------------------------------------------------------
