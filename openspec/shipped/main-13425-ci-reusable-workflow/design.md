@@ -1,5 +1,15 @@
 # MAIN-13425: Design
 
+> **Implementation note:** the target state and migration steps below describe
+> the original full-convergence design. It was not implemented as-is — see
+> "Scope revision" in `proposal.md` for why (branch-protection required-check
+> names change on every job when a workflow switches to `uses:`, and neither
+> the author nor the assistant had permission to update them). What actually
+> shipped in this PR is the smaller Option B fix: composite-action reuse +
+> the `PYSEC-2025-183` fix, with job names/IDs untouched. The "Target state"
+> below remains the intended end state for a follow-up ticket once branch
+> protection can be coordinated.
+
 ## Current state
 
 ```
@@ -54,3 +64,12 @@ apply to both PR and staging runs automatically.
   job names, PRs could get stuck "waiting for status" until protection rules
   are updated. Treat updating branch protection as part of this change, not a
   follow-up.
+- **This risk materialized during implementation.** Confirmed via a real
+  `staging.yml` run: reusable-workflow-call jobs report as `<calling job
+  name> / <job name>` (e.g. `Verify / Backend Lint & Type Check`), not the
+  bare job name. Every one of `ci.yml`'s ~8 required checks would be renamed
+  simultaneously on merge. Both `/branches/main/protection` and `/rulesets`
+  returned 404 for the available `gh` token (no admin access), so the
+  required-checks list could not be safely updated in lockstep. Full
+  convergence is deferred to a follow-up ticket with a GitHub admin looped
+  in; this PR ships Option B instead (see `proposal.md`).

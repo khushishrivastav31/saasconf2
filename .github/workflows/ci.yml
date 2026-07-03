@@ -35,32 +35,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install system dependencies (WeasyPrint)
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: >-
-            libpango-1.0-0
-            libpangocairo-1.0-0
-            libpangoft2-1.0-0
-            libcairo2
-            libgdk-pixbuf-2.0-0
-            libffi-dev
-            libglib2.0-0
-            fonts-dejavu-core
-          version: 1.0
-
-      - name: Install dependencies
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - uses: ./.github/actions/setup-backend
 
       - name: Lint with Ruff
         working-directory: backend
@@ -146,32 +121,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install system dependencies (WeasyPrint)
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: >-
-            libpango-1.0-0
-            libpangocairo-1.0-0
-            libpangoft2-1.0-0
-            libcairo2
-            libgdk-pixbuf-2.0-0
-            libffi-dev
-            libglib2.0-0
-            fonts-dejavu-core
-          version: 1.0
-
-      - name: Install dependencies
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - uses: ./.github/actions/setup-backend
 
       - name: Run tests
         working-directory: backend
@@ -211,21 +161,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-frontend
 
       - name: Lint
         working-directory: frontend
@@ -276,21 +212,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-frontend
 
       - name: Run tests
         working-directory: frontend
@@ -324,41 +246,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install system dependencies (WeasyPrint)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
-            libcairo2 libgdk-pixbuf-2.0-0 libffi-dev libglib2.0-0 fonts-dejavu-core
-
-      - name: Install backend deps
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install frontend deps
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-frontend
 
       - name: Assert api.generated.ts matches backend schema
         working-directory: frontend
@@ -387,7 +276,12 @@ jobs:
         working-directory: backend
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539
+          # TODO: Remove --ignore-vuln PYSEC-2025-183 once PyJWT ships a release that closes
+          # the OSV advisory. Snyk shows 2.12.1 as clean; vendor disputes the finding; and
+          # our app already enforces a 32-char minimum key in config.py — we are not exposed.
+          pip-audit -r requirements.txt \
+            --ignore-vuln CVE-2026-4539 \
+            --ignore-vuln PYSEC-2025-183
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
