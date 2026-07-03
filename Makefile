@@ -96,6 +96,10 @@ lint-backend: ## Lint backend code
 	cd backend && venv/bin/python -m ruff check .
 
 lint-frontend: ## Lint frontend code
+	# Intentionally stricter than CI's --max-warnings 90 ceiling: the local
+	# target holds the aspirational goal of zero warnings (max-lines N=0) so
+	# new code doesn't add warnings. CI keeps a ratcheting ceiling for the
+	# existing backlog (MAIN-13428).
 	cd frontend && npx eslint src/ --max-warnings 0
 
 format: ## Format all code

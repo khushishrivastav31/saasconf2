@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import ReadOnlyCalendarGrid from './ReadOnlyCalendarGrid';
-import { formatDateDE } from './calendarUtils';
+import { formatDateDE, snapshotToPlacements } from './calendarUtils';
 import ChangesPreviewDialog from './ChangesPreviewDialog';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import type {
@@ -181,44 +181,10 @@ export default function FinalProgramTab({ year }: Props) {
   }, [placements]);
 
   // Convert snapshot data to ProgramYearTraining format for the grid
-  const snapshotPlacements: ProgramYearTraining[] = useMemo(() => {
-    if (!latestSnapshot?.snapshot_data) return [];
-    return latestSnapshot.snapshot_data.map((entry) => {
-      const live = livePlacementMap.get(entry.placement_id);
-      return {
-        id: entry.placement_id,
-        program_year_id: programYear?.id ?? '',
-        training_id: '',
-        training_name: entry.training_name,
-        training_slug: entry.training_slug,
-        training_abbreviation: entry.training_abbreviation,
-        training_duration: entry.duration,
-        training_color: entry.training_color,
-        location_id: null,
-        location_name: entry.location_name,
-        location_code: entry.location_code,
-        start_date: entry.start_date,
-        placement_type: (live?.placement_type || entry.placement_type || 'open') as
-          | 'open'
-          | 'inhouse'
-          | 'hybrid',
-        is_guaranteed: live?.is_guaranteed ?? false,
-        created_at: '',
-        updated_at: '',
-        trainer_assignments: entry.trainer_ids.map((tid, idx) => {
-          const nameParts = (entry.trainer_names[idx] || '').split(' ');
-          return {
-            id: `snap-${tid}-${entry.placement_id}`,
-            placement_id: entry.placement_id,
-            trainer_id: tid,
-            trainer_first_name: nameParts[0] || '',
-            trainer_last_name: nameParts.slice(1).join(' ') || '',
-            created_at: '',
-          };
-        }),
-      };
-    });
-  }, [latestSnapshot, programYear?.id, livePlacementMap]);
+  const snapshotPlacements: ProgramYearTraining[] = useMemo(
+    () => snapshotToPlacements(latestSnapshot, programYear?.id ?? '', livePlacementMap),
+    [latestSnapshot, programYear?.id, livePlacementMap]
+  );
 
   if (!programYear) {
     return (

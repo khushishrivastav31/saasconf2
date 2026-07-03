@@ -188,7 +188,9 @@ jobs:
 
       - name: Lint
         working-directory: frontend
-        run: pnpm exec eslint src/ --max-warnings 120
+        # Ceiling ratchets down as files are split under the max-lines rule
+        # (MAIN-13428). Current count is 89; lower this whenever it drops further.
+        run: pnpm exec eslint src/ --max-warnings 90
 
       - name: Type check
         working-directory: frontend

@@ -1,4 +1,56 @@
-import type { HolidayDateEntry, ProgramYearTraining } from '../../../../types/training';
+import type {
+  HolidayDateEntry,
+  ProgramYearTraining,
+  ProgramSnapshot,
+} from '../../../../types/training';
+
+/**
+ * Convert a published program snapshot into ProgramYearTraining rows for the
+ * read-only grid, layering in live placement fields (guaranteed / type) that
+ * older snapshots may not carry.
+ */
+export function snapshotToPlacements(
+  snapshot: ProgramSnapshot | null | undefined,
+  programYearId: string,
+  livePlacementMap: Map<string, ProgramYearTraining>
+): ProgramYearTraining[] {
+  if (!snapshot?.snapshot_data) return [];
+  return snapshot.snapshot_data.map((entry) => {
+    const live = livePlacementMap.get(entry.placement_id);
+    return {
+      id: entry.placement_id,
+      program_year_id: programYearId,
+      training_id: '',
+      training_name: entry.training_name,
+      training_slug: entry.training_slug,
+      training_abbreviation: entry.training_abbreviation,
+      training_duration: entry.duration,
+      training_color: entry.training_color,
+      location_id: null,
+      location_name: entry.location_name,
+      location_code: entry.location_code,
+      start_date: entry.start_date,
+      placement_type: (live?.placement_type || entry.placement_type || 'open') as
+        | 'open'
+        | 'inhouse'
+        | 'hybrid',
+      is_guaranteed: live?.is_guaranteed ?? false,
+      created_at: '',
+      updated_at: '',
+      trainer_assignments: entry.trainer_ids.map((tid, idx) => {
+        const nameParts = (entry.trainer_names[idx] || '').split(' ');
+        return {
+          id: `snap-${tid}-${entry.placement_id}`,
+          placement_id: entry.placement_id,
+          trainer_id: tid,
+          trainer_first_name: nameParts[0] || '',
+          trainer_last_name: nameParts.slice(1).join(' ') || '',
+          created_at: '',
+        };
+      }),
+    };
+  });
+}
 
 /** Format YYYY-MM-DD as DD.MM.YYYY */
 export function formatDateDE(isoDate: string): string {

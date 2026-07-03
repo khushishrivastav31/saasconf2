@@ -6,16 +6,7 @@ import { parseApiError } from '../../utils/apiError';
 import { validateEmail } from '../../utils/validators';
 import { useAuth } from '../../hooks/useAuth';
 import type { TenantRole, TenantUserCreate, PaginatedResponse, Conference } from '../../types';
-
-// Per-scope role rows we may render on the invite form. Each is gated by
-// the matching module being enabled on the inviter's tenant (see filter
-// below) so we don't offer a Trainings role on a tenant that hasn't
-// activated the Trainings module — Brandon's QA 0.5.1.6.
-const SCOPE_OPTIONS = [
-  { scope: 'conferences' as const, label: 'Conferences', module: 'conferences' },
-  { scope: 'trainings' as const, label: 'Trainings', module: 'trainings' },
-  { scope: 'accounting' as const, label: 'Accounting', module: 'accounting' },
-] as const;
+import { SCOPE_OPTIONS } from './addMemberScopes';
 
 export default function AddMemberModal({
   onClose,

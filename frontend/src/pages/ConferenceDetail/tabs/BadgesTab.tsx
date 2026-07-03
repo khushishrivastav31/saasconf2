@@ -1,10 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../config/api';
-import { useToast } from '../../../components/Toast';
-import { parseApiError } from '../../../utils/apiError';
 import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import type { Conference } from '../../../types';
+import { useBadgeGeneration } from './useBadgeGeneration';
 
 const BADGE_TYPES = [
   { key: 'attendee', label: 'Attendee' },
@@ -32,16 +31,21 @@ export default function BadgesTab({
   conference: Conference;
   isAdmin: boolean;
 }) {
-  const { showToast } = useToast();
   const [badgeType, setBadgeType] = useState('attendee');
   const { search, setSearch, debouncedSearch, page, setPage } = useUrlFilters({
     search: '',
     page: 1,
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
-  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const {
+    previewBlobUrl,
+    setPreviewBlobUrl,
+    generatingId,
+    bulkGenerating,
+    handlePreview,
+    handleDownload,
+    handleBulkDownload,
+  } = useBadgeGeneration(conference.id, badgeType);
   const pageSize = 50;
 
   // Fetch registrations
@@ -79,91 +83,6 @@ export default function BadgesTab({
       setSelectedIds(new Set(registrations.map((r) => r.id)));
     }
   }, [selectedIds.size, registrations]);
-
-  // Preview badge
-  const handlePreview = useCallback(
-    async (registrationId: string) => {
-      setGeneratingId(registrationId);
-      try {
-        const res = await api.post(
-          `/conferences/${conference.id}/badges/preview/${registrationId}`,
-          null,
-          { responseType: 'blob', params: { badge_type: badgeType } }
-        );
-        const blob = new Blob([res.data], { type: 'application/pdf' });
-        const reader = new FileReader();
-        reader.onloadend = () => setPreviewBlobUrl(reader.result as string);
-        reader.readAsDataURL(blob);
-      } catch (err: unknown) {
-        showToast(parseApiError(err, 'Failed to generate preview'), 'error');
-      } finally {
-        setGeneratingId(null);
-      }
-    },
-    [conference.id, badgeType, showToast]
-  );
-
-  // Download single badge
-  const handleDownload = useCallback(
-    async (registrationId: string, name: string) => {
-      setGeneratingId(registrationId);
-      try {
-        const res = await api.post(
-          `/conferences/${conference.id}/badges/generate/${registrationId}`,
-          null,
-          { responseType: 'blob', params: { badge_type: badgeType } }
-        );
-        const blob = new Blob([res.data], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `badge_${name.replace(/\s+/g, '_')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (err: unknown) {
-        showToast(parseApiError(err, 'Failed to download badge'), 'error');
-      } finally {
-        setGeneratingId(null);
-      }
-    },
-    [conference.id, badgeType, showToast]
-  );
-
-  // Bulk download
-  const handleBulkDownload = useCallback(
-    async (ids?: string[]) => {
-      const regIds = ids ?? Array.from(selectedIds);
-      if (regIds.length === 0) {
-        showToast('No registrations selected', 'warning');
-        return;
-      }
-      setBulkGenerating(true);
-      try {
-        const res = await api.post(
-          `/conferences/${conference.id}/badges/generate-bulk`,
-          { registration_ids: regIds, badge_type: badgeType },
-          { responseType: 'blob' }
-        );
-        const blob = new Blob([res.data], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `badges_bulk_${badgeType}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast(`${regIds.length} badges generated`, 'success');
-      } catch (err: unknown) {
-        showToast(parseApiError(err, 'Failed to generate bulk badges'), 'error');
-      } finally {
-        setBulkGenerating(false);
-      }
-    },
-    [conference.id, badgeType, selectedIds, showToast]
-  );
 
   const statusColor = useMemo(
     () => (status: string) => {
@@ -243,7 +162,7 @@ export default function BadgesTab({
         {/* Bulk Actions */}
         {selectedIds.size > 0 && isAdmin && (
           <button
-            onClick={() => handleBulkDownload()}
+            onClick={() => handleBulkDownload(Array.from(selectedIds))}
             disabled={bulkGenerating}
             className="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
           >

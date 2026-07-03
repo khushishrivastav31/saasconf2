@@ -7,6 +7,11 @@ import type {
   DiscountCodeCreate,
   PlatformCurrency,
 } from '../../../../types';
+import {
+  buildDiscountUpdates,
+  buildDiscountCreatePayload,
+  type DiscountFormValues,
+} from './discountFormHelpers';
 
 interface DiscountModalProps {
   open: boolean;
@@ -85,60 +90,30 @@ export default function DiscountModal({
 
     const effectiveCurrency = isCurrencyLocked ? conferenceCurrency : currency;
 
+    const values: DiscountFormValues = {
+      description,
+      code,
+      discountType,
+      discountValue,
+      effectiveCurrency,
+      startDate,
+      endDate,
+      maxUses,
+      isActive,
+      isCombinable,
+      applicableOptions,
+      applicablePeriods,
+    };
+
     if (isEditMode) {
-      const updates: Record<string, unknown> = {};
-
-      if (description.trim() !== (discount.description || ''))
-        updates.description = description.trim();
-      if (code.trim().toUpperCase() !== discount.code) updates.code = code.trim().toUpperCase();
-      if (discountType !== discount.discount_type) updates.discount_type = discountType;
-      if (parseFloat(discountValue) !== discount.discount_value)
-        updates.discount_value = parseFloat(discountValue);
-
-      const newCurrency = discountType === 'fixed' && effectiveCurrency ? effectiveCurrency : null;
-      if (newCurrency !== discount.currency) updates.currency = newCurrency;
-
-      const newStartDate = startDate || null;
-      if (newStartDate !== discount.start_date) updates.start_date = newStartDate;
-
-      const newEndDate = endDate || null;
-      if (newEndDate !== discount.end_date) updates.end_date = newEndDate;
-
-      if (parseInt(maxUses) !== discount.max_uses) updates.max_uses = parseInt(maxUses) || 0;
-      if (isActive !== discount.is_active) updates.is_active = isActive;
-      if (isCombinable !== (discount.is_combinable ?? false)) updates.is_combinable = isCombinable;
-
-      const oldOptIds = [...(discount.applicable_option_ids || [])].sort();
-      const newOptIds = [...applicableOptions].sort();
-      if (JSON.stringify(oldOptIds) !== JSON.stringify(newOptIds)) {
-        updates.applicable_option_ids = applicableOptions;
-      }
-
-      const oldPerIds = [...(discount.applicable_period_ids || [])].sort();
-      const newPerIds = [...applicablePeriods].sort();
-      if (JSON.stringify(oldPerIds) !== JSON.stringify(newPerIds)) {
-        updates.applicable_period_ids = applicablePeriods;
-      }
-
+      const updates = buildDiscountUpdates(discount, values);
       if (Object.keys(updates).length > 0) {
         onEdit(discount.id, updates);
       } else {
         onClose();
       }
     } else {
-      onAdd({
-        description: description.trim(),
-        code: code.trim().toUpperCase(),
-        discount_type: discountType,
-        discount_value: parseFloat(discountValue),
-        currency: discountType === 'fixed' && effectiveCurrency ? effectiveCurrency : null,
-        start_date: startDate || null,
-        end_date: endDate || null,
-        max_uses: parseInt(maxUses) || 0,
-        is_combinable: isCombinable,
-        applicable_option_ids: applicableOptions.length > 0 ? applicableOptions : undefined,
-        applicable_period_ids: applicablePeriods.length > 0 ? applicablePeriods : undefined,
-      });
+      onAdd(buildDiscountCreatePayload(values));
     }
   };
 

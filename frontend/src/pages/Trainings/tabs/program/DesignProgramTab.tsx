@@ -173,12 +173,10 @@ export default function DesignProgramTab({ year }: Props) {
       data: { location_id?: string | null; placement_type?: string; start_date?: string };
     }) => {
       if (!programYear) throw new Error('No program year');
-      console.log('Updating placement:', placementId, data);
       const res = await api.put<ProgramYearTraining>(
         `/trainings/programs/years/${programYear.id}/trainings/${placementId}`,
         data
       );
-      console.log('Update result:', res.data);
       return res.data;
     },
     onSuccess: () => {

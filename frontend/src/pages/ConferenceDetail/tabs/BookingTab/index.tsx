@@ -1,19 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import type {
   BookingPeriod,
-  BookingPeriodCreate,
-  BookingOptionCreate,
   BookingPackage,
-  BookingPackageCreate,
   BookingMatrix,
   PlatformCurrency,
   PaginatedResponse,
   DiscountCode,
-  DiscountCodeCreate,
-  BulkDiscountCodeCreate,
 } from '../../../../types';
 import { parseApiError } from '../../../../utils/apiError';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
@@ -28,6 +23,7 @@ import AddPeriodModal from './AddPeriodModal';
 import PackageModal from './PackageModal';
 import DiscountModal from './DiscountModal';
 import BulkDiscountModal from './BulkDiscountModal';
+import { useBookingMutations } from './useBookingMutations';
 
 interface BookingTabProps {
   conferenceId: string;
@@ -125,14 +121,6 @@ function ConferenceBookingTab({
     },
   });
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.booking.matrix(conferenceId) });
-  };
-
-  const invalidateDiscounts = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.booking.discountCodes(conferenceId) });
-  };
-
   // Fetch discount codes
   const { data: discountCodes } = useQuery({
     queryKey: queryKeys.booking.discountCodes(conferenceId),
@@ -145,166 +133,31 @@ function ConferenceBookingTab({
     },
   });
 
-  // --- Period mutations ---
-  const createPeriodMutation = useMutation({
-    mutationFn: async (data: BookingPeriodCreate) => {
-      await api.post(`/conferences/${conferenceId}/settings/booking-periods`, data);
-    },
-    onSuccess: () => {
-      invalidate();
-      setShowAddPeriod(false);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  const updatePeriodMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
-      await api.put(`/conferences/${conferenceId}/settings/booking-periods/${id}`, data);
-    },
-    onSuccess: () => {
-      invalidate();
-      setEditingPeriodId(null);
-      setApiError('');
-    },
-    onError: (error: unknown) => setApiError(parseApiError(error)),
-  });
-
-  const deletePeriodMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/conferences/${conferenceId}/settings/booking-periods/${id}`);
-    },
-    onSuccess: () => {
-      invalidate();
-      setDeleteTarget(null);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  // --- Option mutations ---
-  const createOptionMutation = useMutation({
-    mutationFn: async (data: BookingOptionCreate) => {
-      await api.post(`/conferences/${conferenceId}/settings/booking-options`, data);
-    },
-    onSuccess: () => {
-      invalidate();
-      setShowAddOption(false);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  const deleteOptionMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/conferences/${conferenceId}/settings/booking-options/${id}`);
-    },
-    onSuccess: () => {
-      invalidate();
-      setDeleteTarget(null);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  const updateOptionMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
-      await api.put(`/conferences/${conferenceId}/settings/booking-options/${id}`, data);
-    },
-    onSuccess: () => {
-      invalidate();
-      // Option name syncs to program day name on the backend, so refresh program days too
-      queryClient.invalidateQueries({ queryKey: queryKeys.program.days(conferenceId) });
-      setEditingOptionId(null);
-      setApiError('');
-    },
-    onError: (error: unknown) => setApiError(parseApiError(error)),
-  });
-
-  // --- Discount code mutations ---
-  const createDiscountMutation = useMutation({
-    mutationFn: async (data: DiscountCodeCreate) => {
-      await api.post(`/conferences/${conferenceId}/settings/discount-codes`, data);
-    },
-    onSuccess: () => {
-      invalidateDiscounts();
-      setShowAddDiscount(false);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  const updateDiscountMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
-      await api.put(`/conferences/${conferenceId}/settings/discount-codes/${id}`, data);
-    },
-    onSuccess: () => {
-      invalidateDiscounts();
-      setEditingDiscount(null);
-      setApiError('');
-    },
-    onError: (error: unknown) => setApiError(parseApiError(error)),
-  });
-
-  const deleteDiscountMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/conferences/${conferenceId}/settings/discount-codes/${id}`);
-    },
-    onSuccess: () => {
-      invalidateDiscounts();
-      setDeleteTarget(null);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  const bulkCreateDiscountMutation = useMutation({
-    mutationFn: async (data: BulkDiscountCodeCreate) => {
-      await api.post(`/conferences/${conferenceId}/settings/discount-codes/bulk`, data);
-    },
-    onSuccess: () => {
-      invalidateDiscounts();
-      setShowBulkDiscount(false);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  // --- Package mutations ---
-  const createPackageMutation = useMutation({
-    mutationFn: async (data: BookingPackageCreate) => {
-      await api.post(`/conferences/${conferenceId}/settings/booking-packages`, data);
-    },
-    onSuccess: () => {
-      invalidate();
-      setShowAddPackage(false);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
-  });
-
-  const updatePackageMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
-      await api.put(`/conferences/${conferenceId}/settings/booking-packages/${id}`, data);
-    },
-    onSuccess: () => {
-      invalidate();
-      setEditingPackage(null);
-      setApiError('');
-    },
-    onError: (error: unknown) => setApiError(parseApiError(error)),
-  });
-
-  const deletePackageMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/conferences/${conferenceId}/settings/booking-packages/${id}`);
-    },
-    onSuccess: () => {
-      invalidate();
-      setDeleteTarget(null);
-      setApiError('');
-    },
-    onError: (error) => setApiError(parseApiError(error)),
+  const {
+    createPeriodMutation,
+    updatePeriodMutation,
+    deletePeriodMutation,
+    createOptionMutation,
+    deleteOptionMutation,
+    updateOptionMutation,
+    createDiscountMutation,
+    updateDiscountMutation,
+    deleteDiscountMutation,
+    bulkCreateDiscountMutation,
+    createPackageMutation,
+    updatePackageMutation,
+    deletePackageMutation,
+  } = useBookingMutations(conferenceId, setApiError, {
+    addPeriod: () => setShowAddPeriod(false),
+    editPeriod: () => setEditingPeriodId(null),
+    delete: () => setDeleteTarget(null),
+    addOption: () => setShowAddOption(false),
+    editOption: () => setEditingOptionId(null),
+    addDiscount: () => setShowAddDiscount(false),
+    editDiscount: () => setEditingDiscount(null),
+    bulkDiscount: () => setShowBulkDiscount(false),
+    addPackage: () => setShowAddPackage(false),
+    editPackage: () => setEditingPackage(null),
   });
 
   // --- Price cell update ---
