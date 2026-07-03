@@ -5,6 +5,12 @@ on:
   # branches also get CI. Including ``edited`` so retargeting a PR fires CI.
   pull_request:
     types: [opened, reopened, synchronize, edited, ready_for_review]
+  # Also run on pushes to main so coverage is tracked on the default branch
+  # (MAIN-13426). No PR context here, so the coverage-report job's sticky-comment
+  # step self-skips; the job summary + coverage artifacts are still produced,
+  # giving a post-merge coverage baseline for main.
+  push:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -130,8 +136,25 @@ jobs:
           REDIS_URL: redis://localhost:6379
           JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
           SUPER_ADMIN_PASSWORD: TestPassword123!
+          # Per-shard data file name so the four shards don't collide when the
+          # coverage-report job downloads and `coverage combine`s them. pytest-cov
+          # writes the combined-across-xdist-workers data to this path.
+          COVERAGE_FILE: .coverage.${{ matrix.shard }}
         run: |
-          pytest ${{ matrix.dirs }} -n auto --dist=worksteal --durations=50 -m "not slow"
+          # --cov-fail-under=0 overrides pyproject's fail_under=55 for the SHARD
+          # run: a shard executes only ~1/3 of the suite, so it can never hit the
+          # whole-suite threshold. Gating happens on the MERGED number in the
+          # coverage-report job, not here.
+          pytest ${{ matrix.dirs }} -n auto --dist=worksteal --durations=50 -m "not slow" \
+            --cov=app --cov-report= --cov-fail-under=0
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage-${{ matrix.shard }}
+          path: backend/.coverage.${{ matrix.shard }}
+          include-hidden-files: true
+          retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
   # Backend Tests — summary gate (preserves required status check)
@@ -194,8 +217,11 @@ jobs:
   # Frontend Tests — 3 parallel shards
   #
   # Vitest's --shard N/M splits the test suite by file across N
-  # runners. Coverage is skipped per-shard (merging across shards
-  # requires extra tooling and no threshold is enforced on frontend).
+  # runners. Each shard collects v8 coverage (json reporter →
+  # coverage-final.json) which the coverage-report job merges. Config
+  # thresholds are forced to 0 per-shard: a single shard only exercises
+  # 1/3 of the suite, so the real 60/61 floors would always "fail" here.
+  # Enforcement happens on the MERGED number in the coverage-report job.
   # ─────────────────────────────────────────────────────────────
   frontend-test-shard:
     name: Frontend Tests (shard ${{ matrix.shard }}/3)
@@ -216,7 +242,20 @@ jobs:
 
       - name: Run tests
         working-directory: frontend
-        run: pnpm exec vitest run --shard=${{ matrix.shard }}/3
+        run: |
+          pnpm exec vitest run --shard=${{ matrix.shard }}/3 \
+            --coverage --coverage.reporter=json \
+            --coverage.thresholds.statements=0 \
+            --coverage.thresholds.branches=0 \
+            --coverage.thresholds.functions=0 \
+            --coverage.thresholds.lines=0
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage-${{ matrix.shard }}
+          path: frontend/coverage/coverage-final.json
+          retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
   # Frontend Tests — summary gate (preserves required status check)
@@ -233,6 +272,143 @@ jobs:
             echo "One or more frontend test shards failed."
             exit 1
           fi
+
+  # ─────────────────────────────────────────────────────────────
+  # Coverage Report (MAIN-13426)
+  #
+  # Merges the per-shard coverage data uploaded by the backend (×4)
+  # and frontend (×3) test shards, publishes both percentages to the
+  # job summary + a sticky PR comment, and uploads the merged
+  # coverage.xml / lcov.info as artifacts. Enforces a temporary 30%
+  # floor on the MERGED numbers (MAIN-13453 ratchets it back toward the
+  # real 55% / 60-61% targets). Runs only when all shards pass (default
+  # `needs`), so the artifacts are guaranteed present.
+  # ─────────────────────────────────────────────────────────────
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [backend-test-shard, frontend-test-shard]
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-frontend
+
+      # ── Backend: combine the 4 shard data files ──
+      - name: Download backend coverage data
+        uses: actions/download-artifact@v7
+        with:
+          pattern: backend-coverage-*
+          path: backend/coverage-data
+          merge-multiple: true
+
+      - name: Merge backend coverage
+        id: backend
+        working-directory: backend
+        run: |
+          cp coverage-data/.coverage.* .
+          coverage combine
+          # --fail-under=0 overrides pyproject's fail_under=55: this ticket
+          # reports coverage, it does not gate on it. Without this, `xml`/`json`
+          # exit non-zero on any dip below 55 and fail the job.
+          coverage xml -o coverage.xml --fail-under=0
+          coverage json -o coverage.json --fail-under=0
+          PCT=$(python -c "import json; print(f\"{json.load(open('coverage.json'))['totals']['percent_covered']:.2f}\")")
+          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
+          echo "Backend coverage: $PCT%"
+
+      # ── Frontend: merge the 3 shard istanbul JSON files via nyc ──
+      - name: Download frontend coverage data
+        uses: actions/download-artifact@v7
+        with:
+          pattern: frontend-coverage-*
+          path: frontend/coverage-shards
+
+      - name: Merge frontend coverage
+        id: frontend
+        working-directory: frontend
+        run: |
+          # download-artifact keeps each shard in its own subdir; flatten to
+          # unique names so `nyc report -t` sees them all as one temp dir.
+          mkdir -p nyc-input
+          i=0
+          for f in coverage-shards/frontend-coverage-*/coverage-final.json; do
+            cp "$f" "nyc-input/coverage-$i.json"
+            i=$((i + 1))
+          done
+          npx -y nyc@17 report -t nyc-input \
+            --reporter=lcov --reporter=json-summary --report-dir=coverage-merged
+          PCT=$(node -e "console.log(require('./coverage-merged/coverage-summary.json').total.lines.pct.toFixed(2))")
+          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
+          echo "Frontend coverage: $PCT%"
+
+      # ── Publish ──
+      - name: Write job summary
+        run: |
+          {
+            echo "## 📊 Test Coverage"
+            echo ""
+            echo "| Stack | Coverage |"
+            echo "|-------|----------|"
+            echo "| Backend (\`app/\`) | ${{ steps.backend.outputs.pct }}% |"
+            echo "| Frontend (\`src/\`) | ${{ steps.frontend.outputs.pct }}% |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post coverage comment
+        # Same-repo PRs only — forked-PR runs get a read-only token, so the
+        # comment step would 403. Skip it there and rely on the artifacts.
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@v2
+        continue-on-error: true
+        with:
+          header: coverage-report
+          message: |
+            <!-- coverage-report -->
+            ## 📊 Test Coverage
+
+            | Stack | Coverage |
+            |-------|----------|
+            | Backend (`app/`) | **${{ steps.backend.outputs.pct }}%** |
+            | Frontend (`src/`) | **${{ steps.frontend.outputs.pct }}%** |
+
+            <sub>Temporary 30% floor enforced on the merged numbers (MAIN-13453 ratchets toward 55% / 60-61%). Full reports are attached as workflow artifacts.</sub>
+
+      - name: Upload merged coverage reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            backend/coverage.xml
+            frontend/coverage-merged/lcov.info
+          retention-days: 7
+
+      - name: Enforce temporary 30% coverage floor
+        # Soft floor on the MERGED numbers while coverage is improved
+        # (MAIN-13453). Runs LAST so the job summary, PR comment, and artifacts
+        # are always published even when the floor is not met. The real targets
+        # are higher (backend 55% per pyproject.toml, frontend 60/61% per
+        # vite.config.ts) — MAIN-13453 ratchets this back up. `below` uses awk
+        # because the percentages are floats. Gating on merged, never per-shard.
+        run: |
+          FLOOR=30
+          BE="${{ steps.backend.outputs.pct }}"
+          FE="${{ steps.frontend.outputs.pct }}"
+          echo "Backend merged: ${BE}% · Frontend merged: ${FE}% · floor: ${FLOOR}%"
+          below() { awk "BEGIN{exit !($1 < $2)}"; }
+          fail=0
+          if below "$BE" "$FLOOR"; then echo "::error::Backend coverage ${BE}% is below the ${FLOOR}% floor"; fail=1; fi
+          if below "$FE" "$FLOOR"; then echo "::error::Frontend coverage ${FE}% is below the ${FLOOR}% floor"; fail=1; fi
+          exit $fail
 
   # ─────────────────────────────────────────────────────────────
   # OpenAPI schema drift check
