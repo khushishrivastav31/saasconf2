@@ -594,7 +594,19 @@ def _render_items_table(line_items: list, currency: str = "EUR", settings: dict 
         discount = Decimal(str(item.get("discount", 0)))
         total = Decimal(str(item.get("total", 0)))
 
-        discount_display = f"-{format_amount(discount, fmt_settings)}{cur}" if discount > 0 else "-"
+        # A line carries either a fixed discount amount or a percentage. For a
+        # percentage line, derive the absolute amount so the printed column
+        # shows the reduction that the total already reflects.
+        discount_percentage = item.get("discount_percentage")
+        if discount_percentage:
+            pct = Decimal(str(discount_percentage))
+            derived = unit_price * Decimal(str(raw_qty)) * pct / Decimal("100")
+            pct_label = f"{pct.normalize():f}".rstrip(".")
+            discount_display = f"-{format_amount(derived, fmt_settings)}{cur} ({pct_label}%)"
+        elif discount > 0:
+            discount_display = f"-{format_amount(discount, fmt_settings)}{cur}"
+        else:
+            discount_display = "-"
 
         table += f"""
         <tr>

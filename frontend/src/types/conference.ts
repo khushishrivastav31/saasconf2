@@ -435,6 +435,8 @@ export interface InvoiceLineItem {
   quantity: number;
   unit_price: number;
   discount?: number;
+  /** Percentage discount (0–100). Mutually exclusive with `discount`. */
+  discount_percentage?: number | null;
   total: number;
 }
 

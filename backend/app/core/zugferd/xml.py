@@ -588,12 +588,22 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
     # ── BUILD LINE ITEMS (including per-line discounts) ──
     line_items = []
     for idx, item in enumerate(invoice.line_items or [], start=1):
+        item_quantity = float(item.get("quantity", 1))
+        item_unit_price = float(item.get("unit_price", 0))
+        # A line carries either a fixed discount amount or a percentage; when a
+        # percentage is set, derive the absolute line discount so EN16931 output
+        # is identical to the fixed-amount case (see build_zugferd_xml).
+        discount_percentage = item.get("discount_percentage")
+        if discount_percentage:
+            item_discount = item_unit_price * item_quantity * float(discount_percentage) / 100
+        else:
+            item_discount = float(item.get("discount", 0))
         line_item = {
             "line_id": str(idx),
             "name": item.get("description", f"Item {idx}"),
-            "quantity": float(item.get("quantity", 1)),
-            "unit_price": float(item.get("unit_price", 0)),
-            "discount": float(item.get("discount", 0)),
+            "quantity": item_quantity,
+            "unit_price": item_unit_price,
+            "discount": item_discount,
             "line_total": float(item.get("total", 0)),
             "tax_category": tax_category_code,
             "tax_percent": tax_rate,

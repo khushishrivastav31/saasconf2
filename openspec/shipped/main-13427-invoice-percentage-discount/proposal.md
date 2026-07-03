@@ -1,7 +1,7 @@
 # MAIN-13427: Amount- and percentage-based discount on invoice line items
 
 ## Status
-`draft` · Branch: _to be created on approval_ (`feat/invoice-line-item-percentage-discount`)
+`shipped` · Branch: `feat/invoice-line-item-percentage-discount`
 
 ## Methodology
 TDD — Red → Green → Refactor.

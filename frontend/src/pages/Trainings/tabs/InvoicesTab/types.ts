@@ -30,6 +30,8 @@ export interface LineItem {
   description: string;
   quantity: number;
   unit_price: number;
+  discount?: number;
+  discount_percentage?: number | null;
   total: number;
 }
 
@@ -37,4 +39,6 @@ export interface LineItemInput {
   description: string;
   quantity: string;
   unit_price: string;
+  discount?: string;
+  discount_percentage?: string;
 }

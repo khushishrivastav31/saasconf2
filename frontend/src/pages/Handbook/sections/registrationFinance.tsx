@@ -153,6 +153,7 @@ export const registrationFinanceCategory: HandbookCategory = {
 <strong>What you can do:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300">Create invoices with recipient details, line items, due date</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Line-item discounts</strong>: Each line takes either a fixed <em>Discount (amount)</em> off the line total or a <em>Discount %</em> (0–100) — the two are mutually exclusive (entering one clears the other). The line total, subtotal, and invoice total update automatically. Percentage discounts also apply to training invoices and are serialized correctly into ZUGFeRD/Factur-X e-invoice XML.</li>
 <li class="text-gray-700 dark:text-gray-300">Search recipients from sponsors, speakers, registrations</li>
 <li class="text-gray-700 dark:text-gray-300">Send invoices (generates number, creates payment link for credit card, emails PDF)</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Replace Invoice</strong>: Correct billing info on sent invoices (original cancelled with credit note, new invoice created with corrected data — all registrations stay linked)</li>

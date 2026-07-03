@@ -55,7 +55,10 @@ export default function InvoiceLineItemsEditor({
                   Unit Price
                 </th>
                 <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">
-                  Discount
+                  Discount (amount)
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-24">
+                  Discount %
                 </th>
                 <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">
                   Total
@@ -100,9 +103,22 @@ export default function InvoiceLineItemsEditor({
                       type="number"
                       step="0.01"
                       min="0"
-                      className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      disabled={!!item.discount_percentage}
+                      className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       value={item.discount ?? 0}
                       onChange={(e) => onUpdateItem(index, 'discount', e.target.value)}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      disabled={!!item.discount}
+                      className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={item.discount_percentage ?? ''}
+                      onChange={(e) => onUpdateItem(index, 'discount_percentage', e.target.value)}
                     />
                   </td>
                   <td className="px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-gray-100">

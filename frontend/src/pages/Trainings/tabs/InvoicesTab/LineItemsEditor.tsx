@@ -1,4 +1,5 @@
 import type { LineItemInput } from './types';
+import { lineItemTotal } from '../../../../utils/lineItemTotal';
 
 export default function LineItemsEditor({
   items,
@@ -11,9 +12,22 @@ export default function LineItemsEditor({
 }) {
   const sym = currency === 'EUR' ? '€' : currency || '';
   const update = (idx: number, field: keyof LineItemInput, value: string) =>
-    onChange(items.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
+    onChange(
+      items.map((it, i) => {
+        if (i !== idx) return it;
+        const next = { ...it, [field]: value };
+        // Amount and percentage discounts are mutually exclusive.
+        if (field === 'discount' && value) next.discount_percentage = '';
+        if (field === 'discount_percentage' && value) next.discount = '';
+        return next;
+      })
+    );
   const remove = (idx: number) => onChange(items.filter((_, i) => i !== idx));
-  const add = () => onChange([...items, { description: '', quantity: '1', unit_price: '' }]);
+  const add = () =>
+    onChange([
+      ...items,
+      { description: '', quantity: '1', unit_price: '', discount: '', discount_percentage: '' },
+    ]);
 
   return (
     <div>
@@ -30,6 +44,12 @@ export default function LineItemsEditor({
               Unit Price
             </th>
             <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-24">
+              Discount (amount)
+            </th>
+            <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-20">
+              Discount %
+            </th>
+            <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-24">
               Total
             </th>
             <th className="py-2 w-8" />
@@ -37,7 +57,12 @@ export default function LineItemsEditor({
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {items.map((it, i) => {
-            const rowTotal = (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0);
+            const rowTotal = lineItemTotal(
+              parseFloat(it.quantity) || 0,
+              parseFloat(it.unit_price) || 0,
+              parseFloat(it.discount || '') || 0,
+              parseFloat(it.discount_percentage || '') || 0
+            );
             return (
               <tr key={i}>
                 <td className="py-1.5 pr-2">
@@ -64,6 +89,31 @@ export default function LineItemsEditor({
                     onChange={(e) => update(i, 'unit_price', e.target.value)}
                     placeholder="0.00"
                     className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 dark:text-gray-100 text-right"
+                  />
+                </td>
+                <td className="py-1.5 pr-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={it.discount ?? ''}
+                    disabled={!!it.discount_percentage}
+                    onChange={(e) => update(i, 'discount', e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 dark:text-gray-100 text-right disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </td>
+                <td className="py-1.5 pr-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={it.discount_percentage ?? ''}
+                    disabled={!!it.discount}
+                    onChange={(e) => update(i, 'discount_percentage', e.target.value)}
+                    placeholder="0"
+                    className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 dark:text-gray-100 text-right disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </td>
                 <td className="py-1.5 text-right tabular-nums text-gray-700 dark:text-gray-300 whitespace-nowrap">

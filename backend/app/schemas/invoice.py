@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.validators import validate_email
 from app.schemas.location import LocationContactPerson, validate_vat
@@ -21,8 +21,16 @@ class InvoiceLineItem(BaseModel):
     description: str = Field(..., min_length=1, max_length=500)
     quantity: float = Field(..., ge=0)
     unit_price: float = Field(..., ge=0)
-    discount: float = Field(default=0.0, ge=0)
+    discount: float = Field(default=0.0, ge=0)  # fixed amount off the line total
+    discount_percentage: float | None = Field(default=None, ge=0, le=100)  # percentage off the line
     total: float = Field(...)  # No ge=0: credit notes have negative totals
+
+    @model_validator(mode="after")
+    def _one_discount_kind(self) -> "InvoiceLineItem":
+        """Reject setting both a fixed and a percentage discount on one line."""
+        if self.discount and self.discount_percentage:
+            raise ValueError("Set either discount or discount_percentage, not both")
+        return self
 
 
 class InvoiceCreate(BaseModel):

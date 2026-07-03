@@ -7,6 +7,7 @@ import VatNumberInput from '../../../../components/common/VatNumberInput';
 import { validateEmail } from '../../../../utils/validators';
 import type { LineItemInput } from './types';
 import LineItemsEditor, { InvoiceTotalsEditor } from './LineItemsEditor';
+import { lineItemTotal } from '../../../../utils/lineItemTotal';
 
 export default function CreateForm({
   onBack,
@@ -33,13 +34,20 @@ export default function CreateForm({
   const [taxRate, setTaxRate] = useState('0');
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState<LineItemInput[]>([
-    { description: '', quantity: '1', unit_price: '' },
+    { description: '', quantity: '1', unit_price: '', discount: '', discount_percentage: '' },
   ]);
 
   const subtotal = useMemo(
     () =>
       lineItems.reduce(
-        (s, it) => s + (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0),
+        (s, it) =>
+          s +
+          lineItemTotal(
+            parseFloat(it.quantity) || 0,
+            parseFloat(it.unit_price) || 0,
+            parseFloat(it.discount || '') || 0,
+            parseFloat(it.discount_percentage || '') || 0
+          ),
         0
       ),
     [lineItems]
@@ -68,12 +76,20 @@ export default function CreateForm({
         currency: currency || null,
         line_items: lineItems
           .filter((it) => it.description.trim())
-          .map((it) => ({
-            description: it.description,
-            quantity: parseFloat(it.quantity) || 1,
-            unit_price: parseFloat(it.unit_price) || 0,
-            total: (parseFloat(it.quantity) || 1) * (parseFloat(it.unit_price) || 0),
-          })),
+          .map((it) => {
+            const quantity = parseFloat(it.quantity) || 1;
+            const unitPrice = parseFloat(it.unit_price) || 0;
+            const discount = parseFloat(it.discount || '') || 0;
+            const discountPercentage = parseFloat(it.discount_percentage || '') || 0;
+            return {
+              description: it.description,
+              quantity,
+              unit_price: unitPrice,
+              discount: discountPercentage ? 0 : discount,
+              discount_percentage: discountPercentage || null,
+              total: lineItemTotal(quantity, unitPrice, discount, discountPercentage),
+            };
+          }),
         subtotal: subtotal.toFixed(2),
         tax_rate: (parseFloat(taxRate) || 0).toFixed(2),
         tax_amount: taxAmount.toFixed(2),

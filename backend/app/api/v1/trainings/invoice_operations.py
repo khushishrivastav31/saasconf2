@@ -22,6 +22,7 @@ from app.core.training_stripe_helper import (
 )
 from app.models.tenant import Tenant
 from app.models.training_invoice import TrainingInvoice
+from app.schemas.invoice import InvoiceLineItem
 
 from ._invoice_helpers import CANCELLABLE_STATUSES, build_credit_note, invoice_to_dict
 
@@ -45,7 +46,7 @@ class UpdateDraftInvoiceRequest(BaseModel):
     recipient_country: str | None = None
     recipient_vat_number: str | None = None
     payment_method: str | None = None
-    line_items: list[dict] | None = None
+    line_items: list[InvoiceLineItem] | None = None
     subtotal: float | None = None
     tax_rate: float | None = None
     tax_amount: float | None = None
@@ -69,7 +70,7 @@ class CreateTrainingInvoiceRequest(BaseModel):
     recipient_country: str | None = None
     recipient_vat_number: str | None = None
     payment_method: str | None = None
-    line_items: list[dict] = []
+    line_items: list[InvoiceLineItem] = []
     subtotal: float | None = None
     tax_rate: float | None = None
     tax_amount: float | None = None
@@ -369,7 +370,7 @@ async def create_training_invoice(
         recipient_country=data.recipient_country,
         recipient_vat_number=data.recipient_vat_number,
         payment_method=data.payment_method,
-        line_items=data.line_items,
+        line_items=[li.model_dump(mode="json") for li in data.line_items],
         subtotal=Decimal(str(data.subtotal)) if data.subtotal is not None else None,
         tax_rate=Decimal(str(data.tax_rate)) if data.tax_rate is not None else None,
         tax_amount=Decimal(str(data.tax_amount)) if data.tax_amount is not None else None,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { lineItemTotal } from '../../../../utils/lineItemTotal';
 import type {
   Conference,
   Invoice,
@@ -78,7 +79,14 @@ export function useInvoiceCreateForm({ conference, taxInfo, createMutation }: Op
   const addLineItem = () => {
     const items: InvoiceLineItem[] = [
       ...(createForm.line_items || []),
-      { description: '', quantity: 1, unit_price: 0, discount: 0, total: 0 },
+      {
+        description: '',
+        quantity: 1,
+        unit_price: 0,
+        discount: 0,
+        discount_percentage: null,
+        total: 0,
+      },
     ];
     setCreateForm({ ...createForm, line_items: items });
   };
@@ -101,13 +109,22 @@ export function useInvoiceCreateForm({ conference, taxInfo, createMutation }: Op
     } else if (field === 'unit_price') {
       item.unit_price = numVal;
     } else if (field === 'discount') {
+      // Amount and percentage discounts are mutually exclusive.
       item.discount = numVal;
+      if (numVal) item.discount_percentage = null;
+    } else if (field === 'discount_percentage') {
+      item.discount_percentage = numVal || null;
+      if (numVal) item.discount = 0;
     } else if (field === 'total') {
       item.total = numVal;
     }
 
-    item.total = item.quantity * item.unit_price - (item.discount || 0);
-    if (item.total < 0) item.total = 0;
+    item.total = lineItemTotal(
+      item.quantity,
+      item.unit_price,
+      item.discount,
+      item.discount_percentage
+    );
     items[index] = item;
 
     const totals = recalcTotals(items, createForm.tax_rate || 0);

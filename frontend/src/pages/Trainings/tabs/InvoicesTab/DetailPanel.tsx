@@ -5,6 +5,7 @@ import type { TrainingInvoice, LineItem, LineItemInput } from './types';
 import { formatDate, formatAmount, StatusBadge, TypeBadge } from './formatters';
 import LineItemsEditor, { InvoiceTotalsEditor } from './LineItemsEditor';
 import DraftDetailsEditor from './DraftDetailsEditor';
+import { lineItemTotal } from '../../../../utils/lineItemTotal';
 
 function ConfirmDialog({
   message,
@@ -93,6 +94,8 @@ function DetailPanel({
       description: li.description,
       quantity: String(li.quantity),
       unit_price: String(li.unit_price),
+      discount: li.discount ? String(li.discount) : '',
+      discount_percentage: li.discount_percentage ? String(li.discount_percentage) : '',
     }))
   );
   const [editTaxRate, setEditTaxRate] = useState(
@@ -102,7 +105,14 @@ function DetailPanel({
   const editSubtotal = useMemo(
     () =>
       editLineItems.reduce(
-        (s, li) => s + (parseFloat(li.quantity) || 0) * (parseFloat(li.unit_price) || 0),
+        (s, li) =>
+          s +
+          lineItemTotal(
+            parseFloat(li.quantity) || 0,
+            parseFloat(li.unit_price) || 0,
+            parseFloat(li.discount || '') || 0,
+            parseFloat(li.discount_percentage || '') || 0
+          ),
         0
       ),
     [editLineItems]
@@ -126,12 +136,20 @@ function DetailPanel({
     notes: editNotes || null,
     line_items: editLineItems
       .filter((li) => li.description.trim())
-      .map((li) => ({
-        description: li.description,
-        quantity: parseFloat(li.quantity) || 1,
-        unit_price: parseFloat(li.unit_price) || 0,
-        total: (parseFloat(li.quantity) || 1) * (parseFloat(li.unit_price) || 0),
-      })),
+      .map((li) => {
+        const quantity = parseFloat(li.quantity) || 1;
+        const unitPrice = parseFloat(li.unit_price) || 0;
+        const discount = parseFloat(li.discount || '') || 0;
+        const discountPercentage = parseFloat(li.discount_percentage || '') || 0;
+        return {
+          description: li.description,
+          quantity,
+          unit_price: unitPrice,
+          discount: discountPercentage ? 0 : discount,
+          discount_percentage: discountPercentage || null,
+          total: lineItemTotal(quantity, unitPrice, discount, discountPercentage),
+        };
+      }),
     subtotal: editSubtotal,
     tax_rate: parseFloat(editTaxRate) || 0,
     tax_amount: editTaxAmount,

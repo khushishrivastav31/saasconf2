@@ -17560,9 +17560,7 @@ export type components = {
        * Line Items
        * @default []
        */
-      line_items?: {
-        [key: string]: unknown;
-      }[];
+      line_items?: components['schemas']['InvoiceLineItem'][];
       /** Subtotal */
       subtotal?: number | null;
       /** Tax Rate */
@@ -19375,6 +19373,8 @@ export type components = {
        * @default 0
        */
       discount?: number;
+      /** Discount Percentage */
+      discount_percentage?: number | null;
       /** Total */
       total: number;
     };
@@ -28747,11 +28747,7 @@ export type components = {
       /** Payment Method */
       payment_method?: string | null;
       /** Line Items */
-      line_items?:
-        | {
-            [key: string]: unknown;
-          }[]
-        | null;
+      line_items?: components['schemas']['InvoiceLineItem'][] | null;
       /** Subtotal */
       subtotal?: number | null;
       /** Tax Rate */
