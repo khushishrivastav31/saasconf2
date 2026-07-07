@@ -34,7 +34,7 @@ python-stdnum = "2.2"
 schwifty = "2026.3.0"
 pycountry = "26.2.16"
 # PDF & document generation
-weasyprint = "68.1"
+weasyprint = "69.0"
 fpdf2 = "2.8.7"
 factur-x = "4.2"
 pypdf = "6.13.3"

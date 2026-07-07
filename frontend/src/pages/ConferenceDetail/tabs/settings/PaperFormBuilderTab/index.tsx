@@ -597,14 +597,17 @@ function PaperFormBuilderTab({
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <div className="grid grid-cols-12 gap-4" style={{ minHeight: '600px' }}>
+              <div
+                className="grid grid-cols-1 lg:grid-cols-12 gap-4"
+                style={{ minHeight: '600px' }}
+              >
                 {/* Left: Field Palette */}
-                <div className="col-span-3">
+                <div className="lg:col-span-3">
                   <FieldPalette onAddField={handleAddField} isAdmin={isAdmin} />
                 </div>
 
                 {/* Center: Unified Form Canvas */}
-                <div className="col-span-6">
+                <div className="lg:col-span-6">
                   <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 h-full">
                     <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
                       Form Fields
@@ -659,7 +662,7 @@ function PaperFormBuilderTab({
                 </div>
 
                 {/* Right: Field Properties */}
-                <div className="col-span-3">
+                <div className="lg:col-span-3">
                   {selectedBuiltinKey ? (
                     <BuiltinHelpTextPanel
                       fieldKey={selectedBuiltinKey}

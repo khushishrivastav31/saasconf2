@@ -89,7 +89,7 @@ export default function UnifiedFieldCard({
       ref={setNodeRef}
       style={style}
       className={`
-        flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
+        flex items-center gap-3 flex-wrap p-3 rounded-lg border cursor-pointer transition-all
         ${
           isSelected
             ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
@@ -174,7 +174,7 @@ export default function UnifiedFieldCard({
 
       {/* Quick toggles for built-in fields */}
       {isBuiltin && isAdmin && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           <label className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <input
               type="checkbox"
