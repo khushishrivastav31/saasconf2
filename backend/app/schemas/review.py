@@ -206,6 +206,8 @@ class PaperReviewResponse(BaseModel):
     must_have: bool = False
     answers: list[ReviewAnswerResponse]
     submitted_at: datetime | None
+    last_edited_at: datetime | None = None
+    edit_count: int = 0
     created_at: datetime
     updated_at: datetime
 

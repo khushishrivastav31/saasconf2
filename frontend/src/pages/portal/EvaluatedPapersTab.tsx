@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import portalApi from '../../config/portalApi';
 import type { PortalAssignedPaperListResponse, PortalAssignedPaper } from '../../types/portal';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
@@ -8,7 +8,13 @@ import ReviewForm from '../../components/portal/ReviewForm';
 import { PAPER_STATUS_COLORS, LEVEL_LABELS } from '../../config/statusColors';
 import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
 
-function EvaluatedPaperCard({ paper }: { paper: PortalAssignedPaper }) {
+function EvaluatedPaperCard({
+  paper,
+  onReviewSubmitted,
+}: {
+  paper: PortalAssignedPaper;
+  onReviewSubmitted: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const videoSrc = usePortalAuthMedia(paper.video_url ?? null);
   const [mediaPreview, setMediaPreview] = useState<{ open: boolean; src: string | null }>({
@@ -207,7 +213,7 @@ function EvaluatedPaperCard({ paper }: { paper: PortalAssignedPaper }) {
             )}
 
             <div className="border-t border-gray-300 dark:border-gray-600 my-4" />
-            <ReviewForm assignmentId={paper.assignment_id} />
+            <ReviewForm assignmentId={paper.assignment_id} onReviewSubmitted={onReviewSubmitted} />
           </div>
         )}
       </div>
@@ -224,6 +230,7 @@ function EvaluatedPaperCard({ paper }: { paper: PortalAssignedPaper }) {
 }
 
 export default function EvaluatedPapersTab() {
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['portal-assigned-papers'],
     queryFn: async () => {
@@ -302,7 +309,14 @@ export default function EvaluatedPapersTab() {
           )}
           <div className="space-y-3">
             {group.papers.map((paper) => (
-              <EvaluatedPaperCard key={paper.id} paper={paper} />
+              <EvaluatedPaperCard
+                key={paper.id}
+                paper={paper}
+                onReviewSubmitted={() => {
+                  queryClient.invalidateQueries({ queryKey: ['portal-assigned-papers'] });
+                  queryClient.invalidateQueries({ queryKey: ['portal-pending-assignments'] });
+                }}
+              />
             ))}
           </div>
         </div>

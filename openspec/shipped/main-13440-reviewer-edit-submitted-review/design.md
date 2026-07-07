@@ -19,14 +19,24 @@ ideally "edited after paper decision") on the review, e.g. a small badge in
 
 ## Backend change
 
+**Refinement (2026-07-03, second pass)**: there's no "save as draft" path
+once a review is submitted — the edit UI only offers resubmit. So the guard
+narrows rather than disappears: `submit=false` against an already-submitted
+review stays blocked (as today); only `submit=true` bypasses the rejection.
+This also sidesteps a real footgun — if a draft-save were allowed here, it
+would flip `review.status` back to `draft` (see the `else` branch further
+down in the same handler), silently pulling an already-submitted review out
+of the submitted-count and out of speaker-feedback visibility, even on an
+already-decided paper.
+
 ```python
-# reviews.py, remove the blanket rejection at line 272-273 entirely —
-# no paper-status check; every write also stamps the audit fields:
+# reviews.py, line 272-273 — narrow, don't remove:
 if review and review.status == ReviewStatus.SUBMITTED.value:
+    if not submit:
+        raise HTTPException(status_code=400, detail="Review has already been submitted")
     review.last_edited_at = datetime.utcnow()
     review.edit_count = (review.edit_count or 0) + 1
-    # allow the write to proceed (re-submit / re-draft), regardless of
-    # paper.status
+    # allow the resubmit to proceed regardless of paper.status
 ```
 
 Re-submitting a review needs to re-run whatever aggregate/must-have
@@ -49,7 +59,8 @@ that code during implementation.
 ## Frontend toggle
 
 `ReviewForm.tsx`'s existing `EditableCriterionSection` (draft-editing UI)
-already exists — the "Edit" button on the read-only submitted view just
-needs to flip a local `isEditing` state to reuse that same editable UI and
-its existing draft-save/submit mutation, rather than building new form
-components.
+already exists — the "Edit" button on the read-only submitted view flips a
+local `isEditing` state to reuse that same editable UI and its existing
+submit mutation. In this edit-after-submit state, hide/disable the
+"Save Draft" action — only "Resubmit" is offered, matching the narrowed
+backend guard above.

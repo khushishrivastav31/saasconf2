@@ -209,6 +209,8 @@ async def get_review_config(
                 for a in review.answers
             ],
             submitted_at=review.submitted_at,
+            last_edited_at=review.last_edited_at,
+            edit_count=review.edit_count,
         )
 
     return PortalReviewConfigResponse(
@@ -270,7 +272,12 @@ async def submit_or_save_review(
     review = review_result.scalar_one_or_none()
 
     if review and review.status == ReviewStatus.SUBMITTED.value:
-        raise HTTPException(status_code=400, detail="Review has already been submitted")
+        if not submit:
+            raise HTTPException(status_code=400, detail="Review has already been submitted")
+        # Editing an already-submitted review is allowed (resubmit only,
+        # regardless of the paper's current status) — audit the edit.
+        review.last_edited_at = utcnow()
+        review.edit_count = (review.edit_count or 0) + 1
 
     if not review:
         review = PaperReview(

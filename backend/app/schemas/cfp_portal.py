@@ -488,6 +488,8 @@ class PortalExistingReviewResponse(BaseModel):
     must_have: bool = False
     answers: list[PortalReviewAnswerResponse] = []
     submitted_at: datetime | None = None
+    last_edited_at: datetime | None = None
+    edit_count: int = 0
 
 
 class PortalReviewFormSettingsResponse(BaseModel):

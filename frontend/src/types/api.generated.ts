@@ -21470,6 +21470,13 @@ export type components = {
        * @default false
        */
       must_have?: boolean;
+      /** Last Edited At */
+      last_edited_at?: string | null;
+      /**
+       * Edit Count
+       * @default 0
+       */
+      edit_count?: number;
     };
     /**
      * PaperStats
@@ -22435,6 +22442,13 @@ export type components = {
       answers?: components['schemas']['PortalReviewAnswerResponse'][];
       /** Submitted At */
       submitted_at?: string | null;
+      /** Last Edited At */
+      last_edited_at?: string | null;
+      /**
+       * Edit Count
+       * @default 0
+       */
+      edit_count?: number;
     };
     /** PortalExpenseCreate */
     PortalExpenseCreate: {

@@ -1916,7 +1916,7 @@ class TestPortalSubmitReview:
         assert "review_id" in data
 
     @pytest.mark.asyncio
-    async def test_submit_review_cannot_resubmit(
+    async def test_submit_review_can_resubmit_with_valid_feedback(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -1929,7 +1929,9 @@ class TestPortalSubmitReview:
         in_eval_paper: CFPPaper,
         review_setup: dict,
     ) -> None:
-        """Cannot submit a review that has already been submitted."""
+        """Resubmitting (editing) an already-submitted review succeeds and
+        stamps the audit fields (MAIN-13440); normal submit validation
+        (e.g. minimum feedback length) still applies on the resubmit."""
         assignment = CFPPaperAssignment(
             id=uuid.uuid4(),
             tenant_id=tenant.id,
@@ -1953,7 +1955,9 @@ class TestPortalSubmitReview:
         await db_session.commit()
 
         token = create_applicant_access_token(reviewer_applicant.id, tenant.id)
-        resp = await client.post(
+
+        # Too-short feedback still fails validation on a resubmit
+        short_resp = await client.post(
             f"/api/v1/portal/assignments/{assignment.id}/review?submit=true",
             json={
                 "answers": [],
@@ -1961,7 +1965,23 @@ class TestPortalSubmitReview:
             },
             headers=auth_headers(token),
         )
-        assert resp.status_code == 400
+        assert short_resp.status_code == 422
+
+        # Valid resubmit succeeds and stamps the audit fields
+        resp = await client.post(
+            f"/api/v1/portal/assignments/{assignment.id}/review?submit=true",
+            json={
+                "answers": [],
+                "speaker_feedback": "A" * 200,
+            },
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "submitted"
+
+        await db_session.refresh(review)
+        assert review.edit_count == 1
+        assert review.last_edited_at is not None
 
     @pytest.mark.asyncio
     async def test_save_draft_then_submit(

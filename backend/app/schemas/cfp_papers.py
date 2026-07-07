@@ -182,6 +182,8 @@ class PaperReviewSummary(BaseModel):
     total_score: float | None = None
     internal_comment: str | None = None
     must_have: bool = False
+    last_edited_at: datetime | None = None
+    edit_count: int = 0
 
 
 class PaperResponse(BaseModel):

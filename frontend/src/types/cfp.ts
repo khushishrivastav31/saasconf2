@@ -314,6 +314,8 @@ export interface PaperReviewSummary {
   total_score: number | null;
   internal_comment: string | null;
   must_have: boolean;
+  last_edited_at: string | null;
+  edit_count: number;
 }
 
 export interface Paper {

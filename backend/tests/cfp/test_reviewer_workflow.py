@@ -28,6 +28,7 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import create_applicant_access_token
@@ -688,14 +689,16 @@ class TestReviewSubmission:
         assert data["status"] == "submitted"
         assert data["total_score"] is None
 
-    async def test_cannot_resubmit_an_already_submitted_review(
+    async def test_can_resubmit_an_already_submitted_review(
         self,
         client: AsyncClient,
         reviewer_token: str,
         assignment: CFPPaperAssignment,
         review_setup: tuple,
     ) -> None:
-        """A second submission attempt on a submitted review returns 400."""
+        """Resubmitting (submit=true) an already-submitted review succeeds and
+        updates the stored content — a reviewer editing their own submitted
+        review re-uses this same endpoint (MAIN-13440)."""
         _scale, option, _criterion, question = review_setup
         payload = {
             "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
@@ -710,15 +713,29 @@ class TestReviewSubmission:
         )
         assert resp1.status_code == 200
         assert resp1.json()["status"] == "submitted"
+        review_id = resp1.json()["review_id"]
 
-        # Duplicate submission attempt
+        # Re-submission with edited content succeeds
+        edited_payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "Edited after submission — " + VALID_FEEDBACK,
+        }
         resp2 = await client.post(
             f"{PORTAL_BASE}/assignments/{assignment.id}/review",
-            json=payload,
+            json=edited_payload,
             params={"submit": "true"},
             headers=auth_headers(reviewer_token),
         )
-        assert resp2.status_code == 400
+        assert resp2.status_code == 200
+        assert resp2.json()["status"] == "submitted"
+        assert resp2.json()["review_id"] == review_id
+
+        config_resp = await client.get(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review-config",
+            headers=auth_headers(reviewer_token),
+        )
+        existing = config_resp.json()["existing_review"]
+        assert existing["speaker_feedback"] == "Edited after submission — " + VALID_FEEDBACK
 
     async def test_can_save_draft_multiple_times(
         self,
@@ -1742,3 +1759,363 @@ class TestAssignedPaperSessionTypeDisplay:
         match = next((i for i in items if i["id"] == str(paper.id)), None)
         assert match is not None
         assert match["session_type_name"] is None
+
+
+# ── 10. Editing a submitted review after decision (MAIN-13440) ──────────────
+
+
+@pytest.mark.asyncio
+class TestEditSubmittedReview:
+    """A reviewer can resubmit (edit) their own submitted review at any time,
+    including after the paper reaches a final decision — every resubmit is
+    audited via last_edited_at/edit_count. There is no "save as draft" path
+    once submitted (submit=false stays blocked, see TestDraftUpdateCycle)."""
+
+    async def test_resubmit_survives_final_consideration_advance(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        paper: CFPPaper,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Single-reviewer paper auto-advances to final_consideration on the
+        first submit; resubmitting (editing) that same review still succeeds."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+        }
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+
+        await db_session.refresh(paper)
+        assert paper.status == PaperStatus.FINAL_CONSIDERATION.value
+
+        edited_payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "Revised — " + VALID_FEEDBACK,
+        }
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=edited_payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["status"] == "submitted"
+
+    async def test_resubmit_succeeds_on_accepted_paper(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        paper: CFPPaper,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """A reviewer can edit their submitted review even after the paper
+        has been formally accepted — no paper-status write guard."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+        }
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+
+        paper.status = PaperStatus.ACCEPTED.value
+        await db_session.commit()
+
+        edited_payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "Revised after acceptance — " + VALID_FEEDBACK,
+        }
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=edited_payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["status"] == "submitted"
+
+    async def test_resubmit_succeeds_on_rejected_paper(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        paper: CFPPaper,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """A reviewer can edit their submitted review even after the paper
+        has been formally rejected — no paper-status write guard."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+        }
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+
+        paper.status = PaperStatus.REJECTED.value
+        await db_session.commit()
+
+        edited_payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "Revised after rejection — " + VALID_FEEDBACK,
+        }
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=edited_payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["status"] == "submitted"
+
+    async def test_draft_save_still_blocked_after_submitted(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """submit=false against an already-submitted review still returns 400
+        — there is no "save as draft" path once submitted, only resubmit."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+        }
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "false"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp2.status_code == 400
+
+    async def test_resubmit_stamps_audit_fields(
+        self,
+        client: AsyncClient,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """last_edited_at/edit_count are absent/zero after the initial submit,
+        and only increment on a subsequent resubmit."""
+        _scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+        }
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+
+        config_resp1 = await client.get(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review-config",
+            headers=auth_headers(reviewer_token),
+        )
+        existing1 = config_resp1.json()["existing_review"]
+        assert existing1.get("edit_count", 0) == 0
+        assert existing1.get("last_edited_at") is None
+
+        edited_payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "First edit — " + VALID_FEEDBACK,
+        }
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=edited_payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp2.status_code == 200
+
+        config_resp2 = await client.get(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review-config",
+            headers=auth_headers(reviewer_token),
+        )
+        existing2 = config_resp2.json()["existing_review"]
+        assert existing2["edit_count"] == 1
+        assert existing2["last_edited_at"] is not None
+
+        # A second edit increments again
+        resp3 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=edited_payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp3.status_code == 200
+
+        config_resp3 = await client.get(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review-config",
+            headers=auth_headers(reviewer_token),
+        )
+        assert config_resp3.json()["existing_review"]["edit_count"] == 2
+
+    async def test_resubmit_updates_aggregate_score(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """Editing the selected answer and resubmitting recomputes total_score
+        to reflect the new selection."""
+        scale, option, _criterion, question = review_setup
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+        }
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+        original_score = resp1.json()["total_score"]
+
+        # Pick a different scale option (lowest value) to force a different score
+        other_options_result = await db_session.execute(
+            select(ReviewScaleOption).where(
+                ReviewScaleOption.scale_id == scale.id,
+                ReviewScaleOption.id != option.id,
+            )
+        )
+        other_option = other_options_result.scalars().first()
+        assert other_option is not None
+
+        edited_payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(other_option.id)}],
+            "speaker_feedback": "Changed my score — " + VALID_FEEDBACK,
+        }
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=edited_payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["total_score"] != original_score
+
+    async def test_resubmit_does_not_retrigger_status_advance(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant: Tenant,
+        conference: Conference,
+        paper: CFPPaper,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_setup: tuple,
+    ) -> None:
+        """With two reviewers assigned, the paper only advances to
+        final_consideration once both submit. Editing (resubmitting) one
+        reviewer's review afterward must not re-fire or disturb that
+        transition."""
+        _scale, option, _criterion, question = review_setup
+
+        # Second reviewer assigned to the same paper
+        second_reviewer = _make_applicant(tenant, "Second", "Reviewer")
+        db_session.add(second_reviewer)
+        await db_session.flush()
+
+        second_committee_member = CFPCommitteeMember(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            applicant_id=second_reviewer.id,
+            role="reviewer",
+        )
+        db_session.add(second_committee_member)
+        await db_session.flush()
+
+        second_assignment = CFPPaperAssignment(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            paper_id=paper.id,
+            committee_member_id=second_committee_member.id,
+        )
+        db_session.add(second_assignment)
+        await db_session.commit()
+
+        second_reviewer_token = create_applicant_access_token(second_reviewer.id, tenant.id)
+
+        payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": VALID_FEEDBACK,
+        }
+
+        # First reviewer submits — only 1/2, paper stays in_evaluation
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+        await db_session.refresh(paper)
+        assert paper.status == PaperStatus.IN_EVALUATION.value
+
+        # Second reviewer submits — 2/2, paper advances
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{second_assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(second_reviewer_token),
+        )
+        assert resp2.status_code == 200
+        await db_session.refresh(paper)
+        assert paper.status == PaperStatus.FINAL_CONSIDERATION.value
+
+        # First reviewer edits (resubmits) their own review
+        edited_payload = {
+            "answers": [{"question_id": str(question.id), "selected_option_id": str(option.id)}],
+            "speaker_feedback": "Edited after paper advanced — " + VALID_FEEDBACK,
+        }
+        resp3 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=edited_payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp3.status_code == 200
+
+        # Paper status is untouched by the edit — no re-trigger, no reset
+        await db_session.refresh(paper)
+        assert paper.status == PaperStatus.FINAL_CONSIDERATION.value

@@ -1,7 +1,7 @@
 # MAIN-13440: Reviewer can edit a submitted evaluation
 
 ## Status
-`draft` · Branch: _to be created on approval_ (`feat/reviewer-edit-submitted-review`)
+`shipped` · Branch: `feat/reviewer-edit-submitted-review`
 
 ## Methodology
 TDD — Red → Green → Refactor.
@@ -47,8 +47,12 @@ paper reaches a final decision (accepted/rejected) — no paper-status write
 guard. Every edit stamps an audit trail (`last_edited_at`/`edit_count`) so a
 post-decision edit is visible to admins even though it's not blocked.
 
-1. **Backend**: remove the submitted-review write guard entirely
-   (`reviews.py:272-273`), and stamp audit fields on every edit:
+1. **Backend**: narrow the submitted-review write guard (`reviews.py:272-273`)
+   to only block `submit=false` (save-as-draft); allow `submit=true`
+   (resubmit) unconditionally, and stamp audit fields on every resubmit.
+   There is no "save as draft" path once a review is submitted — the edit
+   flow only re-enables resubmit, so a submitted review can never be
+   silently un-submitted:
    - Add `PaperReview.last_edited_at: datetime | None` and
      `PaperReview.edit_count: int = 0` (small migration).
    - Re-running submitted-review edits must correctly re-evaluate the

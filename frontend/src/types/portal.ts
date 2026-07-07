@@ -405,6 +405,8 @@ export interface PortalExistingReview {
   must_have: boolean;
   answers: PortalReviewAnswer[];
   submitted_at: string | null;
+  last_edited_at: string | null;
+  edit_count: number;
 }
 
 export interface PortalReviewFormSettings {

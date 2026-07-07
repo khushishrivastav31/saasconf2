@@ -77,15 +77,15 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   const [formError, setFormError] = useState<string | null>(null);
   const [questionErrors, setQuestionErrors] = useState<Map<string, string>>(new Map());
   const [speakerFeedbackError, setSpeakerFeedbackError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  // Initialize form state from existing review or empty defaults
-  useEffect(() => {
-    if (!config) return;
+  const resetFromConfig = useCallback((cfg: PortalReviewConfig | undefined) => {
+    if (!cfg) return;
 
     const initial = new Map<string, AnswerState>();
 
     // Collect all question IDs from criteria
-    for (const criterion of config.criteria) {
+    for (const criterion of cfg.criteria) {
       for (const question of criterion.questions) {
         initial.set(question.id, {
           selected_option_id: null,
@@ -95,16 +95,16 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     }
 
     // Overlay existing review answers if present
-    if (config.existing_review) {
-      for (const ans of config.existing_review.answers) {
+    if (cfg.existing_review) {
+      for (const ans of cfg.existing_review.answers) {
         initial.set(ans.question_id, {
           selected_option_id: ans.selected_option_id ?? null,
           comment: ans.comment ?? '',
         });
       }
-      setSpeakerFeedback(config.existing_review.speaker_feedback ?? '');
-      setInternalComment(config.existing_review.internal_comment ?? '');
-      setMustHave(config.existing_review.must_have ?? false);
+      setSpeakerFeedback(cfg.existing_review.speaker_feedback ?? '');
+      setInternalComment(cfg.existing_review.internal_comment ?? '');
+      setMustHave(cfg.existing_review.must_have ?? false);
     } else {
       setSpeakerFeedback('');
       setInternalComment('');
@@ -112,7 +112,12 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     }
 
     setAnswers(initial);
-  }, [config]);
+  }, []);
+
+  // Initialize form state from existing review or empty defaults
+  useEffect(() => {
+    resetFromConfig(config);
+  }, [config, resetFromConfig]);
 
   const updateAnswer = useCallback((questionId: string, patch: Partial<AnswerState>) => {
     setAnswers((prev) => {
@@ -163,6 +168,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     },
     onSuccess: () => {
       setFormError(null);
+      setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: queryKeys.portal.reviewConfig(assignmentId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.portal.assignedPapers });
       onReviewSubmitted?.();
@@ -173,7 +179,8 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   });
 
   const isSubmitting = saveDraftMutation.isPending || submitMutation.isPending;
-  const isReadOnly = config?.existing_review?.status === 'submitted';
+  const isAlreadySubmitted = config?.existing_review?.status === 'submitted';
+  const isReadOnly = isAlreadySubmitted && !isEditing;
 
   // Sort criteria by display_order
   const sortedCriteria = useMemo(() => {
@@ -253,6 +260,18 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
               Submitted on {formatDateTime(existingReview.submitted_at)}
             </span>
           )}
+          {existingReview.edit_count > 0 && existingReview.last_edited_at && (
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Edited on {formatDateTime(existingReview.last_edited_at)}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="ml-auto inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Edit
+          </button>
         </div>
 
         {sortedCriteria.map((criterion) => (
@@ -391,21 +410,36 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <button
-          type="button"
-          onClick={() => saveDraftMutation.mutate()}
-          disabled={isSubmitting}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saveDraftMutation.isPending ? (
-            <>
-              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2" />
-              Saving...
-            </>
-          ) : (
-            'Save Draft'
-          )}
-        </button>
+        {isAlreadySubmitted ? (
+          <button
+            type="button"
+            onClick={() => {
+              resetFromConfig(config);
+              setFormError(null);
+              setIsEditing(false);
+            }}
+            disabled={isSubmitting}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => saveDraftMutation.mutate()}
+            disabled={isSubmitting}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saveDraftMutation.isPending ? (
+              <>
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2" />
+                Saving...
+              </>
+            ) : (
+              'Save Draft'
+            )}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -422,8 +456,10 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
           {submitMutation.isPending ? (
             <>
               <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-              Submitting...
+              {isAlreadySubmitted ? 'Saving...' : 'Submitting...'}
             </>
+          ) : isAlreadySubmitted ? (
+            'Save Changes'
           ) : (
             'Submit Review'
           )}

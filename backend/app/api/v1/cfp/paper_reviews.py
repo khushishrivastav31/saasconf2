@@ -93,6 +93,8 @@ async def get_paper_reviews(
                     for a in review.answers
                 ],
                 submitted_at=review.submitted_at,
+                last_edited_at=review.last_edited_at,
+                edit_count=review.edit_count,
                 created_at=review.created_at,
                 updated_at=review.updated_at,
             )

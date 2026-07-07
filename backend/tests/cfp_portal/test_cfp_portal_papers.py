@@ -1511,7 +1511,7 @@ class TestPortalReviews:
         assert data["total_score"] == 4.0
 
     @pytest.mark.asyncio
-    async def test_resubmit_review_fails(
+    async def test_resubmit_review_succeeds(
         self,
         client: AsyncClient,
         reviewer_applicant: CFPApplicant,
@@ -1519,7 +1519,8 @@ class TestPortalReviews:
         assignment: CFPPaperAssignment,
         review_criterion_with_question: tuple,
     ) -> None:
-        """Cannot modify a review that has already been submitted."""
+        """Resubmitting (submit=true) an already-submitted review succeeds —
+        a reviewer can edit their own submitted review (MAIN-13440)."""
         _criterion, question, _scale, option = review_criterion_with_question
         payload = {
             "answers": [
@@ -1540,11 +1541,50 @@ class TestPortalReviews:
         )
         assert resp1.status_code == 200
 
-        # Try to submit again
+        # Resubmitting (editing) succeeds
         resp2 = await client.post(
             f"{PORTAL_BASE}/assignments/{assignment.id}/review",
             json=payload,
             params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["status"] == "submitted"
+
+    @pytest.mark.asyncio
+    async def test_save_draft_after_submit_still_fails(
+        self,
+        client: AsyncClient,
+        reviewer_applicant: CFPApplicant,
+        reviewer_token: str,
+        assignment: CFPPaperAssignment,
+        review_criterion_with_question: tuple,
+    ) -> None:
+        """There is no 'save as draft' path once a review is submitted —
+        submit=false still returns 400."""
+        _criterion, question, _scale, option = review_criterion_with_question
+        payload = {
+            "answers": [
+                {
+                    "question_id": str(question.id),
+                    "selected_option_id": str(option.id),
+                }
+            ],
+            "speaker_feedback": "A" * 200,
+        }
+
+        resp1 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "true"},
+            headers=auth_headers(reviewer_token),
+        )
+        assert resp1.status_code == 200
+
+        resp2 = await client.post(
+            f"{PORTAL_BASE}/assignments/{assignment.id}/review",
+            json=payload,
+            params={"submit": "false"},
             headers=auth_headers(reviewer_token),
         )
         assert resp2.status_code == 400

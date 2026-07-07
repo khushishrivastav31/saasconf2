@@ -55,6 +55,7 @@ export const contentCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">Committee members review assigned papers through their portal</li>
 <li class="text-gray-700 dark:text-gray-300">They score papers using the configured Score Scales and Review Criteria</li>
 <li class="text-gray-700 dark:text-gray-300">Papers move to "Evaluated" status once all assigned reviews are complete</li>
+<li class="text-gray-700 dark:text-gray-300">A reviewer can click <strong>Edit</strong> on their own submitted review to revise and resubmit it at any time — even after the paper has been accepted or rejected. There is no "save as draft" step once submitted; edits go straight back to resubmit. Every edit is timestamped (visible to admins as an "Edited" badge in the paper's review list) so late changes to a decided paper stay auditable.</li>
 </ul>
 <strong>Phase 5 — Decision:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">

@@ -759,6 +759,142 @@ describe('ReviewForm', () => {
     });
   });
 
+  describe('editing a submitted review (MAIN-13440)', () => {
+    const submittedConfig: PortalReviewConfig = {
+      ...mockReviewConfig,
+      existing_review: {
+        id: 'review-123',
+        status: 'submitted',
+        total_score: 3.5,
+        speaker_feedback: 'A'.repeat(200),
+        internal_comment: 'Original internal comment',
+        must_have: false,
+        answers: [
+          { question_id: 'q-1', selected_option_id: 'opt-q-1-3', comment: null },
+          { question_id: 'q-2', selected_option_id: 'opt-q-2-3', comment: null },
+          { question_id: 'q-3', selected_option_id: 'opt-q-3-3', comment: null },
+        ],
+        submitted_at: '2024-01-15T10:30:00Z',
+        last_edited_at: null,
+        edit_count: 0,
+      },
+    };
+
+    it('shows an Edit button on a submitted review', async () => {
+      mockPortalApi.get.mockResolvedValueOnce({ data: submittedConfig });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      });
+    });
+
+    it('reveals the editable form pre-filled with existing content when Edit is clicked', async () => {
+      const user = userEvent.setup();
+      mockPortalApi.get.mockResolvedValueOnce({ data: submittedConfig });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+      // Editable form is now shown with pre-filled data
+      const richTextEditors = await screen.findAllByTestId('rich-text-editor');
+      expect(richTextEditors[0]).toHaveValue('A'.repeat(200));
+      expect(richTextEditors[1]).toHaveValue('Original internal comment');
+
+      const radioButtons = screen.getAllByRole('radio');
+      expect(radioButtons.some((r) => (r as HTMLInputElement).checked)).toBe(true);
+    });
+
+    it('offers Save Changes (not Save Draft) while editing a submitted review', async () => {
+      const user = userEvent.setup();
+      mockPortalApi.get.mockResolvedValueOnce({ data: submittedConfig });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: 'Save Draft' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    it('resubmits (submit=true) with the edited content when Save Changes is clicked', async () => {
+      const user = userEvent.setup();
+      mockPortalApi.get.mockResolvedValueOnce({ data: submittedConfig });
+      mockPortalApi.post.mockResolvedValueOnce({});
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+      const internalCommentEditor = (await screen.findAllByTestId('rich-text-editor'))[1];
+      await user.clear(internalCommentEditor);
+      await user.type(internalCommentEditor, 'Updated internal comment');
+
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      await waitFor(() => {
+        expect(mockPortalApi.post).toHaveBeenCalledWith(
+          '/portal/assignments/assign-123/review?submit=true',
+          expect.objectContaining({ internal_comment: 'Updated internal comment' })
+        );
+      });
+    });
+
+    it('returns to the read-only view when Cancel is clicked', async () => {
+      const user = userEvent.setup();
+      mockPortalApi.get.mockResolvedValueOnce({ data: submittedConfig });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+    });
+
+    it('shows an edited timestamp when edit_count is greater than zero', async () => {
+      const editedConfig: PortalReviewConfig = {
+        ...submittedConfig,
+        existing_review: {
+          ...submittedConfig.existing_review!,
+          edit_count: 1,
+          last_edited_at: '2024-02-01T09:00:00Z',
+        },
+      };
+      mockPortalApi.get.mockResolvedValueOnce({ data: editedConfig });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/edited on/i)).toBeInTheDocument();
+      });
+    });
+  });
+
   describe('must-have feature', () => {
     it('renders must-have checkbox when enabled', async () => {
       mockPortalApi.get.mockResolvedValueOnce({ data: mockReviewConfig });

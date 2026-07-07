@@ -467,6 +467,8 @@ async def _build_paper_responses_batch(
                 total_score=rev.total_score,
                 internal_comment=rev.internal_comment,
                 must_have=rev.must_have,
+                last_edited_at=rev.last_edited_at,
+                edit_count=rev.edit_count,
             )
             for rev in paper_reviews
         ]
@@ -631,6 +633,8 @@ async def _build_paper_response(
                 total_score=rev.total_score,
                 internal_comment=rev.internal_comment,
                 must_have=rev.must_have,
+                last_edited_at=rev.last_edited_at,
+                edit_count=rev.edit_count,
             )
         )
 
