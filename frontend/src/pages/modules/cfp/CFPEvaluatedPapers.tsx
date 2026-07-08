@@ -222,6 +222,7 @@ export default function CFPEvaluatedPapers() {
                 key={paper.id}
                 paper={paper}
                 customFields={customFields}
+                conferenceId={conferenceId}
                 onAccept={(p) => setConfirmAction({ paper: p, action: 'accepted' })}
                 onReject={(p) => setConfirmAction({ paper: p, action: 'rejected' })}
               />

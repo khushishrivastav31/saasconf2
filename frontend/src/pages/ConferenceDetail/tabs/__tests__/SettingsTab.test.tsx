@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import SettingsTab from '../SettingsTab';
 import type { Conference } from '../../../../types';
+
+function renderWithRouter(ui: React.ReactElement, initialEntries: string[] = ['/']) {
+  return render(<MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>);
+}
 
 // Mock useAuth
 const mockUseAuth = vi.fn();
@@ -89,7 +94,7 @@ describe('SettingsTab', () => {
         user: { id: 'u1', role: 'super_admin', modules: [] },
       });
 
-      render(<SettingsTab conference={mockConference} isAdmin={true} />);
+      renderWithRouter(<SettingsTab conference={mockConference} isAdmin={true} />);
 
       // All Finance nav items should be visible
       expect(screen.getByRole('button', { name: /currency & tax/i })).toBeInTheDocument();
@@ -105,7 +110,7 @@ describe('SettingsTab', () => {
         user: { id: 'u2', role: 'tenant_admin', modules: [] },
       });
 
-      render(<SettingsTab conference={mockConference} isAdmin={true} />);
+      renderWithRouter(<SettingsTab conference={mockConference} isAdmin={true} />);
 
       // All Finance nav items should be visible for tenant_admin
       expect(screen.getByRole('button', { name: /currency & tax/i })).toBeInTheDocument();
@@ -121,7 +126,7 @@ describe('SettingsTab', () => {
         user: { id: 'u3', role: 'user', modules: [] },
       });
 
-      render(<SettingsTab conference={mockConference} isAdmin={false} />);
+      renderWithRouter(<SettingsTab conference={mockConference} isAdmin={false} />);
 
       // superOnly items should be hidden
       expect(screen.queryByRole('button', { name: /numbering/i })).not.toBeInTheDocument();
@@ -135,7 +140,7 @@ describe('SettingsTab', () => {
         user: { id: 'u1', role: 'super_admin', modules: [] },
       });
 
-      render(<SettingsTab conference={mockConference} isAdmin={true} />);
+      renderWithRouter(<SettingsTab conference={mockConference} isAdmin={true} />);
 
       expect(screen.getByText('People & Roles')).toBeInTheDocument();
       expect(screen.getByText('Conference Setup')).toBeInTheDocument();
@@ -149,9 +154,22 @@ describe('SettingsTab', () => {
         user: { id: 'u1', role: 'super_admin', modules: [] },
       });
 
-      render(<SettingsTab conference={mockConference} isAdmin={true} />);
+      renderWithRouter(<SettingsTab conference={mockConference} isAdmin={true} />);
 
       expect(screen.getByText('UserRolesTab')).toBeInTheDocument();
+    });
+
+    it('deep-links straight to the Email Templates subtab via ?subtab=', () => {
+      mockUseAuth.mockReturnValue({
+        user: { id: 'u1', role: 'super_admin', modules: [] },
+      });
+
+      renderWithRouter(<SettingsTab conference={mockConference} isAdmin={true} />, [
+        '/?tab=settings&subtab=email-templates&templateType=paper_acceptance',
+      ]);
+
+      expect(screen.getByText('EmailTemplatesTab')).toBeInTheDocument();
+      expect(screen.queryByText('UserRolesTab')).not.toBeInTheDocument();
     });
   });
 });

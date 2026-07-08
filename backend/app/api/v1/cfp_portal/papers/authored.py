@@ -19,6 +19,7 @@ from app.api.v1.cfp._paper_helpers import (
     validate_topics,
 )
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
+from app.core.email.cfp import build_speaker_feedback_html, render_paper_decision_email
 from app.core.exceptions import AuthorizationError, NotFoundError, SubmissionValidationError, ValidationError
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
@@ -30,11 +31,13 @@ from app.models.cfp import (
     CospeakerInvitationStatus,
     PaperStatus,
 )
+from app.models.conference import Conference
 from app.models.form_schema import ConferencePaperFormSchema
 from app.models.paper_form_variant import PaperFormVariant
 from app.schemas.cfp_portal import (
     PortalPaperCreateRequest,
     PortalPaperListResponse,
+    PortalPaperNotificationPreviewResponse,
     PortalPaperResponse,
     PortalPaperUpdateRequest,
 )
@@ -113,6 +116,57 @@ async def get_paper(
     """Get a single paper (main speaker or accepted co-speaker)."""
     paper = await _get_applicant_or_cospeaker_paper(db, paper_id, current.applicant_id, current.tenant_id)
     return await _build_portal_paper_response(db, paper, current.applicant_id)
+
+
+@router.get(
+    "/portal/papers/{paper_id}/notification-preview",
+    response_model=PortalPaperNotificationPreviewResponse,
+)
+async def get_paper_notification_preview(
+    paper_id: str,
+    current: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> PortalPaperNotificationPreviewResponse:
+    """Preview the rendered accept/reject notification for the caller's own paper.
+
+    Only available once a decision has been made (status accepted/rejected).
+    Renders through the exact same path used to send the real email, so the
+    content shown here is guaranteed to match what the speaker received.
+    """
+    paper = await _get_applicant_or_cospeaker_paper(db, paper_id, current.applicant_id, current.tenant_id)
+
+    if paper.status not in (PaperStatus.ACCEPTED.value, PaperStatus.REJECTED.value):
+        raise ValidationError("No decision notification available for this paper yet")
+
+    speaker_result = await db.execute(
+        select(CFPApplicant).where(
+            CFPApplicant.id == current.applicant_id,
+            CFPApplicant.tenant_id == current.tenant_id,
+        )
+    )
+    speaker = speaker_result.scalar_one_or_none()
+    if not speaker:
+        raise NotFoundError("Applicant not found")
+
+    conf_result = await db.execute(
+        select(Conference)
+        .join(ConferenceCFP, ConferenceCFP.conference_id == Conference.id)
+        .where(ConferenceCFP.cfp_id == paper.cfp_id)
+        .limit(1)
+    )
+    conference = conf_result.scalar_one_or_none()
+
+    feedback_html = await build_speaker_feedback_html(db, paper.id, current.tenant_id)
+    rendered = await render_paper_decision_email(
+        db,
+        paper,
+        speaker,
+        tenant_id=current.tenant_id,
+        conference_id=conference.id if conference else None,
+        conference_name=conference.name if conference else "",
+        feedback_html=feedback_html,
+    )
+    return PortalPaperNotificationPreviewResponse(subject=rendered.subject, body_html=rendered.body_html)
 
 
 @router.post("/portal/papers", response_model=PortalPaperResponse)

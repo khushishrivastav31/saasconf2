@@ -12420,6 +12420,30 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/portal/papers/{paper_id}/notification-preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Paper Notification Preview
+     * @description Preview the rendered accept/reject notification for the caller's own paper.
+     *
+     *     Only available once a decision has been made (status accepted/rejected).
+     *     Renders through the exact same path used to send the real email, so the
+     *     content shown here is guaranteed to match what the speaker received.
+     */
+    get: operations['get_paper_notification_preview_api_v1_portal_papers__paper_id__notification_preview_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/portal/papers/{paper_id}/submit': {
     parameters: {
       query?: never;
@@ -22667,6 +22691,20 @@ export type components = {
       items: components['schemas']['PortalPaperResponse'][];
       /** Total */
       total: number;
+    };
+    /**
+     * PortalPaperNotificationPreviewResponse
+     * @description Rendered accept/reject notification content for the speaker's own paper.
+     *
+     *     Renders through the same ``render_email`` path used for the actual send
+     *     (see ``app.core.email.cfp``), so this is guaranteed to match what was
+     *     (or will be) emailed.
+     */
+    PortalPaperNotificationPreviewResponse: {
+      /** Subject */
+      subject: string;
+      /** Body Html */
+      body_html: string;
     };
     /**
      * PortalPaperResponse
@@ -58070,6 +58108,39 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_paper_notification_preview_api_v1_portal_papers__paper_id__notification_preview_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        paper_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PortalPaperNotificationPreviewResponse'];
         };
       };
       /** @description Validation Error */

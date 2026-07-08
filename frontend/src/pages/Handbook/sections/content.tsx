@@ -67,8 +67,10 @@ export const contentCategory: HandbookCategory = {
 </ul>
 <strong>Phase 6 — Outcome:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">Accepted papers appear in the Accepted Papers sub-tab; authors receive acceptance email</li>
-<li class="text-gray-700 dark:text-gray-300">Rejected papers appear in the Rejected Papers sub-tab; authors receive rejection email</li>
+<li class="text-gray-700 dark:text-gray-300">Accepted papers appear in the Accepted Papers sub-tab; the speaker (and every co-speaker) receives an acceptance email immediately — no need to wait for Program publish</li>
+<li class="text-gray-700 dark:text-gray-300">Rejected papers appear in the Rejected Papers sub-tab; the speaker (and every co-speaker) receives a rejection email immediately</li>
+<li class="text-gray-700 dark:text-gray-300">Program publish (2.2) also notifies speakers when it changes a paper's outcome — a paper is never emailed twice for the same decision, whichever trigger fires first wins</li>
+<li class="text-gray-700 dark:text-gray-300">Speakers can review the exact notification they received from their portal paper page ("View your notification")</li>
 <li class="text-gray-700 dark:text-gray-300">Accepted papers can be converted into Sessions (2.3) for the conference program</li>
 </ul>
 <strong>Dependencies (must be set up before opening the CFP):</strong>
@@ -86,8 +88,8 @@ export const contentCategory: HandbookCategory = {
 <strong>Email templates used:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300"><code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">reviewer_assignment</code> — sent to reviewers when papers are assigned</li>
-<li class="text-gray-700 dark:text-gray-300"><code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">cfp_acceptance</code> — sent to authors when their paper is accepted</li>
-<li class="text-gray-700 dark:text-gray-300"><code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">cfp_rejection</code> — sent to authors when their paper is rejected</li>
+<li class="text-gray-700 dark:text-gray-300"><code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">paper_acceptance</code> — sent to the speaker and co-speakers immediately when their paper is accepted</li>
+<li class="text-gray-700 dark:text-gray-300"><code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">paper_rejection</code> — sent to the speaker and co-speakers immediately when their paper is rejected</li>
 </ul>
 <strong>Interdependencies:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
@@ -109,16 +111,17 @@ export const contentCategory: HandbookCategory = {
 <strong>Consequences:</strong> Assigned reviewers receive email notifications and see papers in their portal review queue.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">2.1.4 Evaluated Papers</h4>
 <p class="text-gray-700 dark:text-gray-300 my-2">View papers that have completed the review process with aggregated scores and reviewer comments. Compare papers side-by-side to make informed accept/reject decisions. Sort the list by session type or average review score (either direction) — papers with no submitted reviews yet always sort to the end. Expanding a paper shows the same detail a reviewer sees, including learning objectives, submission video, and custom form field answers.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">Each paper's Accept/Reject controls have a small pencil icon next to them — click it to jump straight to that decision's email template in Settings → System Email Templates, pre-selected for editing, so you can customize the wording before (or after) making the call.</p>
 <strong>Dependencies:</strong> Reviews must be completed by assigned committee members.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">2.1.5 Accepted Papers</h4>
-<p class="text-gray-700 dark:text-gray-300 my-2">Papers marked as accepted. Bulk or individual acceptance with email notification.</p>
-<strong>Email template used:</strong> <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">cfp_acceptance</code>
-<strong>Consequences:</strong> Accepted papers can be converted into program sessions. Applicants receive acceptance notification.
+<p class="text-gray-700 dark:text-gray-300 my-2">Papers marked as accepted. Accepting a paper (individually, from Evaluated Papers) immediately emails the speaker and every co-speaker using the <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">paper_acceptance</code> template — the tenant's customized template if one exists, otherwise the system default.</p>
+<strong>Email template used:</strong> <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">paper_acceptance</code>
+<strong>Consequences:</strong> Accepted papers can be converted into program sessions. The speaker and co-speakers receive an acceptance email immediately, and don't receive a second one if Program publish (2.2) later notifies the same decision.
 <strong>Interdependency:</strong> Accepted papers → Sessions (2.3) → Program Design (2.2.1)
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">2.1.6 Rejected Papers</h4>
-<p class="text-gray-700 dark:text-gray-300 my-2">Papers marked as rejected. Bulk or individual rejection with email notification.</p>
-<strong>Email template used:</strong> <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">cfp_rejection</code>
-<strong>Consequences:</strong> Applicants receive rejection notification.`,
+<p class="text-gray-700 dark:text-gray-300 my-2">Papers marked as rejected. Rejecting a paper immediately emails the speaker and every co-speaker using the <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">paper_rejection</code> template, with reviewer speaker-feedback interpolated into the email when the template includes the <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">[Speaker Feedback]</code> placeholder.</p>
+<strong>Email template used:</strong> <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">paper_rejection</code>
+<strong>Consequences:</strong> The speaker and co-speakers receive a rejection email immediately.`,
           }}
         />
       ),

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
+from app.core.cfp_notifications import clear_paper_notification
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -14,6 +15,7 @@ from app.core.dependencies import (
     get_client_ip,
     require_module,
 )
+from app.core.email.cfp import send_paper_decision_notifications
 from app.core.exceptions import NotFoundError
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
@@ -27,6 +29,7 @@ from app.models.cfp import (
     CFPPaperCospeaker,
     PaperStatus,
 )
+from app.models.conference import Conference
 from app.models.customer_event import CustomerEventType
 from app.models.review import PaperReview
 from app.schemas.cfp import (
@@ -356,6 +359,10 @@ async def update_paper(
 
             raise ValidationError(f"Cannot transition paper from '{current_status}' to '{new_status}'")
         update_data["status"] = new_status
+        # Any real status change invalidates a prior notification: a paper
+        # flipped accepted -> rejected (or vice versa) must be eligible for a
+        # fresh notification, not suppressed by the earlier decision's mark.
+        clear_paper_notification(paper)
         # Clear submitted_at, delete assignments & reviews when reverting to draft
         if new_status == PaperStatus.DRAFT.value:
             paper.submitted_at = None
@@ -396,10 +403,30 @@ async def update_paper(
         event_type = _CFP_EVENT_BY_STATUS.get(update_data["status"])
         if event_type is not None:
             await _record_paper_customer_event(db, paper, event_type, current_user)
+    else:
+        event_type = None
 
     # Update remaining fields
     for field, value in update_data.items():
         setattr(paper, field, value)
+
+    # Notify the speaker(s) immediately on accept/reject (deduped against the
+    # batched program-publish flow via CFPPaper.notification_sent_at).
+    if event_type in (CustomerEventType.CFP_ACCEPTED, CustomerEventType.CFP_REJECTED):
+        conf_result = await db.execute(
+            select(Conference.id, Conference.name)
+            .join(ConferenceCFP, Conference.id == ConferenceCFP.conference_id)
+            .where(ConferenceCFP.cfp_id == paper.cfp_id)
+            .limit(1)
+        )
+        conf_row = conf_result.one_or_none()
+        await send_paper_decision_notifications(
+            db,
+            paper,
+            tenant_id=current_user.require_tenant_id(),
+            conference_id=conf_row.id if conf_row else None,
+            conference_name=conf_row.name if conf_row else "",
+        )
 
     # Audit log
     audit_log = AuditLog(

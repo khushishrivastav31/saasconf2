@@ -7,6 +7,11 @@ import type { Paper, Applicant, PaperFormField } from '../../../../types';
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockGet = vi.fn();
+const mockNavigate = vi.fn();
+
+vi.mock('react-router', () => ({
+  useNavigate: () => mockNavigate,
+}));
 
 vi.mock('../../../../config/api', () => ({
   default: {
@@ -109,13 +114,14 @@ const makeCustomField = (overrides: Partial<PaperFormField> = {}): PaperFormFiel
   ...overrides,
 });
 
-function renderCard(paper: Paper, customFields: PaperFormField[] = []) {
+function renderCard(paper: Paper, customFields: PaperFormField[] = [], conferenceId?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
       <EvaluatedPaperCard
         paper={paper}
         customFields={customFields}
+        conferenceId={conferenceId}
         onAccept={vi.fn()}
         onReject={vi.fn()}
       />
@@ -198,5 +204,41 @@ describe('EvaluatedPaperCard — detail parity with reviewer view', () => {
     renderCard(paper, fields);
 
     expect(screen.queryByText('Session Length')).not.toBeInTheDocument();
+  });
+});
+
+describe('EvaluatedPaperCard — deep-link to email template editor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('navigates to the acceptance template pre-filtered when conferenceId is set', () => {
+    const paper = makePaper();
+    renderCard(paper, [], 'conf-1');
+
+    fireEvent.click(screen.getByTitle('Edit acceptance email template'));
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/modules/conferences/conf-1?tab=settings&subtab=email-templates&templateType=paper_acceptance'
+    );
+  });
+
+  it('navigates to the rejection template pre-filtered when conferenceId is set', () => {
+    const paper = makePaper();
+    renderCard(paper, [], 'conf-1');
+
+    fireEvent.click(screen.getByTitle('Edit rejection email template'));
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/modules/conferences/conf-1?tab=settings&subtab=email-templates&templateType=paper_rejection'
+    );
+  });
+
+  it('omits the deep-link buttons when no conferenceId is available', () => {
+    const paper = makePaper();
+    renderCard(paper, [], undefined);
+
+    expect(screen.queryByTitle('Edit acceptance email template')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Edit rejection email template')).not.toBeInTheDocument();
   });
 });

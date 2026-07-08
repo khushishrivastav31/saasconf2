@@ -444,6 +444,13 @@ export interface PortalSpeakerFeedbackListResponse {
   total: number;
 }
 
+// --- Notification Preview ---
+
+export interface PortalPaperNotificationPreview {
+  subject: string;
+  body_html: string;
+}
+
 // --- Paper Form Schema ---
 
 export type PortalFieldType =

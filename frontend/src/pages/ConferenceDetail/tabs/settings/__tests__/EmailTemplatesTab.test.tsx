@@ -90,6 +90,13 @@ const sampleTemplate = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
+const paperAcceptanceTemplate = {
+  ...sampleTemplate,
+  id: 'tpl-2',
+  template_type: 'paper_acceptance',
+  subject: 'Paper Acceptance',
+};
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -168,5 +175,53 @@ describe('EmailTemplatesTab — sticky actions layout', () => {
     expect(actionsTd.className).toMatch(/sticky/);
     expect(actionsTd.className).toMatch(/right-0/);
     expect(actionsTd.className).toMatch(/z-\[1\]/);
+  });
+});
+
+describe('EmailTemplatesTab — deep-link auto-open', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGet.mockResolvedValue({
+      data: { items: [sampleTemplate, paperAcceptanceTemplate], total: 2 },
+    });
+  });
+
+  it('auto-opens the edit modal for the template type passed via initialTemplateType', async () => {
+    render(
+      <EmailTemplatesTab
+        conference={mockConference}
+        isAdmin={true}
+        initialTemplateType="paper_acceptance"
+      />,
+      { wrapper: createWrapper() }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('modal')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Paper Acceptance')).toBeInTheDocument();
+  });
+
+  it('does not auto-open when initialTemplateType is absent', async () => {
+    render(<EmailTemplatesTab conference={mockConference} isAdmin={true} />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => screen.getByText('Verify your email'));
+    expect(screen.queryByTestId('modal')).not.toBeInTheDocument();
+  });
+
+  it('does not auto-open for a non-admin viewer', async () => {
+    render(
+      <EmailTemplatesTab
+        conference={mockConference}
+        isAdmin={false}
+        initialTemplateType="paper_acceptance"
+      />,
+      { wrapper: createWrapper() }
+    );
+
+    await waitFor(() => screen.getByText('Verify your email'));
+    expect(screen.queryByTestId('modal')).not.toBeInTheDocument();
   });
 });

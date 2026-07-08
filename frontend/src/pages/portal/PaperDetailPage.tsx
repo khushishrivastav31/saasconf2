@@ -13,13 +13,16 @@ import type {
   PortalPaperFormSchema,
   PortalPaperFormField,
   PortalTopic,
+  PortalPaperNotificationPreview,
 } from '../../types/portal';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
 import { isAxiosError } from 'axios';
 import { parseApiError } from '../../utils/apiError';
 import MediaPreviewModal from '../../components/MediaPreviewModal';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import Modal from '../../components/Modal';
 import PaperStatusLifeline from '../../components/PaperStatusLifeline';
+import { sanitizeHtml } from '../../utils/richText';
 import { validateVideo } from '../../utils/mediaValidation';
 import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
@@ -95,6 +98,9 @@ function PaperDetailPage() {
   const [showUnsubmitConfirm, setShowUnsubmitConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Notification preview modal
+  const [showNotificationPreview, setShowNotificationPreview] = useState(false);
+
   const { data: paper, isLoading } = useQuery({
     queryKey: ['portal-paper', paperId],
     queryFn: async () => {
@@ -113,6 +119,23 @@ function PaperDetailPage() {
       return res.data;
     },
     enabled: !!paperId,
+  });
+
+  const isDecided = paper?.status === 'accepted' || paper?.status === 'rejected';
+
+  const {
+    data: notificationPreview,
+    isLoading: isNotificationPreviewLoading,
+    isError: isNotificationPreviewError,
+  } = useQuery({
+    queryKey: ['portal-paper-notification-preview', paperId],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalPaperNotificationPreview>(
+        `/portal/papers/${paperId}/notification-preview`
+      );
+      return res.data;
+    },
+    enabled: !!paperId && isDecided && showNotificationPreview,
   });
 
   const existingVideoSrc = usePortalAuthMedia(paper?.video_url ?? null);
@@ -555,9 +578,20 @@ function PaperDetailPage() {
         {/* Status lifeline */}
         <div className="mb-6">
           <PaperStatusLifeline status={paper.status} />
-          {paper.conference_name && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{paper.conference_name}</p>
-          )}
+          <div className="flex items-center justify-between mt-2">
+            {paper.conference_name && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">{paper.conference_name}</p>
+            )}
+            {isDecided && (
+              <button
+                type="button"
+                onClick={() => setShowNotificationPreview(true)}
+                className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                View your notification
+              </button>
+            )}
+          </div>
         </div>
 
         {isEditing ? (
@@ -680,6 +714,33 @@ function PaperDetailPage() {
         type="video"
         alt="Paper video"
       />
+
+      {/* Notification Preview Modal */}
+      <Modal
+        open={showNotificationPreview}
+        onClose={() => setShowNotificationPreview(false)}
+        title="Your Notification"
+      >
+        {isNotificationPreviewLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+          </div>
+        ) : isNotificationPreviewError ? (
+          <p className="p-6 text-sm text-red-600 dark:text-red-400">
+            Failed to load your notification.
+          </p>
+        ) : notificationPreview ? (
+          <div className="p-6">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+              {notificationPreview.subject}
+            </p>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(notificationPreview.body_html) }}
+            />
+          </div>
+        ) : null}
+      </Modal>
 
       {/* Confirmation Dialogs */}
       <ConfirmDialog

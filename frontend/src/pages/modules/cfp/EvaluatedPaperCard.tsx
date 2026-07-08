@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import api from '../../../config/api';
 import type { Paper, PaperFormField } from '../../../types';
 import PaperStatusLifeline from '../../../components/PaperStatusLifeline';
@@ -9,6 +10,7 @@ import { PAPER_STATUS_COLORS, LEVEL_LABELS } from '../../../config/statusColors'
 import { useAuthMedia } from '../../../hooks/useAuthMedia';
 import { downloadViaApi } from '../../../utils/downloadFile';
 import { getAverageScore } from '../../../utils/paperScore';
+import EditTemplateButton from './EditTemplateButton';
 import ReviewsPanel from './ReviewsPanel';
 
 function CustomFieldAnswer({ field, value }: { field: PaperFormField; value: unknown }) {
@@ -65,14 +67,17 @@ function CustomFieldAnswer({ field, value }: { field: PaperFormField; value: unk
 export default function EvaluatedPaperCard({
   paper,
   customFields,
+  conferenceId,
   onAccept,
   onReject,
 }: {
   paper: Paper;
   customFields: PaperFormField[];
+  conferenceId?: string;
   onAccept: (paper: Paper) => void;
   onReject: (paper: Paper) => void;
 }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const displayStatus = paper.display_status || paper.status;
   const videoSrc = useAuthMedia(paper.video_url ?? null);
@@ -80,6 +85,13 @@ export default function EvaluatedPaperCard({
     open: false,
     src: null,
   });
+
+  const goToTemplate = (templateType: 'paper_acceptance' | 'paper_rejection') => {
+    if (!conferenceId) return;
+    navigate(
+      `/modules/conferences/${conferenceId}?tab=settings&subtab=email-templates&templateType=${templateType}`
+    );
+  };
 
   return (
     <>
@@ -198,6 +210,14 @@ export default function EvaluatedPaperCard({
                   />
                 </svg>
               </button>
+              {/* Edit the acceptance email template */}
+              {conferenceId && (
+                <EditTemplateButton
+                  hoverColorClass="hover:text-green-600 hover:bg-green-50"
+                  title="Edit acceptance email template"
+                  onClick={() => goToTemplate('paper_acceptance')}
+                />
+              )}
               {/* Reject (thumbs down) */}
               <button
                 type="button"
@@ -217,6 +237,14 @@ export default function EvaluatedPaperCard({
                   />
                 </svg>
               </button>
+              {/* Edit the rejection email template */}
+              {conferenceId && (
+                <EditTemplateButton
+                  hoverColorClass="hover:text-red-600 hover:bg-red-50"
+                  title="Edit rejection email template"
+                  onClick={() => goToTemplate('paper_rejection')}
+                />
+              )}
             </div>
             <svg
               className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}

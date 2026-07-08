@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
+from app.core.cfp_notifications import clear_paper_notification, mark_paper_notified, paper_already_notified
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.csv_export import csv_response
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
@@ -419,10 +420,12 @@ async def publish_program(
         if paper.id in session_paper_ids:
             if paper.status != PaperStatus.ACCEPTED.value:
                 paper.status = PaperStatus.ACCEPTED.value
+                clear_paper_notification(paper)
             papers_accepted += 1
         else:
             if paper.status != PaperStatus.REJECTED.value:
                 paper.status = PaperStatus.REJECTED.value
+                clear_paper_notification(paper)
             papers_rejected += 1
 
     # Step 2: Update CFP statuses to COMPLETED
@@ -437,8 +440,11 @@ async def publish_program(
         if cfp.status != CFPStatus.COMPLETED.value:
             cfp.status = CFPStatus.COMPLETED.value
 
-    # Step 3: Send consolidated notifications
-    speaker_paper_map = _build_speaker_paper_map(papers, session_paper_ids)
+    # Step 3: Send consolidated notifications — skip papers already notified by
+    # the immediate per-decision trigger in update_paper (dedup, see
+    # app.core.cfp_notifications).
+    notifiable_papers = [p for p in papers if not paper_already_notified(p)]
+    speaker_paper_map = _build_speaker_paper_map(notifiable_papers, session_paper_ids)
     notifications_sent = await _send_consolidated_notifications(
         db,
         tenant_id,
@@ -450,6 +456,8 @@ async def publish_program(
 
     # Step 4: Update conference published timestamp
     now = datetime.now(UTC)
+    for p in notifiable_papers:
+        mark_paper_notified(p, now)
     conference.program_published_at = now
 
     # Step 5: Audit log
@@ -519,19 +527,25 @@ async def update_program(
             if paper.status != PaperStatus.ACCEPTED.value:
                 newly_accepted_papers.append(paper)
                 paper.status = PaperStatus.ACCEPTED.value
+                clear_paper_notification(paper)
         else:
             papers_rejected += 1
             if paper.status == PaperStatus.ACCEPTED.value:
                 newly_rejected_papers.append(paper)
                 paper.status = PaperStatus.REJECTED.value
+                clear_paper_notification(paper)
             elif paper.status != PaperStatus.REJECTED.value:
                 paper.status = PaperStatus.REJECTED.value
 
-    # Only notify for changes
+    # Only notify for changes — and skip papers already notified by the
+    # immediate per-decision trigger in update_paper (dedup, see
+    # app.core.cfp_notifications).
     changed_papers = newly_accepted_papers + newly_rejected_papers
-    if changed_papers:
-        changed_session_ids = {p.id for p in newly_accepted_papers}
-        speaker_paper_map = _build_speaker_paper_map(changed_papers, changed_session_ids)
+    notifiable_changed_papers = [p for p in changed_papers if not paper_already_notified(p)]
+    if notifiable_changed_papers:
+        notifiable_ids = {p.id for p in notifiable_changed_papers}
+        changed_session_ids = {p.id for p in newly_accepted_papers if p.id in notifiable_ids}
+        speaker_paper_map = _build_speaker_paper_map(notifiable_changed_papers, changed_session_ids)
         notifications_sent = await _send_consolidated_notifications(
             db,
             tenant_id,
@@ -545,6 +559,8 @@ async def update_program(
 
     # Update timestamp
     now = datetime.now(UTC)
+    for p in notifiable_changed_papers:
+        mark_paper_notified(p, now)
     conference.program_published_at = now
 
     # Audit log

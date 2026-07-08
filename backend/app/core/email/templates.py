@@ -593,6 +593,42 @@ def build_deadline_reminder_context(
     }
 
 
+def build_paper_decision_context(
+    *,
+    first_name: str = "",
+    last_name: str = "",
+    email: str = "",
+    conference_name: str = "",
+    company_name: str = "",
+    paper_title: str = "",
+    support_email: str = "",
+    speaker_feedback: str = "",
+) -> dict[str, str]:
+    """Build context for the immediate accept/reject decision email.
+
+    ``Paper List`` mirrors the placeholder used by the batched program-publish
+    notification so the same template works for both — here it's always a
+    single-item list since this fires per-paper, per-decision.
+    """
+    full_name = f"{first_name} {last_name}".strip() or email.split("@")[0]
+    feedback_block = ""
+    if speaker_feedback:
+        feedback_block = f'<p style="margin-top: 12px;"><strong>Feedback:</strong> {speaker_feedback}</p>'
+
+    return {
+        "First Name": first_name or full_name,
+        "Last Name": last_name,
+        "Full Name": full_name,
+        "Email": email,
+        "Conference Name": conference_name,
+        "Company Name": company_name,
+        "Paper Title": paper_title,
+        "Paper List": f"<ul><li>{paper_title}</li></ul>",
+        "Support Email": support_email,
+        "Speaker Feedback": feedback_block,
+    }
+
+
 def build_payment_overdue_admin_context(
     *,
     conference_name: str = "",

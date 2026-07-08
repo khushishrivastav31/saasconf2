@@ -109,8 +109,16 @@ const mockFormSchema = {
 
 // ----- Helpers -----
 
-function mockApiGet(paper = makePaper()) {
+function mockApiGet(
+  paper = makePaper(),
+  notificationPreview: { subject: string; body_html: string } | null = null
+) {
   mockPortalApi.get.mockImplementation((url: string) => {
+    if (url.includes('/notification-preview')) {
+      return notificationPreview
+        ? Promise.resolve({ data: notificationPreview })
+        : Promise.reject(new Error('No decision notification available for this paper yet'));
+    }
     if (url.includes('/portal/papers/paper-1/feedback')) {
       return Promise.resolve({ data: { items: [], total: 0 } });
     }
@@ -323,6 +331,48 @@ describe('PaperDetailPage', () => {
       });
 
       expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('notification preview', () => {
+    it('shows the "View your notification" link for an accepted paper', async () => {
+      mockApiGet(makePaper({ status: 'accepted' }));
+      renderPaperDetail();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'View your notification' })).toBeInTheDocument();
+      });
+    });
+
+    it('does not show the link for a paper still in final consideration', async () => {
+      mockApiGet(makePaper({ status: 'final_consideration' }));
+      renderPaperDetail();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('status-final_consideration')).toBeInTheDocument();
+      });
+      expect(
+        screen.queryByRole('button', { name: 'View your notification' })
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the rendered subject and body when opened', async () => {
+      const user = userEvent.setup();
+      mockApiGet(makePaper({ status: 'accepted' }), {
+        subject: 'Paper Acceptance - TestConf 2025',
+        body_html: '<p>Congratulations Jane!</p>',
+      });
+      renderPaperDetail();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'View your notification' })).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', { name: 'View your notification' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Paper Acceptance - TestConf 2025')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Congratulations Jane!')).toBeInTheDocument();
     });
   });
 });

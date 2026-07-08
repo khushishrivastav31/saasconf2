@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import type { Conference } from '../../../types';
 import { useAuth } from '../../../hooks/useAuth';
 import ConferenceVolunteerRolesTab from './settings/VolunteerRolesTab';
@@ -556,7 +557,18 @@ function ConferenceSettingsTab({
     );
   }, [canAccessRestricted]);
 
-  const [activeTab, setActiveTab] = useState<ConferenceSettingsActiveTab>('user-roles');
+  // Deep-link support: ?subtab=email-templates&templateType=paper_acceptance
+  // opens straight to a specific template's edit modal (e.g. from the
+  // evaluated-papers "Edit template" button).
+  const [searchParams] = useSearchParams();
+  const subtabFromUrl = searchParams.get('subtab');
+  const initialTab: ConferenceSettingsActiveTab =
+    subtabFromUrl && SETTINGS_NAV_ITEMS.some((item) => item.key === subtabFromUrl)
+      ? (subtabFromUrl as ConferenceSettingsActiveTab)
+      : 'user-roles';
+  const deepLinkTemplateType = searchParams.get('templateType');
+
+  const [activeTab, setActiveTab] = useState<ConferenceSettingsActiveTab>(initialTab);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const renderContent = () => {
@@ -580,7 +592,13 @@ function ConferenceSettingsTab({
       case 'paper-form-builder':
         return <PaperFormBuilderTab conference={conference} isAdmin={isAdmin} />;
       case 'email-templates':
-        return <EmailTemplatesTab conference={conference} isAdmin={isAdmin} />;
+        return (
+          <EmailTemplatesTab
+            conference={conference}
+            isAdmin={isAdmin}
+            initialTemplateType={deepLinkTemplateType}
+          />
+        );
       case 'email-settings':
         return <EmailSettingsTab conference={conference} isAdmin={isAdmin} />;
       case 'messaging-settings':

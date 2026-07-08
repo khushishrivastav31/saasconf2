@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sanitizeHtml } from '../../../../utils/richText';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
@@ -25,10 +25,19 @@ interface EmailTemplateListResponse {
   total: number;
 }
 
-function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
+function EmailTemplatesTab({
+  conference,
+  isAdmin,
+  initialTemplateType,
+}: {
+  conference: Conference;
+  isAdmin: boolean;
+  initialTemplateType?: string | null;
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autoOpenedFor, setAutoOpenedFor] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -46,6 +55,18 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
       return response.data;
     },
   });
+
+  // Deep-link: auto-open the edit modal for a template type passed via URL
+  // (e.g. the "Edit template" button on the evaluated-papers list).
+  useEffect(() => {
+    if (!isAdmin || !initialTemplateType || autoOpenedFor === initialTemplateType) return;
+    const match = data?.items?.find((t) => t.template_type === initialTemplateType);
+    if (match) {
+      setEditingTemplate(match);
+      setIsModalOpen(true);
+      setAutoOpenedFor(initialTemplateType);
+    }
+  }, [data, initialTemplateType, isAdmin, autoOpenedFor]);
 
   const updateMutation = useMutation({
     mutationFn: async ({
@@ -267,6 +288,7 @@ const VALID_PLACEHOLDERS = [
   'Booking Option Name',
   'Password Setup Link',
   'Cancellation Reason',
+  'Speaker Feedback',
 ];
 
 // Extract all placeholders from text (anything in [brackets])
@@ -575,6 +597,9 @@ function EmailTemplateForm({
             </div>
             <div>
               <code>[Contract Content]</code> - Inline contract HTML
+            </div>
+            <div>
+              <code>[Speaker Feedback]</code> - Reviewer feedback (paper accept/reject)
             </div>
           </div>
         </div>

@@ -523,3 +523,15 @@ class PortalSpeakerFeedbackListResponse(BaseModel):
 
     items: list[PortalSpeakerFeedbackResponse]
     total: int
+
+
+class PortalPaperNotificationPreviewResponse(BaseModel):
+    """Rendered accept/reject notification content for the speaker's own paper.
+
+    Renders through the same ``render_email`` path used for the actual send
+    (see ``app.core.email.cfp``), so this is guaranteed to match what was
+    (or will be) emailed.
+    """
+
+    subject: str
+    body_html: str
