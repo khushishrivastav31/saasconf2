@@ -108,7 +108,7 @@ export const contentCategory: HandbookCategory = {
 <strong>Email template used:</strong> <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">reviewer_assignment</code>
 <strong>Consequences:</strong> Assigned reviewers receive email notifications and see papers in their portal review queue.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">2.1.4 Evaluated Papers</h4>
-<p class="text-gray-700 dark:text-gray-300 my-2">View papers that have completed the review process with aggregated scores and reviewer comments. Compare papers side-by-side to make informed accept/reject decisions.</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">View papers that have completed the review process with aggregated scores and reviewer comments. Compare papers side-by-side to make informed accept/reject decisions. Sort the list by session type or average review score (either direction) — papers with no submitted reviews yet always sort to the end. Expanding a paper shows the same detail a reviewer sees, including learning objectives, submission video, and custom form field answers.</p>
 <strong>Dependencies:</strong> Reviews must be completed by assigned committee members.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">2.1.5 Accepted Papers</h4>
 <p class="text-gray-700 dark:text-gray-300 my-2">Papers marked as accepted. Bulk or individual acceptance with email notification.</p>
