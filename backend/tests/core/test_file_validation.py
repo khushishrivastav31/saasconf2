@@ -17,6 +17,9 @@ PDF_MAGIC = b"%PDF-1.4" + b"\x00" * 20
 # EXE/PE magic bytes
 EXE_MAGIC = b"MZ" + b"\x00" * 50
 
+# Minimal valid Matroska (MKV): EBML header + DocType "matroska"
+MKV_MAGIC = b"\x1a\x45\xdf\xa3" + b"\x00" * 8 + b"\x42\x82\x88matroska" + b"\x00" * 20
+
 
 class TestSanitizeFilename:
     def test_normal_filename(self):
@@ -100,6 +103,19 @@ class TestValidateUpload:
         """Magic bytes should override claimed content type."""
         result = validate_upload(JPEG_MAGIC, "image/png", "location")
         assert result == "image/jpeg"
+
+    def test_mkv_allowed_for_paper_video(self):
+        """MKV is advertised in the upload UI, so it must be accepted for paper videos."""
+        result = validate_upload(MKV_MAGIC, "video/x-matroska", "paper_video")
+        assert result == "video/x-matroska"
+
+    def test_mkv_allowed_for_applicant_video(self):
+        result = validate_upload(MKV_MAGIC, "video/x-matroska", "applicant_video")
+        assert result == "video/x-matroska"
+
+    def test_mkv_allowed_for_portal_user_video(self):
+        result = validate_upload(MKV_MAGIC, "video/x-matroska", "portal_user_video")
+        assert result == "video/x-matroska"
 
 
 class TestPlaybackContentType:

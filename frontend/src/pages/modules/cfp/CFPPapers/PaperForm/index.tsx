@@ -200,9 +200,19 @@ export function PaperForm({
 
   const displayStatus = paper?.display_status || paper?.status;
 
+  // Errors and validation messages render at the top of a long form; scroll
+  // them into view so a submit failure isn't missed below the fold.
+  const errorAnchorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (error || validationErrors.length > 0) {
+      errorAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [error, validationErrors]);
+
   return (
     <FormProvider {...methods}>
       <form className="space-y-5" onSubmit={handleSubmit(onFormValid, onFormInvalid)} noValidate>
+        <div ref={errorAnchorRef} />
         <ErrorBanner message={error} />
         {validationErrors.length > 0 && (
           <div className="rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-3">

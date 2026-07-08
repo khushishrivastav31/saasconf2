@@ -4,6 +4,7 @@ import portalApi from '../../config/portalApi';
 import type { PortalAssignedPaperListResponse, PortalAssignedPaper } from '../../types/portal';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
 import MediaPreviewModal from '../../components/MediaPreviewModal';
+import VideoAttachmentLink from '../../components/VideoAttachmentLink';
 import ReviewForm from '../../components/portal/ReviewForm';
 import { PAPER_STATUS_COLORS, LEVEL_LABELS } from '../../config/statusColors';
 import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
@@ -155,45 +156,12 @@ function EvaluatedPaperCard({
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                   Video
                 </h4>
-                <button
-                  type="button"
-                  onClick={() => {
+                <VideoAttachmentLink
+                  videoSrc={videoSrc}
+                  onPreview={() => {
                     if (videoSrc) setMediaPreview({ open: true, src: videoSrc });
                   }}
-                  disabled={!videoSrc}
-                  className={`w-32 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-100 dark:bg-gray-800 relative ${
-                    videoSrc
-                      ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
-                      : ''
-                  }`}
-                  title={videoSrc ? 'Click to play video' : 'Loading video...'}
-                >
-                  {videoSrc ? (
-                    <>
-                      <video
-                        src={videoSrc}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                          <svg
-                            className="w-4 h-4 text-gray-700 ml-0.5"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400" />
-                    </div>
-                  )}
-                </button>
+                />
               </div>
             )}
 

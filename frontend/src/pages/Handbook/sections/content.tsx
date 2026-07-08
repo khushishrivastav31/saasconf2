@@ -54,6 +54,8 @@ export const contentCategory: HandbookCategory = {
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300">Committee members review assigned papers through their portal</li>
 <li class="text-gray-700 dark:text-gray-300">They score papers using the configured Score Scales and Review Criteria</li>
+<li class="text-gray-700 dark:text-gray-300">When a paper includes a speaker video, reviewers can preview it inline, <strong>Open video</strong> in a new browser tab, or <strong>Download</strong> the file — the same actions are available to admins on the paper detail view in Assignments. Uploaded videos may be MP4, MOV, WebM, AVI, or MKV.</li>
+<li class="text-gray-700 dark:text-gray-300">Any file uploaded to a custom paper field is shown to reviewers with a <strong>Download</strong> link so they can open the attachment.</li>
 <li class="text-gray-700 dark:text-gray-300">Papers move to "Evaluated" status once all assigned reviews are complete</li>
 <li class="text-gray-700 dark:text-gray-300">A reviewer can click <strong>Edit</strong> on their own submitted review to revise and resubmit it at any time — even after the paper has been accepted or rejected. There is no "save as draft" step once submitted; edits go straight back to resubmit. Every edit is timestamped (visible to admins as an "Edited" badge in the paper's review list) so late changes to a decided paper stay auditable.</li>
 </ul>

@@ -33,6 +33,9 @@ Follow this sweep before asking to merge. **Every step is mandatory** — CI rej
 8. Full sweep: `cd backend && venv/bin/python -m pytest tests/ -n 4 -q` and `cd frontend && pnpm test`. Use `-n 4` workers — `-n 8`+ causes SQLAlchemy race conditions in `test_trainings.py` and `test_user_update_address.py` that are flaky at high parallelism but pass cleanly at 4 workers or in serial.
 9. **OpenAPI schema drift** — if you added/changed any backend endpoint, route prefix, request/response schema, or response code, run `cd frontend && JWT_SECRET_KEY=test-secret-key-for-ci-pipeline-minimum-32-chars SUPER_ADMIN_PASSWORD=TestPassword123! pnpm gen:api` and commit the updated `frontend/src/types/api.generated.ts`. CI's "OpenAPI schema drift" check will fail the PR otherwise. Verify locally with `pnpm gen:api:check` — it must print no output.
 10. For UI or user-visible changes, update the in-app handbook at `frontend/src/pages/Handbook/handbookSections.tsx`.
+11. **Security audit — run before every commit.** Run the same dependency audit CI enforces and resolve anything it flags (bump the package, or add an `--ignore-vuln` only with a justifying comment, matching CI) before committing:
+    - Backend: `cd backend && venv/bin/pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539 --ignore-vuln PYSEC-2025-183` (install with `venv/bin/pip install pip-audit` if missing). Keep the `--ignore-vuln` list in sync with the `security-audit` job in `.github/workflows/ci.yml`.
+    - Frontend: `cd frontend && pnpm audit --audit-level=critical`.
 
 **Why "whole tree" matters**: dependency bumps (Dependabot, manual upgrades) can add new lint or type-check rules that fire on code you didn't touch. A per-file check on your diff will pass while the full sweep fails on CI. Always run steps 3–6 across the full tree before pushing, especially on any PR that modifies `requirements.txt`, `package.json`, or lockfiles.
 

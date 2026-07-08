@@ -10,8 +10,8 @@ from app.core.exceptions import ValidationError
 # Allowed MIME types per entity type
 ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "applicant_picture": {"image/jpeg", "image/png", "image/webp"},
-    "applicant_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
-    "paper_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
+    "applicant_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo", "video/x-matroska"},
+    "paper_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo", "video/x-matroska"},
     "conference_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "tenant_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "sponsor_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
@@ -20,7 +20,7 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "badge_conditional_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "trainer_photo": {"image/jpeg", "image/png", "image/webp"},
     "portal_user_picture": {"image/jpeg", "image/png", "image/webp"},
-    "portal_user_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
+    "portal_user_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo", "video/x-matroska"},
     "customer_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "paper_file": {
         # Documents

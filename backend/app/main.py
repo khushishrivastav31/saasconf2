@@ -140,17 +140,27 @@ class OriginValidationMiddleware(BaseHTTPMiddleware):
 
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
-    """Reject requests with bodies exceeding the configured maximum size."""
+    """Reject requests with bodies exceeding the maximum upload size.
 
-    MAX_BODY_SIZE = 10 * 1024 * 1024  # 10MB
+    Sized off ``settings.MAX_UPLOAD_SIZE_MB`` (plus multipart overhead for the
+    boundaries and accompanying form fields) so it never rejects an upload the
+    endpoints would otherwise accept. This middleware runs *outside* the
+    CORSMiddleware, so its 413 must carry CORS headers itself via
+    ``_cors_response`` — otherwise the browser reports an oversized upload as an
+    opaque CORS/Network error instead of a clean "Request body too large".
+    """
+
+    # Headroom for multipart/form-data boundaries and non-file form fields.
+    MULTIPART_OVERHEAD = 1 * 1024 * 1024  # 1MB
+
+    @property
+    def max_body_size(self) -> int:
+        return settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024 + self.MULTIPART_OVERHEAD
 
     async def dispatch(self, request: Request, call_next):
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > self.MAX_BODY_SIZE:
-            return JSONResponse(
-                status_code=413,
-                content={"detail": "Request body too large"},
-            )
+        if content_length and int(content_length) > self.max_body_size:
+            return _cors_response(request, 413, {"detail": "Request body too large"})
         return await call_next(request)
 
 

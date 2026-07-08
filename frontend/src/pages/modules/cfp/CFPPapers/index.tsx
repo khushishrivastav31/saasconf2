@@ -11,6 +11,7 @@ import ConfirmDialog from '../../../../components/ConfirmDialog';
 import PaperStatusLifeline from '../../../../components/PaperStatusLifeline';
 import { PaperForm } from './PaperForm';
 import type { PaperFormData } from './PaperForm';
+import { uploadPaperMedia } from './uploadPaperMedia';
 
 interface PaperListResponse {
   items: Paper[];
@@ -290,21 +291,11 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   ) => {
     try {
       const paper = await createMutation.mutateAsync(formData);
-      if (videoFile) {
-        try {
-          await uploadVideo(paper.id, videoFile);
-        } catch {
-          // non-fatal
-        }
-      }
-      if (Object.keys(customFieldFiles).length > 0) {
-        try {
-          await uploadPaperFiles(paper, customFieldFiles);
-        } catch {
-          // non-fatal
-        }
-      }
-      setError(null);
+      const uploadErrors = await uploadPaperMedia(paper, videoFile, customFieldFiles, {
+        uploadVideo,
+        uploadPaperFiles,
+      });
+      setError(uploadErrors.length > 0 ? uploadErrors.join(' ') : null);
       setIsAdding(false);
       queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
       queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
@@ -325,21 +316,11 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     if (!selectedPaperId) return;
     try {
       const paper = await updateMutation.mutateAsync({ id: selectedPaperId, data: formData });
-      if (videoFile) {
-        try {
-          await uploadVideo(paper.id, videoFile);
-        } catch {
-          // non-fatal
-        }
-      }
-      if (Object.keys(customFieldFiles).length > 0) {
-        try {
-          await uploadPaperFiles(paper, customFieldFiles);
-        } catch {
-          // non-fatal
-        }
-      }
-      setError(null);
+      const uploadErrors = await uploadPaperMedia(paper, videoFile, customFieldFiles, {
+        uploadVideo,
+        uploadPaperFiles,
+      });
+      setError(uploadErrors.length > 0 ? uploadErrors.join(' ') : null);
       queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
       queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
       queryClient.invalidateQueries({ queryKey: ['cfp-selected-papers'] });

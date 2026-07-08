@@ -5,6 +5,7 @@ import { PAPER_STATUS_COLORS, LEVEL_LABELS } from '../../../../config/statusColo
 import Modal from '../../../../components/Modal';
 import RichTextDisplay from '../../../../components/common/RichTextDisplay';
 import MediaPreviewModal from '../../../../components/MediaPreviewModal';
+import VideoAttachmentLink from '../../../../components/VideoAttachmentLink';
 
 // ─── Paper Detail Modal ──────────────────────────────────────────────────────
 
@@ -178,45 +179,12 @@ export function PaperDetailModal({
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                 Video
               </h4>
-              <button
-                type="button"
-                onClick={() => {
+              <VideoAttachmentLink
+                videoSrc={videoSrc}
+                onPreview={() => {
                   if (videoSrc) setMediaPreview({ open: true, src: videoSrc });
                 }}
-                disabled={!videoSrc}
-                className={`w-32 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-900 relative ${
-                  videoSrc
-                    ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
-                    : ''
-                }`}
-                title={videoSrc ? 'Click to play video' : 'Loading video...'}
-              >
-                {videoSrc ? (
-                  <>
-                    <video
-                      src={videoSrc}
-                      className="w-full h-full object-cover"
-                      muted
-                      playsInline
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                      <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-gray-700 dark:text-gray-300 ml-0.5"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400 dark:border-gray-500" />
-                  </div>
-                )}
-              </button>
+              />
             </div>
           )}
 

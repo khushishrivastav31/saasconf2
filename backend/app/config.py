@@ -82,8 +82,9 @@ class Settings(BaseSettings):
     # CORS — set CORS_ORIGINS env var for production (comma-separated or JSON array)
     CORS_ORIGINS: list[str] = _parse_cors_origins()
 
-    # File Upload
-    MAX_UPLOAD_SIZE_MB: int = 10
+    # File Upload — must cover the largest advertised upload (50MB paper/speaker
+    # videos). RequestSizeLimitMiddleware sizes the global body cap off this.
+    MAX_UPLOAD_SIZE_MB: int = 50
 
     # Rate Limiting
     # Login is defense-in-depth on top of per-email account lockout

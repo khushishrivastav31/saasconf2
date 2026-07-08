@@ -71,6 +71,55 @@ URL should be hyperlink (new tab)."
   sharing the extracted component (confirm this is acceptable scope in
   review, since the ticket only names "reviewer").
 
+## Addendum — additional issues folded in during implementation (2026-07-07)
+
+User testing surfaced three closely-related gaps that were fixed in the same
+PR (user-approved expanding scope):
+
+1. **Reviewer custom-field file download.** File uploads on custom paper
+   fields rendered to reviewers as plain text `📎 <filename>` with no way to
+   download. The answer value already carries `attachment_id`, so a new
+   `CustomFieldFileDownload` component fetches
+   `/portal/attachments/{attachment_id}/download` via the authenticated portal
+   API. Frontend-only; `AssignedPapersTab` is the only reviewer surface that
+   renders these fields.
+2. **Admin video upload failed silently.** `handleCreate`/`handleUpdate` in
+   `CFPPapers/index.tsx` swallowed `uploadVideo`/`uploadPaperFiles` errors with
+   empty `catch {}` blocks, so a rejected upload produced no feedback. Extracted
+   a testable `uploadPaperMedia` helper that collects per-upload error messages
+   and surfaces them in the paper form's error banner.
+3. **MKV rejected despite being advertised.** The upload UI offers `.mkv`, but
+   the backend `paper_video` / `applicant_video` / `portal_user_video`
+   allow-lists omitted `video/x-matroska`, so MKV uploads 400'd (and — per #2 —
+   silently). Added `video/x-matroska` to those sets in
+   `app/core/file_validation.py`. Validation-only change, no request/response
+   schema change → no OpenAPI drift.
+
+## Addendum 2 — video upload blocked by request-size limit (2026-07-08)
+
+Manual testing of the admin video upload surfaced the actual root cause behind
+"nothing worked": uploads over 10MB were rejected by
+`RequestSizeLimitMiddleware`, whose body cap was hardcoded to 10MB while the UI
+advertises 50MB videos. Because that middleware runs *outside* `CORSMiddleware`
+and short-circuits with a bare `JSONResponse(413)`, the rejection carried no
+CORS headers, so the browser reported it as an opaque CORS/Network error.
+
+Fixes:
+
+1. `settings.MAX_UPLOAD_SIZE_MB` default raised 10 → 50 to match the advertised
+   video limit (the per-file endpoint cap, previously also 10MB, blocked large
+   videos even if the middleware passed them).
+2. `RequestSizeLimitMiddleware` now sizes its body cap off
+   `MAX_UPLOAD_SIZE_MB` (+1MB multipart overhead) instead of a hardcoded 10MB,
+   and returns its 413 through `_cors_response` so over-limit rejections are a
+   clean error rather than a CORS wall.
+3. `.env.example` documents `MAX_UPLOAD_SIZE_MB`.
+4. Frontend: the admin paper form scrolls its error banner into view on a
+   failed submit (the banner sits at the top of a long form and was missed
+   below the fold).
+
+Config/validation change only — no endpoint or schema change, no OpenAPI drift.
+
 ## Spec
 
 See `openspec/specs/` once implementation lands.

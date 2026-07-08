@@ -1108,10 +1108,10 @@ def test_log_security_event_picks_up_context_request_id() -> None:
 
 
 async def test_request_size_limit_enforced(client: AsyncClient) -> None:
-    """Requests declaring a body larger than 10 MB must be rejected (413)."""
+    """Requests declaring a body larger than the upload limit must be rejected (413)."""
     response = await client.post(
         "/api/v1/auth/login",
-        headers={"Content-Length": str(11 * 1024 * 1024)},
+        headers={"Content-Length": str(80 * 1024 * 1024)},
         json={"email": "test@test.com", "password": "Password123!"},
     )
     assert response.status_code == 413
