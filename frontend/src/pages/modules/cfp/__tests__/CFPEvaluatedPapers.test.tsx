@@ -26,6 +26,10 @@ vi.mock('../EvaluatedPaperCard', () => ({
   default: ({ paper }: { paper: Paper }) => <div data-testid="paper-card">{paper.title}</div>,
 }));
 
+vi.mock('../SeedTestDataButton', () => ({
+  default: () => null,
+}));
+
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const makeApplicant = (overrides: Partial<Applicant> = {}): Applicant => ({

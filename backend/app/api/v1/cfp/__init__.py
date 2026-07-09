@@ -10,6 +10,7 @@ from .paper_cospeakers import router as paper_cospeakers_router
 from .paper_reviews import router as paper_reviews_router
 from .papers import router as papers_router
 from .pending_verifications import router as pending_verifications_router
+from .seed import router as seed_router
 from .submissions import router as submissions_router
 from .topics import router as topics_router
 
@@ -30,5 +31,8 @@ router.include_router(paper_cospeakers_router)
 router.include_router(paper_reviews_router)
 router.include_router(papers_router)
 router.include_router(topics_router)
+# seed_router uses /{cfp_id}/seed-review-data — register before the /{cfp_id}
+# catch-all routers (cfp_crud_router, submissions_router) to avoid shadowing.
+router.include_router(seed_router)
 router.include_router(cfp_crud_router)
 router.include_router(submissions_router)

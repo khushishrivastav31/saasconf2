@@ -8,6 +8,7 @@ import ConfirmDialog from '../../../components/ConfirmDialog';
 import { parseApiError } from '../../../utils/apiError';
 import { getAverageScore } from '../../../utils/paperScore';
 import EvaluatedPaperCard from './EvaluatedPaperCard';
+import SeedTestDataButton from './SeedTestDataButton';
 
 interface PaperListResponse {
   items: Paper[];
@@ -145,6 +146,7 @@ export default function CFPEvaluatedPapers() {
             Papers that have been evaluated by the program committee ({papers.length} total)
           </p>
         </div>
+        {conferenceId && <SeedTestDataButton conferenceId={conferenceId} />}
       </div>
 
       {mutationError && (

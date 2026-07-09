@@ -6314,6 +6314,26 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/cfp/conferences/{conference_id}/seed-review-data': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Seed Review Data
+     * @description Seed review test data into the given conference (dev/staging only).
+     */
+    post: operations['seed_review_data_api_v1_cfp_conferences__conference_id__seed_review_data_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/cfp/': {
     parameters: {
       query?: never;
@@ -25676,6 +25696,38 @@ export type components = {
       display_order?: number | null;
     };
     /**
+     * SeedReviewDataRequest
+     * @description Volumes to seed. Bounded so an admin can't generate absurd amounts.
+     */
+    SeedReviewDataRequest: {
+      /**
+       * Papers
+       * @default 22
+       */
+      papers?: number;
+      /**
+       * Reviewers
+       * @default 3
+       */
+      reviewers?: number;
+      /**
+       * Must Have
+       * @default 5
+       */
+      must_have?: number;
+    };
+    /** SeedReviewDataResponse */
+    SeedReviewDataResponse: {
+      /** Evaluated Papers */
+      evaluated_papers: number;
+      /** Reviewers */
+      reviewers: number;
+      /** Must Have Papers */
+      must_have_papers: number;
+      /** Default Password */
+      default_password: string;
+    };
+    /**
      * SelectSessionRequest
      * @description Request to select a session for a registration.
      */
@@ -44152,6 +44204,43 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  seed_review_data_api_v1_cfp_conferences__conference_id__seed_review_data_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path: {
+        conference_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SeedReviewDataRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SeedReviewDataResponse'];
         };
       };
       /** @description Validation Error */

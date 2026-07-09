@@ -64,6 +64,7 @@ export const contentCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">Admin reviews aggregated scores and comments in the Evaluated Papers sub-tab</li>
 <li class="text-gray-700 dark:text-gray-300">Papers can be compared side-by-side</li>
 <li class="text-gray-700 dark:text-gray-300">Admin makes Accept or Reject decisions (individually or in bulk)</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Seed test data</strong> (test environments only): on staging/development, a <strong>Seed test data</strong> button appears on the Evaluated Papers sub-tab. It populates the conference with sample papers, reviewers, and submitted reviews so you can try the review workflows without real submissions. It is safe to run repeatedly (idempotent) and is hidden — and rejected by the server — in production.</li>
 </ul>
 <strong>Phase 6 — Outcome:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
