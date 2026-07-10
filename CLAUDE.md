@@ -104,6 +104,24 @@ Before a PR merges, move the spec folder from `openspec/changes/` to
 contain work that has not yet shipped. `openspec/specs/` holds the
 source-of-truth feature specs and is never pruned.
 
+**Auto-merge gate — `--auto` requires the spec be in `openspec/shipped/`.** Never
+run `gh pr merge --auto` on a PR that still carries its spec folder under
+`openspec/changes/`: the PR would merge with the spec in the wrong place and
+nobody is watching to catch it. Concretely:
+
+- PR touches `openspec/` and the spec has **shipped** (folder moved to
+  `openspec/shipped/` in this PR) → `gh pr merge --auto --squash` as usual.
+- PR touches `openspec/` and the spec is **still in `openspec/changes/`** → use
+  the **"commit only"** path: commit, push, open the PR, but do **not** arm
+  auto-merge. The PR stays open for manual merge.
+
+This matters for a spec delivered across several PRs (phased rollouts, one PR per
+ratchet step). The spec folder stays in `openspec/changes/` for every intermediate
+PR — those merge manually — and only the **final** PR of the sequence moves it to
+`openspec/shipped/` and may arm `--auto`. Do not relocate a spec to `shipped/`
+early just to unlock auto-merge; "shipped" means the work is done, not that the
+first commit landed.
+
 **Review gate — always stop after writing the spec.** When a task starts with
 OpenSpec, write the `openspec/changes/<JIRA-KEY>-<slug>/` folder
 (`proposal.md`, `design.md`, `tasks.md`) and then **stop and wait for the user

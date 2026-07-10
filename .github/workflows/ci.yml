@@ -294,12 +294,12 @@ jobs:
   # Coverage Report (MAIN-13426)
   #
   # Merges the per-shard coverage data uploaded by the backend (×4)
-  # and frontend (×3) test shards, publishes both percentages to the
+  # and frontend (×3) test shards, publishes the percentages to the
   # job summary + a sticky PR comment, and uploads the merged
-  # coverage.xml / lcov.info as artifacts. Enforces a temporary 30%
-  # floor on the MERGED numbers (MAIN-13453 ratchets it back toward the
-  # real 55% / 60-61% targets). Runs only when all shards pass (default
-  # `needs`), so the artifacts are guaranteed present.
+  # coverage.xml / lcov.info as artifacts. Enforces per-stack, per-metric
+  # floors on the MERGED numbers — see the `env` block below. Runs only
+  # when all shards pass (default `needs`), so the artifacts are
+  # guaranteed present.
   # ─────────────────────────────────────────────────────────────
   coverage-report:
     name: Coverage Report
@@ -310,6 +310,17 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+
+    # Frontend floors, consumed by the summary, the PR comment, and the gate step.
+    # Must match `thresholds` in frontend/vite.config.ts — a bump belongs in both.
+    # Ratchet up only; never lower these.
+    #
+    # The backend has no floor here on purpose: it delegates to `fail_under` in
+    # backend/pyproject.toml, which `coverage report` enforces natively. One number,
+    # one place.
+    env:
+      FRONTEND_STATEMENTS_FLOOR: 62
+      FRONTEND_LINES_FLOOR: 63
 
     steps:
       - name: Checkout code
@@ -332,14 +343,17 @@ jobs:
         run: |
           cp coverage-data/.coverage.* .
           coverage combine
-          # --fail-under=0 overrides pyproject's fail_under=55: this ticket
-          # reports coverage, it does not gate on it. Without this, `xml`/`json`
-          # exit non-zero on any dip below 55 and fail the job.
+          # --fail-under=0 on xml/json only: these publish artifacts and must never
+          # fail the job. The gate is the final `coverage report` step, which honours
+          # pyproject's fail_under. Leave the combined .coverage in place for it.
           coverage xml -o coverage.xml --fail-under=0
           coverage json -o coverage.json --fail-under=0
           PCT=$(python -c "import json; print(f\"{json.load(open('coverage.json'))['totals']['percent_covered']:.2f}\")")
+          # Read the floor rather than restate it — pyproject.toml is the source of truth.
+          FLOOR=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under'])")
           echo "pct=$PCT" >> "$GITHUB_OUTPUT"
-          echo "Backend coverage: $PCT%"
+          echo "floor=$FLOOR" >> "$GITHUB_OUTPUT"
+          echo "Backend coverage: $PCT% (floor $FLOOR%)"
 
       # ── Frontend: merge the 3 shard istanbul JSON files via nyc ──
       - name: Download frontend coverage data
@@ -362,9 +376,16 @@ jobs:
           done
           npx -y nyc@17 report -t nyc-input \
             --reporter=lcov --reporter=json-summary --report-dir=coverage-merged
-          PCT=$(node -e "console.log(require('./coverage-merged/coverage-summary.json').total.lines.pct.toFixed(2))")
-          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
-          echo "Frontend coverage: $PCT%"
+          # vite.config.ts declares thresholds on BOTH statements and lines, so
+          # both are gated here. Reading only `lines` leaves a statements
+          # regression invisible on the merged number.
+          read -r STATEMENTS_PCT LINES_PCT <<<"$(node -e "
+            const t = require('./coverage-merged/coverage-summary.json').total;
+            console.log(t.statements.pct.toFixed(2), t.lines.pct.toFixed(2));
+          ")"
+          echo "statements_pct=$STATEMENTS_PCT" >> "$GITHUB_OUTPUT"
+          echo "lines_pct=$LINES_PCT" >> "$GITHUB_OUTPUT"
+          echo "Frontend coverage: statements ${STATEMENTS_PCT}%, lines ${LINES_PCT}%"
 
       # ── Publish ──
       - name: Write job summary
@@ -372,10 +393,11 @@ jobs:
           {
             echo "## 📊 Test Coverage"
             echo ""
-            echo "| Stack | Coverage |"
-            echo "|-------|----------|"
-            echo "| Backend (\`app/\`) | ${{ steps.backend.outputs.pct }}% |"
-            echo "| Frontend (\`src/\`) | ${{ steps.frontend.outputs.pct }}% |"
+            echo "| Stack | Metric | Coverage | Floor |"
+            echo "|-------|--------|----------|-------|"
+            echo "| Backend (\`app/\`) | statements | ${{ steps.backend.outputs.pct }}% | ${{ steps.backend.outputs.floor }}% |"
+            echo "| Frontend (\`src/\`) | statements | ${{ steps.frontend.outputs.statements_pct }}% | ${FRONTEND_STATEMENTS_FLOOR}% |"
+            echo "| Frontend (\`src/\`) | lines | ${{ steps.frontend.outputs.lines_pct }}% | ${FRONTEND_LINES_FLOOR}% |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post coverage comment
@@ -392,12 +414,13 @@ jobs:
             <!-- coverage-report -->
             ## 📊 Test Coverage
 
-            | Stack | Coverage |
-            |-------|----------|
-            | Backend (`app/`) | **${{ steps.backend.outputs.pct }}%** |
-            | Frontend (`src/`) | **${{ steps.frontend.outputs.pct }}%** |
+            | Stack | Metric | Coverage | Floor |
+            |-------|--------|----------|-------|
+            | Backend (`app/`) | statements | **${{ steps.backend.outputs.pct }}%** | ${{ steps.backend.outputs.floor }}% |
+            | Frontend (`src/`) | statements | **${{ steps.frontend.outputs.statements_pct }}%** | ${{ env.FRONTEND_STATEMENTS_FLOOR }}% |
+            | Frontend (`src/`) | lines | **${{ steps.frontend.outputs.lines_pct }}%** | ${{ env.FRONTEND_LINES_FLOOR }}% |
 
-            <sub>Temporary 30% floor enforced on the merged numbers (MAIN-13453 ratchets toward 55% / 60-61%). Full reports are attached as workflow artifacts.</sub>
+            <sub>Floors are enforced on the merged numbers, never per-shard (MAIN-13453). Full reports are attached as workflow artifacts.</sub>
 
       - name: Upload merged coverage reports
         uses: actions/upload-artifact@v7
@@ -409,22 +432,35 @@ jobs:
             frontend/coverage-merged/lcov.info
           retention-days: 7
 
-      - name: Enforce temporary 30% coverage floor
-        # Soft floor on the MERGED numbers while coverage is improved
-        # (MAIN-13453). Runs LAST so the job summary, PR comment, and artifacts
-        # are always published even when the floor is not met. The real targets
-        # are higher (backend 55% per pyproject.toml, frontend 60/61% per
-        # vite.config.ts) — MAIN-13453 ratchets this back up. `below` uses awk
-        # because the percentages are floats. Gating on merged, never per-shard.
+      - name: Enforce coverage floors
+        # Per-stack, per-metric floors on the MERGED numbers (MAIN-13453). Runs
+        # LAST so the job summary, PR comment, and artifacts are always published
+        # even when a floor is not met. Gating on merged, never per-shard.
+        #
+        # Backend: `coverage report` reads fail_under from pyproject.toml and exits
+        # non-zero itself — no floor is restated here. It runs against the combined
+        # .coverage left behind by the merge step.
+        # Frontend: `below` uses awk because the percentages are floats.
+        working-directory: backend
         run: |
-          FLOOR=30
-          BE="${{ steps.backend.outputs.pct }}"
-          FE="${{ steps.frontend.outputs.pct }}"
-          echo "Backend merged: ${BE}% · Frontend merged: ${FE}% · floor: ${FLOOR}%"
-          below() { awk "BEGIN{exit !($1 < $2)}"; }
           fail=0
-          if below "$BE" "$FLOOR"; then echo "::error::Backend coverage ${BE}% is below the ${FLOOR}% floor"; fail=1; fi
-          if below "$FE" "$FLOOR"; then echo "::error::Frontend coverage ${FE}% is below the ${FLOOR}% floor"; fail=1; fi
+
+          if ! coverage report; then
+            echo "::error::Backend coverage is below the fail_under floor in backend/pyproject.toml"
+            fail=1
+          fi
+
+          below() { awk "BEGIN{exit !($1 < $2)}"; }
+          check() { # <label> <measured> <floor>
+            echo "$1: $2% (floor ${3}%)"
+            if below "$2" "$3"; then
+              echo "::error::$1 coverage $2% is below the ${3}% floor"
+              fail=1
+            fi
+          }
+          check "Frontend statements" "${{ steps.frontend.outputs.statements_pct }}" "$FRONTEND_STATEMENTS_FLOOR"
+          check "Frontend lines"      "${{ steps.frontend.outputs.lines_pct }}"      "$FRONTEND_LINES_FLOOR"
+
           exit $fail
 
   # ─────────────────────────────────────────────────────────────
