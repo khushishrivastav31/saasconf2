@@ -1,0 +1,203 @@
+---
+# Deploy SaaSConf staging from prebuilt ghcr images.
+#
+# Run:
+#   cd provision
+#   ANSIBLE_CONFIG=$PWD/ansible.cfg GHCR_READ_TOKEN=… GHCR_READ_USER=… \
+#   ansible-playbook \
+#     -i inventory/staging.sonrisa.ventures.ini \
+#     -i inventory/domains/staging.ini \
+#     playbooks/saasconf.staging.deploy.yml
+#
+# Deploy a specific build (rollback without rebuilding):
+#   … -e image_tag=<sha>
+#
+# Runs as the `deploy` user (no become): it is in the docker group, and the
+# ghcr credentials live in its ~/.docker/config.json.
+#
+# Nothing is built here. Host provisioning is saasconf.staging.provision.yml.
+
+- hosts: STAGING
+  gather_facts: no
+  become: no
+
+  vars:
+    backend_ref: "{{ ghcr_backend_image }}:{{ image_tag }}"
+    frontend_ref: "{{ ghcr_frontend_image }}:{{ image_tag }}"
+    docker_config_dir: "{{ app_root }}/.docker"
+
+  # SHARED HOST. Docker stores ONE credential per registry per config file, and
+  # the Trendig stack is already logged in to ghcr.io as `TrendigGmbH` in
+  # /root/.docker/config.json. A plain `docker login ghcr.io` from a root-run
+  # task would overwrite it, and their next pull would 401.
+  #
+  # DOCKER_CONFIG gives SaaSConf its own credential store, so the two projects
+  # cannot clobber each other regardless of which user a task runs as.
+  environment:
+    DOCKER_CONFIG: "{{ docker_config_dir }}"
+
+  tasks:
+    - name: Assert the ghcr token is present
+      ansible.builtin.assert:
+        that: lookup('env', 'GHCR_READ_TOKEN') | length > 0
+        fail_msg: "GHCR_READ_TOKEN is empty — the image pull will 401."
+
+    - name: Ensure the isolated docker config dir exists
+      ansible.builtin.file:
+        path: "{{ docker_config_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Log in to GitHub Container Registry
+      ansible.builtin.shell:
+        cmd: >-
+          echo "{{ lookup('env', 'GHCR_READ_TOKEN') }}"
+          | docker login ghcr.io -u "{{ lookup('env', 'GHCR_READ_USER') }}" --password-stdin
+      args:
+        executable: /bin/bash
+      register: ghcr_login
+      changed_when: "'Login Succeeded' in ghcr_login.stdout"
+      no_log: yes
+
+    - name: Assert we did not touch the Trendig credential
+      ansible.builtin.stat:
+        path: "{{ docker_config_dir }}/config.json"
+      register: our_cfg
+      failed_when: not our_cfg.stat.exists
+
+    # ── Rollback safety net ──────────────────────────────────────────────────
+    # Tag whatever is currently deployed as :previous BEFORE pulling the new
+    # image, so saasconf.staging.rollback.yml has something to restore if E2E
+    # fails. Ignored on the very first deploy, when nothing is there yet.
+    - name: Tag the currently deployed images as :previous
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          for img in "{{ ghcr_backend_image }}" "{{ ghcr_frontend_image }}"; do
+            if docker image inspect "$img:{{ image_tag }}" >/dev/null 2>&1; then
+              docker tag "$img:{{ image_tag }}" "$img:previous"
+              echo "tagged $img:previous"
+            else
+              echo "no local $img:{{ image_tag }} yet — first deploy, skipping"
+            fi
+          done
+        executable: /bin/bash
+      register: prev_tag
+      changed_when: "'tagged' in prev_tag.stdout"
+
+    # ── Pull ─────────────────────────────────────────────────────────────────
+    # `docker pull` via the CLI, not community.docker.docker_image: the CLI
+    # honours DOCKER_CONFIG, so the pull uses OUR credential store. The Python
+    # SDK's config resolution is less predictable, and getting it wrong here
+    # means silently authenticating as TrendigGmbH.
+    - name: Pull the images
+      ansible.builtin.command:
+        cmd: "docker pull {{ item }}"
+      loop:
+        - "{{ backend_ref }}"
+        - "{{ frontend_ref }}"
+      register: pulled
+      changed_when: "'Downloaded newer image' in pulled.stdout or 'Pull complete' in pulled.stdout"
+
+    # ── Compose file ─────────────────────────────────────────────────────────
+    # Rendered every deploy so image tags and domains follow the inventory.
+    # `.env` sits beside it and is never templated — it holds PII_ENCRYPTION_KEY.
+    - name: Render docker-compose.yml
+      ansible.builtin.template:
+        src: docker-compose.j2
+        dest: "{{ app_root }}/docker-compose.yml"
+        mode: "0644"
+
+    # ── Infrastructure first ─────────────────────────────────────────────────
+    - name: Start db and redis, wait for healthy
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_root }}"
+        services:
+          - db
+          - redis
+        state: present
+        wait: yes
+
+    # ── Migrations ───────────────────────────────────────────────────────────
+    # In a one-off container, not inside the live uvicorn process: running
+    # alembic in-process doubles memory pressure and OOM-kills the backend on a
+    # low-RAM box. The image carries alembic.ini, app/ and scripts/, so no
+    # source is needed on the server.
+    - name: Run alembic migrations
+      ansible.builtin.command:
+        cmd: docker compose run --rm --no-deps backend alembic upgrade head
+        chdir: "{{ app_root }}"
+      register: alembic
+      changed_when: "'Running upgrade' in alembic.stdout"
+
+    - name: Show migration output
+      ansible.builtin.debug:
+        var: alembic.stdout_lines
+
+    # ── App services ─────────────────────────────────────────────────────────
+    - name: Start all services
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_root }}"
+        state: present
+        recreate: always
+        wait: yes
+
+    # ── Seed ─────────────────────────────────────────────────────────────────
+    # Empty E2E_* values mean "skip seeding the E2E user" — safe anywhere.
+    - name: Seed platform data
+      ansible.builtin.command:
+        cmd: docker compose run --rm --no-deps backend python -u -m app.db.seed
+        chdir: "{{ app_root }}"
+      environment:
+        E2E_PORTAL_EMAIL: "{{ lookup('env', 'E2E_PORTAL_EMAIL') }}"
+        E2E_PORTAL_PASSWORD: "{{ lookup('env', 'E2E_PORTAL_PASSWORD') }}"
+        E2E_PORTAL_TENANT_SLUG: "{{ lookup('env', 'E2E_TENANT_SLUG') }}"
+      register: seed
+      changed_when: seed.rc == 0
+      no_log: yes
+
+    # ── Post-deploy checks ───────────────────────────────────────────────────
+    - name: Container status
+      ansible.builtin.command:
+        cmd: docker compose ps
+        chdir: "{{ app_root }}"
+      register: ps
+      changed_when: false
+
+    - name: Show container status
+      ansible.builtin.debug:
+        var: ps.stdout_lines
+
+    - name: Backend health on the loopback port
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ backend_port }}/health"
+        status_code: 200
+      register: health
+      retries: 12
+      delay: 5
+      until: health.status is defined and health.status == 200
+
+    - name: Frontend health on the loopback port
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ frontend_port }}/health"
+        status_code: 200
+      retries: 6
+      delay: 5
+      register: fe_health
+      until: fe_health.status is defined and fe_health.status == 200
+
+    # ── Housekeeping ─────────────────────────────────────────────────────────
+    # Shared host: never `docker system prune -af`, which would reap the
+    # Trendig stack's unused images too. Dangling-only, and no volume pruning.
+    - name: Prune dangling images older than 1h
+      ansible.builtin.command:
+        cmd: docker image prune --force --filter "until=1h"
+      register: prune
+      changed_when: "'Total reclaimed space: 0B' not in prune.stdout"
+
+    - name: Deploy summary
+      ansible.builtin.debug:
+        msg:
+          - "backend:  {{ backend_ref }}"
+          - "frontend: {{ frontend_ref }}"
+          - "public:   https://{{ domain }}  |  https://{{ api_domain }}"

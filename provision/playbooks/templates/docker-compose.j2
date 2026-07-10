@@ -1,0 +1,207 @@
+{{ ansible_managed | comment }}
+# Rendered from provision/playbooks/templates/docker-compose.j2 — do not edit on
+# the server; changes are overwritten on every deploy.
+#
+# Differences from deploy/staging/docker-compose.yml (the old single-tenant box):
+#   • no `nginx` / `certbot` services — host nginx owns 80/443 on this shared
+#     host (it also serves dev.trendig.com), so containers cannot bind them
+#   • `backend` / `frontend` are pulled from ghcr, never built here
+#   • both publish to 127.0.0.1 only, so the internet cannot bypass host nginx
+#   • DOMAIN-derived values are rendered from the Ansible inventory, not ${DOMAIN}
+#
+# `${VAR}` below is Compose interpolation, resolved from {{ app_root }}/.env.
+# `{{ '{{' }} … }}` would be Jinja — there is none in the service bodies.
+
+services:
+  # PostgreSQL Database
+  db:
+    # postgres:17.9-alpine — major version must match the dump being restored
+    image: postgres:17.9-alpine@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609
+    container_name: saasconf_db_staging
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-saasconf}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-saasconf}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-saasconf} -d ${DB_NAME:-saasconf}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - saasconf_network
+
+  # Redis for token blacklist and caching
+  redis:
+    # redis:7.4.9-alpine
+    image: redis:7.4.9-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    container_name: saasconf_redis_staging
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    networks:
+      - saasconf_network
+
+  # FastAPI Backend — prebuilt in CI, pulled from ghcr
+  backend:
+    image: {{ ghcr_backend_image }}:{{ image_tag }}
+    container_name: saasconf_backend_staging
+    restart: unless-stopped
+    ports:
+      # Loopback only — host nginx proxies api.{{ domain }} here
+      - "127.0.0.1:{{ backend_port }}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-saasconf}:${DB_PASSWORD}@db:5432/${DB_NAME:-saasconf}
+      DATABASE_SSL_REQUIRED: ${DATABASE_SSL_REQUIRED:-false}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: HS256
+      PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY}
+      PII_ENCRYPTION_KEYS_OLD: ${PII_ENCRYPTION_KEYS_OLD:-}
+      DEBUG: "false"
+      CORS_ORIGINS: '["https://{{ domain }}", "https://{{ domain_www | default("www." ~ domain) }}"]'
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+      OPS_API_KEY: ${OPS_API_KEY}
+      # Override for E2E: Playwright tests run from a single GHA IP and would trip the prod-safe default
+      RATE_LIMIT_LOGIN: ${RATE_LIMIT_LOGIN:-30/minute}
+      SENTRY_DSN: ${SENTRY_DSN_BACKEND:-}
+      SENTRY_ENVIRONMENT: staging
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@sonrisa.ventures}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-SaaSConf}
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN:-}
+      MAILGUN_FROM_EMAIL: ${MAILGUN_FROM_EMAIL:-noreply@sonrisa.ventures}
+      MAILGUN_FROM_NAME: ${MAILGUN_FROM_NAME:-SaaSConf}
+      MAILGUN_BASE_URL: ${MAILGUN_BASE_URL:-https://api.mailgun.net}
+      # Rendered from the inventory, not ${DOMAIN} — these build outbound email
+      # links, so on the temp domain they must not point at the old box.
+      FRONTEND_BASE_URL: https://{{ domain }}
+      PORTAL_BASE_URL: https://{{ domain }}
+      UVICORN_WORKERS: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - saasconf_network
+
+  # React SPA served by an in-container nginx — prebuilt in CI, pulled from ghcr.
+  # VITE_API_URL ({{ vite_api_url }}) is baked into the bundle at build time.
+  frontend:
+    image: {{ ghcr_frontend_image }}:{{ image_tag }}
+    container_name: saasconf_frontend_staging
+    restart: unless-stopped
+    ports:
+      # Loopback only — host nginx proxies {{ domain }} here
+      - "127.0.0.1:{{ frontend_port }}:80"
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    networks:
+      - saasconf_network
+
+  # Nightly data retention cleanup (expired tokens, old audit logs)
+  # Cron sidecars reach the backend over the Compose network on :8000 —
+  # unaffected by the loopback host-port choice above.
+  cleanup-cron:
+    image: curlimages/curl:8.20.0
+    container_name: saasconf_cleanup_cron
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      OPS_API_KEY: ${OPS_API_KEY}
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 86400; echo \"Running data retention cleanup...\"; curl -sf -X POST -H \"Authorization: Bearer $${OPS_API_KEY}\" http://backend:8000/ops/data-retention-cleanup || echo \"Cleanup failed\"; done;'"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+    networks:
+      - saasconf_network
+
+  # Hourly deadline reminder emails
+  deadline-cron:
+    image: curlimages/curl:8.20.0
+    container_name: saasconf_deadline_cron
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      OPS_API_KEY: ${OPS_API_KEY}
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 3600; echo \"Sending deadline reminders...\"; curl -sf -X POST -H \"Authorization: Bearer $${OPS_API_KEY}\" http://backend:8000/ops/send-deadline-reminders || echo \"Deadline reminders failed\"; done;'"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+    networks:
+      - saasconf_network
+
+  # Daily payment reminder emails (overdue invoices)
+  payment-reminder-cron:
+    image: curlimages/curl:8.20.0
+    container_name: saasconf_payment_reminder_cron
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      OPS_API_KEY: ${OPS_API_KEY}
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 86400; echo \"Sending payment reminders...\"; curl -sf -X POST -H \"Authorization: Bearer $${OPS_API_KEY}\" http://backend:8000/ops/send-payment-reminders || echo \"Payment reminders failed\"; done;'"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+    networks:
+      - saasconf_network
+
+networks:
+  saasconf_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

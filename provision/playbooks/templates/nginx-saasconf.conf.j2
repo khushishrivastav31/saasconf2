@@ -1,0 +1,159 @@
+{{ ansible_managed | comment }}
+# Host nginx vhost for SaaSConf staging. Derived from deploy/staging/nginx.conf,
+# which was a whole nginx.conf for a container. This file is included inside the
+# host's `http { }` block, so only http-context and server-context directives
+# belong here — no `worker_processes`, `events`, `http`.
+#
+# Shared host: this box also serves dev.trendig.com and devtrendig.bjvsoft.net.
+# A syntax error here takes THOSE DOWN TOO. `nginx -t` gates every reload.
+#
+# Upstreams are loopback ports published by docker compose, not Docker service
+# names: backend :{{ backend_port }}, frontend :{{ frontend_port }}.
+#
+# TLS is issued with `certbot certonly` and referenced here. We deliberately do
+# NOT use `certbot --nginx`, which rewrites the files it manages — this file is
+# templated and would clobber those edits on the next render.
+
+# Rate-limit zone. Namespaced: zone names are global across every vhost on the
+# host, so a bare `api` would collide with any other site's zone and fail
+# `nginx -t` for the whole server.
+limit_req_zone $binary_remote_addr zone=saasconf_api:10m rate=10r/s;
+
+# ── HTTP → HTTPS, plus ACME challenge for renewals ───────────────────────────
+server {
+    listen 80;
+    server_name {{ domain }} {{ domain_www | default("www." ~ domain) }} {{ api_domain }};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── HTTPS — Frontend (SPA) ───────────────────────────────────────────────────
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name {{ domain }} {{ domain_www | default("www." ~ domain) }};
+
+    ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    client_max_body_size 10m;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://{{ api_domain }} https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; upgrade-insecure-requests" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Entry-point files have no content hash — never cache them so browsers
+    # always fetch the latest version after a deploy.
+    #
+    # NOTE: `add_header` does not merge across levels — any add_header in a
+    # location DISCARDS every add_header from the server block. The original
+    # config dropped CSP/HSTS on index.html for exactly this reason. The
+    # security headers are therefore repeated here and in /assets/.
+    location ~* ^/(index\.html|theme-init\.js)$ {
+        proxy_pass http://127.0.0.1:{{ frontend_port }};
+        proxy_set_header Host $host;
+
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        add_header Pragma "no-cache";
+
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://{{ api_domain }} https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; upgrade-insecure-requests" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    }
+
+    # Vite writes all hashed assets under /assets/ — safe to cache forever.
+    location /assets/ {
+        proxy_pass http://127.0.0.1:{{ frontend_port }};
+        proxy_set_header Host $host;
+
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ frontend_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# ── HTTPS — API backend ──────────────────────────────────────────────────────
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name {{ api_domain }};
+
+    # Single certificate, SANs cover the frontend + www + api names, so the
+    # path is keyed on the primary domain.
+    ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    client_max_body_size 10m;
+
+    # Security headers
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Rate limiting for API
+    limit_req zone=saasconf_api burst=20 nodelay;
+
+    # Block internal endpoints from public access.
+    # /metrics is a Prometheus scrape endpoint — it must never be reachable
+    # from the public internet. The backend additionally protects /metrics
+    # with OPS_API_KEY bearer auth (defense-in-depth); internal scrapers
+    # hit backend:8000/metrics directly on the Docker network with that
+    # header. Do NOT proxy /metrics through here.
+    location /metrics {
+        return 404;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ backend_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Timeouts — 120s for streaming exports and large uploads
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+    }
+}

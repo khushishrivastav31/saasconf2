@@ -1,5 +1,11 @@
 # Infrastructure
 
+> ⚠️ **Staging is no longer deployed this way.** It runs on a shared host via
+> Ansible (`provision/`) from prebuilt ghcr.io images, behind host nginx.
+> `setup.sh`, `init-ssl.sh`, `deploy.sh` and `nginx-init.conf` were deleted —
+> running them against the shared host would damage it. The sections below
+> describe the retired single-VPS architecture.
+
 This document covers local development, staging deployment, CI/CD, Nginx, SSL, monitoring, backups, and environment configuration.
 
 ---

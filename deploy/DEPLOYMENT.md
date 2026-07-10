@@ -1,5 +1,11 @@
 # SaaSConf Deployment Guide
 
+> ⚠️ **Staging is no longer deployed this way.** It runs on a shared host via
+> Ansible (`provision/`) from prebuilt ghcr.io images, behind host nginx.
+> `setup.sh`, `init-ssl.sh`, `deploy.sh` and `nginx-init.conf` were deleted —
+> running them against the shared host would damage it. The sections below
+> describe the retired single-VPS architecture.
+
 This guide covers deploying SaaSConf to a staging environment on Hetzner Cloud (or similar VPS provider).
 
 ## Architecture Overview

@@ -12,10 +12,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-env:
-  STAGING_HOST: ${{ secrets.STAGING_HOST }}
-  STAGING_USER: ${{ secrets.STAGING_USER }}
-  STAGING_PATH: ${{ secrets.STAGING_PATH }}
+# No STAGING_HOST/USER/PATH env: Ansible reads the target host and app root
+# from provision/inventory/, and connects as the user in the inventory.
 
 permissions:
   contents: read
@@ -31,6 +29,134 @@ jobs:
     uses: ./.github/workflows/_verify.yml
 
   # ─────────────────────────────────────────────────────────────
+  # Build + push images to GitHub Container Registry
+  #
+  # Images are built HERE, never on the server. The staging host is shared with
+  # the Trendig stack and has no business compiling anything.
+  #
+  # Two tags per image:
+  #   :staging  — rolling, what the deploy pulls
+  #   :<sha>    — immutable, for rollback without a rebuild
+  # ─────────────────────────────────────────────────────────────
+  build-images:
+    name: Build & push images (ghcr)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: verify
+    if: needs.verify.result == 'success'
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      sha_tag: ${{ steps.vars.outputs.sha_tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.sha }}
+
+      - name: Resolve build variables from the inventory
+        id: vars
+        # provision/inventory/domains/staging.ini is the single source of truth
+        # for per-environment values. VITE_API_URL is baked into the JS bundle at
+        # build time (Vite inlines it), so it cannot be supplied at deploy time —
+        # that is why staging and production need distinct frontend image tags.
+        run: |
+          set -euo pipefail
+          INI=provision/inventory/domains/staging.ini
+          read_ini() { grep "^$1=" "$INI" | cut -d= -f2-; }
+
+          VITE_API_URL="$(read_ini vite_api_url)"
+          BACKEND_IMAGE="$(read_ini ghcr_backend_image)"
+          FRONTEND_IMAGE="$(read_ini ghcr_frontend_image)"
+          IMAGE_TAG="$(read_ini image_tag)"
+
+          for v in VITE_API_URL BACKEND_IMAGE FRONTEND_IMAGE IMAGE_TAG; do
+            if [ -z "${!v}" ]; then
+              echo "::error::$v is empty — check $INI"
+              exit 1
+            fi
+          done
+
+          # ghcr rejects uppercase in image paths (the org is "PepeDiaz").
+          # `tr`, not ${VAR,,} — the latter needs bash 4+ and is untestable on
+          # a bash 3.2 dev machine.
+          BACKEND_IMAGE="$(printf '%s' "$BACKEND_IMAGE" | tr '[:upper:]' '[:lower:]')"
+          FRONTEND_IMAGE="$(printf '%s' "$FRONTEND_IMAGE" | tr '[:upper:]' '[:lower:]')"
+
+          VERSION="${{ inputs.tag || github.sha }}"
+          SHA_TAG="${VERSION//[^a-zA-Z0-9._-]/-}"
+
+          {
+            echo "vite_api_url=$VITE_API_URL"
+            echo "backend_image=$BACKEND_IMAGE"
+            echo "frontend_image=$FRONTEND_IMAGE"
+            echo "image_tag=$IMAGE_TAG"
+            echo "sha_tag=$SHA_TAG"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "backend  → $BACKEND_IMAGE:{$IMAGE_TAG,$SHA_TAG}"
+          echo "frontend → $FRONTEND_IMAGE:{$IMAGE_TAG,$SHA_TAG}  (API $VITE_API_URL)"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.backend_image }}:${{ steps.vars.outputs.image_tag }}
+            ${{ steps.vars.outputs.backend_image }}:${{ steps.vars.outputs.sha_tag }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile.prod
+          push: true
+          # No `target:` — the default (last) stage is the full build. The
+          # `prebuilt` stage exists only for the old build-on-server flow.
+          build-args: |
+            VITE_API_URL=${{ steps.vars.outputs.vite_api_url }}
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN_FRONTEND }}
+            VITE_SENTRY_ENVIRONMENT=staging
+            VITE_APP_VERSION=${{ inputs.tag || github.sha }}
+          tags: |
+            ${{ steps.vars.outputs.frontend_image }}:${{ steps.vars.outputs.image_tag }}
+            ${{ steps.vars.outputs.frontend_image }}:${{ steps.vars.outputs.sha_tag }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+      - name: Summary
+        run: |
+          {
+            echo "### Images pushed to ghcr 📦"
+            echo ""
+            echo '```'
+            echo "${{ steps.vars.outputs.backend_image }}:${{ steps.vars.outputs.image_tag }}"
+            echo "${{ steps.vars.outputs.backend_image }}:${{ steps.vars.outputs.sha_tag }}"
+            echo "${{ steps.vars.outputs.frontend_image }}:${{ steps.vars.outputs.image_tag }}"
+            echo "${{ steps.vars.outputs.frontend_image }}:${{ steps.vars.outputs.sha_tag }}"
+            echo '```'
+            echo ""
+            echo "Frontend built against \`${{ steps.vars.outputs.vite_api_url }}\` (baked in)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ─────────────────────────────────────────────────────────────
   # Deploy to Staging
   # ─────────────────────────────────────────────────────────────
   deploy-staging:
@@ -38,8 +164,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 30
-    needs: verify
-    if: needs.verify.result == 'success'
+    needs: [verify, build-images]
+    if: needs.verify.result == 'success' && needs.build-images.result == 'success'
 
     steps:
       - name: Checkout code
@@ -49,298 +175,62 @@ jobs:
           # exact commit. On push-to-main this is empty and defaults to HEAD.
           ref: ${{ inputs.tag || github.sha }}
 
-      - name: Compute image tag
-        id: image_tag
+      - name: Resolve deploy variables from the inventory
+        id: vars
         run: |
-          VERSION="${{ inputs.tag || github.sha }}"
-          # Sanitise for Docker: replace '+' and other invalid chars with '-'
-          TAG="staging-${VERSION//[^a-zA-Z0-9._-]/-}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Set up frontend tooling
-        uses: ./.github/actions/setup-frontend
-
-      - name: Build frontend dist
-        # Produces frontend/dist/ on the CI runner. The dist is rsynced to the
-        # server and the image is built there using the lightweight prebuilt
-        # stage (COPY dist into nginx — no Node.js on the server needed).
-        working-directory: frontend
-        env:
-          VITE_API_URL: https://api.staging.sonrisa.ventures
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_FRONTEND }}
-          VITE_SENTRY_ENVIRONMENT: staging
-          VITE_APP_VERSION: ${{ inputs.tag || github.sha }}
-        run: pnpm run build
+          set -euo pipefail
+          INI=provision/inventory/domains/staging.ini
+          read_ini() { grep "^$1=" "$INI" | cut -d= -f2-; }
+          {
+            echo "domain=$(read_ini domain)"
+            echo "api_domain=$(read_ini api_domain)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Ensure swap is available on staging
-        # FastAPI + WeasyPrint startup OOM-kills the backend on servers with no swap.
-        # The deploy user lacks passwordless sudo, so we use a privileged Docker
-        # container (no sudo needed — deploy user already has Docker socket access)
-        # to create the swapfile and enable it in the host mount namespace via nsenter.
-        # Idempotent: exits early if swap is already active.
+      - name: Install Ansible
+        # ansible-core 2.17+: community.docker 5.x does not support 2.16
+        # (which is what `ansible==9.*` pins), and docker_compose_v2 needs it.
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            SWAP_TOTAL=$(free -b | awk '/^Swap:/ {print $2}')
-            if [ "$SWAP_TOTAL" -gt 0 ]; then
-              echo "Swap already active — skipping."
-              free -h
-              exit 0
-            fi
+          pip install 'ansible-core==2.17.*'
+          ansible-galaxy collection install community.docker
 
-            echo "No active swap — creating 2 GB swapfile via privileged container..."
-            # --privileged --pid=host: shares host PID namespace + CAP_SYS_ADMIN so
-            # nsenter can enter the host mount namespace and call swapon there.
-            # -v /:/hostfs: host filesystem is visible inside the container at /hostfs.
-            docker run --rm --privileged --pid=host \
-              -v /:/hostfs \
-              alpine:3 sh -c '
-                apk add -q util-linux 2>/dev/null
-                if [ ! -f /hostfs/swapfile ]; then
-                  fallocate -l 2G /hostfs/swapfile 2>/dev/null \
-                    || dd if=/dev/zero of=/hostfs/swapfile bs=1M count=2048
-                  chmod 600 /hostfs/swapfile
-                  mkswap /hostfs/swapfile
-                fi
-                nsenter -t 1 -m -- /sbin/swapon /swapfile 2>/dev/null || true
-              '
-
-            free -h
-            SWAP_TOTAL=$(free -b | awk '/^Swap:/ {print $2}')
-            if [ "$SWAP_TOTAL" -eq 0 ]; then
-              echo "::error::Swap is still 0 after privileged container setup — investigate manually"
-              exit 1
-            fi
-            echo "Swap is active."
-          EOF
-
-      - name: Reclaim docker disk space on staging
-        # Runs BEFORE the server-side build so there is room on disk for the new image.
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            echo "=== Disk usage BEFORE cleanup ==="
-            df -h / | tail -1
-            docker system df 2>/dev/null || true
-
-            # Remove ALL versioned saasconf staging/failed tags — they pile up
-            # on every RC deploy and are the primary driver of disk growth.
-            # The rolling :staging tag is kept; versioned snapshots are ephemeral.
-            docker images --format '{{.Repository}}:{{.Tag}}' \
-              | grep -E '^saasconf-(backend|frontend):(staging-|failed-)' \
-              | xargs -r docker rmi -f 2>&1 | tail -10 || true
-
-            # Prune ALL unused Docker resources — no age filter because all our
-            # RC images are from today and would be skipped by until=24h.
-            # Named volumes (postgres_data, redis_data) are NOT touched by
-            # docker system prune unless --volumes is passed — DB data is safe.
-            docker system prune -af 2>&1 | tail -5 || true
-
-            echo "=== Disk usage AFTER cleanup ==="
-            df -h / | tail -1
-            docker system df 2>/dev/null || true
-          EOF
-
-      - name: Deploy backend source
-        # Alembic migrations run from app/ source on the server — keep it in sync.
-        run: |
-          rsync -avz --delete \
-            --exclude '__pycache__' \
-            --exclude '.pytest_cache' \
-            --exclude '*.pyc' \
-            --exclude 'venv' \
-            --exclude '.env' \
-            -e "ssh -i ~/.ssh/id_ed25519" \
-            backend/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/backend/
-
-      - name: Deploy configuration
-        run: |
-          rsync -avz \
-            --exclude '.env' \
-            -e "ssh -i ~/.ssh/id_ed25519" \
-            deploy/staging/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/deploy/staging/
-
-      - name: Deploy frontend dist to staging
-        # Rsync the pre-built dist/ and Dockerfile to the server so the server
-        # can build the tiny nginx+prebuilt image without needing Node.js.
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/id_ed25519" \
-            frontend/dist/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/frontend/dist/
-          rsync -avz \
-            -e "ssh -i ~/.ssh/id_ed25519" \
-            frontend/Dockerfile.prod \
-            ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/frontend/
-          rsync -avz \
-            -e "ssh -i ~/.ssh/id_ed25519" \
-            frontend/deploy/ \
-            ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/frontend/deploy/
-
-      - name: Tag previous images for rollback
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-
-            # Tag current :latest images as :previous so the rollback-staging
-            # job can restore them if E2E later fails. ``docker compose images``
-            # prints a table with the Repository in column 2 of row 2 (header
-            # is row 1). We parsed via ``--format json`` previously, but
-            # Compose v2 returns a JSON *array* that ``head -1`` shreds into
-            # ``[`` — python then crashed and $img was silently empty, so
-            # :previous tags never got created. Awk on the plain table is
-            # format-stable.
-            for svc in backend frontend; do
-              img=$(docker compose images "$svc" 2>/dev/null | awk 'NR==2 {print $2}')
-              echo "Resolved image repo for $svc: '${img:-<empty>}'"
-              if [ -n "$img" ]; then
-                docker tag "$img:latest" "$img:previous" 2>/dev/null || true
-                echo "Tagged $img:latest → $img:previous"
-              else
-                echo "::warning::Could not resolve image repo for $svc — rollback will have nothing to restore"
-              fi
-            done
-          EOF
-
-      - name: Build frontend image on staging
-        # The frontend image is built on the server using the prebuilt stage —
-        # just COPY dist into nginx, no Node.js required (~50 MB RAM vs ~1 GB).
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-            echo "Building frontend image from prebuilt dist..."
-            docker compose build --no-cache frontend
-            echo "Frontend image built successfully."
-          EOF
-
-      - name: Build backend image on staging
-        # The backend image is built on the server from the rsynced source so it
-        # picks up runtime secrets (RESEND_API_KEY etc.) via deploy/staging/.env.
-        # Running in its own step keeps the deploy log readable and isolates build
-        # failures from the container-recreation step.
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-            echo "Building backend image..."
-            docker compose build --no-cache backend
-            echo "Backend image built successfully."
-          EOF
-
-      - name: Reset database for PG16 (one-time fix)
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-
-            # Check if db is healthy — if not, reset the volume for a clean PG16 start
-            if ! docker exec saasconf_db_staging pg_isready -U saasconf 2>/dev/null; then
-              echo "Database unhealthy — resetting volume for clean PG16 start..."
-              docker compose down db 2>/dev/null || true
-              docker rm -f saasconf_db_staging 2>/dev/null || true
-
-              # Remove the postgres volume (try all possible prefix names)
-              for vol in $(docker volume ls --format '{{.Name}}' | grep postgres_data); do
-                echo "Removing volume: $vol"
-                docker volume rm "$vol" 2>/dev/null || true
-              done
-
-              echo "Volume reset complete. PG16 will start fresh."
-            else
-              echo "Database is healthy — no reset needed."
-            fi
-          EOF
-
-      - name: Rebuild and restart containers
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            set -e
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-
-            # Ensure infrastructure services are running and healthy
-            docker compose up -d --wait db redis
-
-            # Run migrations in an isolated one-off container before starting the
-            # backend service. This avoids running alembic inside a live uvicorn
-            # process, which doubles memory pressure and triggers OOM on low-RAM servers.
-            echo "Running database migrations..."
-            docker compose run --rm --no-deps backend alembic upgrade head < /dev/null
-
-            # Explicitly remove all app containers before recreating them.
-            # Relying solely on --force-recreate has proven unreliable when the
-            # SSH session has been open for a long build — the old container can
-            # remain running if the SSH pipe closes between the migration step and
-            # the compose up. Explicit rm guarantees a clean slate.
-            echo "Removing old app containers..."
-            docker rm -f saasconf_backend_staging saasconf_frontend_staging saasconf_nginx_staging 2>/dev/null || true
-
-            # Start app services — images already built, migrations already applied
-            echo "Starting app containers..."
-            docker compose up -d --no-deps backend frontend nginx
-          EOF
-
-      - name: Seed platform data
+      - name: Deploy with Ansible
+        working-directory: provision
         env:
-          # Pass-through to the seed script so it can create / update the
-          # E2E test portal user (consumed by ``seed_e2e_portal_user`` in
-          # backend/app/db/seed.py). Empty values mean "skip seeding the
-          # E2E user" — safe in any environment that didn't set them.
+          ANSIBLE_CONFIG: ${{ github.workspace }}/provision/ansible.cfg
+          ANSIBLE_PRIVATE_KEY_FILE: ~/.ssh/id_ed25519
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_READ_USER: ${{ github.repository_owner }}
           E2E_PORTAL_EMAIL: ${{ secrets.E2E_PORTAL_EMAIL }}
           E2E_PORTAL_PASSWORD: ${{ secrets.E2E_PORTAL_PASSWORD }}
-          E2E_PORTAL_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
+          E2E_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
+        # Both -i files are required: `inventory = inventory` in ansible.cfg is
+        # inert because Ansible's directory inventory skips .ini files.
         run: |
-          # Unquoted heredoc so the GH-Actions-supplied env vars expand
-          # locally before the SSH transport. Single-quoted ``-e`` values
-          # keep the secrets intact across the docker exec arg parsing.
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} <<EOF
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-            echo "Seeding platform data..."
-            docker compose run --rm --no-deps \\
-              -e E2E_PORTAL_EMAIL='$E2E_PORTAL_EMAIL' \\
-              -e E2E_PORTAL_PASSWORD='$E2E_PORTAL_PASSWORD' \\
-              -e E2E_PORTAL_TENANT_SLUG='$E2E_PORTAL_TENANT_SLUG' \\
-              backend python -u -m app.db.seed 2>&1
-            echo "Seed exit code: \$?"
-            echo "Container status:"
-            docker compose ps
-          EOF
-
-      - name: Verify containers are running
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-
-            echo "=== Container Status ==="
-            docker compose ps
-
-            echo ""
-            echo "=== Backend Logs (last 30 lines) ==="
-            docker compose logs --tail=30 backend
-
-            echo ""
-            echo "=== Nginx Logs (last 15 lines) ==="
-            docker compose logs --tail=15 nginx
-
-            echo ""
-            echo "=== Local Backend Health Check ==="
-            curl -sv http://localhost:8000/health 2>&1 || true
-
-            echo ""
-            echo "=== Local Backend via Docker Network ==="
-            docker compose exec -T backend curl -sf http://localhost:8000/health || echo "Backend health endpoint unreachable inside container"
-          EOF
+          ansible-playbook -v \
+            -i inventory/staging.sonrisa.ventures.ini \
+            -i inventory/domains/staging.ini \
+            playbooks/saasconf.staging.deploy.yml \
+            -e image_tag=${{ needs.build-images.outputs.sha_tag }}
 
       - name: Health check
+        # Public check through host nginx. The playbook already verified both
+        # services on their loopback ports; this proves TLS and the vhost.
+        env:
+          DOMAIN: ${{ steps.vars.outputs.domain }}
+          API_DOMAIN: ${{ steps.vars.outputs.api_domain }}
         run: |
           echo "Waiting for services to stabilize..."
           sleep 20
 
-          # Retry health checks up to 8 times with 15s intervals
           for i in 1 2 3 4 5 6 7 8; do
-            echo "Health check attempt $i/5..."
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1) || true
+            echo "Backend health check attempt $i/8..."
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://${API_DOMAIN}/health" 2>&1) || true
             echo "  HTTP status: $HTTP_CODE"
             if [ "$HTTP_CODE" = "200" ]; then
               echo "Backend is healthy"
@@ -349,21 +239,23 @@ jobs:
             if [ "$i" -eq 8 ]; then
               echo "Backend health check failed after 8 attempts"
               echo "=== Full curl output ==="
-              curl -sv --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1 || true
+              curl -sv --max-time 10 "https://${API_DOMAIN}/health" 2>&1 || true
               exit 1
             fi
             sleep 15
           done
 
           for i in 1 2 3 4 5; do
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://staging.sonrisa.ventures 2>&1) || true
+            echo "Frontend health check attempt $i/5..."
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://${DOMAIN}" 2>&1) || true
+            echo "  HTTP status: $HTTP_CODE"
             if [ "$HTTP_CODE" = "200" ]; then
               echo "Frontend is healthy"
               break
             fi
             if [ "$i" -eq 5 ]; then
               echo "Frontend health check failed after 5 attempts (last status: $HTTP_CODE)"
-              curl -sv --max-time 10 https://staging.sonrisa.ventures 2>&1 || true
+              curl -sv --max-time 10 "https://${DOMAIN}" 2>&1 || true
               exit 1
             fi
             sleep 10
@@ -373,8 +265,8 @@ jobs:
         if: success()
         run: |
           echo "✅ Deployment successful!"
-          echo "Frontend: https://staging.sonrisa.ventures"
-          echo "Backend: https://api.staging.sonrisa.ventures"
+          echo "Frontend: https://${{ steps.vars.outputs.domain }}"
+          echo "Backend:  https://${{ steps.vars.outputs.api_domain }}"
 
   # ─────────────────────────────────────────────────────────────
   # E2E Tests (against staging)
@@ -396,6 +288,17 @@ jobs:
 
       - uses: ./.github/actions/setup-frontend
 
+      - name: Resolve staging URLs from the inventory
+        id: vars
+        run: |
+          set -euo pipefail
+          INI=provision/inventory/domains/staging.ini
+          read_ini() { grep "^$1=" "$INI" | cut -d= -f2-; }
+          {
+            echo "base_url=https://$(read_ini domain)"
+            echo "api_url=https://$(read_ini api_domain)"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Install Playwright browsers
         working-directory: frontend
         run: pnpm exec playwright install chromium
@@ -405,10 +308,12 @@ jobs:
         run: mkdir -p playwright/.auth
 
       - name: Wait for staging to be ready
+        env:
+          API_URL: ${{ steps.vars.outputs.api_url }}
         run: |
           echo "Waiting for staging API to become ready..."
           for i in $(seq 1 30); do
-            status=$(curl -s -o /dev/null -w '%{http_code}' https://api.staging.sonrisa.ventures/health/ready || true)
+            status=$(curl -s -o /dev/null -w '%{http_code}' "${API_URL}/health/ready" || true)
             if [ "$status" = "200" ]; then
               echo "Staging API is ready (attempt $i)"
               break
@@ -417,13 +322,15 @@ jobs:
             sleep 10
           done
           # Final check
-          curl -sf https://api.staging.sonrisa.ventures/health/ready || (echo "API not ready after 5 minutes" && exit 1)
+          curl -sf "${API_URL}/health/ready" || (echo "API not ready after 5 minutes" && exit 1)
 
       - name: Wait for staging frontend
+        env:
+          BASE_URL: ${{ steps.vars.outputs.base_url }}
         run: |
           echo "Waiting for staging frontend..."
           for i in $(seq 1 30); do
-            status=$(curl -s -o /dev/null -w '%{http_code}' https://staging.sonrisa.ventures || true)
+            status=$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}" || true)
             if [ "$status" = "200" ]; then
               echo "Frontend is ready (attempt $i)"
               break
@@ -431,12 +338,12 @@ jobs:
             echo "Attempt $i/30: frontend returned $status, waiting 10s..."
             sleep 10
           done
-          curl -sf https://staging.sonrisa.ventures || (echo "Frontend not ready after 5 minutes" && exit 1)
+          curl -sf "${BASE_URL}" || (echo "Frontend not ready after 5 minutes" && exit 1)
 
       - name: Seed E2E test data
         working-directory: frontend
         env:
-          E2E_API_URL: https://api.staging.sonrisa.ventures
+          E2E_API_URL: ${{ steps.vars.outputs.api_url }}
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           # Used by the seed to grant the E2E portal user a CFP committee
@@ -448,7 +355,7 @@ jobs:
       - name: Run E2E tests
         working-directory: frontend
         env:
-          E2E_BASE_URL: https://staging.sonrisa.ventures
+          E2E_BASE_URL: ${{ steps.vars.outputs.base_url }}
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_PORTAL_EMAIL: ${{ secrets.E2E_PORTAL_EMAIL }}
@@ -456,7 +363,7 @@ jobs:
           E2E_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
           # E2E_CONFERENCE_ID and E2E_CONFERENCE_NAME are set dynamically
           # by the seed step via GITHUB_ENV — no static secrets needed.
-          E2E_API_URL: https://api.staging.sonrisa.ventures
+          E2E_API_URL: ${{ steps.vars.outputs.api_url }}
           E2E_PORTAL_PATH: /demo/portal
         run: npx playwright test
 
@@ -499,96 +406,65 @@ jobs:
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Resolve deploy variables from the inventory
+        id: vars
+        run: |
+          set -euo pipefail
+          INI=provision/inventory/domains/staging.ini
+          read_ini() { grep "^$1=" "$INI" | cut -d= -f2-; }
+          {
+            echo "domain=$(read_ini domain)"
+            echo "api_domain=$(read_ini api_domain)"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Restore :previous image tags
+      - name: Install Ansible
         run: |
-          # Pre-compute SHORT_SHA locally so the remote heredoc can be
-          # single-quoted (no $-expansion surprises). ``GITHUB_SHA`` is always
-          # exported in GH Actions runners.
-          SHORT_SHA="${GITHUB_SHA::8}"
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} \
-            "export SHORT_SHA='$SHORT_SHA' && bash -s" << 'EOF'
-            set -e
-            cd ${{ env.STAGING_PATH }}/deploy/staging
+          pip install 'ansible-core==2.17.*'
+          ansible-galaxy collection install community.docker
 
-            # Awk-on-plain-table matches the tag-previous step. Compose v2's
-            # --format json returns an array that head -1 reduces to "[",
-            # breaking the old python pipe silently — hence rollback never
-            # actually ran. Keep the two sites consistent.
-            rolled_back=0
-            for svc in backend frontend; do
-              img=$(docker compose images "$svc" 2>/dev/null | awk 'NR==2 {print $2}')
-              echo "Resolved image repo for $svc: '${img:-<empty>}'"
-              if [ -z "$img" ]; then
-                echo "::warning::Could not resolve image repo for $svc; skipping"
-                continue
-              fi
-              if ! docker image inspect "$img:previous" >/dev/null 2>&1; then
-                echo "::warning::No $img:previous tag found — cannot roll back $svc"
-                continue
-              fi
-              # Preserve the broken image under a SHA tag for post-mortem,
-              # then swap :previous into :latest so docker compose up picks
-              # up the older image.
-              docker tag "$img:latest" "$img:failed-$SHORT_SHA" || true
-              docker tag "$img:previous" "$img:latest"
-              echo "Rolled back $img:latest ← :previous (broken image saved as :failed-$SHORT_SHA)"
-              rolled_back=$((rolled_back + 1))
-            done
-
-            if [ "$rolled_back" -eq 0 ]; then
-              echo "::error::No services were rolled back — :previous tags missing"
-              exit 1
-            fi
-
-            echo "Restarting app containers off the restored :latest tags..."
-            docker compose up -d --force-recreate --no-deps backend frontend nginx
-          EOF
+      - name: Roll back with Ansible
+        working-directory: provision
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/provision/ansible.cfg
+          ANSIBLE_PRIVATE_KEY_FILE: ~/.ssh/id_ed25519
+        # The deploy playbook tags the running images as :previous before it
+        # pulls, so this is a local retag + restart — no registry round-trip.
+        run: |
+          ansible-playbook -v \
+            -i inventory/staging.sonrisa.ventures.ini \
+            -i inventory/domains/staging.ini \
+            playbooks/saasconf.staging.rollback.yml
 
       - name: Verify rollback health
+        env:
+          API_DOMAIN: ${{ steps.vars.outputs.api_domain }}
         run: |
-          echo "Waiting for rolled-back services to come up..."
-          sleep 20
-
-          for i in 1 2 3 4 5 6 7 8; do
-            echo "Post-rollback health check $i/8..."
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1) || true
-            echo "  HTTP status: $HTTP_CODE"
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Backend healthy after rollback"
-              break
-            fi
-            if [ "$i" -eq 8 ]; then
-              echo "::error::Backend still unhealthy after rollback — staging needs manual intervention"
-              exit 1
-            fi
-            sleep 15
-          done
-
-          for i in 1 2 3 4 5; do
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://staging.sonrisa.ventures 2>&1) || true
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Frontend healthy after rollback"
-              break
-            fi
-            if [ "$i" -eq 5 ]; then
-              echo "::error::Frontend still unhealthy after rollback — staging needs manual intervention"
-              exit 1
-            fi
+          sleep 15
+          for i in 1 2 3 4 5 6; do
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://${API_DOMAIN}/health" 2>&1) || true
+            echo "Rollback health attempt $i/6: $HTTP_CODE"
+            [ "$HTTP_CODE" = "200" ] && { echo "Rollback healthy"; exit 0; }
             sleep 10
           done
+          echo "::error::Staging is unhealthy after rollback — manual intervention required"
+          exit 1
 
       - name: Notify rollback
         if: always()
         run: |
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "::warning::Staging rolled back to previous release after E2E failure on ${GITHUB_SHA::8}. Investigate and push a fix."
-          else
-            echo "::error::Rollback attempt FAILED. Staging may be in a degraded state — SSH in and inspect manually."
-          fi
+          {
+            echo "## ⏪ Staging rolled back"
+            echo ""
+            echo "E2E failed against \`${{ github.sha }}\`; the previous images were restored."
+            echo ""
+            echo "> Migrations are NOT reverted — \`alembic downgrade\` is manual."
+          } >> "$GITHUB_STEP_SUMMARY"

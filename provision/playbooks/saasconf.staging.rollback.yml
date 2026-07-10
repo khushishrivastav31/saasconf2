@@ -1,0 +1,77 @@
+---
+# Roll staging back to the previously deployed images.
+#
+# saasconf.staging.deploy.yml tags the running images as :previous before it
+# pulls new ones, so the rollback is a local retag + restart — no registry
+# round-trip, no rebuild.
+#
+# Run:
+#   cd provision
+#   ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook \
+#     -i inventory/staging.sonrisa.ventures.ini \
+#     -i inventory/domains/staging.ini \
+#     playbooks/saasconf.staging.rollback.yml
+#
+# To roll back to a specific build instead, redeploy with an immutable tag:
+#   ansible-playbook … saasconf.staging.deploy.yml -e image_tag=<sha>
+
+- hosts: STAGING
+  gather_facts: no
+  become: no
+
+  # Same isolated credential store as the deploy playbook — never write to
+  # /root/.docker/config.json, which holds the Trendig stack's ghcr login.
+  environment:
+    DOCKER_CONFIG: "{{ app_root }}/.docker"
+
+  tasks:
+    - name: Check that :previous images exist
+      ansible.builtin.command:
+        cmd: docker image inspect "{{ item }}:previous"
+      loop:
+        - "{{ ghcr_backend_image }}"
+        - "{{ ghcr_frontend_image }}"
+      register: prev
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if there is nothing to roll back to
+      ansible.builtin.assert:
+        that: prev.results | selectattr('rc', 'ne', 0) | list | length == 0
+        fail_msg: >-
+          No :previous images on the host — nothing to roll back to. This is
+          expected on the first deploy. Redeploy an immutable tag instead:
+          ansible-playbook … saasconf.staging.deploy.yml -e image_tag=<sha>
+
+    - name: Restore the :previous images over the deployed tag
+      ansible.builtin.command:
+        cmd: docker tag "{{ item }}:previous" "{{ item }}:{{ image_tag }}"
+      loop:
+        - "{{ ghcr_backend_image }}"
+        - "{{ ghcr_frontend_image }}"
+
+    # No pull: the local retag above is what we want to run. A pull would
+    # overwrite it with the broken image we are rolling back from.
+    - name: Recreate the app containers from the restored images
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_root }}"
+        state: present
+        recreate: always
+        pull: never
+        wait: yes
+
+    - name: Backend health on the loopback port
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ backend_port }}/health"
+        status_code: 200
+      register: health
+      retries: 12
+      delay: 5
+      until: health.status is defined and health.status == 200
+
+    - name: Rollback summary
+      ansible.builtin.debug:
+        msg:
+          - "Rolled back to the :previous images."
+          - "Migrations were NOT reverted — alembic downgrade is manual."
+          - "public: https://{{ domain }}  |  https://{{ api_domain }}"

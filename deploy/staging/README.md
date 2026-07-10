@@ -1,4 +1,26 @@
-# Staging Deployment
+# Staging Deployment — ⚠️ SUPERSEDED
+
+> **This directory no longer describes how staging is deployed.**
+>
+> Staging now runs on a **shared host**, deployed with **Ansible** from prebuilt
+> **ghcr.io** images, behind **host nginx** (not containerised nginx/certbot).
+> See [`provision/`](../../provision/) and the change record in
+> [`openspec/shipped/main-13468-staging-server-migration/`](../../openspec/shipped/main-13468-staging-server-migration/).
+>
+> `setup.sh`, `init-ssl.sh`, `deploy.sh` and `nginx-init.conf` were **deleted**
+> — they provisioned and deployed the retired single-VPS architecture and would
+> damage the shared host if run against it. Recover them from git history if you
+> need them for reference.
+>
+> Still live in this directory, still wired to workflows:
+> `backup.sh`, `restore.sh`, `logs.sh`, `upgrade-pg1{6,7}.sh`.
+> **They still assume the old paths** (`/opt/saasconf/backups`,
+> `$SCRIPT_DIR/.env`) and break on the new host — see issue #444.
+>
+> The rest of this file documents the **old** single-VPS setup, kept for the
+> old box until it is decommissioned.
+
+---
 
 This directory contains the Docker Compose configuration for the staging environment at `staging.sonrisa.ventures`.
 
@@ -29,17 +51,14 @@ Required environment variables:
 
 ### 2. Obtain SSL Certificates
 
-Run the SSL initialization script to obtain Let's Encrypt certificates:
-
-```bash
-chmod +x init-ssl.sh
-./init-ssl.sh
-```
-
-This will:
-1. Start a temporary nginx for the ACME challenge
-2. Obtain certificates for both `staging.sonrisa.ventures` and `api.staging.sonrisa.ventures`
-3. Store certificates in `./certbot/conf/`
+> `init-ssl.sh` was deleted with the retired architecture. On the current host,
+> TLS is issued by the provision playbook with `certbot certonly --webroot`
+> (one certificate, three SANs) and renewed by the host's `certbot.timer` with
+> a `systemctl reload nginx` deploy hook.
+>
+> Historically this script started a temporary nginx for the ACME challenge,
+> obtained certificates for `staging.sonrisa.ventures` and
+> `api.staging.sonrisa.ventures`, and stored them in `./certbot/conf/`.
 
 ### 3. Start Services
 

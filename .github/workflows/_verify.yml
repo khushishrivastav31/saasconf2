@@ -176,10 +176,25 @@ jobs:
         working-directory: frontend
         run: pnpm exec tsc --noEmit
 
+      - name: Resolve VITE_API_URL from the inventory
+        id: vite
+        # provision/inventory/domains/staging.ini is the single source of truth
+        # for per-environment values. This build is thrown away (type-check,
+        # lint, bundle size) — the URL is only inlined so the bundle matches
+        # what staging actually ships.
+        run: |
+          set -euo pipefail
+          URL="$(grep '^vite_api_url=' provision/inventory/domains/staging.ini | cut -d= -f2-)"
+          if [ -z "$URL" ]; then
+            echo "::error::vite_api_url is empty in provision/inventory/domains/staging.ini"
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
       - name: Build
         working-directory: frontend
         env:
-          VITE_API_URL: https://api.staging.sonrisa.ventures
+          VITE_API_URL: ${{ steps.vite.outputs.url }}
         run: pnpm run build
 
       - name: Check bundle size

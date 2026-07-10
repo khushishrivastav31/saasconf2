@@ -1,0 +1,23 @@
+{{ ansible_managed | comment }}
+# Bootstrap vhost — HTTP only. Installed ONLY to let certbot answer the ACME
+# HTTP-01 challenge for the very first certificate.
+#
+# Chicken-and-egg: the real vhost references
+# /etc/letsencrypt/live/{{ domain }}/fullchain.pem, and `nginx -t` fails if that
+# file does not exist yet. So: install this, reload, obtain the cert, then
+# install the real vhost (nginx-saasconf.conf.j2) and reload again.
+#
+# This file is replaced by the real vhost and is never left in place.
+
+server {
+    listen 80;
+    server_name {{ domain }} {{ domain_www | default("www." ~ domain) }} {{ api_domain }};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 404;
+    }
+}

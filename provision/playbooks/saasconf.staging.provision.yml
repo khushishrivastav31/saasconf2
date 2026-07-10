@@ -1,0 +1,380 @@
+---
+# One-time host provisioning for SaaSConf staging.
+#
+# Idempotent — safe to re-run. It does NOT deploy the app; that is
+# saasconf.staging.deploy.yml.
+#
+# Run:
+#   cd provision
+#   ANSIBLE_CONFIG=$PWD/ansible.cfg \
+#   ansible-playbook \
+#     -i inventory/staging.sonrisa.ventures.ini \
+#     -i inventory/domains/staging.ini \
+#     playbooks/saasconf.staging.provision.yml
+#
+# No GHCR_READ_TOKEN needed: the deploy playbook authenticates before it pulls.
+# Supply it only to pre-authenticate the host for manual `docker pull` debugging.
+#
+# Both -i flags are required: `inventory = inventory` in ansible.cfg is inert
+# because Ansible's directory inventory skips .ini files.
+#
+# SHARED HOST. This box also serves dev.trendig.com and devtrendig.bjvsoft.net.
+# Every nginx change is gated by `nginx -t`, and the symlink is removed again if
+# the test fails — a broken config here would block reloads for those sites too.
+
+- hosts: STAGING
+  gather_facts: yes
+  become: yes
+
+  vars:
+    deploy_user: "{{ ansible_ssh_user }}"
+    certbot_webroot: /var/www/certbot
+    cert_live_dir: "/etc/letsencrypt/live/{{ domain }}"
+    nginx_site_available: /etc/nginx/sites-available/saasconf
+    nginx_site_enabled: /etc/nginx/sites-enabled/saasconf
+    swap_file: /swapfile
+    swap_size_mb: 2048
+    # Isolated docker credential store — see the ghcr login task below.
+    docker_config_dir: "{{ app_root }}/.docker"
+
+  tasks:
+    # ── Host packages ────────────────────────────────────────────────────────
+    - name: Ensure nginx and certbot are installed
+      tags: [packages]
+      ansible.builtin.apt:
+        name:
+          - nginx
+          - certbot
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # ── User, group, app root ────────────────────────────────────────────────
+    - name: Ensure the deploy user is in the docker group
+      tags: [user]
+      ansible.builtin.user:
+        name: "{{ deploy_user }}"
+        groups: docker
+        append: yes
+
+    - name: Ensure the app root exists
+      tags: [user]
+      ansible.builtin.file:
+        path: "{{ app_root }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
+
+    # ── Swap ─────────────────────────────────────────────────────────────────
+    # Images are built in CI now, so this is not for builds. WeasyPrint needs
+    # headroom when rendering invoice PDFs at runtime.
+    - name: Check whether any swap is active
+      tags: [swap]
+      ansible.builtin.set_fact:
+        swap_active: "{{ (ansible_facts.swaptotal_mb | default(0) | int) > 0 }}"
+
+    - name: Create a swap file
+      tags: [swap]
+      when: not swap_active
+      block:
+        - name: Allocate {{ swap_size_mb }}MB swap file
+          ansible.builtin.command:
+            cmd: "fallocate -l {{ swap_size_mb }}M {{ swap_file }}"
+            creates: "{{ swap_file }}"
+
+        - name: Secure the swap file
+          ansible.builtin.file:
+            path: "{{ swap_file }}"
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: Format the swap file
+          ansible.builtin.command:
+            cmd: "mkswap {{ swap_file }}"
+          register: mkswap
+          changed_when: "'Setting up swapspace' in mkswap.stdout"
+          failed_when:
+            - mkswap.rc != 0
+            - "'already' not in mkswap.stderr"
+
+        - name: Enable the swap file
+          ansible.builtin.command:
+            cmd: "swapon {{ swap_file }}"
+          register: swapon
+          changed_when: swapon.rc == 0
+          failed_when:
+            - swapon.rc != 0
+            - "'already' not in swapon.stderr"
+
+        # lineinfile, not ansible.posix.mount — that would add a second
+        # collection dependency, and CI installs only community.docker.
+        - name: Persist swap in /etc/fstab
+          ansible.builtin.lineinfile:
+            path: /etc/fstab
+            regexp: "^{{ swap_file }}\\s"
+            line: "{{ swap_file }} none swap sw 0 0"
+            state: present
+
+    # ── ghcr login ───────────────────────────────────────────────────────────
+    # SHARED HOST. Docker stores ONE credential per registry per config file.
+    # The Trendig stack is already logged in to ghcr.io as `TrendigGmbH` in
+    # /root/.docker/config.json (its playbook runs with become: yes). This play
+    # also runs as root, so a plain `docker login` here would OVERWRITE that
+    # credential and their next pull would 401.
+    #
+    # DOCKER_CONFIG points at our own store under {{ app_root }}, so neither
+    # project can clobber the other regardless of which user runs the task.
+    # OPTIONAL here. The deploy playbook logs in on every run, so provisioning
+    # does not need the token — and a human running this by hand should not have
+    # to hold a registry credential on their laptop. Set GHCR_READ_TOKEN only if
+    # you want to pre-authenticate the host (e.g. to pull by hand for debugging).
+    - name: Note whether a ghcr token was supplied
+      tags: [ghcr]
+      ansible.builtin.set_fact:
+        ghcr_token_supplied: "{{ (lookup('env', 'GHCR_READ_TOKEN') | default('', true) | length) > 0 }}"
+
+    - name: Explain the skipped login
+      tags: [ghcr]
+      when: not ghcr_token_supplied
+      ansible.builtin.debug:
+        msg: >-
+          GHCR_READ_TOKEN not set — skipping the registry login. This is fine:
+          saasconf.staging.deploy.yml logs in before it pulls.
+
+    - name: Ensure the isolated docker config dir exists
+      tags: [ghcr]
+      ansible.builtin.file:
+        path: "{{ docker_config_dir }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0700"
+
+    - name: Record the Trendig ghcr credential before we touch anything
+      tags: [ghcr]
+      ansible.builtin.stat:
+        path: /root/.docker/config.json
+        checksum_algorithm: sha256
+      register: trendig_cfg_before
+
+    - name: Log in to GitHub Container Registry
+      tags: [ghcr]
+      when: ghcr_token_supplied
+      become_user: "{{ deploy_user }}"
+      environment:
+        DOCKER_CONFIG: "{{ docker_config_dir }}"
+      ansible.builtin.shell:
+        cmd: >-
+          echo "{{ lookup('env', 'GHCR_READ_TOKEN') }}"
+          | docker login ghcr.io -u "{{ lookup('env', 'GHCR_READ_USER') }}" --password-stdin
+      args:
+        executable: /bin/bash
+      register: ghcr_login
+      changed_when: "'Login Succeeded' in ghcr_login.stdout"
+      no_log: yes
+
+    - name: Verify the Trendig ghcr credential is untouched
+      tags: [ghcr]
+      ansible.builtin.stat:
+        path: /root/.docker/config.json
+        checksum_algorithm: sha256
+      register: trendig_cfg_after
+
+    - name: Fail if we clobbered the co-tenant's registry credential
+      tags: [ghcr]
+      ansible.builtin.assert:
+        that:
+          - trendig_cfg_before.stat.checksum | default('') == trendig_cfg_after.stat.checksum | default('')
+        fail_msg: >-
+          /root/.docker/config.json changed while logging in to ghcr. The
+          Trendig stack's registry credential may have been overwritten — its
+          next `docker compose pull` will 401. Restore it before proceeding.
+
+    # ── .env — placed by hand, never templated ───────────────────────────────
+    # It holds PII_ENCRYPTION_KEY. Regenerating that key makes every encrypted
+    # PII column in the restored dump permanently unreadable, so this playbook
+    # asserts the file exists rather than creating one.
+    - name: Check for the env file
+      tags: [env]
+      ansible.builtin.stat:
+        path: "{{ app_root }}/.env"
+      register: env_file
+
+    - name: Assert the env file exists
+      tags: [env]
+      ansible.builtin.assert:
+        that: env_file.stat.exists
+        fail_msg: >-
+          {{ app_root }}/.env is missing. Copy it from the old staging host
+          (see .github/workflows/get-staging-env.yml) and install it with:
+          install -m 600 -o {{ deploy_user }} -g {{ deploy_user }}
+          staging.env {{ app_root }}/.env
+          It must be named exactly `.env` — compose resolves ${VAR} from the
+          project-directory .env, and a differently-named file silently expands
+          every value to the empty string.
+
+    - name: Lock down the env file
+      tags: [env]
+      ansible.builtin.file:
+        path: "{{ app_root }}/.env"
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0600"
+
+    # ── TLS bootstrap ────────────────────────────────────────────────────────
+    - name: Ensure the ACME webroot exists
+      tags: [tls]
+      ansible.builtin.file:
+        path: "{{ certbot_webroot }}"
+        state: directory
+        mode: "0755"
+
+    - name: Check for an existing certificate
+      tags: [tls]
+      ansible.builtin.stat:
+        path: "{{ cert_live_dir }}/fullchain.pem"
+      register: cert
+
+    # The real vhost references the certificate. Before first issuance,
+    # `nginx -t` fails with [emerg] cannot load certificate — which also blocks
+    # reloads for dev.trendig.com. So serve HTTP-only until the cert exists.
+    - name: Obtain the first certificate
+      tags: [cert]
+      when: not cert.stat.exists
+      block:
+        - name: Install the HTTP-only bootstrap vhost
+          ansible.builtin.template:
+            src: nginx-saasconf-bootstrap.conf.j2
+            dest: "{{ nginx_site_available }}"
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Enable the bootstrap vhost
+          ansible.builtin.file:
+            src: "{{ nginx_site_available }}"
+            dest: "{{ nginx_site_enabled }}"
+            state: link
+
+        - name: Validate nginx config (bootstrap)
+          ansible.builtin.command: nginx -t
+          changed_when: false
+
+        - name: Reload nginx (bootstrap)
+          ansible.builtin.service:
+            name: nginx
+            state: reloaded
+
+        # `certonly --webroot`, never `--nginx`: the nginx plugin rewrites the
+        # files it manages, and this vhost is templated — every render would
+        # clobber its edits. One cert, three SANs.
+        # Explicit, never defaulted: Let's Encrypt sends expiry warnings here,
+        # and a guessed address means nobody sees them. The old box's cert died
+        # un-renewed for exactly this class of silent failure.
+        - name: Assert an ACME contact address is configured
+          ansible.builtin.assert:
+            that: acme_email is defined and acme_email | length > 0
+            fail_msg: "Set acme_email in inventory/domains/staging.ini."
+
+        - name: Obtain the certificate via the ACME webroot
+          ansible.builtin.command:
+            cmd: >-
+              certbot certonly --webroot
+              -w {{ certbot_webroot }}
+              -d {{ domain }}
+              -d {{ domain_www | default('www.' ~ domain) }}
+              -d {{ api_domain }}
+              --non-interactive --agree-tos
+              --email {{ acme_email }}
+              --deploy-hook "systemctl reload nginx"
+            creates: "{{ cert_live_dir }}/fullchain.pem"
+
+      rescue:
+        - name: Remove the bootstrap symlink so a half-configured site cannot load
+          ansible.builtin.file:
+            path: "{{ nginx_site_enabled }}"
+            state: absent
+
+        - name: Reload nginx back to a known-good config
+          ansible.builtin.service:
+            name: nginx
+            state: reloaded
+
+        - name: Fail with context
+          ansible.builtin.fail:
+            msg: >-
+              Certificate issuance failed. The bootstrap vhost has been removed
+              and nginx reloaded, so dev.trendig.com is unaffected. Check that
+              {{ domain }}, {{ domain_www | default('www.' ~ domain) }} and
+              {{ api_domain }} all resolve to this host.
+
+    # ── Real vhost ───────────────────────────────────────────────────────────
+    - name: Install the SaaSConf vhost
+      tags: [vhost]
+      block:
+        - name: Render the vhost
+          ansible.builtin.template:
+            src: nginx-saasconf.conf.j2
+            dest: "{{ nginx_site_available }}"
+            owner: root
+            group: root
+            mode: "0644"
+            backup: yes
+          register: vhost
+
+        - name: Enable the vhost
+          ansible.builtin.file:
+            src: "{{ nginx_site_available }}"
+            dest: "{{ nginx_site_enabled }}"
+            state: link
+
+        - name: Validate nginx config
+          ansible.builtin.command: nginx -t
+          changed_when: false
+
+        - name: Reload nginx
+          ansible.builtin.service:
+            name: nginx
+            state: reloaded
+          when: vhost.changed
+
+      rescue:
+        # Never leave a config that fails `nginx -t` enabled: the next reload of
+        # ANY site on this host would fail with it.
+        - name: Disable the broken vhost
+          ansible.builtin.file:
+            path: "{{ nginx_site_enabled }}"
+            state: absent
+
+        - name: Restore the previous vhost if we have a backup
+          ansible.builtin.copy:
+            src: "{{ vhost.backup_file }}"
+            dest: "{{ nginx_site_available }}"
+            remote_src: yes
+          when: vhost.backup_file is defined
+
+        - name: Reload nginx back to a known-good config
+          ansible.builtin.service:
+            name: nginx
+            state: reloaded
+
+        - name: Fail with context
+          ansible.builtin.fail:
+            msg: >-
+              nginx -t failed for the SaaSConf vhost. It has been disabled and
+              nginx reloaded, so dev.trendig.com is unaffected. Inspect
+              {{ nginx_site_available }}.
+
+    # ── Summary ──────────────────────────────────────────────────────────────
+    - name: Provisioning summary
+      tags: [summary]
+      ansible.builtin.debug:
+        msg:
+          - "app root:   {{ app_root }} (owner {{ deploy_user }})"
+          - "vhost:      {{ nginx_site_enabled }} -> {{ nginx_site_available }}"
+          - "cert:       {{ cert_live_dir }}/fullchain.pem"
+          - "frontend:   https://{{ domain }} -> 127.0.0.1:{{ frontend_port }}"
+          - "api:        https://{{ api_domain }} -> 127.0.0.1:{{ backend_port }}"
+          - "next:       run saasconf.staging.deploy.yml"

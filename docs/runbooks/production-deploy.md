@@ -121,7 +121,9 @@ Watch the prod Sentry project for 5 minutes. Any new error group appearing in th
 
 ### 10. Bump `APP_VERSION` in `.env` (if not already tag-driven)
 
-The staging `deploy.sh` script does this with `sed` — keep the same pattern in prod so Sentry release tags match the deployed version.
+Staging's now-deleted `deploy.sh` did this with `sed` on `.env` — keep the same
+pattern in prod so Sentry release tags match the deployed version. (Staging's
+Ansible deploy does not bump `APP_VERSION`; it reads whatever `.env` holds.)
 
 ## Common failure modes
 
