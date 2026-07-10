@@ -42,7 +42,13 @@ docker-compose.override.yml
 logs/
 
 # Testing
+# Coverage artifacts are build outputs — CI regenerates them on every run and the
+# `coverage-report` job publishes them as workflow artifacts. Committing them lets a
+# stale local file masquerade as a real measurement (MAIN-13453).
 .coverage
+.coverage.*
+coverage.json
+coverage.xml
 htmlcov/
 coverage/
 .pytest_cache/
