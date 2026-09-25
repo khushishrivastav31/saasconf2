@@ -61,7 +61,7 @@ jobs:
             ./${{ steps.resolve.outputs.filename }}
 
       - name: Upload as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: staging-backup-${{ steps.resolve.outputs.filename }}
           path: ./${{ steps.resolve.outputs.filename }}

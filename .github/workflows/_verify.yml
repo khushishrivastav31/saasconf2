@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-backend
 
       - name: Lint with Ruff
@@ -28,7 +28,7 @@ jobs:
           ruff format --check app/
 
       - name: Cache mypy results
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: backend/.mypy_cache
           key: mypy-${{ runner.os }}-py3.13-${{ hashFiles('backend/requirements.txt', 'backend/pyproject.toml') }}
@@ -88,7 +88,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-backend
 
       - name: Run tests
@@ -143,7 +143,7 @@ jobs:
           --shm-size 1g
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-backend
 
       - name: Run slow tests
@@ -163,7 +163,7 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-frontend
 
       - name: Lint
@@ -228,7 +228,7 @@ jobs:
         shard: [1, 2, 3]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-frontend
 
       - name: Run tests
@@ -261,7 +261,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-backend
       - uses: ./.github/actions/setup-frontend
 
@@ -280,10 +280,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
@@ -307,7 +307,7 @@ jobs:
       # store stays empty and setup-node's post-job cache save would fail with
       # "Path Validation Error", marking the whole job failed.
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
@@ -332,11 +332,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@v3.95.3
+        uses: trufflesecurity/trufflehog@v3.97.6
         with:
           extra_args: --only-verified
